@@ -13,6 +13,9 @@ type ClientAccount = {
   status?: string;
   created_at?: string;
   activated_at?: string;
+  monthly_credits?: number;
+  credits_used?: number;
+  credits_remaining?: number;
 };
 
 async function getClientAccount() {
@@ -84,9 +87,10 @@ export default async function ClientPortalPage() {
 
   const activeAgents = account?.active_agents || [];
 
-  const monthlyCreditAllocation = 0;
-  const creditsUsed = 0;
-  const creditsRemaining = monthlyCreditAllocation - creditsUsed;
+  const monthlyCreditAllocation = account?.monthly_credits ?? 0;
+  const creditsUsed = account?.credits_used ?? 0;
+  const creditsRemaining =
+    account?.credits_remaining ?? Math.max(monthlyCreditAllocation - creditsUsed, 0);
   const usagePercentage =
     monthlyCreditAllocation > 0
       ? Math.round((creditsUsed / monthlyCreditAllocation) * 100)
