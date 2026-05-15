@@ -509,3 +509,43 @@ def assign_client_credits(payload: dict):
         },
     }
 
+
+def lookup_client_account(identifier: str):
+    identifier = str(identifier or "").strip().lower()
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+            SELECT
+                tenant_id,
+                email,
+                company_name,
+                package_name,
+                active_agents,
+                status,
+                monthly_credits,
+                credits_used
+            FROM client_accounts
+            WHERE lower(tenant_id) = %s OR lower(email) = %s
+            """, (identifier, identifier))
+
+            row = cur.fetchone()
+
+    if not row:
+        return {"success": False, "error": "client_account_not_found", "identifier": identifier}
+
+    return {
+        "success": True,
+        "account": {
+            "tenant_id": row[0],
+            "email": row[1],
+            "company_name": row[2],
+            "package": row[3],
+            "active_agents": json.loads(row[4] or "[]"),
+            "status": row[5],
+            "monthly_credits": row[6],
+            "credits_used": row[7],
+            "credits_remaining": max(int(row[6]) - int(row[7]), 0),
+        },
+    }
+
