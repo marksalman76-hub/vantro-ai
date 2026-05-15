@@ -7,6 +7,7 @@ from backend.app.core.postgres_account_runtime import (
     get_session_account as pg_get_session_account,
     login as pg_login,
     recent_security_events as pg_recent_security_events,
+    assign_client_credits as pg_assign_client_credits,
 )
 
 
@@ -1048,4 +1049,9 @@ async def durable_client_me(session_token: str):
 @app.get("/admin/client-account-security-events")
 async def durable_client_account_security_events(limit: int = 25):
     return pg_recent_security_events(limit)
+
+
+@app.post("/admin/client-credits/assign")
+async def durable_assign_client_credits(payload: dict):
+    return pg_assign_client_credits(payload)
 
