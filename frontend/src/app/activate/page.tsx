@@ -1,10 +1,12 @@
+export const dynamic = "force-dynamic";
+
 const BACKEND_URL =
   process.env.BACKEND_URL || "https://ecommerce-ai-agent-platform-1.onrender.com";
 
 type ActivatePageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     token?: string;
-  };
+  }>;
 };
 
 async function getInviteStatus(token: string) {
@@ -27,7 +29,8 @@ async function getInviteStatus(token: string) {
 }
 
 export default async function ActivatePage({ searchParams }: ActivatePageProps) {
-  const token = searchParams?.token || "";
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const token = resolvedSearchParams.token || "";
   const invite = token ? await getInviteStatus(token) : null;
 
   const isValid =
@@ -103,11 +106,7 @@ export default async function ActivatePage({ searchParams }: ActivatePageProps) 
               </p>
             </div>
 
-            <form
-              method="POST"
-              action="/api/activate"
-              style={{ marginTop: 24 }}
-            >
+            <form method="POST" action="/api/activate" style={{ marginTop: 24 }}>
               <input type="hidden" name="token" value={token} />
 
               <label style={{ display: "block", marginBottom: 10 }}>
