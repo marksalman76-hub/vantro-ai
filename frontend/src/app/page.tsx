@@ -1,4 +1,48 @@
-export default function Home() {
+const BACKEND_URL =
+  process.env.BACKEND_URL || "https://ecommerce-ai-agent-platform-1.onrender.com";
+
+async function getBackendHealth() {
+  try {
+    const response = await fetch(`${BACKEND_URL}/health`, {
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        status: response.status,
+        data: null,
+      };
+    }
+
+    const data = await response.json();
+
+    return {
+      ok: true,
+      status: response.status,
+      data,
+    };
+  } catch {
+    return {
+      ok: false,
+      status: 0,
+      data: null,
+    };
+  }
+}
+
+export default async function Home() {
+  const health = await getBackendHealth();
+
+  const capabilityCards = [
+    "Governed AI execution",
+    "Product and offer intelligence",
+    "UGC creative planning",
+    "Influencer outreach workflows",
+    "Analytics optimisation",
+    "White-label deployment ready",
+  ];
+
   return (
     <main
       style={{
@@ -42,20 +86,33 @@ export default function Home() {
 
         <div
           style={{
+            marginTop: 34,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "12px 16px",
+            borderRadius: 999,
+            background: health.ok ? "rgba(22, 163, 74, .18)" : "rgba(239, 68, 68, .18)",
+            border: health.ok
+              ? "1px solid rgba(34, 197, 94, .4)"
+              : "1px solid rgba(248, 113, 113, .4)",
+            color: health.ok ? "#bbf7d0" : "#fecaca",
+            fontWeight: 700,
+          }}
+        >
+          <span>{health.ok ? "● Backend live" : "● Backend unavailable"}</span>
+          <span style={{ opacity: 0.8 }}>Status: {health.status}</span>
+        </div>
+
+        <div
+          style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
             gap: 16,
             marginTop: 44,
           }}
         >
-          {[
-            "Governed AI execution",
-            "Product and offer intelligence",
-            "UGC creative planning",
-            "Influencer outreach workflows",
-            "Analytics optimisation",
-            "White-label deployment ready",
-          ].map((item) => (
+          {capabilityCards.map((item) => (
             <div
               key={item}
               style={{
@@ -71,11 +128,37 @@ export default function Home() {
           ))}
         </div>
 
-        <div style={{ marginTop: 48, color: "#94a3b8" }}>
-          Backend:
-          <span style={{ color: "#e2e8f0", marginLeft: 8 }}>
-            https://ecommerce-ai-agent-platform-1.onrender.com
-          </span>
+        <div
+          style={{
+            marginTop: 48,
+            borderTop: "1px solid rgba(148,163,184,.22)",
+            paddingTop: 24,
+            color: "#94a3b8",
+          }}
+        >
+          <div>
+            Backend:
+            <span style={{ color: "#e2e8f0", marginLeft: 8 }}>
+              {BACKEND_URL}
+            </span>
+          </div>
+
+          {health.data && (
+            <pre
+              style={{
+                marginTop: 20,
+                padding: 20,
+                overflowX: "auto",
+                borderRadius: 16,
+                background: "rgba(2, 6, 23, .72)",
+                border: "1px solid rgba(148,163,184,.2)",
+                color: "#cbd5e1",
+                fontSize: 13,
+              }}
+            >
+              {JSON.stringify(health.data, null, 2)}
+            </pre>
+          )}
         </div>
       </section>
     </main>
