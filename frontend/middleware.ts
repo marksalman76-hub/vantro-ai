@@ -13,19 +13,17 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const access = request.nextUrl.searchParams.get("access");
+  const portalAccess = request.cookies.get("portal_access")?.value;
   const expected = process.env.PORTAL_ACCESS_CODE;
 
   if (!expected) {
-    return new NextResponse("Portal access is not configured.", {
-      status: 503,
-    });
+    return new NextResponse("Portal access is not configured.", { status: 503 });
   }
 
-  if (access !== expected) {
-    return new NextResponse("Access denied.", {
-      status: 401,
-    });
+  if (portalAccess !== expected) {
+    const loginUrl = new URL("/login", request.url);
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return NextResponse.next();
