@@ -1,3 +1,15 @@
+
+# Step 157 tenant-aware client account runtime
+from backend.app.core.tenant_account_runtime import (
+    activate_client_account,
+    create_client_activation_invite,
+    get_account_from_session,
+    get_invite_status,
+    get_tenant_account_security_events,
+    login_client_account,
+    logout_session,
+)
+
 """
 Ecommerce AI Agent Platform API Runtime
 
@@ -926,4 +938,41 @@ def admin_operational_dashboard():
     }
 
     return dashboard
+
+
+# Step 157 tenant-aware client account routes
+@app.post("/admin/client-activation-invite")
+async def step157_create_client_activation_invite(payload: dict):
+    return create_client_activation_invite(payload)
+
+
+@app.get("/client/activation-invite-status")
+async def step157_get_invite_status(token: str):
+    return get_invite_status(token)
+
+
+@app.post("/client/activate-account")
+async def step157_activate_client_account(payload: dict):
+    return activate_client_account(payload)
+
+
+@app.post("/client/login")
+async def step157_login_client_account(payload: dict):
+    return login_client_account(payload)
+
+
+@app.get("/client/me")
+async def step157_client_me(session_token: str):
+    return get_account_from_session(session_token)
+
+
+@app.post("/client/logout")
+async def step157_client_logout(payload: dict):
+    session_token = str(payload.get("session_token") or "")
+    return logout_session(session_token)
+
+
+@app.get("/admin/client-account-security-events")
+async def step157_client_account_security_events(limit: int = 25):
+    return get_tenant_account_security_events(limit)
 
