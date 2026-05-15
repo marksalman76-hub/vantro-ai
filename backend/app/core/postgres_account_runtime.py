@@ -424,21 +424,19 @@ def safe_initialise_tables():
 
 
 def database_readiness():
-    from urllib.parse import urlparse
-
-    parsed = urlparse(DATABASE_URL or "")
+    raw = DATABASE_URL or ""
 
     safe_url_details = {
-        "database_url_present": bool(DATABASE_URL),
-        "scheme": parsed.scheme,
-        "username": parsed.username,
-        "password_present": bool(parsed.password),
-        "password_length": len(parsed.password or ""),
-        "host": parsed.hostname,
-        "port": parsed.port,
-        "database": parsed.path.lstrip("/") if parsed.path else None,
-        "contains_placeholder": "[YOUR-PASSWORD]" in (DATABASE_URL or ""),
-        "contains_spaces": " " in (DATABASE_URL or ""),
+        "database_url_present": bool(raw),
+        "length": len(raw),
+        "starts_with_postgresql": raw.startswith("postgresql://"),
+        "contains_placeholder": "[YOUR-PASSWORD]" in raw,
+        "contains_spaces": " " in raw,
+        "contains_pooler_host": "pooler.supabase.com" in raw,
+        "contains_project_ref_username": "postgres.udcvkzgxojklwwdocokv" in raw,
+        "contains_direct_host": "db.udcvkzgxojklwwdocokv.supabase.co" in raw,
+        "contains_at_symbol": "@" in raw,
+        "contains_database_suffix": raw.endswith("/postgres"),
     }
 
     try:
