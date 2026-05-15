@@ -6,4 +6,4 @@ openai
 stripe
 httpx
 requests
-psycopg[binary]psycopg[binary]
+psycopg[binary]
