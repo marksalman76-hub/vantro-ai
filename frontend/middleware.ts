@@ -16,11 +16,11 @@ export function middleware(request: NextRequest) {
 
   if (isAdminPath) {
     if (!expectedOwnerCode) {
-      return new NextResponse("Portal access is not configured.", { status: 503 });
+      return new NextResponse("Admin access is not configured.", { status: 503 });
     }
 
     if (ownerAccess !== expectedOwnerCode) {
-      const loginUrl = new URL("/login", request.url);
+      const loginUrl = new URL("/admin-login", request.url);
       loginUrl.searchParams.set("next", pathname);
       return NextResponse.redirect(loginUrl);
     }
@@ -29,13 +29,13 @@ export function middleware(request: NextRequest) {
   }
 
   if (isClientPath) {
-    if (clientSession || ownerAccess === expectedOwnerCode) {
-      return NextResponse.next();
+    if (!clientSession) {
+      const loginUrl = new URL("/login", request.url);
+      loginUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(loginUrl);
     }
 
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.next();
   }
 
   return NextResponse.next();

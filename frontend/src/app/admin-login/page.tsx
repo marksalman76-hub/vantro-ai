@@ -1,10 +1,10 @@
-export default async function LoginPage({
+export default async function AdminLoginPage({
   searchParams,
 }: {
   searchParams?: Promise<{ next?: string }>;
 }) {
   const resolvedSearchParams = searchParams ? await searchParams : {};
-  const nextPath = resolvedSearchParams.next || "/client";
+  const nextPath = resolvedSearchParams.next || "/admin";
 
   return (
     <main
@@ -21,50 +21,34 @@ export default async function LoginPage({
     >
       <form
         method="POST"
-        action="/api/client-login"
+        action="/api/login"
         style={{
           width: "100%",
           maxWidth: 460,
           padding: 34,
           borderRadius: 24,
-          background: "#0f172a",
-          border: "1px solid rgba(148,163,184,.25)",
+          background: "#111827",
+          border: "1px solid rgba(245,158,11,.28)",
           boxShadow: "0 28px 90px rgba(0,0,0,.32)",
         }}
       >
-        <p style={{ color: "#38bdf8", fontWeight: 800, letterSpacing: 1 }}>
-          CLIENT LOGIN
+        <p style={{ color: "#f59e0b", fontWeight: 800, letterSpacing: 1 }}>
+          OWNER / ADMIN ACCESS
         </p>
 
         <h1 style={{ marginTop: 10, fontSize: 38, lineHeight: 1.1 }}>
-          Access your workspace
+          Admin control centre
         </h1>
 
         <input type="hidden" name="next" value={nextPath} />
 
         <label style={{ display: "block", marginTop: 20, marginBottom: 8 }}>
-          Email
+          Owner access code
         </label>
         <input
-          name="email"
-          type="email"
-          placeholder="client@example.com"
-          required
-          style={{
-            width: "100%",
-            padding: 14,
-            borderRadius: 10,
-            border: "1px solid rgba(148,163,184,.35)",
-          }}
-        />
-
-        <label style={{ display: "block", marginTop: 16, marginBottom: 8 }}>
-          Password
-        </label>
-        <input
-          name="password"
+          name="access"
           type="password"
-          placeholder="Password"
+          placeholder="Owner access code"
           required
           style={{
             width: "100%",
@@ -82,13 +66,13 @@ export default async function LoginPage({
             padding: 14,
             borderRadius: 10,
             border: 0,
-            background: "#2563eb",
-            color: "white",
+            background: "#f59e0b",
+            color: "#111827",
             fontWeight: 800,
             cursor: "pointer",
           }}
         >
-          Login as Client
+          Login as Owner/Admin
         </button>
       </form>
     </main>
