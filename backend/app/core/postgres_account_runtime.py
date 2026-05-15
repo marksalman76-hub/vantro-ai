@@ -403,7 +403,49 @@ def recent_security_events(limit: int = 10):
     }
 
 
-initialise_tables()
+
+POSTGRES_STARTUP_STATUS = {
+    "available": False,
+    "initialised": False,
+    "error": None,
+}
+
+
+def safe_initialise_tables():
+    try:
+        initialise_tables()
+        POSTGRES_STARTUP_STATUS["available"] = True
+        POSTGRES_STARTUP_STATUS["initialised"] = True
+        POSTGRES_STARTUP_STATUS["error"] = None
+    except Exception as exc:
+        POSTGRES_STARTUP_STATUS["available"] = False
+        POSTGRES_STARTUP_STATUS["initialised"] = False
+        POSTGRES_STARTUP_STATUS["error"] = str(exc)
+
+
+def database_readiness():
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                row = cur.fetchone()
+
+        return {
+            "success": True,
+            "database_available": True,
+            "startup_status": POSTGRES_STARTUP_STATUS,
+            "test_result": row[0] if row else None,
+        }
+    except Exception as exc:
+        return {
+            "success": False,
+            "database_available": False,
+            "startup_status": POSTGRES_STARTUP_STATUS,
+            "error": str(exc),
+        }
+
+
+safe_initialise_tables()
 
 
 def assign_client_credits(payload: dict):
