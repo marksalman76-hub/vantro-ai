@@ -1,0 +1,43 @@
+{
+  "step": 134,
+  "name": "Supabase Connection Checklist",
+  "generated_at_utc": "2026-05-14T15:04:15.249237+00:00",
+  "status": "supabase_connection_checklist_created",
+  "completed_steps": "51-133",
+  "secret_values_included": false,
+  "supabase_connection_rules": {
+    "database_provider": "Supabase",
+    "database_type": "Postgres",
+    "render_env_var": "DATABASE_URL",
+    "vercel_allowed": false,
+    "frontend_exposure_allowed": false,
+    "service_role_frontend_allowed": false
+  },
+  "required_supabase_checks": [
+    "Supabase project created",
+    "Supabase project region selected",
+    "Production database available",
+    "Connection string copied only into Render DATABASE_URL",
+    "Database SSL requirement confirmed",
+    "Supabase service role key kept out of Vercel/frontend",
+    "Database password not stored in repository",
+    "Backups/restore policy confirmed",
+    "Production and test data separation confirmed",
+    "Render backend can connect to Supabase after deployment"
+  ],
+  "forbidden_locations_for_database_credentials": [
+    "Vercel environment variables",
+    "frontend runtime",
+    "GitHub repository",
+    "docs",
+    "screenshots",
+    "chat",
+    "client/browser runtime",
+    "committed .env files"
+  ],
+  "release_decision": {
+    "can_continue_documentation": true,
+    "can_continue_live_validation": false,
+    "next_step": "create_external_setup_execution_checkpoint"
+  }
+}

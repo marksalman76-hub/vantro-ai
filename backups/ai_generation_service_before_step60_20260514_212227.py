@@ -1,0 +1,293 @@
+"""
+AI Generation Service
+
+Central generation layer for premium ecommerce agent outputs.
+Improved structured extraction layer for premium ecommerce realism.
+"""
+
+from dataclasses import dataclass
+from typing import Dict
+import re
+
+from backend.app.media.product_image_prompt_engine import (
+    ProductImagePromptEngine,
+    ProductImagePromptRequest,
+)
+from backend.app.media.ugc_prompt_engine import (
+    UGCPromptEngine,
+    UGCPromptRequest,
+)
+
+
+@dataclass
+class GenerationRequest:
+    tenant_id: str
+    requested_agent: str
+    workflow_stage: str
+    task: str
+    region: str
+    language: str
+    currency: str
+
+
+class AIGenerationService:
+    def __init__(self) -> None:
+        self.product_image_engine = ProductImagePromptEngine()
+        self.ugc_prompt_engine = UGCPromptEngine()
+
+    def generate(self, request: GenerationRequest) -> Dict[str, object]:
+        if request.requested_agent == "ugc_creative_agent":
+            return self._generate_ugc_output(request)
+
+        if request.requested_agent == "influencer_collaboration_agent":
+            return self._generate_influencer_output(request)
+
+        if request.requested_agent == "analytics_optimisation_agent":
+            return self._generate_analytics_output(request)
+
+        if request.requested_agent in {
+            "product_image_direction_agent",
+            "product_image_agent",
+            "ad_creative_image_agent",
+        }:
+            return self._generate_product_image_output(request)
+
+        if request.workflow_stage == "store_creation" or request.requested_agent in {
+            "store_builder_agent",
+            "product_copywriting_agent",
+            "product_research_agent",
+        }:
+            return self._generate_product_page_output(request)
+
+        return self._generate_general_output(request)
+
+    def _generate_ugc_output(self, request: GenerationRequest) -> Dict[str, object]:
+        product_name = self._extract_product_name(request.task)
+        target_audience = self._extract_target_audience(request.task)
+
+        ugc_request = UGCPromptRequest(
+            product_name=product_name,
+            product_category=self._detect_product_category(request.task),
+            target_audience=target_audience,
+            region=request.region,
+            language=request.language,
+            currency=request.currency,
+            creator_age_range=self._extract_age_range(target_audience),
+            creator_gender=self._extract_gender(target_audience),
+            creator_ethnicity="region-appropriate and campaign-selectable",
+            creator_accent=f"{request.region} appropriate accent",
+            platform="TikTok, Meta Reels, Instagram Reels, YouTube Shorts",
+            tone="natural, premium, trustworthy, emotionally believable",
+        )
+
+        result = self.ugc_prompt_engine.build_prompt(ugc_request)
+
+        return {
+            "client_safe": True,
+            "output_type": "premium_ugc_video_execution_brief",
+            "product_name": product_name,
+            "content": result["production_brief"],
+            "ugc_prompt": result,
+            "sections": {
+                "creator_profile": result["creator_profile"],
+                "shot_plan": result["shot_plan"],
+                "audio_quality_requirements": result["audio_quality_requirements"],
+                "video_quality_requirements": result["video_quality_requirements"],
+                "quality_rejection_rules": result["quality_rejection_rules"],
+                "provider_execution_packet": result["provider_execution_packet"],
+            },
+        }
+
+    def _generate_product_image_output(self, request: GenerationRequest) -> Dict[str, object]:
+        product_name = self._extract_product_name(request.task)
+
+        image_request = ProductImagePromptRequest(
+            product_name=product_name,
+            product_category=self._detect_product_category(request.task),
+            target_audience=self._extract_target_audience(request.task),
+            region=request.region,
+            language=request.language,
+            currency=request.currency,
+            brand_style="premium, commercial, conversion-focused, ecommerce-ready",
+            image_type="premium ecommerce product image",
+            platform="Shopify, Meta Ads, TikTok Shop, Landing Pages",
+            scene_direction=(
+                "Use realistic commercial product photography composition, "
+                "premium lighting, mobile-friendly framing, clean backgrounds, "
+                "and platform-native visual direction."
+            ),
+        )
+
+        result = self.product_image_engine.build_prompt(image_request)
+
+        return {
+            "client_safe": True,
+            "output_type": "premium_product_image_direction",
+            "product_name": product_name,
+            "content": result["production_brief"],
+            "image_prompt": result,
+            "sections": {
+                "composition_requirements": result["composition_requirements"],
+                "realism_requirements": result["realism_requirements"],
+                "quality_rejection_rules": result["quality_rejection_rules"],
+            },
+        }
+
+    def _generate_product_page_output(self, request: GenerationRequest) -> Dict[str, object]:
+        product_name = self._extract_product_name(request.task)
+        target_audience = self._extract_target_audience(request.task)
+
+        html = (
+            f"<section>"
+            f"<h1>{product_name}</h1>"
+            f"<p>Designed for {target_audience} in {request.region}, this premium ecommerce offer is positioned to support trust, conversion, and strong customer perception.</p>"
+
+            f"<h2>Why customers will love it</h2>"
+            f"<ul>"
+            f"<li><strong>Benefit-led positioning:</strong> Clear commercial value communicated quickly.</li>"
+            f"<li><strong>Trust-focused structure:</strong> Premium language, proof cues, and low-friction buying psychology.</li>"
+            f"<li><strong>Conversion-ready messaging:</strong> Designed to improve clarity and buying confidence.</li>"
+            f"</ul>"
+
+            f"<h2>Who it is for</h2>"
+            f"<p>{target_audience}</p>"
+
+            f"<h2>Commercial positioning</h2>"
+            f"<p>Use strong product visuals, concise benefit-first copy, FAQ support, social proof, and mobile-first formatting.</p>"
+
+            f"<h2>Recommended conversion structure</h2>"
+            f"<ul>"
+            f"<li>Strong headline</li>"
+            f"<li>Benefit-first bullet points</li>"
+            f"<li>Visual proof</li>"
+            f"<li>Trust signals</li>"
+            f"<li>Objection handling</li>"
+            f"<li>Soft but confident CTA</li>"
+            f"</ul>"
+            f"</section>"
+        )
+
+        return {
+            "client_safe": True,
+            "output_type": "premium_shopify_product_page",
+            "product_name": product_name,
+            "target_audience": target_audience,
+            "content": html,
+            "sections": {
+                "headline": product_name,
+                "target_audience": target_audience,
+                "benefits": [
+                    "Benefit-led product positioning",
+                    "Trust-building ecommerce copy",
+                    "Conversion-focused offer structure",
+                ],
+                "conversion_requirements": [
+                    "Clear above-the-fold value proposition",
+                    "Benefit-first bullet points",
+                    "Objection handling",
+                    "FAQ-ready structure",
+                    "Strong call-to-action",
+                ],
+            },
+        }
+
+    def _generate_influencer_output(self, request: GenerationRequest) -> Dict[str, object]:
+        return {
+            "client_safe": True,
+            "output_type": "influencer_collaboration_strategy",
+            "content": (
+                f"Premium influencer collaboration strategy for {request.region} in {request.language}, "
+                f"using {request.currency}. Focus on creators with authentic audience trust, "
+                f"high engagement quality, commercial content quality, and strong product-category alignment. "
+                f"Task: {request.task}"
+            ),
+        }
+
+    def _generate_analytics_output(self, request: GenerationRequest) -> Dict[str, object]:
+        return {
+            "client_safe": True,
+            "output_type": "analytics_recommendation",
+            "content": (
+                f"Premium analytics recommendation for {request.region} in {request.language}, "
+                f"using {request.currency}. Focus on conversion rate, CPA, ROAS, CTR, "
+                f"creative fatigue, funnel performance, and scaling opportunities."
+            ),
+        }
+
+    def _generate_general_output(self, request: GenerationRequest) -> Dict[str, object]:
+        return {
+            "client_safe": True,
+            "output_type": "general_ecommerce_agent_output",
+            "content": (
+                f"Premium region-aware ecommerce output for {request.region} in {request.language}, "
+                f"using {request.currency}. Adapted to local buyer psychology, "
+                f"commercial expectations, trust signals, and ecommerce best practices."
+            ),
+        }
+
+    def _extract_product_name(self, task: str) -> str:
+        patterns = [
+            r"for\s+([A-Z][A-Za-z0-9\s]+?)(?:,|\stargeting|\sfor women|\sfor men|\sin\s)",
+            r"images for\s+([A-Z][A-Za-z0-9\s]+?)(?:,|\stargeting|\sin\s)",
+            r"page for\s+([A-Z][A-Za-z0-9\s]+?)(?:,|\stargeting|\sin\s)",
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, task, re.IGNORECASE)
+            if match:
+                return match.group(1).strip()
+
+        return "Premium Ecommerce Product"
+
+    def _extract_target_audience(self, task: str) -> str:
+        lowered = task.lower()
+
+        targeting_match = re.search(r"targeting\s+(.+?)(?:\.|$)", lowered)
+
+        if targeting_match:
+            audience = targeting_match.group(1).strip()
+            audience = audience.replace(" in the ", " in ")
+            return audience.capitalize()
+
+        return "Premium ecommerce buyers"
+
+    def _extract_age_range(self, audience: str) -> str:
+        match = re.search(r"(\d{2}\s?(?:to|-)\s?\d{2})", audience)
+
+        if match:
+            return match.group(1).replace(" to ", "-")
+
+        return "25-40"
+
+    def _extract_gender(self, audience: str) -> str:
+        lowered = audience.lower()
+
+        if "women" in lowered or "female" in lowered:
+            return "female"
+
+        if "men" in lowered or "male" in lowered:
+            return "male"
+
+        return "flexible based on campaign brief"
+
+    def _detect_product_category(self, task: str) -> str:
+        lowered = task.lower()
+
+        category_map = {
+            "skincare": "skincare",
+            "serum": "skincare",
+            "beauty": "beauty",
+            "supplement": "supplement",
+            "fashion": "fashion",
+            "coffee": "food_and_beverage",
+            "protein": "fitness",
+            "watch": "accessories",
+            "electronics": "electronics",
+            "fragrance": "fragrance",
+        }
+
+        for keyword, category in category_map.items():
+            if keyword in lowered:
+                return category
+
+        return "general_ecommerce"

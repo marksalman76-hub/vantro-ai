@@ -1,0 +1,1396 @@
+[
+  {
+    "memory_id": "mem_896a3680882c",
+    "tenant_id": "client_demo_001",
+    "project_id": "project_glow_restore",
+    "record_type": "agent_output",
+    "title": "UGC execution brief",
+    "payload": {
+      "output_type": "premium_ugc_video_execution_brief"
+    },
+    "created_at": "2026-05-14T10:29:46.574232+00:00"
+  },
+  {
+    "memory_id": "mem_dc7abd741313",
+    "tenant_id": "client_demo_001",
+    "project_id": "project_glow_restore",
+    "record_type": "agent_output",
+    "title": "UGC execution brief",
+    "payload": {
+      "output_type": "premium_ugc_video_execution_brief"
+    },
+    "created_at": "2026-05-14T10:41:36.044566+00:00"
+  },
+  {
+    "memory_id": "mem_8ed2d4218c55",
+    "tenant_id": "client_demo_001",
+    "project_id": "project_glow_restore",
+    "record_type": "successful_execution",
+    "title": "ugc_creative_agent execution",
+    "payload": {
+      "workflow": {
+        "tenant_id": "client_demo_001",
+        "workflow_stage": "creative_production",
+        "requested_agent": "ugc_creative_agent",
+        "task": "Create premium UGC videos for Glow Restore Serum targeting women aged 25 to 40 in the United Arab Emirates.",
+        "region": "United Arab Emirates",
+        "language": "Arabic",
+        "currency": "AED",
+        "requires_owner_approval": false,
+        "client_safe": true,
+        "blocked_reason": null,
+        "workflow_notes": [
+          "Workflow packet created.",
+          "Client-facing output must remain white-label safe.",
+          "Premium quality gate required before client delivery."
+        ]
+      },
+      "approval": {
+        "action_type": "ugc_script_generation",
+        "requires_owner_approval": false,
+        "approved": true,
+        "status": "autonomous_allowed",
+        "reason": "This action is allowed to run autonomously."
+      },
+      "quality": {
+        "passed": true,
+        "score": 100,
+        "issues": [],
+        "recommendation": "approved_for_client_delivery"
+      },
+      "execution": {
+        "success": true,
+        "execution_status": "adapter_prepared",
+        "action_type": "create_ugc_video_brief",
+        "message": "Execution request passed governance, quality checks, and adapter preparation.",
+        "execution_notes": [
+          "Tenant validated before execution.",
+          "Owner approval respected where required.",
+          "Premium quality gate respected.",
+          "Controlled execution adapter prepared."
+        ],
+        "adapter": "ugc_video_provider_adapter",
+        "adapter_result": {
+          "success": true,
+          "adapter_name": "ugc_video_provider_adapter",
+          "execution_mode": "provider_orchestrated_safe_stub",
+          "provider_ready": false,
+          "message": "UGC video provider adapter prepared through provider orchestrator.",
+          "next_steps": [
+            "Select premium UGC/video provider.",
+            "Map creator profile, language, voice, and video quality parameters.",
+            "Add provider API credentials through secure environment variables.",
+            "Run safe test generation before enabling client delivery."
+          ],
+          "execution_payload": {
+            "provider_route": {
+              "success": true,
+              "provider_category": "ugc_video_generation",
+              "selected_provider": "premium_ugc_video_provider_pending_selection",
+              "execution_mode": "provider_route_prepared",
+              "provider_ready": false,
+              "message": "Provider route prepared. Real provider credentials/API connection not enabled yet.",
+              "quality_requirements": [
+                "Accurate lip sync",
+                "Natural multilingual voice",
+                "No facial distortion",
+                "No audio lag",
+                "Commercial usage rights",
+                "Region-aware creator presentation",
+                "Provider API or controlled automation path"
+              ],
+              "approval_required": false
+            },
+            "provider_category": "ugc_video_generation",
+            "provider_connected": false
+          }
+        }
+      },
+      "output": {
+        "client_safe": true,
+        "output_type": "premium_ugc_video_execution_brief",
+        "product_name": "Glow Restore Serum",
+        "content": "Create a premium, realistic, commercially usable TikTok, Meta Reels, Instagram Reels, YouTube Shorts UGC video for Glow Restore Serum, a skincare product. The creator should match this profile: 25-40, female, region-appropriate and campaign-selectable, speaking Arabic with a United Arab Emirates appropriate accent. The content must feel native to United Arab Emirates, culturally appropriate, brand-safe, commercially believable, and relevant to Women aged 25 to 40 in United Arab Emirates. The delivery should be natural, premium, trustworthy, emotionally believable, conversational, and not over-scripted.",
+        "ugc_prompt": {
+          "client_safe": true,
+          "output_type": "realistic_ugc_production_brief",
+          "quality_tier": "premium_commercial_ad_ready",
+          "benchmark_standard": "exceed_high_quality_ai_video_audio_and_creator_content_tools",
+          "provider_execution_ready": true,
+          "product_name": "Glow Restore Serum",
+          "product_category": "skincare",
+          "target_audience": "Women aged 25 to 40 in United Arab Emirates",
+          "platform": "TikTok, Meta Reels, Instagram Reels, YouTube Shorts",
+          "region": "United Arab Emirates",
+          "language": "Arabic",
+          "currency": "AED",
+          "creator_profile": {
+            "age_range": "25-40",
+            "gender": "female",
+            "ethnicity": "region-appropriate and campaign-selectable",
+            "accent": "United Arab Emirates appropriate accent",
+            "tone": "natural, premium, trustworthy, emotionally believable",
+            "delivery_style": "natural, believable, platform-native"
+          },
+          "production_brief": "Create a premium, realistic, commercially usable TikTok, Meta Reels, Instagram Reels, YouTube Shorts UGC video for Glow Restore Serum, a skincare product. The creator should match this profile: 25-40, female, region-appropriate and campaign-selectable, speaking Arabic with a United Arab Emirates appropriate accent. The content must feel native to United Arab Emirates, culturally appropriate, brand-safe, commercially believable, and relevant to Women aged 25 to 40 in United Arab Emirates. The delivery should be natural, premium, trustworthy, emotionally believable, conversational, and not over-scripted.",
+          "shot_plan": [
+            {
+              "scene": 1,
+              "timing": "0-3s",
+              "purpose": "Scroll-stopping hook",
+              "direction": "Immediate audience pain point or curiosity trigger."
+            },
+            {
+              "scene": 2,
+              "timing": "3-8s",
+              "purpose": "Relatable emotional moment",
+              "direction": "Show realistic lifestyle problem or desire."
+            },
+            {
+              "scene": 3,
+              "timing": "8-16s",
+              "purpose": "Product introduction",
+              "direction": "Natural creator-led product demonstration."
+            },
+            {
+              "scene": 4,
+              "timing": "16-25s",
+              "purpose": "Benefit proof",
+              "direction": "Demonstrate believable product value or transformation."
+            },
+            {
+              "scene": 5,
+              "timing": "25-35s",
+              "purpose": "Trust and objection handling",
+              "direction": "Reduce buyer hesitation naturally."
+            },
+            {
+              "scene": 6,
+              "timing": "35-45s",
+              "purpose": "Soft CTA",
+              "direction": "Encourage action without aggressive selling."
+            }
+          ],
+          "audio_quality_requirements": [
+            "Natural human speech rhythm",
+            "Native or region-appropriate pronunciation",
+            "No robotic cadence",
+            "No audio lag",
+            "No clipped words",
+            "No unnatural pauses",
+            "Clear commercial-quality voice output",
+            "Emotionally believable delivery",
+            "Platform-native pacing"
+          ],
+          "video_quality_requirements": [
+            "Accurate lip sync",
+            "Smooth facial movement",
+            "Realistic expressions",
+            "Realistic hand movement",
+            "No distorted face",
+            "No distorted hands",
+            "No flickering",
+            "No warping",
+            "No uncanny facial behaviour",
+            "No lag between audio and mouth movement",
+            "Commercial-ad-ready output",
+            "Mobile-first framing"
+          ],
+          "provider_execution_packet": {
+            "provider_flexible": true,
+            "supported_provider_categories": [
+              "avatar_video_generation",
+              "ugc_creator_generation",
+              "voice_generation",
+              "video_rendering"
+            ],
+            "required_runtime_fields": [
+              "creator_profile",
+              "language",
+              "accent",
+              "platform",
+              "scene_direction",
+              "audio_quality_requirements",
+              "video_quality_requirements"
+            ]
+          },
+          "quality_rejection_rules": [
+            "Reject robotic speech",
+            "Reject weak lip sync",
+            "Reject distorted face",
+            "Reject distorted hands",
+            "Reject lag between speech and mouth movement",
+            "Reject emotionless delivery",
+            "Reject uncanny facial movement",
+            "Reject unrealistic body movement",
+            "Reject low-resolution output",
+            "Reject culturally inappropriate styling",
+            "Reject non-platform-native pacing"
+          ],
+          "variation_requirements": [
+            "Generate multiple hook options",
+            "Support different creator age ranges",
+            "Support different genders",
+            "Support different ethnicities",
+            "Support different accents",
+            "Support multilingual delivery",
+            "Support region-specific buyer psychology",
+            "Support platform-specific pacing and style"
+          ],
+          "approval_rules": {
+            "automatic_allowed": [
+              "UGC script generation",
+              "Creator profile direction",
+              "Shot list generation",
+              "Video brief generation",
+              "Language and accent variation planning",
+              "UGC execution packet preparation"
+            ],
+            "owner_approval_required": [
+              "Paid creator collaboration",
+              "Usage-rights agreement",
+              "Product seeding at scale",
+              "Budget commitment",
+              "Campaign spend increase",
+              "Campaign scaling"
+            ]
+          }
+        },
+        "sections": {
+          "creator_profile": {
+            "age_range": "25-40",
+            "gender": "female",
+            "ethnicity": "region-appropriate and campaign-selectable",
+            "accent": "United Arab Emirates appropriate accent",
+            "tone": "natural, premium, trustworthy, emotionally believable",
+            "delivery_style": "natural, believable, platform-native"
+          },
+          "shot_plan": [
+            {
+              "scene": 1,
+              "timing": "0-3s",
+              "purpose": "Scroll-stopping hook",
+              "direction": "Immediate audience pain point or curiosity trigger."
+            },
+            {
+              "scene": 2,
+              "timing": "3-8s",
+              "purpose": "Relatable emotional moment",
+              "direction": "Show realistic lifestyle problem or desire."
+            },
+            {
+              "scene": 3,
+              "timing": "8-16s",
+              "purpose": "Product introduction",
+              "direction": "Natural creator-led product demonstration."
+            },
+            {
+              "scene": 4,
+              "timing": "16-25s",
+              "purpose": "Benefit proof",
+              "direction": "Demonstrate believable product value or transformation."
+            },
+            {
+              "scene": 5,
+              "timing": "25-35s",
+              "purpose": "Trust and objection handling",
+              "direction": "Reduce buyer hesitation naturally."
+            },
+            {
+              "scene": 6,
+              "timing": "35-45s",
+              "purpose": "Soft CTA",
+              "direction": "Encourage action without aggressive selling."
+            }
+          ],
+          "audio_quality_requirements": [
+            "Natural human speech rhythm",
+            "Native or region-appropriate pronunciation",
+            "No robotic cadence",
+            "No audio lag",
+            "No clipped words",
+            "No unnatural pauses",
+            "Clear commercial-quality voice output",
+            "Emotionally believable delivery",
+            "Platform-native pacing"
+          ],
+          "video_quality_requirements": [
+            "Accurate lip sync",
+            "Smooth facial movement",
+            "Realistic expressions",
+            "Realistic hand movement",
+            "No distorted face",
+            "No distorted hands",
+            "No flickering",
+            "No warping",
+            "No uncanny facial behaviour",
+            "No lag between audio and mouth movement",
+            "Commercial-ad-ready output",
+            "Mobile-first framing"
+          ],
+          "quality_rejection_rules": [
+            "Reject robotic speech",
+            "Reject weak lip sync",
+            "Reject distorted face",
+            "Reject distorted hands",
+            "Reject lag between speech and mouth movement",
+            "Reject emotionless delivery",
+            "Reject uncanny facial movement",
+            "Reject unrealistic body movement",
+            "Reject low-resolution output",
+            "Reject culturally inappropriate styling",
+            "Reject non-platform-native pacing"
+          ],
+          "provider_execution_packet": {
+            "provider_flexible": true,
+            "supported_provider_categories": [
+              "avatar_video_generation",
+              "ugc_creator_generation",
+              "voice_generation",
+              "video_rendering"
+            ],
+            "required_runtime_fields": [
+              "creator_profile",
+              "language",
+              "accent",
+              "platform",
+              "scene_direction",
+              "audio_quality_requirements",
+              "video_quality_requirements"
+            ]
+          }
+        }
+      }
+    },
+    "created_at": "2026-05-14T10:45:28.659404+00:00"
+  },
+  {
+    "memory_id": "mem_d62c21030fd5",
+    "tenant_id": "client_demo_001",
+    "project_id": "project_glow_restore",
+    "record_type": "successful_execution",
+    "title": "ugc_creative_agent execution",
+    "payload": {
+      "workflow": {
+        "tenant_id": "client_demo_001",
+        "workflow_stage": "creative_production",
+        "requested_agent": "ugc_creative_agent",
+        "task": "Create premium UGC videos for Glow Restore Serum targeting women aged 25 to 40 in the United Arab Emirates.",
+        "region": "United Arab Emirates",
+        "language": "Arabic",
+        "currency": "AED",
+        "requires_owner_approval": false,
+        "client_safe": true,
+        "blocked_reason": null,
+        "workflow_notes": [
+          "Workflow packet created.",
+          "Client-facing output must remain white-label safe.",
+          "Premium quality gate required before client delivery."
+        ]
+      },
+      "approval": {
+        "action_type": "ugc_script_generation",
+        "requires_owner_approval": false,
+        "approved": true,
+        "status": "autonomous_allowed",
+        "reason": "This action is allowed to run autonomously."
+      },
+      "quality": {
+        "passed": true,
+        "score": 100,
+        "issues": [],
+        "recommendation": "approved_for_client_delivery"
+      },
+      "execution": {
+        "success": true,
+        "execution_status": "adapter_prepared",
+        "action_type": "create_ugc_video_brief",
+        "message": "Execution request passed governance, quality checks, and adapter preparation.",
+        "execution_notes": [
+          "Tenant validated before execution.",
+          "Owner approval respected where required.",
+          "Premium quality gate respected.",
+          "Controlled execution adapter prepared."
+        ],
+        "adapter": "ugc_video_provider_adapter",
+        "adapter_result": {
+          "success": true,
+          "adapter_name": "ugc_video_provider_adapter",
+          "execution_mode": "provider_orchestrated_safe_stub",
+          "provider_ready": false,
+          "message": "UGC video provider adapter prepared through provider orchestrator.",
+          "next_steps": [
+            "Select premium UGC/video provider.",
+            "Map creator profile, language, voice, and video quality parameters.",
+            "Add provider API credentials through secure environment variables.",
+            "Run safe test generation before enabling client delivery."
+          ],
+          "execution_payload": {
+            "provider_route": {
+              "success": true,
+              "provider_category": "ugc_video_generation",
+              "selected_provider": "premium_ugc_video_provider_pending_selection",
+              "execution_mode": "provider_route_prepared",
+              "provider_ready": false,
+              "message": "Provider route prepared. Real provider credentials/API connection not enabled yet.",
+              "quality_requirements": [
+                "Accurate lip sync",
+                "Natural multilingual voice",
+                "No facial distortion",
+                "No audio lag",
+                "Commercial usage rights",
+                "Region-aware creator presentation",
+                "Provider API or controlled automation path"
+              ],
+              "approval_required": false
+            },
+            "provider_category": "ugc_video_generation",
+            "provider_connected": false
+          }
+        }
+      },
+      "output": {
+        "client_safe": true,
+        "output_type": "premium_ugc_video_execution_brief",
+        "product_name": "Glow Restore Serum",
+        "content": "Create a premium, realistic, commercially usable TikTok, Meta Reels, Instagram Reels, YouTube Shorts UGC video for Glow Restore Serum, a skincare product. The creator should match this profile: 25-40, female, region-appropriate and campaign-selectable, speaking Arabic with a United Arab Emirates appropriate accent. The content must feel native to United Arab Emirates, culturally appropriate, brand-safe, commercially believable, and relevant to Women aged 25 to 40 in United Arab Emirates. The delivery should be natural, premium, trustworthy, emotionally believable, conversational, and not over-scripted.",
+        "ugc_prompt": {
+          "client_safe": true,
+          "output_type": "realistic_ugc_production_brief",
+          "quality_tier": "premium_commercial_ad_ready",
+          "benchmark_standard": "exceed_high_quality_ai_video_audio_and_creator_content_tools",
+          "provider_execution_ready": true,
+          "product_name": "Glow Restore Serum",
+          "product_category": "skincare",
+          "target_audience": "Women aged 25 to 40 in United Arab Emirates",
+          "platform": "TikTok, Meta Reels, Instagram Reels, YouTube Shorts",
+          "region": "United Arab Emirates",
+          "language": "Arabic",
+          "currency": "AED",
+          "creator_profile": {
+            "age_range": "25-40",
+            "gender": "female",
+            "ethnicity": "region-appropriate and campaign-selectable",
+            "accent": "United Arab Emirates appropriate accent",
+            "tone": "natural, premium, trustworthy, emotionally believable",
+            "delivery_style": "natural, believable, platform-native"
+          },
+          "production_brief": "Create a premium, realistic, commercially usable TikTok, Meta Reels, Instagram Reels, YouTube Shorts UGC video for Glow Restore Serum, a skincare product. The creator should match this profile: 25-40, female, region-appropriate and campaign-selectable, speaking Arabic with a United Arab Emirates appropriate accent. The content must feel native to United Arab Emirates, culturally appropriate, brand-safe, commercially believable, and relevant to Women aged 25 to 40 in United Arab Emirates. The delivery should be natural, premium, trustworthy, emotionally believable, conversational, and not over-scripted.",
+          "shot_plan": [
+            {
+              "scene": 1,
+              "timing": "0-3s",
+              "purpose": "Scroll-stopping hook",
+              "direction": "Immediate audience pain point or curiosity trigger."
+            },
+            {
+              "scene": 2,
+              "timing": "3-8s",
+              "purpose": "Relatable emotional moment",
+              "direction": "Show realistic lifestyle problem or desire."
+            },
+            {
+              "scene": 3,
+              "timing": "8-16s",
+              "purpose": "Product introduction",
+              "direction": "Natural creator-led product demonstration."
+            },
+            {
+              "scene": 4,
+              "timing": "16-25s",
+              "purpose": "Benefit proof",
+              "direction": "Demonstrate believable product value or transformation."
+            },
+            {
+              "scene": 5,
+              "timing": "25-35s",
+              "purpose": "Trust and objection handling",
+              "direction": "Reduce buyer hesitation naturally."
+            },
+            {
+              "scene": 6,
+              "timing": "35-45s",
+              "purpose": "Soft CTA",
+              "direction": "Encourage action without aggressive selling."
+            }
+          ],
+          "audio_quality_requirements": [
+            "Natural human speech rhythm",
+            "Native or region-appropriate pronunciation",
+            "No robotic cadence",
+            "No audio lag",
+            "No clipped words",
+            "No unnatural pauses",
+            "Clear commercial-quality voice output",
+            "Emotionally believable delivery",
+            "Platform-native pacing"
+          ],
+          "video_quality_requirements": [
+            "Accurate lip sync",
+            "Smooth facial movement",
+            "Realistic expressions",
+            "Realistic hand movement",
+            "No distorted face",
+            "No distorted hands",
+            "No flickering",
+            "No warping",
+            "No uncanny facial behaviour",
+            "No lag between audio and mouth movement",
+            "Commercial-ad-ready output",
+            "Mobile-first framing"
+          ],
+          "provider_execution_packet": {
+            "provider_flexible": true,
+            "supported_provider_categories": [
+              "avatar_video_generation",
+              "ugc_creator_generation",
+              "voice_generation",
+              "video_rendering"
+            ],
+            "required_runtime_fields": [
+              "creator_profile",
+              "language",
+              "accent",
+              "platform",
+              "scene_direction",
+              "audio_quality_requirements",
+              "video_quality_requirements"
+            ]
+          },
+          "quality_rejection_rules": [
+            "Reject robotic speech",
+            "Reject weak lip sync",
+            "Reject distorted face",
+            "Reject distorted hands",
+            "Reject lag between speech and mouth movement",
+            "Reject emotionless delivery",
+            "Reject uncanny facial movement",
+            "Reject unrealistic body movement",
+            "Reject low-resolution output",
+            "Reject culturally inappropriate styling",
+            "Reject non-platform-native pacing"
+          ],
+          "variation_requirements": [
+            "Generate multiple hook options",
+            "Support different creator age ranges",
+            "Support different genders",
+            "Support different ethnicities",
+            "Support different accents",
+            "Support multilingual delivery",
+            "Support region-specific buyer psychology",
+            "Support platform-specific pacing and style"
+          ],
+          "approval_rules": {
+            "automatic_allowed": [
+              "UGC script generation",
+              "Creator profile direction",
+              "Shot list generation",
+              "Video brief generation",
+              "Language and accent variation planning",
+              "UGC execution packet preparation"
+            ],
+            "owner_approval_required": [
+              "Paid creator collaboration",
+              "Usage-rights agreement",
+              "Product seeding at scale",
+              "Budget commitment",
+              "Campaign spend increase",
+              "Campaign scaling"
+            ]
+          }
+        },
+        "sections": {
+          "creator_profile": {
+            "age_range": "25-40",
+            "gender": "female",
+            "ethnicity": "region-appropriate and campaign-selectable",
+            "accent": "United Arab Emirates appropriate accent",
+            "tone": "natural, premium, trustworthy, emotionally believable",
+            "delivery_style": "natural, believable, platform-native"
+          },
+          "shot_plan": [
+            {
+              "scene": 1,
+              "timing": "0-3s",
+              "purpose": "Scroll-stopping hook",
+              "direction": "Immediate audience pain point or curiosity trigger."
+            },
+            {
+              "scene": 2,
+              "timing": "3-8s",
+              "purpose": "Relatable emotional moment",
+              "direction": "Show realistic lifestyle problem or desire."
+            },
+            {
+              "scene": 3,
+              "timing": "8-16s",
+              "purpose": "Product introduction",
+              "direction": "Natural creator-led product demonstration."
+            },
+            {
+              "scene": 4,
+              "timing": "16-25s",
+              "purpose": "Benefit proof",
+              "direction": "Demonstrate believable product value or transformation."
+            },
+            {
+              "scene": 5,
+              "timing": "25-35s",
+              "purpose": "Trust and objection handling",
+              "direction": "Reduce buyer hesitation naturally."
+            },
+            {
+              "scene": 6,
+              "timing": "35-45s",
+              "purpose": "Soft CTA",
+              "direction": "Encourage action without aggressive selling."
+            }
+          ],
+          "audio_quality_requirements": [
+            "Natural human speech rhythm",
+            "Native or region-appropriate pronunciation",
+            "No robotic cadence",
+            "No audio lag",
+            "No clipped words",
+            "No unnatural pauses",
+            "Clear commercial-quality voice output",
+            "Emotionally believable delivery",
+            "Platform-native pacing"
+          ],
+          "video_quality_requirements": [
+            "Accurate lip sync",
+            "Smooth facial movement",
+            "Realistic expressions",
+            "Realistic hand movement",
+            "No distorted face",
+            "No distorted hands",
+            "No flickering",
+            "No warping",
+            "No uncanny facial behaviour",
+            "No lag between audio and mouth movement",
+            "Commercial-ad-ready output",
+            "Mobile-first framing"
+          ],
+          "quality_rejection_rules": [
+            "Reject robotic speech",
+            "Reject weak lip sync",
+            "Reject distorted face",
+            "Reject distorted hands",
+            "Reject lag between speech and mouth movement",
+            "Reject emotionless delivery",
+            "Reject uncanny facial movement",
+            "Reject unrealistic body movement",
+            "Reject low-resolution output",
+            "Reject culturally inappropriate styling",
+            "Reject non-platform-native pacing"
+          ],
+          "provider_execution_packet": {
+            "provider_flexible": true,
+            "supported_provider_categories": [
+              "avatar_video_generation",
+              "ugc_creator_generation",
+              "voice_generation",
+              "video_rendering"
+            ],
+            "required_runtime_fields": [
+              "creator_profile",
+              "language",
+              "accent",
+              "platform",
+              "scene_direction",
+              "audio_quality_requirements",
+              "video_quality_requirements"
+            ]
+          }
+        }
+      }
+    },
+    "created_at": "2026-05-14T10:54:30.975447+00:00"
+  },
+  {
+    "memory_id": "mem_c0d4419c8007",
+    "tenant_id": "client_demo_001",
+    "project_id": "project_glow_restore",
+    "record_type": "successful_execution",
+    "title": "ugc_creative_agent execution",
+    "payload": {
+      "workflow": {
+        "tenant_id": "client_demo_001",
+        "workflow_stage": "creative_production",
+        "requested_agent": "ugc_creative_agent",
+        "task": "Create premium UGC videos for Glow Restore Serum targeting women aged 25 to 40 in the United Arab Emirates.",
+        "region": "United Arab Emirates",
+        "language": "Arabic",
+        "currency": "AED",
+        "requires_owner_approval": false,
+        "client_safe": true,
+        "blocked_reason": null,
+        "workflow_notes": [
+          "Workflow packet created.",
+          "Client-facing output must remain white-label safe.",
+          "Premium quality gate required before client delivery."
+        ]
+      },
+      "approval": {
+        "action_type": "ugc_script_generation",
+        "requires_owner_approval": false,
+        "approved": true,
+        "status": "autonomous_allowed",
+        "reason": "This action is allowed to run autonomously."
+      },
+      "quality": {
+        "passed": true,
+        "score": 100,
+        "issues": [],
+        "recommendation": "approved_for_client_delivery"
+      },
+      "execution": {
+        "success": true,
+        "execution_status": "adapter_prepared",
+        "action_type": "create_ugc_video_brief",
+        "message": "Execution request passed governance, quality checks, and adapter preparation.",
+        "execution_notes": [
+          "Tenant validated before execution.",
+          "Owner approval respected where required.",
+          "Premium quality gate respected.",
+          "Controlled execution adapter prepared."
+        ],
+        "adapter": "ugc_video_provider_adapter",
+        "adapter_result": {
+          "success": true,
+          "adapter_name": "ugc_video_provider_adapter",
+          "execution_mode": "provider_orchestrated_safe_stub",
+          "provider_ready": false,
+          "message": "UGC video provider adapter prepared through provider orchestrator.",
+          "next_steps": [
+            "Select premium UGC/video provider.",
+            "Map creator profile, language, voice, and video quality parameters.",
+            "Add provider API credentials through secure environment variables.",
+            "Run safe test generation before enabling client delivery."
+          ],
+          "execution_payload": {
+            "provider_route": {
+              "success": true,
+              "provider_category": "ugc_video_generation",
+              "selected_provider": "premium_ugc_video_provider_pending_selection",
+              "execution_mode": "provider_route_prepared",
+              "provider_ready": false,
+              "message": "Provider route prepared. Real provider credentials/API connection not enabled yet.",
+              "quality_requirements": [
+                "Accurate lip sync",
+                "Natural multilingual voice",
+                "No facial distortion",
+                "No audio lag",
+                "Commercial usage rights",
+                "Region-aware creator presentation",
+                "Provider API or controlled automation path"
+              ],
+              "approval_required": false
+            },
+            "provider_category": "ugc_video_generation",
+            "provider_connected": false
+          }
+        }
+      },
+      "output": {
+        "client_safe": true,
+        "output_type": "premium_ugc_video_execution_brief",
+        "product_name": "Glow Restore Serum",
+        "content": "Create a premium, realistic, commercially usable TikTok, Meta Reels, Instagram Reels, YouTube Shorts UGC video for Glow Restore Serum, a skincare product. The creator should match this profile: 25-40, female, region-appropriate and campaign-selectable, speaking Arabic with a United Arab Emirates appropriate accent. The content must feel native to United Arab Emirates, culturally appropriate, brand-safe, commercially believable, and relevant to Women aged 25 to 40 in United Arab Emirates. The delivery should be natural, premium, trustworthy, emotionally believable, conversational, and not over-scripted.",
+        "ugc_prompt": {
+          "client_safe": true,
+          "output_type": "realistic_ugc_production_brief",
+          "quality_tier": "premium_commercial_ad_ready",
+          "benchmark_standard": "exceed_high_quality_ai_video_audio_and_creator_content_tools",
+          "provider_execution_ready": true,
+          "product_name": "Glow Restore Serum",
+          "product_category": "skincare",
+          "target_audience": "Women aged 25 to 40 in United Arab Emirates",
+          "platform": "TikTok, Meta Reels, Instagram Reels, YouTube Shorts",
+          "region": "United Arab Emirates",
+          "language": "Arabic",
+          "currency": "AED",
+          "creator_profile": {
+            "age_range": "25-40",
+            "gender": "female",
+            "ethnicity": "region-appropriate and campaign-selectable",
+            "accent": "United Arab Emirates appropriate accent",
+            "tone": "natural, premium, trustworthy, emotionally believable",
+            "delivery_style": "natural, believable, platform-native"
+          },
+          "production_brief": "Create a premium, realistic, commercially usable TikTok, Meta Reels, Instagram Reels, YouTube Shorts UGC video for Glow Restore Serum, a skincare product. The creator should match this profile: 25-40, female, region-appropriate and campaign-selectable, speaking Arabic with a United Arab Emirates appropriate accent. The content must feel native to United Arab Emirates, culturally appropriate, brand-safe, commercially believable, and relevant to Women aged 25 to 40 in United Arab Emirates. The delivery should be natural, premium, trustworthy, emotionally believable, conversational, and not over-scripted.",
+          "shot_plan": [
+            {
+              "scene": 1,
+              "timing": "0-3s",
+              "purpose": "Scroll-stopping hook",
+              "direction": "Immediate audience pain point or curiosity trigger."
+            },
+            {
+              "scene": 2,
+              "timing": "3-8s",
+              "purpose": "Relatable emotional moment",
+              "direction": "Show realistic lifestyle problem or desire."
+            },
+            {
+              "scene": 3,
+              "timing": "8-16s",
+              "purpose": "Product introduction",
+              "direction": "Natural creator-led product demonstration."
+            },
+            {
+              "scene": 4,
+              "timing": "16-25s",
+              "purpose": "Benefit proof",
+              "direction": "Demonstrate believable product value or transformation."
+            },
+            {
+              "scene": 5,
+              "timing": "25-35s",
+              "purpose": "Trust and objection handling",
+              "direction": "Reduce buyer hesitation naturally."
+            },
+            {
+              "scene": 6,
+              "timing": "35-45s",
+              "purpose": "Soft CTA",
+              "direction": "Encourage action without aggressive selling."
+            }
+          ],
+          "audio_quality_requirements": [
+            "Natural human speech rhythm",
+            "Native or region-appropriate pronunciation",
+            "No robotic cadence",
+            "No audio lag",
+            "No clipped words",
+            "No unnatural pauses",
+            "Clear commercial-quality voice output",
+            "Emotionally believable delivery",
+            "Platform-native pacing"
+          ],
+          "video_quality_requirements": [
+            "Accurate lip sync",
+            "Smooth facial movement",
+            "Realistic expressions",
+            "Realistic hand movement",
+            "No distorted face",
+            "No distorted hands",
+            "No flickering",
+            "No warping",
+            "No uncanny facial behaviour",
+            "No lag between audio and mouth movement",
+            "Commercial-ad-ready output",
+            "Mobile-first framing"
+          ],
+          "provider_execution_packet": {
+            "provider_flexible": true,
+            "supported_provider_categories": [
+              "avatar_video_generation",
+              "ugc_creator_generation",
+              "voice_generation",
+              "video_rendering"
+            ],
+            "required_runtime_fields": [
+              "creator_profile",
+              "language",
+              "accent",
+              "platform",
+              "scene_direction",
+              "audio_quality_requirements",
+              "video_quality_requirements"
+            ]
+          },
+          "quality_rejection_rules": [
+            "Reject robotic speech",
+            "Reject weak lip sync",
+            "Reject distorted face",
+            "Reject distorted hands",
+            "Reject lag between speech and mouth movement",
+            "Reject emotionless delivery",
+            "Reject uncanny facial movement",
+            "Reject unrealistic body movement",
+            "Reject low-resolution output",
+            "Reject culturally inappropriate styling",
+            "Reject non-platform-native pacing"
+          ],
+          "variation_requirements": [
+            "Generate multiple hook options",
+            "Support different creator age ranges",
+            "Support different genders",
+            "Support different ethnicities",
+            "Support different accents",
+            "Support multilingual delivery",
+            "Support region-specific buyer psychology",
+            "Support platform-specific pacing and style"
+          ],
+          "approval_rules": {
+            "automatic_allowed": [
+              "UGC script generation",
+              "Creator profile direction",
+              "Shot list generation",
+              "Video brief generation",
+              "Language and accent variation planning",
+              "UGC execution packet preparation"
+            ],
+            "owner_approval_required": [
+              "Paid creator collaboration",
+              "Usage-rights agreement",
+              "Product seeding at scale",
+              "Budget commitment",
+              "Campaign spend increase",
+              "Campaign scaling"
+            ]
+          }
+        },
+        "sections": {
+          "creator_profile": {
+            "age_range": "25-40",
+            "gender": "female",
+            "ethnicity": "region-appropriate and campaign-selectable",
+            "accent": "United Arab Emirates appropriate accent",
+            "tone": "natural, premium, trustworthy, emotionally believable",
+            "delivery_style": "natural, believable, platform-native"
+          },
+          "shot_plan": [
+            {
+              "scene": 1,
+              "timing": "0-3s",
+              "purpose": "Scroll-stopping hook",
+              "direction": "Immediate audience pain point or curiosity trigger."
+            },
+            {
+              "scene": 2,
+              "timing": "3-8s",
+              "purpose": "Relatable emotional moment",
+              "direction": "Show realistic lifestyle problem or desire."
+            },
+            {
+              "scene": 3,
+              "timing": "8-16s",
+              "purpose": "Product introduction",
+              "direction": "Natural creator-led product demonstration."
+            },
+            {
+              "scene": 4,
+              "timing": "16-25s",
+              "purpose": "Benefit proof",
+              "direction": "Demonstrate believable product value or transformation."
+            },
+            {
+              "scene": 5,
+              "timing": "25-35s",
+              "purpose": "Trust and objection handling",
+              "direction": "Reduce buyer hesitation naturally."
+            },
+            {
+              "scene": 6,
+              "timing": "35-45s",
+              "purpose": "Soft CTA",
+              "direction": "Encourage action without aggressive selling."
+            }
+          ],
+          "audio_quality_requirements": [
+            "Natural human speech rhythm",
+            "Native or region-appropriate pronunciation",
+            "No robotic cadence",
+            "No audio lag",
+            "No clipped words",
+            "No unnatural pauses",
+            "Clear commercial-quality voice output",
+            "Emotionally believable delivery",
+            "Platform-native pacing"
+          ],
+          "video_quality_requirements": [
+            "Accurate lip sync",
+            "Smooth facial movement",
+            "Realistic expressions",
+            "Realistic hand movement",
+            "No distorted face",
+            "No distorted hands",
+            "No flickering",
+            "No warping",
+            "No uncanny facial behaviour",
+            "No lag between audio and mouth movement",
+            "Commercial-ad-ready output",
+            "Mobile-first framing"
+          ],
+          "quality_rejection_rules": [
+            "Reject robotic speech",
+            "Reject weak lip sync",
+            "Reject distorted face",
+            "Reject distorted hands",
+            "Reject lag between speech and mouth movement",
+            "Reject emotionless delivery",
+            "Reject uncanny facial movement",
+            "Reject unrealistic body movement",
+            "Reject low-resolution output",
+            "Reject culturally inappropriate styling",
+            "Reject non-platform-native pacing"
+          ],
+          "provider_execution_packet": {
+            "provider_flexible": true,
+            "supported_provider_categories": [
+              "avatar_video_generation",
+              "ugc_creator_generation",
+              "voice_generation",
+              "video_rendering"
+            ],
+            "required_runtime_fields": [
+              "creator_profile",
+              "language",
+              "accent",
+              "platform",
+              "scene_direction",
+              "audio_quality_requirements",
+              "video_quality_requirements"
+            ]
+          }
+        }
+      }
+    },
+    "created_at": "2026-05-14T11:01:00.351242+00:00"
+  },
+  {
+    "memory_id": "mem_2b7ce433fec9",
+    "tenant_id": "client_demo_001",
+    "project_id": "project_glow_restore",
+    "record_type": "successful_execution",
+    "title": "ugc_creative_agent execution",
+    "payload": {
+      "workflow": {
+        "tenant_id": "client_demo_001",
+        "workflow_stage": "creative_production",
+        "requested_agent": "ugc_creative_agent",
+        "task": "Create premium UGC videos for Glow Restore Serum targeting women aged 25 to 40 in the United Arab Emirates.",
+        "region": "United Arab Emirates",
+        "language": "Arabic",
+        "currency": "AED",
+        "requires_owner_approval": false,
+        "client_safe": true,
+        "blocked_reason": null,
+        "workflow_notes": [
+          "Workflow packet created.",
+          "Client-facing output must remain white-label safe.",
+          "Premium quality gate required before client delivery."
+        ]
+      },
+      "approval": {
+        "action_type": "ugc_script_generation",
+        "requires_owner_approval": false,
+        "approved": true,
+        "status": "autonomous_allowed",
+        "reason": "This action is allowed to run autonomously."
+      },
+      "quality": {
+        "passed": true,
+        "score": 100,
+        "issues": [],
+        "recommendation": "approved_for_client_delivery"
+      },
+      "execution": {
+        "success": true,
+        "execution_status": "adapter_prepared",
+        "action_type": "create_ugc_video_brief",
+        "message": "Execution request passed governance, quality checks, and adapter preparation.",
+        "execution_notes": [
+          "Tenant validated before execution.",
+          "Owner approval respected where required.",
+          "Premium quality gate respected.",
+          "Controlled execution adapter prepared."
+        ],
+        "adapter": "ugc_video_provider_adapter",
+        "adapter_result": {
+          "success": true,
+          "adapter_name": "ugc_video_provider_adapter",
+          "execution_mode": "provider_orchestrated_safe_stub",
+          "provider_ready": false,
+          "message": "UGC video provider adapter prepared through provider orchestrator.",
+          "next_steps": [
+            "Select premium UGC/video provider.",
+            "Map creator profile, language, voice, and video quality parameters.",
+            "Add provider API credentials through secure environment variables.",
+            "Run safe test generation before enabling client delivery."
+          ],
+          "execution_payload": {
+            "provider_route": {
+              "success": true,
+              "provider_category": "ugc_video_generation",
+              "selected_provider": "premium_ugc_video_provider_pending_selection",
+              "execution_mode": "provider_route_prepared",
+              "provider_ready": false,
+              "message": "Provider route prepared. Real provider credentials/API connection not enabled yet.",
+              "quality_requirements": [
+                "Accurate lip sync",
+                "Natural multilingual voice",
+                "No facial distortion",
+                "No audio lag",
+                "Commercial usage rights",
+                "Region-aware creator presentation",
+                "Provider API or controlled automation path"
+              ],
+              "approval_required": false
+            },
+            "provider_category": "ugc_video_generation",
+            "provider_connected": false
+          }
+        }
+      },
+      "output": {
+        "client_safe": true,
+        "output_type": "premium_ugc_video_execution_brief",
+        "product_name": "Glow Restore Serum",
+        "content": "Create a premium, realistic, commercially usable TikTok, Meta Reels, Instagram Reels, YouTube Shorts UGC video for Glow Restore Serum, a skincare product. The creator should match this profile: 25-40, female, region-appropriate and campaign-selectable, speaking Arabic with a United Arab Emirates appropriate accent. The content must feel native to United Arab Emirates, culturally appropriate, brand-safe, commercially believable, and relevant to Women aged 25 to 40 in United Arab Emirates. The delivery should be natural, premium, trustworthy, emotionally believable, conversational, and not over-scripted.",
+        "ugc_prompt": {
+          "client_safe": true,
+          "output_type": "realistic_ugc_production_brief",
+          "quality_tier": "premium_commercial_ad_ready",
+          "benchmark_standard": "exceed_high_quality_ai_video_audio_and_creator_content_tools",
+          "provider_execution_ready": true,
+          "product_name": "Glow Restore Serum",
+          "product_category": "skincare",
+          "target_audience": "Women aged 25 to 40 in United Arab Emirates",
+          "platform": "TikTok, Meta Reels, Instagram Reels, YouTube Shorts",
+          "region": "United Arab Emirates",
+          "language": "Arabic",
+          "currency": "AED",
+          "creator_profile": {
+            "age_range": "25-40",
+            "gender": "female",
+            "ethnicity": "region-appropriate and campaign-selectable",
+            "accent": "United Arab Emirates appropriate accent",
+            "tone": "natural, premium, trustworthy, emotionally believable",
+            "delivery_style": "natural, believable, platform-native"
+          },
+          "production_brief": "Create a premium, realistic, commercially usable TikTok, Meta Reels, Instagram Reels, YouTube Shorts UGC video for Glow Restore Serum, a skincare product. The creator should match this profile: 25-40, female, region-appropriate and campaign-selectable, speaking Arabic with a United Arab Emirates appropriate accent. The content must feel native to United Arab Emirates, culturally appropriate, brand-safe, commercially believable, and relevant to Women aged 25 to 40 in United Arab Emirates. The delivery should be natural, premium, trustworthy, emotionally believable, conversational, and not over-scripted.",
+          "shot_plan": [
+            {
+              "scene": 1,
+              "timing": "0-3s",
+              "purpose": "Scroll-stopping hook",
+              "direction": "Immediate audience pain point or curiosity trigger."
+            },
+            {
+              "scene": 2,
+              "timing": "3-8s",
+              "purpose": "Relatable emotional moment",
+              "direction": "Show realistic lifestyle problem or desire."
+            },
+            {
+              "scene": 3,
+              "timing": "8-16s",
+              "purpose": "Product introduction",
+              "direction": "Natural creator-led product demonstration."
+            },
+            {
+              "scene": 4,
+              "timing": "16-25s",
+              "purpose": "Benefit proof",
+              "direction": "Demonstrate believable product value or transformation."
+            },
+            {
+              "scene": 5,
+              "timing": "25-35s",
+              "purpose": "Trust and objection handling",
+              "direction": "Reduce buyer hesitation naturally."
+            },
+            {
+              "scene": 6,
+              "timing": "35-45s",
+              "purpose": "Soft CTA",
+              "direction": "Encourage action without aggressive selling."
+            }
+          ],
+          "audio_quality_requirements": [
+            "Natural human speech rhythm",
+            "Native or region-appropriate pronunciation",
+            "No robotic cadence",
+            "No audio lag",
+            "No clipped words",
+            "No unnatural pauses",
+            "Clear commercial-quality voice output",
+            "Emotionally believable delivery",
+            "Platform-native pacing"
+          ],
+          "video_quality_requirements": [
+            "Accurate lip sync",
+            "Smooth facial movement",
+            "Realistic expressions",
+            "Realistic hand movement",
+            "No distorted face",
+            "No distorted hands",
+            "No flickering",
+            "No warping",
+            "No uncanny facial behaviour",
+            "No lag between audio and mouth movement",
+            "Commercial-ad-ready output",
+            "Mobile-first framing"
+          ],
+          "provider_execution_packet": {
+            "provider_flexible": true,
+            "supported_provider_categories": [
+              "avatar_video_generation",
+              "ugc_creator_generation",
+              "voice_generation",
+              "video_rendering"
+            ],
+            "required_runtime_fields": [
+              "creator_profile",
+              "language",
+              "accent",
+              "platform",
+              "scene_direction",
+              "audio_quality_requirements",
+              "video_quality_requirements"
+            ]
+          },
+          "quality_rejection_rules": [
+            "Reject robotic speech",
+            "Reject weak lip sync",
+            "Reject distorted face",
+            "Reject distorted hands",
+            "Reject lag between speech and mouth movement",
+            "Reject emotionless delivery",
+            "Reject uncanny facial movement",
+            "Reject unrealistic body movement",
+            "Reject low-resolution output",
+            "Reject culturally inappropriate styling",
+            "Reject non-platform-native pacing"
+          ],
+          "variation_requirements": [
+            "Generate multiple hook options",
+            "Support different creator age ranges",
+            "Support different genders",
+            "Support different ethnicities",
+            "Support different accents",
+            "Support multilingual delivery",
+            "Support region-specific buyer psychology",
+            "Support platform-specific pacing and style"
+          ],
+          "approval_rules": {
+            "automatic_allowed": [
+              "UGC script generation",
+              "Creator profile direction",
+              "Shot list generation",
+              "Video brief generation",
+              "Language and accent variation planning",
+              "UGC execution packet preparation"
+            ],
+            "owner_approval_required": [
+              "Paid creator collaboration",
+              "Usage-rights agreement",
+              "Product seeding at scale",
+              "Budget commitment",
+              "Campaign spend increase",
+              "Campaign scaling"
+            ]
+          }
+        },
+        "sections": {
+          "creator_profile": {
+            "age_range": "25-40",
+            "gender": "female",
+            "ethnicity": "region-appropriate and campaign-selectable",
+            "accent": "United Arab Emirates appropriate accent",
+            "tone": "natural, premium, trustworthy, emotionally believable",
+            "delivery_style": "natural, believable, platform-native"
+          },
+          "shot_plan": [
+            {
+              "scene": 1,
+              "timing": "0-3s",
+              "purpose": "Scroll-stopping hook",
+              "direction": "Immediate audience pain point or curiosity trigger."
+            },
+            {
+              "scene": 2,
+              "timing": "3-8s",
+              "purpose": "Relatable emotional moment",
+              "direction": "Show realistic lifestyle problem or desire."
+            },
+            {
+              "scene": 3,
+              "timing": "8-16s",
+              "purpose": "Product introduction",
+              "direction": "Natural creator-led product demonstration."
+            },
+            {
+              "scene": 4,
+              "timing": "16-25s",
+              "purpose": "Benefit proof",
+              "direction": "Demonstrate believable product value or transformation."
+            },
+            {
+              "scene": 5,
+              "timing": "25-35s",
+              "purpose": "Trust and objection handling",
+              "direction": "Reduce buyer hesitation naturally."
+            },
+            {
+              "scene": 6,
+              "timing": "35-45s",
+              "purpose": "Soft CTA",
+              "direction": "Encourage action without aggressive selling."
+            }
+          ],
+          "audio_quality_requirements": [
+            "Natural human speech rhythm",
+            "Native or region-appropriate pronunciation",
+            "No robotic cadence",
+            "No audio lag",
+            "No clipped words",
+            "No unnatural pauses",
+            "Clear commercial-quality voice output",
+            "Emotionally believable delivery",
+            "Platform-native pacing"
+          ],
+          "video_quality_requirements": [
+            "Accurate lip sync",
+            "Smooth facial movement",
+            "Realistic expressions",
+            "Realistic hand movement",
+            "No distorted face",
+            "No distorted hands",
+            "No flickering",
+            "No warping",
+            "No uncanny facial behaviour",
+            "No lag between audio and mouth movement",
+            "Commercial-ad-ready output",
+            "Mobile-first framing"
+          ],
+          "quality_rejection_rules": [
+            "Reject robotic speech",
+            "Reject weak lip sync",
+            "Reject distorted face",
+            "Reject distorted hands",
+            "Reject lag between speech and mouth movement",
+            "Reject emotionless delivery",
+            "Reject uncanny facial movement",
+            "Reject unrealistic body movement",
+            "Reject low-resolution output",
+            "Reject culturally inappropriate styling",
+            "Reject non-platform-native pacing"
+          ],
+          "provider_execution_packet": {
+            "provider_flexible": true,
+            "supported_provider_categories": [
+              "avatar_video_generation",
+              "ugc_creator_generation",
+              "voice_generation",
+              "video_rendering"
+            ],
+            "required_runtime_fields": [
+              "creator_profile",
+              "language",
+              "accent",
+              "platform",
+              "scene_direction",
+              "audio_quality_requirements",
+              "video_quality_requirements"
+            ]
+          }
+        }
+      }
+    },
+    "created_at": "2026-05-14T11:08:41.050651+00:00"
+  }
+]

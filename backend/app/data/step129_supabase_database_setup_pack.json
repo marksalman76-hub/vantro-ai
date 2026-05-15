@@ -1,0 +1,34 @@
+{
+  "step": 129,
+  "name": "Supabase Database Setup Pack",
+  "generated_at_utc": "2026-05-14T14:58:11.774240+00:00",
+  "status": "supabase_database_setup_pack_created",
+  "completed_steps": "51-128",
+  "secret_values_included": false,
+  "provider": "Supabase",
+  "database_type": "Postgres",
+  "required_supabase_actions": [
+    "Create a Supabase project",
+    "Select a secure region close to target users or backend host",
+    "Create/confirm production database",
+    "Copy database connection string only into Render DATABASE_URL",
+    "Enable SSL connection where required",
+    "Confirm backups are enabled according to selected Supabase plan",
+    "Keep Supabase service role keys out of frontend runtime",
+    "Do not expose database credentials in repository files",
+    "Document non-secret project name/region only if needed",
+    "Run backend database connectivity validation after Render deploy"
+  ],
+  "required_render_env_var": "DATABASE_URL",
+  "forbidden_frontend_values": [
+    "DATABASE_URL",
+    "Supabase service role key",
+    "database password",
+    "direct Postgres connection string"
+  ],
+  "release_decision": {
+    "can_continue_documentation": true,
+    "can_continue_live_validation": false,
+    "next_step": "vercel_frontend_setup_pack"
+  }
+}
