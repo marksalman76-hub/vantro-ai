@@ -1,3 +1,5 @@
+import PortalNav from "@/components/PortalNav";
+
 const BACKEND_URL =
   process.env.BACKEND_URL || "https://ecommerce-ai-agent-platform-1.onrender.com";
 
@@ -54,6 +56,8 @@ export default async function ClientPortalPage() {
       }}
     >
       <section style={{ maxWidth: 1180, margin: "0 auto" }}>
+        <PortalNav />
+
         <p style={{ color: "#2563eb", fontWeight: 800, letterSpacing: 1 }}>
           CUSTOMER PORTAL
         </p>
@@ -76,7 +80,9 @@ export default async function ClientPortalPage() {
             gap: 10,
             padding: "12px 16px",
             borderRadius: 999,
-            background: health.ok ? "rgba(22, 163, 74, .12)" : "rgba(239, 68, 68, .12)",
+            background: health.ok
+              ? "rgba(22, 163, 74, .12)"
+              : "rgba(239, 68, 68, .12)",
             border: health.ok
               ? "1px solid rgba(22, 163, 74, .35)"
               : "1px solid rgba(239, 68, 68, .35)",
@@ -107,9 +113,7 @@ export default async function ClientPortalPage() {
                 boxShadow: "0 24px 80px rgba(15,23,42,.08)",
               }}
             >
-              <strong style={{ display: "block", fontSize: 20 }}>
-                {title}
-              </strong>
+              <strong style={{ display: "block", fontSize: 20 }}>{title}</strong>
               <p style={{ color: "#64748b", lineHeight: 1.65, marginTop: 10 }}>
                 {description}
               </p>

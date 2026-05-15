@@ -1,3 +1,5 @@
+import PortalNav from "@/components/PortalNav";
+
 const BACKEND_URL =
   process.env.BACKEND_URL || "https://ecommerce-ai-agent-platform-1.onrender.com";
 
@@ -44,6 +46,8 @@ export default async function AdminPage() {
       }}
     >
       <section style={{ maxWidth: 1180, margin: "0 auto" }}>
+        <PortalNav />
+
         <p style={{ color: "#38bdf8", fontWeight: 800, letterSpacing: 1 }}>
           OWNER ADMIN CONTROL CENTRE
         </p>
