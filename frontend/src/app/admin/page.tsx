@@ -46,7 +46,7 @@ export default async function AdminPage() {
       }}
     >
       <section style={{ maxWidth: 1180, margin: "0 auto" }}>
-        <PortalNav />
+        <PortalNav mode="admin" />
 
         <p style={{ color: "#38bdf8", fontWeight: 800, letterSpacing: 1 }}>
           OWNER ADMIN CONTROL CENTRE
