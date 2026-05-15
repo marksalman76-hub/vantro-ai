@@ -1,4 +1,11 @@
-import { cookies } from "next/headers";
+from pathlib import Path
+
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+FRONTEND = ROOT / "frontend"
+
+CLIENT_PAGE = FRONTEND / "src" / "app" / "client" / "page.tsx"
+
+CLIENT_PAGE.write_text(r'''import { cookies } from "next/headers";
 import PortalNav from "@/components/PortalNav";
 
 const BACKEND_URL =
@@ -302,3 +309,10 @@ export default async function ClientPortalPage() {
     </main>
   );
 }
+''', encoding="utf-8")
+
+print("STEP_168_TENANT_AWARE_CLIENT_RUNTIME_INSTALLED")
+print("updated frontend/src/app/client/page.tsx")
+print("credit_panels_reserved", True)
+print("tenant_session_runtime", True)
+print("STEP_168_OK")
