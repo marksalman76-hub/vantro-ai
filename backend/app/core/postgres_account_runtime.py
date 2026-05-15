@@ -424,6 +424,23 @@ def safe_initialise_tables():
 
 
 def database_readiness():
+    from urllib.parse import urlparse
+
+    parsed = urlparse(DATABASE_URL or "")
+
+    safe_url_details = {
+        "database_url_present": bool(DATABASE_URL),
+        "scheme": parsed.scheme,
+        "username": parsed.username,
+        "password_present": bool(parsed.password),
+        "password_length": len(parsed.password or ""),
+        "host": parsed.hostname,
+        "port": parsed.port,
+        "database": parsed.path.lstrip("/") if parsed.path else None,
+        "contains_placeholder": "[YOUR-PASSWORD]" in (DATABASE_URL or ""),
+        "contains_spaces": " " in (DATABASE_URL or ""),
+    }
+
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -434,6 +451,7 @@ def database_readiness():
             "success": True,
             "database_available": True,
             "startup_status": POSTGRES_STARTUP_STATUS,
+            "database_url_details": safe_url_details,
             "test_result": row[0] if row else None,
         }
     except Exception as exc:
@@ -441,6 +459,7 @@ def database_readiness():
             "success": False,
             "database_available": False,
             "startup_status": POSTGRES_STARTUP_STATUS,
+            "database_url_details": safe_url_details,
             "error": str(exc),
         }
 
