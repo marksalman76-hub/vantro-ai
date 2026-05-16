@@ -21,7 +21,7 @@ export default async function AdminLoginPage({
     >
       <form
         method="POST"
-        action="/api/admin-login"
+        action="/api/login"
         style={{
           width: "100%",
           maxWidth: 460,
