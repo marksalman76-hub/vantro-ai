@@ -10,6 +10,7 @@ from backend.app.core.postgres_account_runtime import (
     assign_client_credits as pg_assign_client_credits,
     database_readiness as pg_database_readiness,
     lookup_client_account as pg_lookup_client_account,
+    client_credit_gate as pg_client_credit_gate,
 )
 
 
@@ -1028,4 +1029,9 @@ async def durable_database_readiness():
 @app.get("/admin/client-account/lookup")
 async def durable_lookup_client_account(identifier: str):
     return pg_lookup_client_account(identifier)
+
+
+@app.post("/admin/client-credit-gate/test")
+async def durable_client_credit_gate_test(payload: dict):
+    return pg_client_credit_gate(payload)
 
