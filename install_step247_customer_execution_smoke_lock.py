@@ -1,0 +1,159 @@
+from pathlib import Path
+from datetime import datetime
+import json
+import py_compile
+
+ROOT = Path.cwd()
+DATA = ROOT / "backend" / "app" / "data"
+TEST = ROOT / "test_step247_customer_execution_smoke_lock.py"
+BACKUPS = ROOT / "backups"
+
+DATA.mkdir(parents=True, exist_ok=True)
+BACKUPS.mkdir(parents=True, exist_ok=True)
+
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+record_file = DATA / "step247_customer_execution_smoke_lock.json"
+
+if record_file.exists():
+    backup = BACKUPS / f"step247_customer_execution_smoke_lock_before_{timestamp}.json"
+    backup.write_text(record_file.read_text(encoding="utf-8"), encoding="utf-8")
+
+record = {
+    "success": True,
+    "step": 247,
+    "status": "customer_execution_smoke_requirements_locked",
+    "generated_at": datetime.utcnow().isoformat() + "Z",
+    "execution_flow": {
+        "customer_account_required": True,
+        "active_paid_agent_required": True,
+        "tenant_isolation_required": True,
+        "credit_gate_required": True,
+        "billing_gate_required": True,
+        "premium_output_required": True,
+        "quality_gate_required": True,
+        "provider_live_call_optional_until_approved": True,
+        "client_safe_output_required": True,
+    },
+}
+
+record_file.write_text(json.dumps(record, indent=2), encoding="utf-8")
+
+TEST.write_text(r'''
+import json
+import urllib.request
+import urllib.error
+from pathlib import Path
+
+BASE = "http://127.0.0.1:8000"
+ROOT = Path.cwd()
+
+record_path = ROOT / "backend" / "app" / "data" / "step247_customer_execution_smoke_lock.json"
+record = json.loads(record_path.read_text(encoding="utf-8"))
+
+
+def post_json(path, payload, headers=None):
+    req_headers = {
+        "Content-Type": "application/json",
+        "x-actor-role": "customer",
+        "x-tenant-id": payload.get("tenant_id", "client_step245_smoke"),
+    }
+
+    if headers:
+        req_headers.update(headers)
+
+    req = urllib.request.Request(
+        BASE + path,
+        data=json.dumps(payload).encode("utf-8"),
+        headers=req_headers,
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=60) as res:
+            return res.status, json.loads(res.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8")
+        try:
+            data = json.loads(body)
+        except Exception:
+            data = {"raw": body}
+        return exc.code, data
+
+
+tenant_id = "client_step245_smoke"
+
+payload = {
+    "tenant_id": tenant_id,
+    "requested_agent": "product_copywriting_agent",
+    "workflow_stage": "store_creation",
+    "task": "Create a premium Shopify product page for a high-converting skincare serum targeting women aged 25 to 40 in Australia. Include conversion-focused benefits, objections, offer angle, product description, and ad-ready product positioning.",
+    "action_type": "product_copy_generation",
+    "region": "Australia",
+    "language": "English",
+    "currency": "AUD",
+    "owner_approved": False,
+    "execute_real_world_action": True,
+    "project_id": "step247_customer_execution_smoke",
+    "actor_role": "customer",
+    "requested_credits": 1,
+}
+
+status, result = post_json("/run-agent", payload)
+
+combined = json.dumps({
+    "record": record,
+    "result": result,
+}).lower()
+
+output = result.get("output") or {}
+workflow = result.get("workflow") or {}
+quality = result.get("quality") or {}
+execution = result.get("execution") or {}
+
+checks = {
+    "record_success": record.get("success") is True,
+    "status_locked": record.get("status") == "customer_execution_smoke_requirements_locked",
+    "run_agent_status_controlled": status in {200, 402, 403, 422},
+    "run_agent_success": result.get("success") is True,
+    "workflow_present": isinstance(workflow, dict) and bool(workflow),
+    "quality_passed": quality.get("passed") is True,
+    "output_present": isinstance(output, dict) and bool(output),
+    "client_safe_output": output.get("client_safe") is True,
+    "premium_output_type_present": bool(output.get("output_type")),
+    "execution_present": isinstance(execution, dict) and bool(execution),
+    "provider_safely_governed": "provider_execution" in json.dumps(output),
+    "no_secret_values_exposed": all(secret not in combined for secret in [
+        "sk_live_",
+        "sk_test_",
+        "sk-",
+        "whsec_",
+        "postgresql://",
+        "ecomagentsecure",
+    ]),
+}
+
+print("STEP_247_CUSTOMER_EXECUTION_SMOKE_LOCK_RESULTS")
+for name, passed in checks.items():
+    print(name, passed)
+
+print("http_status", status)
+print("workflow_status", result.get("status"))
+print("output_type", output.get("output_type"))
+print("execution_status", execution.get("execution_status") if isinstance(execution, dict) else None)
+
+failed = [name for name, passed in checks.items() if not passed]
+
+if failed:
+    print("FAILED", failed)
+    print(json.dumps(result, indent=2))
+    raise SystemExit(1)
+
+print("STEP_247_CUSTOMER_EXECUTION_SMOKE_LOCK_OK")
+'''.lstrip(), encoding="utf-8")
+
+py_compile.compile(str(TEST), doraise=True)
+
+print("STEP_247_CUSTOMER_EXECUTION_SMOKE_LOCK_INSTALLED")
+print(f"Created/updated: {record_file}")
+print(f"Created/updated: {TEST}")
+print("STEP_247_OK")

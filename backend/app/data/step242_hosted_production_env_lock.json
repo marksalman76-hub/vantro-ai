@@ -1,0 +1,45 @@
+{
+  "success": true,
+  "step": 242,
+  "status": "hosted_production_env_requirements_locked",
+  "generated_at": "2026-05-16T13:29:33.741983Z",
+  "render_backend_required_env": [
+    "DATABASE_URL",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "STRIPE_PRICE_STARTER_MONTHLY",
+    "STRIPE_PRICE_GROWTH_MONTHLY",
+    "STRIPE_PRICE_PRO_MONTHLY",
+    "STRIPE_CHECKOUT_SUCCESS_URL",
+    "STRIPE_CHECKOUT_CANCEL_URL",
+    "STRIPE_BILLING_PORTAL_RETURN_URL"
+  ],
+  "vercel_frontend_required_env": [
+    "BACKEND_URL",
+    "NEXT_PUBLIC_BACKEND_URL",
+    "PORTAL_ACCESS_CODE"
+  ],
+  "optional_live_provider_env": [
+    "OPENAI_API_KEY",
+    "ENABLE_LIVE_LLM_CALLS",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY",
+    "XAI_API_KEY",
+    "LOCAL_LLM_ENDPOINT"
+  ],
+  "rules": {
+    "never_commit_secret_values": true,
+    "rotate_exposed_stripe_secret_before_public_launch": true,
+    "provider_keys_optional_until_live_llm_approved": true,
+    "enable_live_llm_calls_only_after_owner_approval": true,
+    "topup_price_ids_optional_until_topup_packages_launched": true,
+    "client_ui_must_not_show_internal_ids_or_secret_values": true
+  },
+  "deployment_targets": {
+    "backend": "Render",
+    "frontend": "Vercel",
+    "database": "Supabase/Postgres",
+    "billing": "Stripe",
+    "provider": "OpenAI first, other providers optional later"
+  }
+}
