@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     return new NextResponse("Access denied.", { status: 401 });
   }
 
-  const response = NextResponse.redirect(new URL(next, request.url), { status: 303 });
+  const response = NextResponse.redirect(new URL(next, request.url));
   response.cookies.set("portal_access", expected, {
     httpOnly: true,
     secure: true,
