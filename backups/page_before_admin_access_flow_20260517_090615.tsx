@@ -21,7 +21,7 @@ export default async function AdminLoginPage({
     >
       <form
         method="POST"
-        action="/api/admin-login"
+        action="/api/login"
         style={{
           width: "100%",
           maxWidth: 460,
@@ -45,7 +45,6 @@ export default async function AdminLoginPage({
         <label style={{ display: "block", marginTop: 20, marginBottom: 8 }}>
           Owner access code
         </label>
-
         <input
           name="access"
           type="password"
