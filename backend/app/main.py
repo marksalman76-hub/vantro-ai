@@ -93,6 +93,12 @@ DEMO_TENANTS: Dict[str, List[str]] = {
 }
 
 
+
+AGENT_ALIAS_MAP: Dict[str, str] = {
+    "product_intelligence_agent": "product_research_agent",
+}
+
+
 ACTION_TO_EXECUTION_MAP: Dict[str, str] = {
     "ugc_script_generation": "create_ugc_video_brief",
     "product_image_generation": "create_product_image_brief",
@@ -170,6 +176,8 @@ def health() -> Dict[str, object]:
 
 @app.post("/run-agent")
 def run_agent(request: RunAgentRequest) -> Dict[str, object]:
+    requested_agent = AGENT_ALIAS_MAP.get(request.requested_agent, request.requested_agent)
+
     credit_gate = pg_client_credit_gate({
         "actor_role": request.actor_role,
         "tenant_id": request.tenant_id,
@@ -184,11 +192,12 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             "credit_gate": credit_gate,
         }
 
-    if not agent_exists(request.requested_agent):
+    if not agent_exists(requested_agent):
         return {
             "success": False,
             "error": "unknown_agent",
             "requested_agent": request.requested_agent,
+            "normalised_agent": requested_agent,
         }
 
     tenant_account = pg_lookup_client_account(request.tenant_id)
@@ -203,12 +212,17 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
     active_agents = tenant_account.get("account", {}).get("active_agents", [])
 
     if request.actor_role not in {"owner", "admin", "system"}:
-        if request.requested_agent not in active_agents:
+        normalised_active_agents = [
+            AGENT_ALIAS_MAP.get(agent, agent) for agent in active_agents
+        ]
+
+        if requested_agent not in normalised_active_agents:
             return {
                 "success": False,
                 "error": "agent_not_active_for_tenant",
                 "tenant_id": request.tenant_id,
                 "requested_agent": request.requested_agent,
+                "normalised_agent": requested_agent,
             }
 
     workflow_engine = EcommerceWorkflowEngine()
@@ -227,7 +241,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
     workflow_packet = workflow_engine.create_packet(
         tenant_id=request.tenant_id,
         workflow_stage=request.workflow_stage,
-        requested_agent=request.requested_agent,
+        requested_agent=requested_agent,
         task=request.task,
         region=request.region,
         language=request.language,
@@ -271,7 +285,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
 
     generation_request = GenerationRequest(
         tenant_id=request.tenant_id,
-        requested_agent=request.requested_agent,
+        requested_agent=requested_agent,
         workflow_stage=request.workflow_stage,
         task=request.task,
         region=request.region,
@@ -353,7 +367,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
         tenant_id=request.tenant_id,
         project_id=request.project_id,
         record_type="successful_execution",
-        title=f"{request.requested_agent} execution",
+        title=f"{requested_agent} execution",
         payload=successful_payload,
     )
 
@@ -361,7 +375,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
         tenant_id=request.tenant_id,
         project_id=request.project_id,
         record_type="successful_execution",
-        title=f"{request.requested_agent} execution",
+        title=f"{requested_agent} execution",
         payload=successful_payload,
     )
 
