@@ -1,21 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
-  const next = request.nextUrl.searchParams.get("next") || "/login";
-
-  const response = NextResponse.redirect(
-    new URL(next, "https://ecommerce-ai-agent-platform.vercel.app")
-  );
-
-  response.cookies.set("portal_access", "", {
-    path: "/",
-    expires: new Date(0),
+function logoutResponse(request: NextRequest) {
+  const response = NextResponse.redirect(new URL("/admin-login", request.url), {
+    status: 303,
   });
 
-  response.cookies.set("client_session", "", {
+  response.cookies.set("portal_access", "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
     path: "/",
-    expires: new Date(0),
+    maxAge: 0,
   });
 
   return response;
+}
+
+export async function GET(request: NextRequest) {
+  return logoutResponse(request);
+}
+
+export async function POST(request: NextRequest) {
+  return logoutResponse(request);
 }
