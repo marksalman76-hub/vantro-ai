@@ -147,8 +147,6 @@ class RunAgentRequest(BaseModel):
     project_id: str = "default_project"
     actor_role: str = "client"
     requested_credits: int = 1
-    actor_role: str = "client"
-    requested_credits: int = 1
 
 
 @app.get("/health", response_model=HealthResponse)
