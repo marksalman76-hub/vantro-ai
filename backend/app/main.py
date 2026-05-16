@@ -1,4 +1,12 @@
 
+from backend.app.core.subscription_billing_runtime import (
+    billing_readiness,
+    get_subscription,
+    record_billing_event,
+    upsert_subscription,
+)
+
+
 # Step 173 durable Postgres account runtime
 from backend.app.core.postgres_account_runtime import (
     activate_account as pg_activate_account,
@@ -1069,4 +1077,24 @@ async def durable_lookup_client_account(identifier: str):
 @app.post("/admin/client-credit-gate/test")
 async def durable_client_credit_gate_test(payload: dict):
     return pg_client_credit_gate(payload)
+
+
+@app.get("/admin/billing/readiness")
+async def admin_billing_readiness():
+    return billing_readiness()
+
+
+@app.post("/admin/billing/subscription/upsert")
+async def admin_billing_subscription_upsert(payload: dict):
+    return upsert_subscription(payload)
+
+
+@app.get("/admin/billing/subscription")
+async def admin_billing_subscription(identifier: str):
+    return get_subscription(identifier)
+
+
+@app.post("/admin/billing/event")
+async def admin_billing_event(payload: dict):
+    return record_billing_event(payload)
 
