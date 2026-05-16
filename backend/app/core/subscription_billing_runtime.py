@@ -384,3 +384,24 @@ def handle_invoice_payment_failed(payload: dict):
         "execution_policy": "credit_consuming_actions_may_be_blocked_if_payment_remains_unresolved",
     }
 
+
+def fixed_cycle_retry_policy():
+    return {
+        "success": True,
+        "billing_policy": "automatic_recurring_stripe_subscription",
+        "manual_monthly_payment_required": False,
+        "card_storage": "stripe_tokenised_storage_only",
+        "local_card_storage": False,
+        "invoice_email_provider": "stripe",
+        "payment_retry_interval_hours": 48,
+        "billing_cycle_anchor_locked": True,
+        "late_payment_moves_cycle_date": False,
+        "rule": "If a payment fails and succeeds later, the original monthly billing cycle date remains unchanged.",
+        "example": {
+            "subscription_started": "2026-05-04",
+            "payment_failed": "2026-06-04",
+            "retry_succeeded": "2026-06-11",
+            "next_billing_date_remains": "2026-07-04",
+        },
+    }
+
