@@ -184,13 +184,6 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             "credit_gate": credit_gate,
         }
 
-    if request.tenant_id not in DEMO_TENANTS:
-        return {
-            "success": False,
-            "error": "tenant_not_found_or_not_active",
-            "tenant_id": request.tenant_id,
-        }
-
     if not agent_exists(request.requested_agent):
         return {
             "success": False,
@@ -198,13 +191,25 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             "requested_agent": request.requested_agent,
         }
 
-    if request.requested_agent not in DEMO_TENANTS[request.tenant_id]:
+    tenant_account = pg_lookup_client_account(request.tenant_id)
+
+    if not tenant_account.get("success"):
         return {
             "success": False,
-            "error": "agent_not_active_for_tenant",
+            "error": "tenant_not_found_or_not_active",
             "tenant_id": request.tenant_id,
-            "requested_agent": request.requested_agent,
         }
+
+    active_agents = tenant_account.get("account", {}).get("active_agents", [])
+
+    if request.actor_role not in {"owner", "admin", "system"}:
+        if request.requested_agent not in active_agents:
+            return {
+                "success": False,
+                "error": "agent_not_active_for_tenant",
+                "tenant_id": request.tenant_id,
+                "requested_agent": request.requested_agent,
+            }
 
     workflow_engine = EcommerceWorkflowEngine()
     approval_gateway = OwnerApprovalGateway()
