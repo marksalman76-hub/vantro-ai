@@ -5,6 +5,7 @@ from backend.app.core.subscription_billing_runtime import (
     record_billing_event,
     upsert_subscription,
     handle_invoice_payment_succeeded,
+    handle_invoice_payment_failed,
 )
 
 
@@ -1103,4 +1104,9 @@ async def admin_billing_event(payload: dict):
 @app.post("/admin/billing/invoice-payment-succeeded")
 async def admin_billing_invoice_payment_succeeded(payload: dict):
     return handle_invoice_payment_succeeded(payload)
+
+
+@app.post("/admin/billing/invoice-payment-failed")
+async def admin_billing_invoice_payment_failed(payload: dict):
+    return handle_invoice_payment_failed(payload)
 
