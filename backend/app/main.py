@@ -145,6 +145,8 @@ class RunAgentRequest(BaseModel):
     owner_approved: bool = False
     execute_real_world_action: bool = True
     project_id: str = "default_project"
+    actor_role: str = "client"
+    requested_credits: int = 1
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -168,6 +170,20 @@ def health() -> Dict[str, object]:
 
 @app.post("/run-agent")
 def run_agent(request: RunAgentRequest) -> Dict[str, object]:
+    credit_gate = pg_client_credit_gate({
+        "actor_role": request.actor_role,
+        "tenant_id": request.tenant_id,
+        "requested_credits": request.requested_credits,
+    })
+
+    if not credit_gate.get("credit_gate_passed"):
+        return {
+            "success": False,
+            "status": "credit_gate_blocked",
+            "message": "Client execution is blocked until credit top-up or next billing cycle.",
+            "credit_gate": credit_gate,
+        }
+
     if request.tenant_id not in DEMO_TENANTS:
         return {
             "success": False,
