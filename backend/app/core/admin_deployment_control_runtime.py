@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from backend.app.core.postgres_account_runtime import create_activation_invite as pg_create_activation_invite
+from backend.app.core.onboarding_email_runtime import send_client_activation_email
 
 
 DATA_DIR = Path("backend/app/data")
@@ -109,12 +110,28 @@ def deploy_manual_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
         "credential_values_exposed": False,
     }
 
+    email_result = send_client_activation_email({
+        "contact_email": contact_email,
+        "company_name": company_name,
+        "package": package_name,
+        "activation_link": activation_link,
+    })
+
+    tenant_record["activation_email"] = {
+        "attempted": True,
+        "sent": bool(email_result.get("email_sent")),
+        "reason": email_result.get("reason"),
+        "recipient": contact_email,
+        "secret_values_exposed": False,
+    }
+
     data["tenants"][tenant_id] = tenant_record
     data["events"].append(_event("manual_client_system_deployed", tenant_id, {
         "company_name": company_name,
         "package": package_name,
         "active_agent_count": len(active_agents),
         "unlimited_credits": unlimited_credits,
+        "activation_email_sent": bool(email_result.get("email_sent")),
     }))
 
     _save_state(data)
@@ -123,6 +140,7 @@ def deploy_manual_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
         "success": True,
         "status": "manual_client_system_deployed",
         "tenant": tenant_record,
+        "activation_email": email_result,
         "credential_values_exposed": False,
     }
 
