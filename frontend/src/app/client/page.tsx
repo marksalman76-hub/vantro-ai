@@ -30,6 +30,100 @@ type ClientIntegration = {
   credential_hint?: string;
 };
 
+
+const DEFAULT_CLIENT_INTEGRATIONS: ClientIntegration[] = [
+  {
+    integration_key: "email",
+    name: "Email",
+    providers: ["Gmail", "Outlook", "IMAP/SMTP", "Brevo"],
+    used_by_agents: ["Email Reply Agent", "Sales / Closer Agent", "Customer Support Agent"],
+    recommended_auth: "OAuth or scoped provider API key",
+    high_risk_actions: ["send email", "bulk send"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "crm",
+    name: "CRM",
+    providers: ["GoHighLevel", "HubSpot", "Salesforce", "Pipedrive", "Zoho"],
+    used_by_agents: ["CRM AI Agent", "Sales / Closer Agent", "Lead Generator / Appointment Setter Agent"],
+    recommended_auth: "OAuth or scoped API key",
+    high_risk_actions: ["create contact", "update deal", "create opportunity"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "store",
+    name: "Ecommerce Store",
+    providers: ["Shopify", "WooCommerce", "BigCommerce", "Wix", "Squarespace"],
+    used_by_agents: ["Ecommerce Agent", "Product Research Agent", "Product Copywriting Agent", "Analytics Optimisation Agent"],
+    recommended_auth: "OAuth or private app token with least privilege",
+    high_risk_actions: ["update product", "publish product", "change price"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "website",
+    name: "Website / CMS",
+    providers: ["WordPress", "Webflow", "Shopify CMS", "Wix", "Squarespace"],
+    used_by_agents: ["Website / Landing Page / Apps Agent", "SEO Agent", "Brand Strategy Agent"],
+    recommended_auth: "Scoped CMS token or collaborator access",
+    high_risk_actions: ["publish page", "deploy site", "update DNS"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "calendar",
+    name: "Calendar",
+    providers: ["Google Calendar", "Outlook Calendar"],
+    used_by_agents: ["Receptionist Agent", "Appointment Setter Agent", "Sales / Closer Agent"],
+    recommended_auth: "OAuth calendar scope",
+    high_risk_actions: ["book appointment", "cancel appointment"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "sms",
+    name: "SMS / Phone",
+    providers: ["ClickSend", "Twilio"],
+    used_by_agents: ["Receptionist Agent", "Sales / Closer Agent", "Customer Support Agent"],
+    recommended_auth: "Scoped provider API key",
+    high_risk_actions: ["send SMS", "bulk SMS"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "social",
+    name: "Social Media",
+    providers: ["Meta", "Instagram", "TikTok", "LinkedIn", "Pinterest"],
+    used_by_agents: ["Social Media Manager Agent", "UGC Creative Agent", "Influencer Collaboration Agent"],
+    recommended_auth: "OAuth publishing/insights scopes",
+    high_risk_actions: ["publish post", "send DM"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "ads",
+    name: "Ad Accounts",
+    providers: ["Meta Ads", "Google Ads", "TikTok Ads"],
+    used_by_agents: ["Paid Ads Agent", "Analytics Optimisation Agent", "Marketing Specialist Agent"],
+    recommended_auth: "OAuth ads scope with spending approval controls",
+    high_risk_actions: ["launch campaign", "increase budget", "change bid strategy"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "analytics",
+    name: "Analytics",
+    providers: ["GA4", "Search Console", "Meta Pixel", "Shopify Analytics"],
+    used_by_agents: ["Analytics Optimisation Agent", "SEO Agent", "Marketing Specialist Agent"],
+    recommended_auth: "Read-only analytics scope where possible",
+    high_risk_actions: [],
+    connected: false,
+    status: "not_connected",
+  },
+];
+
 type DeliverableAsset = {
   url?: string;
   image_url?: string;
@@ -297,14 +391,21 @@ export default function ClientPage() {
         setIntegrations(data.integrations);
       }
     } catch {
-      setIntegrationMessage("Could not load integrations.");
+      setIntegrations(DEFAULT_CLIENT_INTEGRATIONS); setIntegrationMessage("Connection centre loaded. Add credentials to activate live automation.");
     }
   }
 
   async function connectIntegration(integration: ClientIntegration) {
-    const provider = integration.providers?.[0] || integration.name;
-    const credential = window.prompt(`Paste scoped API key or OAuth token for ${integration.name}. Do not use raw passwords.`);
-    if (!credential) return;
+    const providerOptions = integration.providers?.join(", ") || integration.name;
+    const provider =
+      window.prompt(`Choose provider for ${integration.name}: ${providerOptions}`, integration.providers?.[0] || integration.name) ||
+      "";
+    if (!provider.trim()) return;
+
+    const credential =
+      window.prompt(`Paste scoped API key or OAuth token for ${provider}. Do not use raw passwords.`) ||
+      "";
+    if (!credential.trim()) return;
 
     const response = await fetch("/api/client-integrations-connect", {
       method: "POST",
@@ -318,7 +419,26 @@ export default function ClientPage() {
     });
 
     const data = await response.json();
-    setIntegrationMessage(data?.success ? `${integration.name} connected. Test the connection next.` : `Could not connect ${integration.name}.`);
+
+    if (data?.success) {
+      setIntegrationMessage(`${integration.name} connected with ${provider}. Test the connection next.`);
+      setIntegrations((previous) =>
+        (previous.length ? previous : DEFAULT_CLIENT_INTEGRATIONS).map((item) =>
+          item.integration_key === integration.integration_key
+            ? {
+                ...item,
+                connected: true,
+                provider,
+                status: "connected_pending_test",
+                credential_hint: data.credential_hint || "stored credential",
+              }
+            : item
+        )
+      );
+    } else {
+      setIntegrationMessage(`Could not connect ${integration.name}.`);
+    }
+
     await loadIntegrations();
   }
 
@@ -330,7 +450,18 @@ export default function ClientPage() {
     });
 
     const data = await response.json();
-    setIntegrationMessage(data?.success ? `${integration.name} test passed. Live automation ready.` : `${integration.name} is not connected yet.`);
+    if (data?.success) {
+      setIntegrationMessage(`${integration.name} test passed. Live automation ready.`);
+      setIntegrations((previous) =>
+        (previous.length ? previous : DEFAULT_CLIENT_INTEGRATIONS).map((item) =>
+          item.integration_key === integration.integration_key
+            ? { ...item, connected: true, status: "test_passed", last_tested_at: new Date().toISOString() }
+            : item
+        )
+      );
+    } else {
+      setIntegrationMessage(`${integration.name} is not connected yet.`);
+    }
     await loadIntegrations();
   }
 
@@ -342,7 +473,18 @@ export default function ClientPage() {
     });
 
     const data = await response.json();
-    setIntegrationMessage(data?.success ? `${integration.name} disconnected.` : `Could not disconnect ${integration.name}.`);
+    if (data?.success) {
+      setIntegrationMessage(`${integration.name} disconnected.`);
+      setIntegrations((previous) =>
+        (previous.length ? previous : DEFAULT_CLIENT_INTEGRATIONS).map((item) =>
+          item.integration_key === integration.integration_key
+            ? { ...item, connected: false, status: "disconnected", provider: undefined, credential_hint: undefined }
+            : item
+        )
+      );
+    } else {
+      setIntegrationMessage(`Could not disconnect ${integration.name}.`);
+    }
     await loadIntegrations();
   }
 
@@ -686,7 +828,7 @@ export default function ClientPage() {
           ) : null}
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12, marginTop: 18 }}>
-            {integrations.map((integration) => (
+            {(integrations.length ? integrations : DEFAULT_CLIENT_INTEGRATIONS).map((integration) => (
               <div key={integration.integration_key} style={{ border: "1px solid #e5eaf2", borderRadius: 18, padding: 16, background: "#fff" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
                   <div>
@@ -710,6 +852,17 @@ export default function ClientPage() {
                 <div style={{ marginTop: 12, color: "#64748b", fontSize: 12, lineHeight: 1.55 }}>
                   Used by: {integration.used_by_agents.slice(0, 3).join(", ")}
                 </div>
+                <div style={{ marginTop: 8, color: "#64748b", fontSize: 12, lineHeight: 1.55 }}>
+                  Providers: {integration.providers.slice(0, 4).join(", ")}
+                </div>
+                <div style={{ marginTop: 8, color: "#64748b", fontSize: 12, lineHeight: 1.55 }}>
+                  Access: {integration.recommended_auth}
+                </div>
+                {integration.credential_hint ? (
+                  <div style={{ marginTop: 8, color: "#16a34a", fontSize: 12, fontWeight: 800 }}>
+                    {integration.credential_hint}
+                  </div>
+                ) : null}
 
                 <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button type="button" onClick={() => connectIntegration(integration)} style={{ border: "1px solid #dbeafe", background: "#eff6ff", color: "#2563eb", borderRadius: 11, padding: "8px 10px", fontWeight: 900, cursor: "pointer" }}>
