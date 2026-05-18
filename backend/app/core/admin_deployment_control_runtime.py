@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
+from backend.app.core.tenant_account_runtime import create_client_activation_invite
+
 
 DATA_DIR = Path("backend/app/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -70,7 +72,23 @@ def deploy_manual_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
         "admin_override": unlimited_credits,
     }
 
-    activation_token = f"act_{uuid.uuid4().hex}"
+    invite = create_client_activation_invite({
+        "tenant_id": tenant_id,
+        "email": contact_email,
+        "company_name": company_name,
+        "package": package_name,
+        "active_agents": active_agents,
+    })
+
+    if not invite.get("success"):
+        return {
+            "success": False,
+            "error": invite.get("error") or "activation_invite_failed",
+            "credential_values_exposed": False,
+        }
+
+    activation_token = invite.get("activation_token")
+    activation_link = invite.get("activation_path")
 
     tenant_record = {
         "tenant_id": tenant_id,
@@ -84,7 +102,8 @@ def deploy_manual_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
         "unlimited_credits": unlimited_credits,
         "credit_state": credit_state,
         "activation_token": activation_token,
-        "activation_link": f"/activate?token={activation_token}",
+        "activation_link": activation_link,
+        "activation_expires_at": invite.get("expires_at"),
         "created_at": utc_now_iso(),
         "updated_at": utc_now_iso(),
         "credential_values_exposed": False,
