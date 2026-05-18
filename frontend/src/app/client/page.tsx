@@ -8,6 +8,11 @@ type Account = {
   status?: string;
   package_status?: string;
   active_agents?: string[];
+  company_name?: string;
+  contact_email?: string;
+  credits_remaining?: number;
+  credits_monthly?: number;
+  credits_used?: number;
 };
 
 type DeliverableAsset = {
@@ -125,8 +130,8 @@ export default function ClientPage() {
       .catch(() => {});
   }, []);
 
-  const creditsRemaining = 500;
-  const accountPackage = account?.package_name || account?.package || "Premium workspace";
+  const creditsRemaining = account?.credits_remaining ?? 0;
+  const accountPackage = account?.package_name || account?.package || "Active workspace";
   const accountStatus = account?.package_status || account?.status || "Active";
   const directMediaAssets: DeliverableAsset[] = [
     liveDeliverable?.image_url
@@ -279,7 +284,7 @@ export default function ClientPage() {
                 fontWeight: 850,
               }}
             >
-              Premium Demo Ecommerce Store
+              {account?.company_name || account?.contact_email || "Client Workspace"}
             </h1>
 
             <p
@@ -518,7 +523,7 @@ export default function ClientPage() {
             }}
           >
             {[
-              ["Business niche", "Luxury skincare, supplements, fashion, pet products"],
+              ["Business niche", "Describe your ecommerce niche, product category, and market position"],
               ["Products & services", "Main products, bundles, offers"],
               ["Target audience", "Customer type, location, needs"],
               ["Competitors", "Competitor names, websites, market examples"],
@@ -592,7 +597,7 @@ export default function ClientPage() {
               <div>
                 <div style={labelStyle}>Task</div>
                 <textarea
-                  defaultValue="Create premium ecommerce campaign assets for a luxury skincare product launch."
+                  defaultValue="Create premium ecommerce campaign assets for this business using the saved business profile, active agents, and selected execution requirements."
                   style={{
                     width: "100%",
                     minHeight: 185,
@@ -620,11 +625,11 @@ export default function ClientPage() {
                         credentials: "include",
                         body: JSON.stringify({
                           selected_agents: selectedAgents,
-                          task: "Create premium ecommerce campaign assets for a luxury skincare product launch.",
+                          task: "Create premium ecommerce campaign assets for this business using the saved business profile, active agents, and selected execution requirements.",
                           business_profile: {
-                            niche: "Luxury skincare",
-                            target_audience: "Premium ecommerce buyers",
-                            positioning: "Commercial-grade premium launch campaign",
+                            niche: "Client ecommerce business",
+                            target_audience: "Target customers from the saved business profile",
+                            positioning: "Commercial-grade client-specific campaign",
                           },
                         }),
                       });
@@ -1171,7 +1176,7 @@ export default function ClientPage() {
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
                   <h4 style={{ margin: 0, fontSize: 20 }}>
-                    {liveDeliverable?.title || "Luxury skincare launch campaign"}
+                    {liveDeliverable?.title || "Latest client deliverable"}
                   </h4>
                   <div style={{ color: "#64748b", fontSize: 12 }}>
                     {liveDeliverable?.created_at || "17 May 2026 · 4:21 PM"}
