@@ -423,8 +423,8 @@ export default function ClientPage() {
         >
           {[
             ["Workspace status", "Ready for execution", accountPackage],
-            ["Approvals", "3 pending", "Requires client review"],
-            ["Workflows", "12 tracked", "Governed automation"],
+            ["Approvals", reviewStatus === "pending" && liveDeliverable ? "1 pending" : "0 pending", liveDeliverable ? "Client review" : "No pending review"],
+            ["Workflows", liveDeliverable ? "1 tracked" : "0 tracked", liveDeliverable ? "Latest execution" : "No active workflow"],
             ["Credits", String(creditsRemaining), "Available balance"],
           ].map(([label, value, note]) => (
             <div
