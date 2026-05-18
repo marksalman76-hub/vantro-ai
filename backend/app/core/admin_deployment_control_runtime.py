@@ -16,6 +16,33 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 STATE_FILE = DATA_DIR / "admin_deployment_control_state.json"
 
 
+FULL_AGENT_CATALOGUE = [
+    "head_agent",
+    "strategist_agent",
+    "business_growth_partnerships_agent",
+    "lead_generator_appointment_setter_agent",
+    "marketing_specialist_agent",
+    "social_media_manager_content_creator_agent",
+    "seo_agent",
+    "email_reply_agent",
+    "crm_ai_agent",
+    "sales_closer_agent",
+    "receptionist_agent",
+    "website_landing_apps_agent",
+    "product_development_agent",
+    "ecommerce_agent",
+    "ugc_creative_agent",
+    "product_copywriting_agent",
+    "product_image_agent",
+    "influencer_collaboration_agent",
+    "analytics_optimisation_agent",
+    "orchestration_agent",
+    "security_compliance_agent",
+    "integration_automation_agent"
+]
+
+
+
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -62,6 +89,12 @@ def deploy_manual_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     if not isinstance(active_agents, list):
         active_agents = []
+
+    if package_name.lower() == "manual unlimited":
+        active_agents = FULL_AGENT_CATALOGUE.copy()
+
+    if package_name.lower() == "manual unlimited":
+        active_agents = FULL_AGENT_CATALOGUE.copy()
 
     unlimited_credits = bool(payload.get("unlimited_credits", True))
 
