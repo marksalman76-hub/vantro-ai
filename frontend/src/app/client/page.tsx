@@ -624,7 +624,7 @@ export default function ClientPage() {
                         }}
                       >
                         {active ? "● " : "○ "}
-                        {agent}
+                        {getAgentDisplayName(agent)}
                       </button>
                     );
                   })}
