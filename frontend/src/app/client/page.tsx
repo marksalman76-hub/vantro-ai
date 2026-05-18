@@ -634,7 +634,7 @@ export default function ClientPage() {
               <div>
                 <div style={labelStyle}>Task</div>
                 <textarea
-                  defaultValue="Create premium ecommerce campaign assets for this business using the saved business profile, active agents, and selected execution requirements."
+                  defaultValue="Create a client-specific premium deliverable using the saved business profile, selected active agents, current offer, target audience, goals, and execution requirements."
                   style={{
                     width: "100%",
                     minHeight: 185,
@@ -662,11 +662,11 @@ export default function ClientPage() {
                         credentials: "include",
                         body: JSON.stringify({
                           selected_agents: selectedAgents,
-                          task: "Create premium ecommerce campaign assets for this business using the saved business profile, active agents, and selected execution requirements.",
+                          task: "Create a client-specific premium deliverable using the saved business profile, selected active agents, current offer, target audience, goals, and execution requirements.",
                           business_profile: {
-                            niche: "Client ecommerce business",
-                            target_audience: "Target customers from the saved business profile",
-                            positioning: "Commercial-grade client-specific campaign",
+                            niche: "Saved client business profile",
+                            target_audience: "Saved target audience and customer context",
+                            positioning: "Client-specific commercial positioning and execution requirements",
                           },
                         }),
                       });
