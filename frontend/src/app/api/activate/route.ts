@@ -34,7 +34,9 @@ export async function POST(request: NextRequest) {
   const password = String(formData.get("password") || "");
   const confirmPassword = String(formData.get("confirm_password") || "");
 
-  const response = await fetch(`${BACKEND_URL}/client/activate-account`, {
+  const backendUrl = `${BACKEND_URL}/client/activate-account`;
+
+  const response = await fetch(backendUrl, {
     method: "POST",
     headers: backendHeaders(),
     body: JSON.stringify({
@@ -44,16 +46,35 @@ export async function POST(request: NextRequest) {
     }),
   });
 
-  const result = await response.json().catch(() => ({
-    success: false,
-    error: "activation_backend_response_not_json",
-  }));
+  const responseText = await response.text();
+  let result: any = null;
 
-  if (!result.success) {
-    return new NextResponse(`Activation failed: ${result.error}`, {
-      status: 400,
-    });
+  try {
+    result = JSON.parse(responseText);
+  } catch {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "activation_backend_response_not_json",
+        backend_status: response.status,
+        backend_url: backendUrl,
+        backend_response_preview: responseText.slice(0, 300),
+      },
+      { status: 400 }
+    );
   }
 
-  return NextResponse.redirect(new URL("/login", request.url));
+  if (!response.ok || !result.success) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: result.error || "activation_failed",
+        backend_status: response.status,
+        backend_result: result,
+      },
+      { status: 400 }
+    );
+  }
+
+  return NextResponse.redirect(new URL("/login", request.url), { status: 303 });
 }
