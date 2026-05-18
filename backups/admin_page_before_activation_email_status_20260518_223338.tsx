@@ -653,23 +653,6 @@ export default function AdminPage() {
                       {deploymentResult.tenant?.activation_link ? (
                         <div>Activation link: {deploymentResult.tenant.activation_link}</div>
                       ) : null}
-
-                      {deploymentResult.activation_email ? (
-                        <div style={{ marginTop: 10 }}>
-                          <div>
-                            Activation email: {deploymentResult.activation_email.email_sent ? "Sent" : "Not sent"}
-                          </div>
-                          {deploymentResult.activation_email.recipient ? (
-                            <div>Recipient: {deploymentResult.activation_email.recipient}</div>
-                          ) : null}
-                          {deploymentResult.activation_email.reason ? (
-                            <div>Reason: {deploymentResult.activation_email.reason}</div>
-                          ) : null}
-                          {deploymentResult.activation_email.error ? (
-                            <div>Error: {deploymentResult.activation_email.error}</div>
-                          ) : null}
-                        </div>
-                      ) : null}
                     </div>
                   ) : null}
                 </div>
