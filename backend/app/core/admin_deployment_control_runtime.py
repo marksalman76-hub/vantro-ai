@@ -121,6 +121,7 @@ def deploy_manual_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
         "attempted": True,
         "sent": bool(email_result.get("email_sent")),
         "reason": email_result.get("reason"),
+        "error": email_result.get("error"),
         "recipient": contact_email,
         "secret_values_exposed": False,
     }
