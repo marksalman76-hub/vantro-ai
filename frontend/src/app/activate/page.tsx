@@ -1,8 +1,5 @@
 export const dynamic = "force-dynamic";
 
-const BACKEND_URL =
-  process.env.BACKEND_URL || "https://ecommerce-ai-agent-platform-1.onrender.com";
-
 type ActivatePageProps = {
   searchParams?: Promise<{
     token?: string;
@@ -12,7 +9,7 @@ type ActivatePageProps = {
 async function getInviteStatus(token: string) {
   try {
     const response = await fetch(
-      `${BACKEND_URL}/client/activation-invite-status?token=${encodeURIComponent(
+      `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/activation-invite-status?token=${encodeURIComponent(
         token
       )}`,
       { cache: "no-store" }
