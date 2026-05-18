@@ -92,9 +92,6 @@ export default function AdminPage() {
   const [runtime, setRuntime] = useState<RuntimePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedAdminAgents, setSelectedAdminAgents] = useState<string[]>(["product_copywriting_agent"]);
-  const [selectedDeploymentAgents, setSelectedDeploymentAgents] = useState<string[]>(
-    ADMIN_AGENT_OPTIONS.map(([agentId]) => agentId)
-  );
   const [task, setTask] = useState("Create a premium Shopify product page for a high-converting ecommerce product.");
   const [runResult, setRunResult] = useState<any>(null);
   const [running, setRunning] = useState(false);
@@ -130,22 +127,6 @@ export default function AdminPage() {
 
       return [...current, agentId];
     });
-  }
-
-  function toggleDeploymentAgent(agentId: string) {
-    setSelectedDeploymentAgents((current) =>
-      current.includes(agentId)
-        ? current.filter((item) => item !== agentId)
-        : [...current, agentId]
-    );
-  }
-
-  function selectAllDeploymentAgents() {
-    setSelectedDeploymentAgents(ADMIN_AGENT_OPTIONS.map(([agentId]) => agentId));
-  }
-
-  function clearDeploymentAgents() {
-    setSelectedDeploymentAgents([]);
   }
 
   async function runAdminAgent() {
@@ -470,97 +451,6 @@ export default function AdminPage() {
                     }}
                   />
 
-                  <div
-                    style={{
-                      border: "1px solid rgba(148,163,184,.22)",
-                      borderRadius: 16,
-                      padding: 14,
-                      background: "#020617",
-                    }}
-                  >
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-                      <div>
-                        <strong>Deploy client agents</strong>
-                        <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>
-                          Select exactly which agents this client can access. Manual Unlimited defaults to all agents.
-                        </div>
-                      </div>
-
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <button
-                          type="button"
-                          onClick={selectAllDeploymentAgents}
-                          style={{
-                            border: "1px solid rgba(34,197,94,.35)",
-                            background: "rgba(34,197,94,.14)",
-                            color: "#bbf7d0",
-                            borderRadius: 10,
-                            padding: "8px 10px",
-                            fontWeight: 800,
-                            cursor: "pointer",
-                          }}
-                        >
-                          Select all
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={clearDeploymentAgents}
-                          style={{
-                            border: "1px solid rgba(248,113,113,.35)",
-                            background: "rgba(248,113,113,.12)",
-                            color: "#fecaca",
-                            borderRadius: 10,
-                            padding: "8px 10px",
-                            fontWeight: 800,
-                            cursor: "pointer",
-                          }}
-                        >
-                          Clear
-                        </button>
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))",
-                        gap: 8,
-                        maxHeight: 260,
-                        overflow: "auto",
-                        marginTop: 14,
-                      }}
-                    >
-                      {ADMIN_AGENT_OPTIONS.map(([agentId, label]) => (
-                        <label
-                          key={`deploy-${agentId}`}
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            padding: 10,
-                            borderRadius: 12,
-                            background: selectedDeploymentAgents.includes(agentId)
-                              ? "rgba(34,197,94,.18)"
-                              : "rgba(15,23,42,.8)",
-                            cursor: "pointer",
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedDeploymentAgents.includes(agentId)}
-                            onChange={() => toggleDeploymentAgent(agentId)}
-                          />
-                          <span>{label}</span>
-                        </label>
-                      ))}
-                    </div>
-
-                    <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 10 }}>
-                      Deployment agents selected: {selectedDeploymentAgents.length}
-                    </div>
-                  </div>
-
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <button
                       onClick={() => callDeploymentControl("/admin/deployment-control/manual-deploy", {
@@ -568,7 +458,7 @@ export default function AdminPage() {
                         company_name: deployCompany,
                         contact_email: deployEmail,
                         package: "Manual Unlimited",
-                        active_agents: selectedDeploymentAgents,
+                        active_agents: selectedAdminAgents,
                         unlimited_credits: true,
                       })}
                       style={{

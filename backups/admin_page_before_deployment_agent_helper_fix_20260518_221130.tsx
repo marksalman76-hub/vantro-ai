@@ -132,22 +132,6 @@ export default function AdminPage() {
     });
   }
 
-  function toggleDeploymentAgent(agentId: string) {
-    setSelectedDeploymentAgents((current) =>
-      current.includes(agentId)
-        ? current.filter((item) => item !== agentId)
-        : [...current, agentId]
-    );
-  }
-
-  function selectAllDeploymentAgents() {
-    setSelectedDeploymentAgents(ADMIN_AGENT_OPTIONS.map(([agentId]) => agentId));
-  }
-
-  function clearDeploymentAgents() {
-    setSelectedDeploymentAgents([]);
-  }
-
   async function runAdminAgent() {
     if (selectedAdminAgents.length === 0 || !task.trim()) {
       setRunResult({
