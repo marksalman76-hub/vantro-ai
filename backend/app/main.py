@@ -1,3 +1,5 @@
+from backend.app.api.storage_routes import router as storage_router
+from backend.app.api.media_routes import router as media_router
 import sitecustomize  # Step 209D force local env loading
 from backend.app.api.subscription_policy_routes import router as subscription_policy_router
 from backend.app.api.admin_deployment_control_routes import (
@@ -1276,3 +1278,8 @@ try:
 except Exception as exc:
     print(f"STEP_236_OPERATIONAL_RECOVERY_ROUTES_NOT_LOADED: {exc}")
 
+# Batch D durable media routes
+app.include_router(media_router)
+
+# Batch G production storage routes
+app.include_router(storage_router)

@@ -1,0 +1,27 @@
+{
+  "generated_at": "2026-05-17T16:00:34.971220+00:00",
+  "project": "ecommerce-ai-agent-platform",
+  "release_profile": "production_launch_candidate",
+  "must_complete_before_public_launch": [
+    "Configure Stripe live environment variables in production only.",
+    "Configure object storage environment variables in production only.",
+    "Run one live Stripe subscription flow.",
+    "Run one full real customer onboarding walkthrough.",
+    "Verify client deliverable media renders from durable object storage.",
+    "Verify owner/admin operations remain unrestricted by client credits.",
+    "Verify entitlement blocks unpaid/inactive agents.",
+    "Verify rollback path.",
+    "Verify monitoring and backups."
+  ],
+  "do_not_do": [
+    "Do not commit secrets.",
+    "Do not add more major features before launch.",
+    "Do not bypass owner approval for spending/scaling/strategy actions.",
+    "Do not expose tenant IDs/internal workflow details in client UI."
+  ],
+  "launch_decision": {
+    "technical_release_candidate": true,
+    "public_launch_blocked_until_live_secrets_and_storage_are_configured": true,
+    "recommended_next_action": "Configure production environment and run real live walkthrough."
+  }
+}

@@ -6,9 +6,9 @@ from typing import Any, Dict, Optional
 
 
 PACKAGE_PRICE_ENV_MAP = {
-    "starter": "STRIPE_PRICE_STARTER_MONTHLY",
-    "growth": "STRIPE_PRICE_GROWTH_MONTHLY",
-    "pro": "STRIPE_PRICE_PRO_MONTHLY",
+    "starter": "STRIPE_PRICE_STARTER",
+    "growth": "STRIPE_PRICE_GROWTH",
+    "business": "STRIPE_PRICE_BUSINESS",
 }
 
 
@@ -22,10 +22,10 @@ def normalise_package(package_name: Optional[str]) -> str:
         return "starter"
     if value in {"growth", "grow"}:
         return "growth"
-    if value in {"pro", "professional"}:
-        return "pro"
-    if value in {"enterprise", "full", "full_access"}:
-        return "enterprise"
+    if value in {"pro", "professional", "business"}:
+        return "business"
+    if value in {"business", "full", "full_access"}:
+        return "business"
     return value
 
 

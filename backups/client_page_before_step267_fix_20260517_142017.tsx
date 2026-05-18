@@ -1,0 +1,546 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+const API_BASE = "";
+
+type ExecutionResult = {
+  success?: boolean;
+  status?: string;
+  workflow?: any;
+  output?: any;
+  approval?: any;
+  message?: string;
+};
+
+type ClientAccount = {
+  tenant_id?: string;
+  email?: string;
+  company_name?: string;
+  package?: string;
+  active_agents?: string[];
+  monthly_credits?: number;
+  credits_used?: number;
+  credits_remaining?: number;
+  status?: string;
+};
+
+const SAFE_AGENT_LABELS: Record<string, string> = {
+  master_orchestrator_agent: "Master Orchestrator Agent",
+  product_research_agent: "Product Research Agent",
+  competitor_intelligence_agent: "Competitor Intelligence Agent",
+  brand_strategy_agent: "Brand Strategy Agent",
+  store_builder_agent: "Store Builder Agent",
+  website_landing_page_agent: "Website / Landing Page Agent",
+  product_copywriting_agent: "Product Copywriting Agent",
+  ugc_creative_agent: "UGC Creative Agent",
+  product_image_direction_agent: "Product Image Direction Agent",
+  ad_creative_agent: "Ad Creative Agent",
+  campaign_launch_agent: "Campaign Launch Agent",
+  analytics_optimisation_agent: "Analytics Optimisation Agent",
+  creative_rotation_agent: "Creative Rotation Agent",
+  email_marketing_agent: "Email Marketing Agent",
+  customer_support_agent: "Customer Support Agent",
+  fulfilment_agent: "Fulfilment Agent",
+  influencer_collaboration_agent: "Influencer Collaboration Agent",
+  seo_agent: "SEO Agent",
+  marketplace_agent: "Marketplace Agent",
+  billing_licence_agent: "Billing & Licence Agent",
+  reporting_agent: "Reporting Agent",
+  quality_assurance_agent: "Quality Assurance Agent",
+  integration_agent: "Integration Agent",
+  security_compliance_agent: "Security & Compliance Agent",
+  demo_trial_agent: "Demo / Trial Agent",
+};
+
+function cleanOutput(value: any): string {
+  if (!value) return "No visible output returned.";
+
+  const text =
+    typeof value === "string"
+      ? value
+      : JSON.stringify(value, null, 2);
+
+  return text
+    .replace(/client_[a-zA-Z0-9_-]+/g, "[protected]")
+    .replace(/tenant_[a-zA-Z0-9_-]+/g, "[protected]")
+    .replace(/sk_live_[a-zA-Z0-9]+/g, "[protected]")
+    .replace(/sk_test_[a-zA-Z0-9]+/g, "[protected]")
+    .replace(/whsec_[a-zA-Z0-9]+/g, "[protected]")
+    .replace(/postgresql:\/\/[^ ]+/g, "[protected]");
+}
+
+export default function ClientWorkspacePage() {
+  const [account, setAccount] = useState<ClientAccount | null>(null);
+  const [health, setHealth] = useState("Checking...");
+  const [selectedAgent, setSelectedAgent] = useState("");
+  const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
+  const [task, setTask] = useState(
+    "Create premium ecommerce campaign assets for a luxury skincare product launch."
+  );
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<ExecutionResult | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    loadWorkspace();
+  }, []);
+
+  async function loadWorkspace() {
+    try {
+      const me = await fetch(`/api/client-me`, {
+        credentials: "include",
+        cache: "no-store",
+      });
+
+      if (me.ok) {
+        const data = await me.json();
+
+        if (data?.account) {
+          setAccount(data.account);
+
+          if (data.account.active_agents?.length > 0) {
+            setSelectedAgent(data.account.active_agents[0]);
+            setSelectedAgents([data.account.active_agents[0]]);
+          }
+        }
+      }
+
+      const healthRes = await fetch(`${API_BASE}/health`, {
+        cache: "no-store",
+      });
+
+      setHealth(healthRes.ok ? "Platform online" : "Platform unavailable");
+    } catch {
+      setHealth("Platform unavailable");
+    }
+  }
+
+  const creditsRemaining = useMemo(() => {
+    if (!account) return 0;
+
+    return (
+      account.credits_remaining ??
+      Math.max(
+        (account.monthly_credits || 0) - (account.credits_used || 0),
+        0
+      )
+    );
+  }, [account]);
+
+  function toggleClientAgent(agentId: string) {
+    setSelectedAgents((current) => {
+      if (current.includes(agentId)) {
+        const next = current.filter((item) => item !== agentId);
+        setSelectedAgent(next[0] || "");
+        return next;
+      }
+
+      const next = [...current, agentId];
+      setSelectedAgent(next[0] || agentId);
+      return next;
+    });
+  }
+
+  async function runAgent() {
+    if (selectedAgents.length === 0 || !task.trim()) {
+      setError("Select at least one active paid agent and enter a task.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    setResult(null);
+
+    try {
+      const results = [];
+
+      for (const agentId of selectedAgents) {
+        const response = await fetch(`/api/run-agent`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            requested_agent: agentId,
+            task,
+            business_profile: businessProfile,
+          }),
+        });
+
+        const data = await response.json();
+
+        results.push({
+          agent_id: agentId,
+          agent_label: SAFE_AGENT_LABELS[agentId] || agentId,
+          http_status: response.status,
+          result: data,
+        });
+      }
+
+      const allSucceeded = results.every((item) => item.result?.success === true);
+
+      const combinedResult = {
+        success: allSucceeded,
+        status: allSucceeded ? "multi_agent_execution_completed" : "multi_agent_execution_partially_blocked",
+        selected_agent_count: selectedAgents.length,
+        results,
+      };
+
+      setResult(combinedResult);
+
+      if (!allSucceeded) {
+        setError("One or more selected agents were blocked or failed.");
+      }
+    } catch {
+      setError("Execution failed.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(135deg,#020617 0%,#0f172a 45%,#111827 100%)",
+        color: "#e2e8f0",
+        padding: "42px 22px",
+        fontFamily:
+          "Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif",
+      }}
+    >
+      <section style={{ maxWidth: 1280, margin: "0 auto" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 20,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                color: "#38bdf8",
+                fontWeight: 800,
+                letterSpacing: 1,
+              }}
+            >
+              CLIENT WORKSPACE
+            </div>
+
+            <h1
+              style={{
+                fontSize: 52,
+                marginTop: 10,
+                lineHeight: 1.02,
+              }}
+            >
+              {account?.company_name || "Ecommerce AI Agent Platform"}
+            </h1>
+
+            <p
+              style={{
+                color: "#94a3b8",
+                maxWidth: 760,
+                lineHeight: 1.7,
+                marginTop: 14,
+              }}
+            >
+              Run premium ecommerce AI agents, generate governed outputs,
+              monitor usage, and review client-safe deliverables.
+            </p>
+          </div>
+
+          <div
+            style={{
+              padding: "14px 18px",
+              borderRadius: 999,
+              background:
+                health === "Platform online"
+                  ? "rgba(34,197,94,.12)"
+                  : "rgba(239,68,68,.12)",
+              border:
+                health === "Platform online"
+                  ? "1px solid rgba(34,197,94,.3)"
+                  : "1px solid rgba(239,68,68,.3)",
+              fontWeight: 700,
+            }}
+          >
+            {health}
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+            gap: 18,
+            marginTop: 34,
+          }}
+        >
+          {[
+            ["Package", account?.package || "Not assigned"],
+            ["Credits Remaining", String(creditsRemaining)],
+            ["Status", account?.status || "Unknown"],
+            [
+              "Active Agents",
+              String(account?.active_agents?.length || 0),
+            ],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              style={{
+                background: "rgba(15,23,42,.75)",
+                border: "1px solid rgba(148,163,184,.18)",
+                borderRadius: 20,
+                padding: 22,
+              }}
+            >
+              <div style={{ color: "#94a3b8", fontSize: 13 }}>
+                {label}
+              </div>
+
+              <strong
+                style={{
+                  display: "block",
+                  marginTop: 10,
+                  fontSize: 24,
+                }}
+              >
+                {value}
+              </strong>
+            </div>
+          ))}
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "380px 1fr",
+            gap: 24,
+            marginTop: 34,
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(15,23,42,.75)",
+              border: "1px solid rgba(148,163,184,.18)",
+              borderRadius: 22,
+              padding: 24,
+            }}
+          >
+            <h2 style={{ fontSize: 26 }}>Run AI Agent</h2>
+
+            <div style={{ marginTop: 20 }}>
+              <div
+                style={{
+                  color: "#94a3b8",
+                  fontSize: 13,
+                  marginBottom: 8,
+                }}
+              >
+                Active Agent
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gap: 10,
+                  maxHeight: 260,
+                  overflow: "auto",
+                  border: "1px solid rgba(148,163,184,.18)",
+                  borderRadius: 16,
+                  padding: 12,
+                  background: "#020617",
+                }}
+              >
+                {(account?.active_agents || []).map((agent) => (
+                  <label
+                    key={agent}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      padding: 10,
+                      borderRadius: 12,
+                      background: selectedAgents.includes(agent)
+                        ? "rgba(37,99,235,.22)"
+                        : "rgba(15,23,42,.8)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedAgents.includes(agent)}
+                      onChange={() => toggleClientAgent(agent)}
+                    />
+                    <span>{SAFE_AGENT_LABELS[agent] || agent}</span>
+                  </label>
+                ))}
+              </div>
+
+              <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 8 }}>
+                Selected agents: {selectedAgents.length}. Only active paid agents are shown.
+              </div>
+            </div>
+
+            <div style={{ marginTop: 18 }}>
+              <div
+                style={{
+                  color: "#94a3b8",
+                  fontSize: 13,
+                  marginBottom: 8,
+                }}
+              >
+                Task
+              </div>
+
+              <textarea
+                value={task}
+                onChange={(e) => setTask(e.target.value)}
+                rows={10}
+                style={{
+                  width: "100%",
+                  padding: 16,
+                  borderRadius: 16,
+                  border: "1px solid rgba(148,163,184,.18)",
+                  background: "#020617",
+                  color: "#fff",
+                  resize: "vertical",
+                }}
+              />
+            </div>
+
+            <button
+              onClick={runAgent}
+              disabled={loading}
+              style={{
+                marginTop: 22,
+                width: "100%",
+                padding: "16px 20px",
+                borderRadius: 16,
+                border: "none",
+                background:
+                  "linear-gradient(135deg,#2563eb 0%,#06b6d4 100%)",
+                color: "#fff",
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              {loading ? "Running..." : selectedAgents.length > 1 ? "Run Selected Agents" : "Run Agent"}
+            </button>
+
+            {error ? (
+              <div
+                style={{
+                  marginTop: 16,
+                  padding: 14,
+                  borderRadius: 14,
+                  background: "rgba(239,68,68,.12)",
+                  border: "1px solid rgba(239,68,68,.24)",
+                  color: "#fecaca",
+                }}
+              >
+                {error}
+              </div>
+            ) : null}
+          </div>
+
+          <div
+            style={{
+              background: "rgba(15,23,42,.75)",
+              border: "1px solid rgba(148,163,184,.18)",
+              borderRadius: 22,
+              padding: 24,
+            }}
+          >
+            <h2 style={{ fontSize: 26 }}>
+              Execution Output Viewer
+            </h2>
+
+            {!result ? (
+              <div
+                style={{
+                  marginTop: 20,
+                  color: "#94a3b8",
+                  lineHeight: 1.7,
+                }}
+              >
+                Generated outputs, billing blocks, approvals,
+                premium deliverables, and workflow results will
+                appear here after execution.
+              </div>
+            ) : (
+              <>
+                <div
+                  style={{
+                    marginTop: 18,
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: 12,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: "10px 14px",
+                      borderRadius: 999,
+                      background: result.success
+                        ? "rgba(34,197,94,.12)"
+                        : "rgba(239,68,68,.12)",
+                      border: result.success
+                        ? "1px solid rgba(34,197,94,.24)"
+                        : "1px solid rgba(239,68,68,.24)",
+                    }}
+                  >
+                    Status: {result.status || "unknown"}
+                  </div>
+
+                  {result.approval?.status ? (
+                    <div
+                      style={{
+                        padding: "10px 14px",
+                        borderRadius: 999,
+                        background: "rgba(59,130,246,.12)",
+                        border:
+                          "1px solid rgba(59,130,246,.24)",
+                      }}
+                    >
+                      Approval: {result.approval.status}
+                    </div>
+                  ) : null}
+                </div>
+
+                <pre
+                  style={{
+                    marginTop: 22,
+                    background: "#020617",
+                    borderRadius: 18,
+                    padding: 22,
+                    overflow: "auto",
+                    maxHeight: 700,
+                    lineHeight: 1.6,
+                    whiteSpace: "pre-wrap",
+                    border:
+                      "1px solid rgba(148,163,184,.14)",
+                  }}
+                >
+                  {cleanOutput(
+                    result.output ||
+                      result.workflow ||
+                      result.message ||
+                      result
+                  )}
+                </pre>
+              </>
+            )}
+          </div>
+        </div>
+      </section>
+    </main>
+  );
+}

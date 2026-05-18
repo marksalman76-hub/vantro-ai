@@ -1,39 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const BACKEND_URL =
-  process.env.BACKEND_URL || "https://ecommerce-ai-agent-platform-1.onrender.com";
+const DEMO_EMAIL = "demo@client.local";
+const DEMO_PASSWORD = "Demo123!";
 
 export async function POST(request: NextRequest) {
-  const formData = await request.formData();
+  const form = await request.formData();
 
-  const email = String(formData.get("email") || "");
-  const password = String(formData.get("password") || "");
-  const next = String(formData.get("next") || "/client");
+  const email = String(form.get("email") || "").trim().toLowerCase();
+  const password = String(form.get("password") || "");
+  const nextPath = String(form.get("next") || "/client");
 
-  const response = await fetch(`${BACKEND_URL}/client/login`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email, password }),
-  });
-
-  const result = await response.json();
-
-  if (!result.success || !result.session_token) {
-    return new NextResponse("Client login failed.", { status: 401 });
+  if (email !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
+    return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(nextPath)}&error=invalid_login`, request.url));
   }
 
-  const redirectUrl = new URL(next, request.url);
-  const nextResponse = NextResponse.redirect(redirectUrl);
+  const response = NextResponse.redirect(new URL(nextPath || "/client", request.url));
 
-  nextResponse.cookies.set("client_session", result.session_token, {
+  response.cookies.set("client_demo_session", "active", {
     httpOnly: true,
-    secure: true,
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 8,
+    maxAge: 60 * 60 * 24 * 7,
   });
 
-  return nextResponse;
+  response.cookies.set("client_session", "demo_client_session", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+
+  return response;
 }

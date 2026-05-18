@@ -191,12 +191,14 @@ export default function AdminPage() {
 
   async function loadClientRegistry() {
     try {
-      const response = await fetch("http://127.0.0.1:8000/admin/deployment-control/list?limit=25", {
-        headers: {
-          "x-actor-role": "owner",
-          "x-tenant-id": "owner",
-        },
+      const response = await fetch("/api/admin-deployment-control", {
+        method: "POST",
         cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: "/admin/deployment-control/list?limit=25",
+          method: "GET",
+        }),
       });
 
       const data = await response.json();
@@ -206,12 +208,14 @@ export default function AdminPage() {
     }
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/admin/deployment-control/summary", {
-        headers: {
-          "x-actor-role": "owner",
-          "x-tenant-id": "owner",
-        },
+      const response = await fetch("/api/admin-deployment-control", {
+        method: "POST",
         cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: "/admin/deployment-control/summary",
+          method: "GET",
+        }),
       });
 
       const data = await response.json();
@@ -223,14 +227,14 @@ export default function AdminPage() {
 
   async function callDeploymentControl(path: string, payload: any) {
     try {
-      const response = await fetch(`http://127.0.0.1:8000${path}`, {
+      const response = await fetch("/api/admin-deployment-control", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "x-actor-role": "owner",
           "x-tenant-id": "owner",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ path, method: "POST", payload }),
       });
 
       const data = await response.json();
