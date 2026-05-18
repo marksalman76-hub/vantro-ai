@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-from backend.app.core.tenant_account_runtime import create_client_activation_invite
+from backend.app.core.postgres_account_runtime import create_activation_invite as pg_create_activation_invite
 
 
 DATA_DIR = Path("backend/app/data")
@@ -72,7 +72,7 @@ def deploy_manual_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
         "admin_override": unlimited_credits,
     }
 
-    invite = create_client_activation_invite({
+    invite = pg_create_activation_invite({
         "tenant_id": tenant_id,
         "email": contact_email,
         "company_name": company_name,
