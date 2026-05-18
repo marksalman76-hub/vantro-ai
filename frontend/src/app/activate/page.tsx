@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 export const dynamic = "force-dynamic";
 
 type ActivatePageProps = {
@@ -8,10 +9,15 @@ type ActivatePageProps = {
 
 async function getInviteStatus(token: string) {
   try {
+    const headerStore = await headers();
+    const host = headerStore.get("host") || "ecommerce-ai-agent-platform.vercel.app";
+    const proto = headerStore.get("x-forwarded-proto") || "https";
+    const origin = `${proto}://${host}`;
+
     const response = await fetch(
-  `/api/activation-invite-status?token=${encodeURIComponent(token)}`,
-  { cache: "no-store" }
-);
+      `${origin}/api/activation-invite-status?token=${encodeURIComponent(token)}`,
+      { cache: "no-store" }
+    );
 
     if (!response.ok) {
       return null;
