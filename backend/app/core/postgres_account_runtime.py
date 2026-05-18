@@ -197,44 +197,62 @@ def activate_account(token: str, password: str):
     if invite["expires_at"] < now:
         return {"success": False, "error": "activation_link_expired"}
 
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-            INSERT INTO client_accounts (
-                tenant_id,
-                email,
-                company_name,
-                package_name,
-                active_agents,
-                password_hash,
-                status,
-                created_at,
-                activated_at,
-                monthly_credits,
-                credits_used
-            )
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-            """, (
-                invite["tenant_id"],
-                invite["email"],
-                invite["company_name"],
-                invite["package"],
-                json.dumps(invite["active_agents"]),
-                hash_password(password),
-                "active",
-                now,
-                now,
-                0,
-                0
-            ))
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                # Re-issued activation links for the same client/email must not crash
+                # on tenant_id/email uniqueness. Replace the previous pending/active
+                # account record for this same client identity, then activate fresh.
+                cur.execute("""
+                DELETE FROM client_accounts
+                WHERE tenant_id = %s OR lower(email) = lower(%s)
+                """, (
+                    invite["tenant_id"],
+                    invite["email"],
+                ))
 
-            cur.execute("""
-            UPDATE client_activation_invites
-            SET used = TRUE
-            WHERE token = %s
-            """, (token,))
+                cur.execute("""
+                INSERT INTO client_accounts (
+                    tenant_id,
+                    email,
+                    company_name,
+                    package_name,
+                    active_agents,
+                    password_hash,
+                    status,
+                    created_at,
+                    activated_at,
+                    monthly_credits,
+                    credits_used
+                )
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                """, (
+                    invite["tenant_id"],
+                    invite["email"],
+                    invite["company_name"],
+                    invite["package"],
+                    json.dumps(invite["active_agents"]),
+                    hash_password(password),
+                    "active",
+                    now,
+                    now,
+                    0,
+                    0
+                ))
 
-        conn.commit()
+                cur.execute("""
+                UPDATE client_activation_invites
+                SET used = TRUE
+                WHERE token = %s
+                """, (token,))
+
+            conn.commit()
+    except Exception as exc:
+        return {
+            "success": False,
+            "error": "account_activation_database_error",
+            "details": str(exc),
+        }
 
     return {
         "success": True,
