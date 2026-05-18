@@ -42,11 +42,21 @@ type LiveDeliverable = {
   tags?: string[];
 };
 
-const DEFAULT_AGENTS: string[] = [];
+const AGENTS = [
+  "Product Copywriting Agent",
+  "UGC Creative Agent",
+  "Product Image Agent",
+  "Influencer Collaboration Agent",
+  "Analytics Optimisation Agent",
+  "General Ecommerce Agent",
+  "Competitor Intelligence Agent",
+];
 
 export default function ClientPage() {
   const [account, setAccount] = useState<Account | null>(null);
-  const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
+  const [selectedAgents, setSelectedAgents] = useState<string[]>([
+    "Product Copywriting Agent",
+  ]);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
   const [feedbackReason, setFeedbackReason] = useState("");
@@ -101,19 +111,7 @@ export default function ClientPage() {
   useEffect(() => {
     fetch("/api/client-me")
       .then((r) => r.json())
-      .then((data) => {
-        const accountData = data?.account || data;
-        setAccount(accountData);
-
-        const deployedAgents =
-          accountData?.active_agents && Array.isArray(accountData.active_agents)
-            ? accountData.active_agents
-            : [];
-
-        if (deployedAgents.length > 0) {
-          setSelectedAgents(deployedAgents);
-        }
-      })
+      .then((data) => setAccount(data?.account || data))
       .catch(() => {});
 
     fetch("/api/client-latest-deliverable", {
