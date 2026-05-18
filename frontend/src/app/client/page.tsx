@@ -15,6 +15,21 @@ type Account = {
   credits_used?: number;
 };
 
+
+type ClientIntegration = {
+  integration_key: string;
+  name: string;
+  providers: string[];
+  used_by_agents: string[];
+  recommended_auth: string;
+  high_risk_actions: string[];
+  connected: boolean;
+  provider?: string;
+  status: string;
+  last_tested_at?: string;
+  credential_hint?: string;
+};
+
 type DeliverableAsset = {
   url?: string;
   image_url?: string;
@@ -90,6 +105,10 @@ export default function ClientPage() {
   const [toastMessage, setToastMessage] = useState("");
   const [showDeliverableModal, setShowDeliverableModal] = useState(false);
   const [selectedAssetIndex, setSelectedAssetIndex] = useState(0);
+
+  const [integrations, setIntegrations] = useState<ClientIntegration[]>([]);
+  const [integrationMessage, setIntegrationMessage] = useState("");
+
 
   const shellStyle = {
     maxWidth: "none",
@@ -267,6 +286,64 @@ export default function ClientPage() {
     } finally {
       setReviewActionLoading(false);
     }
+  }
+
+
+  async function loadIntegrations() {
+    try {
+      const response = await fetch("/api/client-integrations", { cache: "no-store" });
+      const data = await response.json();
+      if (data?.success && Array.isArray(data.integrations)) {
+        setIntegrations(data.integrations);
+      }
+    } catch {
+      setIntegrationMessage("Could not load integrations.");
+    }
+  }
+
+  async function connectIntegration(integration: ClientIntegration) {
+    const provider = integration.providers?.[0] || integration.name;
+    const credential = window.prompt(`Paste scoped API key or OAuth token for ${integration.name}. Do not use raw passwords.`);
+    if (!credential) return;
+
+    const response = await fetch("/api/client-integrations-connect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        integration_key: integration.integration_key,
+        provider,
+        credential,
+        connection_mode: "scoped_api_key",
+      }),
+    });
+
+    const data = await response.json();
+    setIntegrationMessage(data?.success ? `${integration.name} connected. Test the connection next.` : `Could not connect ${integration.name}.`);
+    await loadIntegrations();
+  }
+
+  async function testIntegration(integration: ClientIntegration) {
+    const response = await fetch("/api/client-integrations-test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ integration_key: integration.integration_key }),
+    });
+
+    const data = await response.json();
+    setIntegrationMessage(data?.success ? `${integration.name} test passed. Live automation ready.` : `${integration.name} is not connected yet.`);
+    await loadIntegrations();
+  }
+
+  async function disconnectIntegration(integration: ClientIntegration) {
+    const response = await fetch("/api/client-integrations-disconnect", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ integration_key: integration.integration_key }),
+    });
+
+    const data = await response.json();
+    setIntegrationMessage(data?.success ? `${integration.name} disconnected.` : `Could not disconnect ${integration.name}.`);
+    await loadIntegrations();
   }
 
   const toggleAgent = (agent: string) => {
@@ -593,6 +670,63 @@ export default function ClientPage() {
             ))}
           </div>
         </section>
+
+
+        <section style={cardStyle}>
+          <StepHeader number="00" title="Connections" />
+          <h3 style={cardTitle}>Connect business tools for live automation</h3>
+          <p style={{ marginTop: 10, color: "#64748b", lineHeight: 1.6 }}>
+            Connect approved business systems so active agents can complete real tasks using your own accounts. Use OAuth or scoped API keys where available. High-risk actions still require owner approval.
+          </p>
+
+          {integrationMessage ? (
+            <div style={{ marginTop: 14, padding: "12px 14px", borderRadius: 14, background: "#eff6ff", color: "#2563eb", fontWeight: 800 }}>
+              {integrationMessage}
+            </div>
+          ) : null}
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(240px,1fr))", gap: 12, marginTop: 18 }}>
+            {integrations.map((integration) => (
+              <div key={integration.integration_key} style={{ border: "1px solid #e5eaf2", borderRadius: 18, padding: 16, background: "#fff" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "flex-start" }}>
+                  <div>
+                    <div style={{ fontWeight: 900, color: "#0f172a" }}>{integration.name}</div>
+                    <div style={{ marginTop: 5, color: "#64748b", fontSize: 12 }}>
+                      {integration.connected ? `Connected: ${integration.provider}` : "Not connected"}
+                    </div>
+                  </div>
+                  <span style={{
+                    borderRadius: 999,
+                    padding: "6px 9px",
+                    fontSize: 11,
+                    fontWeight: 900,
+                    background: integration.connected ? "#dcfce7" : "#f1f5f9",
+                    color: integration.connected ? "#16a34a" : "#64748b",
+                  }}>
+                    {integration.status}
+                  </span>
+                </div>
+
+                <div style={{ marginTop: 12, color: "#64748b", fontSize: 12, lineHeight: 1.55 }}>
+                  Used by: {integration.used_by_agents.slice(0, 3).join(", ")}
+                </div>
+
+                <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button type="button" onClick={() => connectIntegration(integration)} style={{ border: "1px solid #dbeafe", background: "#eff6ff", color: "#2563eb", borderRadius: 11, padding: "8px 10px", fontWeight: 900, cursor: "pointer" }}>
+                    Connect
+                  </button>
+                  <button type="button" onClick={() => testIntegration(integration)} style={{ border: "1px solid #e5eaf2", background: "#fff", color: "#334155", borderRadius: 11, padding: "8px 10px", fontWeight: 900, cursor: "pointer" }}>
+                    Test
+                  </button>
+                  <button type="button" onClick={() => disconnectIntegration(integration)} style={{ border: "1px solid #fee2e2", background: "#fff", color: "#dc2626", borderRadius: 11, padding: "8px 10px", fontWeight: 900, cursor: "pointer" }}>
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
 
         <section style={primaryGridStyle}>
           <div style={cardStyle}>

@@ -1,3 +1,11 @@
+from backend.app.core.client_integrations_runtime import (
+    disconnect_client_integration,
+    integration_audit,
+    integration_catalogue,
+    list_client_integrations,
+    save_client_integration,
+    test_client_integration,
+)
 from backend.app.api.storage_routes import router as storage_router
 from backend.app.api.media_routes import router as media_router
 import sitecustomize  # Step 209D force local env loading
@@ -53,7 +61,7 @@ SQLite production persistence, learning recommendations,
 behaviour optimisation, and execution stack routing.
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from pydantic import BaseModel
 from typing import Dict, List
 
@@ -1288,3 +1296,29 @@ app.include_router(media_router)
 
 # Batch G production storage routes
 app.include_router(storage_router)
+
+
+@app.get("/client/integrations/catalogue")
+async def client_integrations_catalogue():
+    return integration_catalogue()
+
+@app.get("/client/integrations")
+async def client_integrations(x_tenant_id: str = Header(default="client_demo_001")):
+    return list_client_integrations(x_tenant_id)
+
+@app.post("/client/integrations/connect")
+async def client_integrations_connect(payload: dict, x_tenant_id: str = Header(default="client_demo_001")):
+    return save_client_integration(x_tenant_id, payload)
+
+@app.post("/client/integrations/test")
+async def client_integrations_test(payload: dict, x_tenant_id: str = Header(default="client_demo_001")):
+    return test_client_integration(x_tenant_id, str(payload.get("integration_key") or ""))
+
+@app.post("/client/integrations/disconnect")
+async def client_integrations_disconnect(payload: dict, x_tenant_id: str = Header(default="client_demo_001")):
+    return disconnect_client_integration(x_tenant_id, str(payload.get("integration_key") or ""))
+
+@app.get("/admin/integrations/audit")
+async def admin_integrations_audit(limit: int = 50):
+    return integration_audit(limit=limit)
+
