@@ -16,7 +16,6 @@ type RuntimePayload = {
 };
 
 const ADMIN_AGENT_OPTIONS = [
-  ["master_orchestrator_agent", "Master Orchestrator Agent"],
   ["product_research_agent", "Product Research Agent"],
   ["competitor_intelligence_agent", "Competitor Intelligence Agent"],
   ["brand_strategy_agent", "Brand Strategy Agent"],
@@ -40,7 +39,7 @@ const ADMIN_AGENT_OPTIONS = [
   ["quality_assurance_agent", "Quality Assurance Agent"],
   ["integration_agent", "Integration Agent"],
   ["security_compliance_agent", "Security and Compliance Agent"],
-  ["demo_trial_agent", "Demo / Trial Agent"],
+  ["trial_trial_agent", "Trial / Trial Agent"],
 ];
 
 function Card({ title, value, detail }: { title: string; value: string | number; detail?: string }) {
@@ -98,7 +97,7 @@ export default function AdminPage() {
   const [task, setTask] = useState("Create a premium Shopify product page for a high-converting ecommerce product.");
   const [runResult, setRunResult] = useState<any>(null);
   const [running, setRunning] = useState(false);
-  const [deployCompany, setDeployCompany] = useState("Manual Deploy Client");
+  const [deployCompany, setDeployCompany] = useState("Create Client Workspace");
   const [deployEmail, setDeployEmail] = useState("manual-client@example.com");
   const [deployTenant, setDeployTenant] = useState("client_manual_admin");
   const [deploymentResult, setDeploymentResult] = useState<any>(null);
@@ -329,7 +328,7 @@ export default function AdminPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(420px,1fr))", gap: 24, marginTop: 34 }}>
               <Panel title="Run Agent">
                 <p style={{ color: "#94a3b8", lineHeight: 1.7 }}>
-                  Owner/admin can run one agent, multiple selected agents, or any agent from the full 25-agent catalogue for internal operations, demos, and testing. Client credit limits do not apply here, but governance and approval controls remain active.
+                  Owner/admin can run one agent, multiple selected agents, or any agent from the full 25-agent catalogue for internal operations, trials, and testing. Client credit limits do not apply here, but governance and approval controls remain active.
                 </p>
 
                 <div style={{

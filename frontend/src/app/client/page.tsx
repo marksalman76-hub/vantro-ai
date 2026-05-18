@@ -45,8 +45,7 @@ type LiveDeliverable = {
 const DEFAULT_AGENTS: string[] = [];
 
 const AGENT_DISPLAY_NAMES: Record<string, string> = {
-  master_orchestrator_agent: "Master Orchestrator Agent",
-  product_research_agent: "Product Research Agent",
+    product_research_agent: "Product Research Agent",
   competitor_intelligence_agent: "Competitor Intelligence Agent",
   brand_strategy_agent: "Brand Strategy Agent",
   store_builder_agent: "Store Builder Agent",
@@ -67,8 +66,7 @@ const AGENT_DISPLAY_NAMES: Record<string, string> = {
   product_development_agent: "Product Development Agent",
   ecommerce_agent: "Ecommerce Agent",
   customer_support_agent: "Customer Support Agent",
-  general_ecommerce_agent: "General Ecommerce Agent",
-  business_growth_partnerships_agent: "Business Growth & Partnerships Agent",
+    business_growth_partnerships_agent: "Business Growth & Partnerships Agent",
 };
 
 function getAgentDisplayName(agentId: string) {
@@ -247,7 +245,7 @@ export default function ClientPage() {
           feedback,
           reason,
           selected_agents: selectedAgents,
-          reviewed_item: liveDeliverable?.title || "Latest premium ecommerce deliverable",
+          reviewed_item: liveDeliverable?.title || "Latest client deliverable",
           source: "client_workspace",
         }),
       });
@@ -333,7 +331,7 @@ export default function ClientPage() {
                 fontSize: 13,
               }}
             >
-              Run premium ecommerce AI agents, generate governed outputs, manage
+              Run selected AI agents, generate governed outputs, manage
               execution workflows, and produce commercial-grade deliverables.
             </p>
           </div>
@@ -529,12 +527,12 @@ export default function ClientPage() {
               </div>
 
               <h2 style={{ margin: 0, fontSize: 26, letterSpacing: -0.8 }}>
-                Store context for smarter agent outputs
+                Store business context for client-specific outputs
               </h2>
 
               <p style={{ marginTop: 10, color: "#64748b", maxWidth: 760, lineHeight: 1.55 }}>
                 Add business context once so every active AI agent can produce more accurate
-                campaigns, creative assets, copy, positioning, and execution recommendations.
+                deliverables, assets, copy, positioning, and execution recommendations.
               </p>
             </div>
 
@@ -560,7 +558,7 @@ export default function ClientPage() {
             }}
           >
             {[
-              ["Business niche", "Describe your ecommerce niche, product category, and market position"],
+              ["Business niche", "Describe your business niche, product category, and market position"],
               ["Products & services", "Main products, bundles, offers"],
               ["Target audience", "Customer type, location, needs"],
               ["Competitors", "Competitor names, websites, market examples"],
@@ -634,7 +632,7 @@ export default function ClientPage() {
               <div>
                 <div style={labelStyle}>Task</div>
                 <textarea
-                  defaultValue="Create a client-specific premium deliverable using the saved business profile, selected active agents, current offer, target audience, goals, and execution requirements."
+                  defaultValue="Create a client-specific client deliverable using the saved business profile, selected active agents, current offer, target audience, goals, and execution requirements."
                   style={{
                     width: "100%",
                     minHeight: 185,
@@ -653,7 +651,7 @@ export default function ClientPage() {
                 <button
                   onClick={async () => {
                     setExecutionState("running");
-                    setToastMessage("Execution started. Generating premium deliverables...");
+                    setToastMessage("Execution started. Generating client deliverables...");
 
                     try {
                       const response = await fetch("/api/run-agent", {
@@ -662,7 +660,7 @@ export default function ClientPage() {
                         credentials: "include",
                         body: JSON.stringify({
                           selected_agents: selectedAgents,
-                          task: "Create a client-specific premium deliverable using the saved business profile, selected active agents, current offer, target audience, goals, and execution requirements.",
+                          task: "Create a client-specific client deliverable using the saved business profile, selected active agents, current offer, target audience, goals, and execution requirements.",
                           business_profile: {
                             niche: "Saved client business profile",
                             target_audience: "Saved target audience and customer context",
@@ -681,7 +679,7 @@ export default function ClientPage() {
                       setSelectedAssetIndex(0);
                       setExecutionState("completed");
                       setReviewStatus("pending");
-                      setToastMessage("Premium deliverable generated and ready for review.");
+                      setToastMessage("Client deliverable generated and ready for review.");
                     } catch {
                       setExecutionState("idle");
                       setToastMessage("Execution could not be completed. Please try again.");
@@ -723,9 +721,9 @@ export default function ClientPage() {
 
             <div style={{ display: "grid", gap: 12, marginTop: 20 }}>
               {[
-                ["Campaign drafted", "Done", "4:18 PM"],
-                ["Review pending", "In progress", "4:19 PM"],
-                ["Approval required", "Pending", "4:20 PM"],
+                ["Execution requested", executionState === "idle" ? "Waiting" : "Started", liveDeliverable?.created_at || "Live"],
+                ["Deliverable status", executionState === "completed" ? "Ready" : "Pending", liveDeliverable?.created_at || "Live"],
+                ["Client review", reviewStatus === "approved" ? "Approved" : reviewStatus === "rejected" ? "Revision requested" : "Pending", reviewStatus === "approved" ? "Complete" : "Open"],
                 ["Execution ready", "Next", "—"],
               ].map(([title, status, time], index) => (
                 <div key={title} style={{ display: "grid", gridTemplateColumns: "34px 1fr auto", gap: 12, alignItems: "center" }}>
@@ -756,7 +754,7 @@ export default function ClientPage() {
 
           <div style={cardStyle}>
             <StepHeader number="03" title="Execution workspace" />
-            <h3 style={cardTitle}>Premium deliverables will appear here</h3>
+            <h3 style={cardTitle}>Client deliverables will appear here</h3>
             <p style={mutedText}>
               Campaign outputs, approvals, execution flows, creative assets, billing events,
               and governed automation actions will appear after execution.
@@ -788,7 +786,7 @@ export default function ClientPage() {
               {executionState === "running" ? (
                 <div>
                   <div style={{ fontSize: 28, marginBottom: 10 }}>⏳</div>
-                  <div>Generating premium deliverables...</div>
+                  <div>Generating client deliverables...</div>
                   <div
                     style={{
                       marginTop: 14,
@@ -851,7 +849,7 @@ export default function ClientPage() {
                       marginBottom: 8,
                     }}
                   >
-                    {liveDeliverable?.title || "Premium ecommerce deliverable"}
+                    {liveDeliverable?.title || "Client deliverable"}
                   </div>
 
                   <div
@@ -901,14 +899,14 @@ export default function ClientPage() {
                   </div>
                 </div>
               ) : (
-                "Run an agent to generate deliverables"
+                "Run selected agents to generate a live deliverable"
               )}
             </div>
           </div>
 
           <div style={cardStyle}>
             <StepHeader number="04" title="Quick actions" />
-            <h3 style={cardTitle}>Common workspace actions</h3>
+            <h3 style={cardTitle}>Workspace actions</h3>
 
             <div style={{ display: "grid", gap: 11, marginTop: 20 }}>
               {["View execution history", "Manage workflows", "Agent performance", "Workspace settings"].map((item) => (
@@ -934,13 +932,12 @@ export default function ClientPage() {
         <section style={secondaryGridStyle}>
           <div style={cardStyle}>
             <StepHeader number="05" title="Execution timeline" />
-            <h3 style={cardTitle}>Real-time execution timeline</h3>
+            <h3 style={cardTitle}>Execution timeline</h3>
 
             <div style={{ display: "grid", gap: 18, marginTop: 22 }}>
               {[
-                ["4:18 PM", "Workflow initiated", "System"],
-                ["4:19 PM", "Product copy generated", "Product Copywriting Agent"],
-                ["4:20 PM", "Execution review ready", "General Ecommerce Agent"],
+                [liveDeliverable?.created_at || "Live", liveDeliverable ? "Deliverable generated" : "Waiting for execution", selectedAgents.length ? getAgentDisplayName(selectedAgents[0]) : "Selected agent"],
+                [reviewStatus === "approved" ? "Complete" : "Pending", reviewStatus === "approved" ? "Approved by client" : "Awaiting review", "Client workspace"],
               ].map(([time, event, actor]) => (
                 <div
                   key={event}
@@ -965,7 +962,7 @@ export default function ClientPage() {
             <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
               <div>
                 <StepHeader number="06" title="Execution output viewer" />
-                <h3 style={cardTitle}>Premium deliverables</h3>
+                <h3 style={cardTitle}>Client deliverables</h3>
               </div>
               <div
                 style={{
@@ -999,7 +996,7 @@ export default function ClientPage() {
                 {primaryAssetUrl ? (
                   <img
                     src={primaryAssetUrl}
-                    alt={liveDeliverable?.title || "Generated campaign asset"}
+                    alt={liveDeliverable?.title || "Generated deliverable asset"}
                     style={{
                       width: "100%",
                       height: "100%",
@@ -1141,7 +1138,7 @@ export default function ClientPage() {
                               color: "#64748b",
                             }}
                           >
-                            Generated creatives, uploaded brand assets, previews, campaign media, and future product images will render here automatically.
+                            Generated assets, uploaded brand files, previews, and deliverable media will appear here automatically.
                           </div>
                         </div>
                       </div>
@@ -1216,17 +1213,17 @@ export default function ClientPage() {
                     {liveDeliverable?.title || "Latest client deliverable"}
                   </h4>
                   <div style={{ color: "#64748b", fontSize: 12 }}>
-                    {liveDeliverable?.created_at || "17 May 2026 · 4:21 PM"}
+                    {liveDeliverable?.created_at || "Ready for review"}
                   </div>
                 </div>
 
                 <p style={{ color: "#475569", lineHeight: 1.6 }}>
                   {liveDeliverable?.summary ||
-                    "Premium ecommerce campaign assets generated with positioning, emotional hooks, conversion-focused messaging, and launch-ready creative direction for luxury skincare buyers."}
+                    "Client-specific deliverable generated from the latest execution, business profile, selected agents, and review requirements."}
                 </p>
 
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-                  {(liveDeliverable?.tags || ["Campaign copy", "Creative assets", "Execution flow", "Workflow automation"]).map((tag: string) => (
+                  {(liveDeliverable?.tags || ["Deliverable", "Assets", "Execution", "Workflow"]).map((tag: string) => (
                     <span
                       key={tag}
                       style={{
@@ -1327,7 +1324,7 @@ export default function ClientPage() {
 
                   <button
                     onClick={async () => {
-                      const shareText = `${liveDeliverable?.title || "Premium ecommerce deliverable"} — ${liveDeliverable?.summary || "Ready for review."}`;
+                      const shareText = `${liveDeliverable?.title || "Client deliverable"} — ${liveDeliverable?.summary || "Ready for review."}`;
                       try {
                         await navigator.clipboard.writeText(shareText);
                         setToastMessage("Deliverable summary copied.");
@@ -1488,7 +1485,7 @@ export default function ClientPage() {
                     lineHeight: 1.15,
                   }}
                 >
-                  {liveDeliverable?.title || "Premium ecommerce deliverable"}
+                  {liveDeliverable?.title || "Client deliverable"}
                 </h2>
 
                 <div style={{ marginTop: 8, color: "#64748b", fontSize: 13 }}>
@@ -1521,7 +1518,7 @@ export default function ClientPage() {
 
                   <button
                     onClick={async () => {
-                      const shareText = `${liveDeliverable?.title || "Premium ecommerce deliverable"} — ${liveDeliverable?.summary || "Ready for review."}`;
+                      const shareText = `${liveDeliverable?.title || "Client deliverable"} — ${liveDeliverable?.summary || "Ready for review."}`;
                       try {
                         await navigator.clipboard.writeText(shareText);
                         setToastMessage("Deliverable summary copied.");
@@ -1576,7 +1573,7 @@ export default function ClientPage() {
                 {primaryAssetUrl ? (
                   <img
                     src={primaryAssetUrl}
-                    alt={liveDeliverable?.title || "Generated campaign asset"}
+                    alt={liveDeliverable?.title || "Generated deliverable asset"}
                     style={{
                       width: "100%",
                       height: "100%",
@@ -1603,7 +1600,7 @@ export default function ClientPage() {
                       No live asset attached
                     </div>
                     <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.65, maxWidth: 280 }}>
-                      Generated creatives, uploaded brand assets, previews, and campaign media will appear here once attached to this deliverable.
+                      Generated assets, uploaded brand files, previews, and deliverable media will appear here once attached.
                     </div>
                   </div>
                 )}
@@ -1611,7 +1608,7 @@ export default function ClientPage() {
 
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
-                  {(liveDeliverable?.tags || ["Campaign copy", "Creative assets", "Execution flow", "Workflow automation"]).map((tag: string) => (
+                  {(liveDeliverable?.tags || ["Deliverable", "Assets", "Execution", "Workflow"]).map((tag: string) => (
                     <span
                       key={tag}
                       style={{
@@ -1641,7 +1638,7 @@ export default function ClientPage() {
                   <h3 style={{ margin: "0 0 10px", fontSize: 17 }}>Executive summary</h3>
                   <p style={{ margin: 0, color: "#475569", lineHeight: 1.75, fontSize: 14.5 }}>
                     {liveDeliverable?.summary ||
-                      "Premium ecommerce campaign assets generated with positioning, emotional hooks, conversion-focused messaging, and launch-ready creative direction for ecommerce buyers."}
+                      "Client-specific deliverable generated from the latest execution, business profile, selected agents, and review requirements."}
                   </p>
                 </section>
 
@@ -1658,7 +1655,7 @@ export default function ClientPage() {
                   <div style={{ display: "grid", gap: 10 }}>
                     {[
                       "Confirm brand fit and tone",
-                      "Confirm offer and campaign direction",
+                      "Confirm offer and deliverable direction",
                       "Check media or asset requirements",
                       "Approve for execution or request revision",
                     ].map((item) => (
