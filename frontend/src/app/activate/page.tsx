@@ -9,11 +9,9 @@ type ActivatePageProps = {
 async function getInviteStatus(token: string) {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/activation-invite-status?token=${encodeURIComponent(
-        token
-      )}`,
-      { cache: "no-store" }
-    );
+  `/api/activation-invite-status?token=${encodeURIComponent(token)}`,
+  { cache: "no-store" }
+);
 
     if (!response.ok) {
       return null;
