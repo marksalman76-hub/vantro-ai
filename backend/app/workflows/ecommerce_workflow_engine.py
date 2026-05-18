@@ -1,37 +1,9 @@
-"""
-Ecommerce Workflow Engine
-
-Creates controlled ecommerce workflow packets for agent execution.
-This does not spend money or scale campaigns. Any spend/budget/scaling action
-must be routed through the Owner Approval Gateway.
-"""
+from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List
 
-
-WORKFLOW_STAGES = [
-    "client_setup",
-    "product_research",
-    "brand_creation",
-    "store_creation",
-    "creative_production",
-    "influencer_collaboration",
-    "campaign_preparation",
-    "customer_support",
-    "analytics_optimisation",
-    "reporting",
-]
-
-
-APPROVAL_GATED_STAGES = [
-    "paid_campaign_launch",
-    "budget_change",
-    "campaign_scaling",
-    "paid_influencer_collaboration",
-    "supplier_commitment",
-    "major_strategy_change",
-]
+from backend.app.core.governance_execution_registry import is_safe_generation_workflow_stage
 
 
 @dataclass
@@ -40,12 +12,12 @@ class EcommerceWorkflowPacket:
     workflow_stage: str
     requested_agent: str
     task: str
-    region: str = "Global"
-    language: str = "English"
-    currency: str = "USD"
-    requires_owner_approval: bool = False
-    client_safe: bool = True
-    blocked_reason: Optional[str] = None
+    region: str
+    language: str
+    currency: str
+    requires_owner_approval: bool
+    client_safe: bool
+    blocked_reason: str | None = None
     workflow_notes: List[str] = field(default_factory=list)
 
 
@@ -60,31 +32,7 @@ class EcommerceWorkflowEngine:
         language: str = "English",
         currency: str = "USD",
     ) -> EcommerceWorkflowPacket:
-        if workflow_stage not in WORKFLOW_STAGES and workflow_stage not in APPROVAL_GATED_STAGES:
-            return EcommerceWorkflowPacket(
-                tenant_id=tenant_id,
-                workflow_stage=workflow_stage,
-                requested_agent=requested_agent,
-                task=task,
-                region=region,
-                language=language,
-                currency=currency,
-                requires_owner_approval=True,
-                client_safe=True,
-                blocked_reason="Unknown workflow stage. Owner approval or admin review required.",
-                workflow_notes=["Rejected by default because the workflow stage is not recognised."],
-            )
-
-        requires_owner_approval = workflow_stage in APPROVAL_GATED_STAGES
-
-        notes = [
-            "Workflow packet created.",
-            "Client-facing output must remain white-label safe.",
-            "Premium quality gate required before client delivery.",
-        ]
-
-        if requires_owner_approval:
-            notes.append("This stage requires owner approval before execution.")
+        safe_stage = is_safe_generation_workflow_stage(workflow_stage)
 
         return EcommerceWorkflowPacket(
             tenant_id=tenant_id,
@@ -94,9 +42,16 @@ class EcommerceWorkflowEngine:
             region=region,
             language=language,
             currency=currency,
-            requires_owner_approval=requires_owner_approval,
+            requires_owner_approval=not safe_stage,
             client_safe=True,
-            workflow_notes=notes,
+            blocked_reason=None if safe_stage else "Unknown workflow stage. Owner approval or admin review required.",
+            workflow_notes=[
+                "Safe generation workflow accepted.",
+                "Client-facing output must remain white-label safe.",
+                "Premium quality gate required before client delivery.",
+            ] if safe_stage else [
+                "Rejected by default because the workflow stage is not recognised."
+            ],
         )
 
 

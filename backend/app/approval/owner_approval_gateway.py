@@ -1,49 +1,13 @@
-"""
-Owner Approval Gateway
-
-Hard-governs any action involving spend, budget changes, scaling,
-contracts, major commitments, or strategy changes.
-"""
+from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List
+from typing import Dict
 
-
-APPROVAL_REQUIRED_ACTIONS: List[str] = [
-    "increase_ad_spend",
-    "change_campaign_budget",
-    "scale_campaign",
-    "launch_paid_campaign",
-    "paid_influencer_collaboration",
-    "commission_agreement",
-    "usage_rights_contract",
-    "large_product_seeding",
-    "large_supplier_order",
-    "large_refund_batch",
-    "major_strategy_change",
-    "package_override",
-    "licence_override",
-]
-
-
-AUTONOMOUS_ALLOWED_ACTIONS: List[str] = [
-    "product_research",
-    "competitor_analysis",
-    "brand_generation",
-    "ugc_script_generation",
-    "product_image_direction",
-    "product_image_generation",
-    "ad_copy_generation",
-    "website_content_generation",
-    "product_copy_generation",
-    "influencer_shortlist",
-    "influencer_outreach_draft",
-    "low_risk_follow_up",
-    "customer_support_reply",
-    "analytics_report",
-    "creative_refresh_recommendation",
-    "workflow_log_update",
-]
+from backend.app.core.governance_execution_registry import (
+    is_prohibited_autonomous_action,
+    is_real_world_action_requiring_owner_approval,
+    is_safe_generation_action_type,
+)
 
 
 @dataclass
@@ -57,35 +21,46 @@ class ApprovalDecision:
 
 class OwnerApprovalGateway:
     def evaluate_action(self, action_type: str, owner_approved: bool = False) -> ApprovalDecision:
-        if action_type in APPROVAL_REQUIRED_ACTIONS:
-            if owner_approved:
-                return ApprovalDecision(
-                    action_type=action_type,
-                    requires_owner_approval=True,
-                    approved=True,
-                    status="approved",
-                    reason="Owner approval confirmed.",
-                )
+        action = str(action_type or "").strip()
 
+        if is_prohibited_autonomous_action(action):
             return ApprovalDecision(
-                action_type=action_type,
+                action_type=action,
                 requires_owner_approval=True,
                 approved=False,
-                status="paused_pending_owner_approval",
-                reason="This action requires explicit owner approval before execution.",
+                status="rejected_prohibited_autonomous_action",
+                reason="This action cannot be completed autonomously and requires explicit owner control.",
             )
 
-        if action_type in AUTONOMOUS_ALLOWED_ACTIONS:
+        if is_safe_generation_action_type(action):
             return ApprovalDecision(
-                action_type=action_type,
+                action_type=action,
                 requires_owner_approval=False,
                 approved=True,
-                status="autonomous_allowed",
-                reason="This action is allowed to run autonomously.",
+                status="approved_safe_generation",
+                reason="Safe generation action approved by governance execution registry.",
+            )
+
+        if is_real_world_action_requiring_owner_approval(action):
+            return ApprovalDecision(
+                action_type=action,
+                requires_owner_approval=True,
+                approved=bool(owner_approved),
+                status="approved_by_owner" if owner_approved else "awaiting_owner_approval",
+                reason="Real-world action requires owner approval.",
+            )
+
+        if owner_approved:
+            return ApprovalDecision(
+                action_type=action,
+                requires_owner_approval=True,
+                approved=True,
+                status="approved_by_owner",
+                reason="Owner approved governed action.",
             )
 
         return ApprovalDecision(
-            action_type=action_type,
+            action_type=action,
             requires_owner_approval=True,
             approved=False,
             status="rejected_unknown_action",

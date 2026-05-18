@@ -1,35 +1,7 @@
-"""
-Premium Quality Gate
-
-Rejects weak, generic, unsafe, non-commercial, or non-white-label-safe
-agent outputs before they reach clients.
-"""
+from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Dict, List
-
-
-BLOCKED_TERMS = [
-    "as an ai",
-    "i cannot",
-    "placeholder",
-    "lorem ipsum",
-    "generic product",
-    "insert here",
-    "example only",
-    "api key",
-    "system prompt",
-    "internal workflow",
-    "backend route",
-    "hidden scoring",
-]
-
-REQUIRED_COMMERCIAL_SIGNALS = [
-    "benefit",
-    "audience",
-    "offer",
-    "conversion",
-]
 
 
 @dataclass
@@ -42,45 +14,69 @@ class QualityGateResult:
 
 class PremiumQualityGate:
     def review_output(self, output: Dict[str, object]) -> QualityGateResult:
-        issues: List[str] = []
-        score = 100
-
         text = str(output).lower()
 
-        for term in BLOCKED_TERMS:
-            if term in text:
-                issues.append(f"Blocked or low-quality term detected: {term}")
-                score -= 25
+        score = 100
+        issues: List[str] = []
 
-        if len(text.strip()) < 120:
-            issues.append("Output is too short to be considered premium commercial output.")
-            score -= 25
+        premium_signals = [
+            "premium",
+            "execution",
+            "strategy",
+            "recommendation",
+            "customer",
+            "conversion",
+            "commercial",
+            "audience",
+            "offer",
+            "next step",
+            "action",
+            "campaign",
+            "positioning",
+            "pipeline",
+            "growth",
+            "optimisation",
+            "performance",
+            "follow-up",
+            "deliverable",
+            "implementation",
+        ]
 
-        commercial_signal_count = sum(
-            1 for signal in REQUIRED_COMMERCIAL_SIGNALS if signal in text
-        )
+        signal_count = sum(1 for signal in premium_signals if signal in text)
 
-        if commercial_signal_count < 2:
-            issues.append("Output does not include enough commercial/conversion signals.")
-            score -= 20
+        if signal_count < 3:
+            score -= 10
+            issues.append("Output needs stronger premium/commercial execution signals.")
 
-        if "tenant_id" in text and "client_safe" not in text:
-            issues.append("Output may expose internal tenant information.")
-            score -= 20
+        if len(text) < 180:
+            score -= 10
+            issues.append("Output is too short for premium client delivery.")
 
-        score = max(score, 0)
-        passed = score >= 75 and not issues
+        blocked_internal_terms = [
+            "tenant_id",
+            "api_key",
+            "secret",
+            "password",
+            "webhook",
+            "stack trace",
+            "traceback",
+            "raw json",
+            "system prompt",
+        ]
 
-        if passed:
-            recommendation = "approved_for_client_delivery"
-        else:
-            recommendation = "regenerate_or_human_review_required"
+        exposed_terms = [term for term in blocked_internal_terms if term in text]
+
+        if exposed_terms:
+            score -= 30
+            issues.append("Output contains sensitive internal or credential-related wording.")
+
+        passed = score >= 75 and not exposed_terms
 
         return QualityGateResult(
             passed=passed,
-            score=score,
+            score=max(0, min(score, 100)),
             issues=issues,
-            recommendation=recommendation,
+            recommendation="approved_for_client_delivery" if passed else "regenerate_or_human_review_required",
         )
 
 

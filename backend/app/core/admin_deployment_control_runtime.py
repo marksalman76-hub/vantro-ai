@@ -4,10 +4,16 @@ import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
-from backend.app.core.postgres_account_runtime import create_activation_invite as pg_create_activation_invite
+from backend.app.agents.agent_registry import (
+    agent_exists,
+    is_internal_agent,
+    list_purchasable_agents,
+    normalize_agent_id,
+)
 from backend.app.core.onboarding_email_runtime import send_client_activation_email
+from backend.app.core.postgres_account_runtime import create_activation_invite as pg_create_activation_invite
 
 
 DATA_DIR = Path("backend/app/data")
@@ -15,32 +21,7 @@ DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 STATE_FILE = DATA_DIR / "admin_deployment_control_state.json"
 
-
-FULL_AGENT_CATALOGUE = [
-    "head_agent",
-    "strategist_agent",
-    "business_growth_partnerships_agent",
-    "lead_generator_appointment_setter_agent",
-    "marketing_specialist_agent",
-    "social_media_manager_content_creator_agent",
-    "seo_agent",
-    "email_reply_agent",
-    "crm_ai_agent",
-    "sales_closer_agent",
-    "receptionist_agent",
-    "website_landing_apps_agent",
-    "product_development_agent",
-    "ecommerce_agent",
-    "ugc_creative_agent",
-    "product_copywriting_agent",
-    "product_image_agent",
-    "influencer_collaboration_agent",
-    "analytics_optimisation_agent",
-    "orchestration_agent",
-    "security_compliance_agent",
-    "integration_automation_agent"
-]
-
+FULL_AGENT_CATALOGUE = list_purchasable_agents()
 
 
 def utc_now_iso() -> str:
@@ -76,22 +57,37 @@ def _event(event_type: str, tenant_id: str, payload: Dict[str, Any]) -> Dict[str
     }
 
 
+def _normalise_deployable_agents(raw_agents: Any) -> list[str]:
+    if not isinstance(raw_agents, list):
+        return []
+
+    deployable_agents: list[str] = []
+
+    for raw_agent in raw_agents:
+        normalized_agent = normalize_agent_id(str(raw_agent or "").strip())
+
+        if not agent_exists(normalized_agent):
+            continue
+
+        if is_internal_agent(normalized_agent):
+            continue
+
+        if normalized_agent not in deployable_agents:
+            deployable_agents.append(normalized_agent)
+
+    return deployable_agents
+
+
 def deploy_manual_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
     data = _load_state()
 
     company_name = str(payload.get("company_name") or "Manual Client").strip()
     contact_email = str(payload.get("contact_email") or payload.get("email") or "").strip().lower()
     package_name = str(payload.get("package") or payload.get("selected_package") or "Manual").strip()
-
     tenant_id = str(payload.get("tenant_id") or f"client_manual_{uuid.uuid4().hex[:10]}").strip()
 
-    active_agents = payload.get("active_agents") or payload.get("paid_agents") or []
-
-    if not isinstance(active_agents, list):
-        active_agents = []
-
-    if package_name.lower() == "manual unlimited":
-        active_agents = FULL_AGENT_CATALOGUE.copy()
+    requested_agents = payload.get("active_agents") or payload.get("paid_agents") or []
+    active_agents = _normalise_deployable_agents(requested_agents)
 
     if package_name.lower() == "manual unlimited":
         active_agents = FULL_AGENT_CATALOGUE.copy()
@@ -106,13 +102,15 @@ def deploy_manual_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
         "admin_override": unlimited_credits,
     }
 
-    invite = pg_create_activation_invite({
-        "tenant_id": tenant_id,
-        "email": contact_email,
-        "company_name": company_name,
-        "package": package_name,
-        "active_agents": active_agents,
-    })
+    invite = pg_create_activation_invite(
+        {
+            "tenant_id": tenant_id,
+            "email": contact_email,
+            "company_name": company_name,
+            "package": package_name,
+            "active_agents": active_agents,
+        }
+    )
 
     if not invite.get("success"):
         return {
@@ -143,12 +141,14 @@ def deploy_manual_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
         "credential_values_exposed": False,
     }
 
-    email_result = send_client_activation_email({
-        "contact_email": contact_email,
-        "company_name": company_name,
-        "package": package_name,
-        "activation_link": activation_link,
-    })
+    email_result = send_client_activation_email(
+        {
+            "contact_email": contact_email,
+            "company_name": company_name,
+            "package": package_name,
+            "activation_link": activation_link,
+        }
+    )
 
     tenant_record["activation_email"] = {
         "attempted": True,
@@ -160,13 +160,19 @@ def deploy_manual_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     data["tenants"][tenant_id] = tenant_record
-    data["events"].append(_event("manual_client_system_deployed", tenant_id, {
-        "company_name": company_name,
-        "package": package_name,
-        "active_agent_count": len(active_agents),
-        "unlimited_credits": unlimited_credits,
-        "activation_email_sent": bool(email_result.get("email_sent")),
-    }))
+    data["events"].append(
+        _event(
+            "manual_client_system_deployed",
+            tenant_id,
+            {
+                "company_name": company_name,
+                "package": package_name,
+                "active_agent_count": len(active_agents),
+                "unlimited_credits": unlimited_credits,
+                "activation_email_sent": bool(email_result.get("email_sent")),
+            },
+        )
+    )
 
     _save_state(data)
 
@@ -192,14 +198,16 @@ def suspend_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
         "created_at": utc_now_iso(),
     }
 
-    tenant.update({
-        "status": "suspended",
-        "access_status": "suspended",
-        "execution_status": "blocked",
-        "suspension_reason": reason,
-        "updated_at": utc_now_iso(),
-        "credential_values_exposed": False,
-    })
+    tenant.update(
+        {
+            "status": "suspended",
+            "access_status": "suspended",
+            "execution_status": "blocked",
+            "suspension_reason": reason,
+            "updated_at": utc_now_iso(),
+            "credential_values_exposed": False,
+        }
+    )
 
     data["tenants"][tenant_id] = tenant
     data["events"].append(_event("client_system_suspended", tenant_id, {"reason": reason}))
@@ -228,14 +236,16 @@ def cancel_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
         "created_at": utc_now_iso(),
     }
 
-    tenant.update({
-        "status": "cancelled",
-        "access_status": "cancelled",
-        "execution_status": "blocked",
-        "cancellation_reason": reason,
-        "updated_at": utc_now_iso(),
-        "credential_values_exposed": False,
-    })
+    tenant.update(
+        {
+            "status": "cancelled",
+            "access_status": "cancelled",
+            "execution_status": "blocked",
+            "cancellation_reason": reason,
+            "updated_at": utc_now_iso(),
+            "credential_values_exposed": False,
+        }
+    )
 
     data["tenants"][tenant_id] = tenant
     data["events"].append(_event("client_system_cancelled", tenant_id, {"reason": reason}))
@@ -264,14 +274,16 @@ def reactivate_client_system(payload: Dict[str, Any]) -> Dict[str, Any]:
     if not tenant:
         return {"success": False, "error": "tenant_not_found"}
 
-    tenant.update({
-        "status": "active",
-        "access_status": "active",
-        "execution_status": "allowed",
-        "reactivation_reason": reason,
-        "updated_at": utc_now_iso(),
-        "credential_values_exposed": False,
-    })
+    tenant.update(
+        {
+            "status": "active",
+            "access_status": "active",
+            "execution_status": "allowed",
+            "reactivation_reason": reason,
+            "updated_at": utc_now_iso(),
+            "credential_values_exposed": False,
+        }
+    )
 
     data["tenants"][tenant_id] = tenant
     data["events"].append(_event("client_system_reactivated", tenant_id, {"reason": reason}))
@@ -292,7 +304,11 @@ def list_admin_deployments(limit: int = 50) -> Dict[str, Any]:
     tenants = list(data.get("tenants", {}).values())
     events = data.get("events", [])[-limit:]
 
-    tenants = sorted(tenants, key=lambda item: str(item.get("updated_at") or item.get("created_at") or ""), reverse=True)
+    tenants = sorted(
+        tenants,
+        key=lambda item: str(item.get("updated_at") or item.get("created_at") or ""),
+        reverse=True,
+    )
 
     return {
         "success": True,
@@ -318,5 +334,7 @@ def admin_deployment_control_summary() -> Dict[str, Any]:
         "active_count": len([t for t in tenants if t.get("access_status") == "active"]),
         "suspended_count": len([t for t in tenants if t.get("access_status") == "suspended"]),
         "cancelled_count": len([t for t in tenants if t.get("access_status") == "cancelled"]),
+        "deployable_agent_count": len(FULL_AGENT_CATALOGUE),
+        "internal_agents_excluded": True,
         "credential_values_exposed": False,
     }

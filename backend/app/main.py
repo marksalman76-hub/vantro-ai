@@ -57,7 +57,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import Dict, List
 
-from backend.app.agents.agent_registry import agent_exists
+from backend.app.agents.agent_registry import agent_exists, normalize_agent_id
 from backend.app.approval.owner_approval_gateway import (
     OwnerApprovalGateway,
     approval_summary,
@@ -102,21 +102,16 @@ app.include_router(admin_deployment_control_router)
 
 DEMO_TENANTS: Dict[str, List[str]] = {
     "client_demo_001": [
-        "master_orchestrator_agent",
+        "head_agent",
         "ugc_creative_agent",
         "analytics_optimisation_agent",
         "product_research_agent",
         "ad_creative_agent",
-        "product_image_direction_agent",
+        "product_image_agent",
         "influencer_collaboration_agent",
     ]
 }
 
-
-
-AGENT_ALIAS_MAP: Dict[str, str] = {
-    "product_intelligence_agent": "product_research_agent",
-}
 
 
 ACTION_TO_EXECUTION_MAP: Dict[str, str] = {
@@ -196,7 +191,7 @@ def health() -> Dict[str, object]:
 
 @app.post("/run-agent")
 def run_agent(request: RunAgentRequest) -> Dict[str, object]:
-    requested_agent = AGENT_ALIAS_MAP.get(request.requested_agent, request.requested_agent)
+    requested_agent = normalize_agent_id(request.requested_agent)
 
     credit_gate = pg_client_credit_gate({
         "actor_role": request.actor_role,
@@ -257,7 +252,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
 
     if not owner_admin_internal_execution:
         normalised_active_agents = [
-            AGENT_ALIAS_MAP.get(agent, agent) for agent in active_agents
+            normalize_agent_id(agent) for agent in active_agents
         ]
 
         if requested_agent not in normalised_active_agents:
@@ -341,7 +336,17 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
 
     polished_output = polish_layer.polish_output(generated_output)
 
-    quality_result = quality_gate.review_output(polished_output)
+    client_visible_quality_payload = {
+        "agent": requested_agent,
+        "task": request.task,
+        "generated_output": polished_output.get("generated_output")
+        or polished_output.get("output")
+        or polished_output.get("content")
+        or polished_output.get("deliverable")
+        or polished_output,
+    }
+
+    quality_result = quality_gate.review_output(client_visible_quality_payload)
 
     if not quality_result.passed:
         quality_failure_payload = {

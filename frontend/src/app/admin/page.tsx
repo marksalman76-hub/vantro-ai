@@ -172,7 +172,7 @@ export default function AdminPage() {
             "x-tenant-id": "owner",
           },
           body: JSON.stringify({
-            tenant_id: "owner_admin",
+            account_reference: "owner_admin",
             requested_agent: agentId,
             workflow_stage: "admin_internal_execution",
             action_type: "product_copy_generation",
@@ -434,7 +434,7 @@ export default function AdminPage() {
                   <input
                     value={deployTenant}
                     onChange={(event) => setDeployTenant(event.target.value)}
-                    placeholder="Tenant ID"
+                    placeholder="Account Reference"
                     style={{
                       padding: 14,
                       borderRadius: 14,
@@ -564,7 +564,7 @@ export default function AdminPage() {
                   <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                     <button
                       onClick={() => callDeploymentControl("/admin/deployment-control/manual-deploy", {
-                        tenant_id: deployTenant,
+                        account_reference: deployTenant,
                         company_name: deployCompany,
                         contact_email: deployEmail,
                         package: "Manual Unlimited",
@@ -586,7 +586,7 @@ export default function AdminPage() {
 
                     <button
                       onClick={() => callDeploymentControl("/admin/deployment-control/suspend", {
-                        tenant_id: deployTenant,
+                        account_reference: deployTenant,
                         reason: "Suspended from admin portal.",
                       })}
                       style={{
@@ -604,7 +604,7 @@ export default function AdminPage() {
 
                     <button
                       onClick={() => callDeploymentControl("/admin/deployment-control/reactivate", {
-                        tenant_id: deployTenant,
+                        account_reference: deployTenant,
                         reason: "Reactivated from admin portal.",
                       })}
                       style={{
@@ -622,7 +622,7 @@ export default function AdminPage() {
 
                     <button
                       onClick={() => callDeploymentControl("/admin/deployment-control/cancel", {
-                        tenant_id: deployTenant,
+                        account_reference: deployTenant,
                         reason: "Cancelled from admin portal.",
                       })}
                       style={{
@@ -691,7 +691,7 @@ export default function AdminPage() {
                   <StatusPill label="Live LLM control" ok={liveControlReady} />
                 </div>
                 <p style={{ color: "#94a3b8", lineHeight: 1.7 }}>
-                  Live provider execution remains owner-gated. Provider keys and internal configuration are hidden from the client surface.
+                  Live provider execution remains owner-gated. Provider keys and platform settingsuration are hidden from the client surface.
                 </p>
               </Panel>
 
@@ -729,7 +729,7 @@ export default function AdminPage() {
                     <div style={{ color: "#94a3b8" }}>No deployed clients found yet.</div>
                   ) : clientRegistry.map((client) => (
                     <div
-                      key={client.tenant_id}
+                      key={client.account_reference}
                       style={{
                         padding: 14,
                         borderRadius: 16,
@@ -777,7 +777,7 @@ export default function AdminPage() {
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
                   <StatusPill label="Stripe runtime" ok={runtime.billing_summary?.stripe_live_ready === true} />
                   <StatusPill label="Deployment status" ok={runtime.deployment_summary?.environment_status === "production_ready"} />
-                  <StatusPill label="Secret exposure" ok={runtime.security_summary?.secret_exposure_detected === false} />
+                  <StatusPill label="Protected data exposure" ok={runtime.security_summary?.secret_exposure_detected === false} />
                 </div>
               </Panel>
             </div>

@@ -1,0 +1,311 @@
+{
+  "success": true,
+  "summary": {
+    "tested_at": "2026-05-18T13:00:18.903171Z",
+    "total": 27,
+    "execution_ready": 0,
+    "approval_gated_ready": 5,
+    "output_ready_needs_action_confirmation": 0,
+    "success_unclassified": 0,
+    "failed": 22
+  },
+  "results": [
+    {
+      "agent_id": "head_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "strategist_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "business_growth_partnerships_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "lead_generator_appointment_setter_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "marketing_specialist_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "social_media_manager_content_creator_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "seo_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": "quality_gate_failed",
+      "workflow_status": null,
+      "execution_status": null,
+      "error": null,
+      "message": "Output rejected by premium quality gate."
+    },
+    {
+      "agent_id": "email_reply_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "crm_ai_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "sales_closer_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "receptionist_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "website_landing_apps_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "product_development_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "ecommerce_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "product_research_agent",
+      "http_status": 200,
+      "classification": "APPROVAL_GATED_READY",
+      "success": true,
+      "status": "agent_execution_completed",
+      "workflow_status": null,
+      "execution_status": null,
+      "error": null,
+      "message": null
+    },
+    {
+      "agent_id": "competitor_intelligence_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": "quality_gate_failed",
+      "workflow_status": null,
+      "execution_status": null,
+      "error": null,
+      "message": "Output rejected by premium quality gate."
+    },
+    {
+      "agent_id": "brand_strategy_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": "quality_gate_failed",
+      "workflow_status": null,
+      "execution_status": null,
+      "error": null,
+      "message": "Output rejected by premium quality gate."
+    },
+    {
+      "agent_id": "store_builder_agent",
+      "http_status": 200,
+      "classification": "APPROVAL_GATED_READY",
+      "success": true,
+      "status": "agent_execution_completed",
+      "workflow_status": null,
+      "execution_status": null,
+      "error": null,
+      "message": null
+    },
+    {
+      "agent_id": "product_copywriting_agent",
+      "http_status": 200,
+      "classification": "APPROVAL_GATED_READY",
+      "success": true,
+      "status": "agent_execution_completed",
+      "workflow_status": null,
+      "execution_status": null,
+      "error": null,
+      "message": null
+    },
+    {
+      "agent_id": "ugc_creative_agent",
+      "http_status": 200,
+      "classification": "APPROVAL_GATED_READY",
+      "success": true,
+      "status": "agent_execution_completed",
+      "workflow_status": null,
+      "execution_status": null,
+      "error": null,
+      "message": null
+    },
+    {
+      "agent_id": "product_image_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "paid_ads_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "analytics_optimisation_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": "quality_gate_failed",
+      "workflow_status": null,
+      "execution_status": null,
+      "error": null,
+      "message": "Output rejected by premium quality gate."
+    },
+    {
+      "agent_id": "influencer_collaboration_agent",
+      "http_status": 200,
+      "classification": "APPROVAL_GATED_READY",
+      "success": true,
+      "status": "agent_execution_completed",
+      "workflow_status": null,
+      "execution_status": null,
+      "error": null,
+      "message": null
+    },
+    {
+      "agent_id": "orchestration_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    },
+    {
+      "agent_id": "security_compliance_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": "quality_gate_failed",
+      "workflow_status": null,
+      "execution_status": null,
+      "error": null,
+      "message": "Output rejected by premium quality gate."
+    },
+    {
+      "agent_id": "integration_automation_agent",
+      "http_status": 200,
+      "classification": "FAILED",
+      "success": false,
+      "status": null,
+      "workflow_status": null,
+      "execution_status": null,
+      "error": "unknown_agent",
+      "message": null
+    }
+  ]
+}
