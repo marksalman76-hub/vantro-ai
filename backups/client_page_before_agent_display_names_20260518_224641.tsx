@@ -44,41 +44,6 @@ type LiveDeliverable = {
 
 const DEFAULT_AGENTS: string[] = [];
 
-const AGENT_DISPLAY_NAMES: Record<string, string> = {
-  master_orchestrator_agent: "Master Orchestrator Agent",
-  product_research_agent: "Product Research Agent",
-  competitor_intelligence_agent: "Competitor Intelligence Agent",
-  brand_strategy_agent: "Brand Strategy Agent",
-  store_builder_agent: "Store Builder Agent",
-  website_landing_apps_agent: "Website / Landing Page Agent",
-  product_copywriting_agent: "Product Copywriting Agent",
-  ugc_creative_agent: "UGC Creative Agent",
-  product_image_agent: "Product Image Agent",
-  paid_ads_agent: "Paid Ads Agent",
-  analytics_optimisation_agent: "Analytics Optimisation Agent",
-  email_reply_agent: "Email Reply Agent",
-  crm_ai_agent: "CRM AI Agent",
-  seo_agent: "SEO Agent",
-  social_media_manager_content_creator_agent: "Social Media Manager Agent",
-  influencer_collaboration_agent: "Influencer Collaboration Agent",
-  lead_generator_appointment_setter_agent: "Lead Generator / Appointment Setter Agent",
-  sales_closer_agent: "Sales / Closer Agent",
-  receptionist_agent: "Receptionist Agent",
-  product_development_agent: "Product Development Agent",
-  ecommerce_agent: "Ecommerce Agent",
-  customer_support_agent: "Customer Support Agent",
-  general_ecommerce_agent: "General Ecommerce Agent",
-  business_growth_partnerships_agent: "Business Growth & Partnerships Agent",
-};
-
-function getAgentDisplayName(agentId: string) {
-  return AGENT_DISPLAY_NAMES[agentId] ||
-    agentId
-      .replace(/_/g, " ")
-      .replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-
 export default function ClientPage() {
   const [account, setAccount] = useState<Account | null>(null);
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
@@ -302,7 +267,7 @@ export default function ClientPage() {
             <div
               style={{
                 color: "#2563eb",
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 900,
                 letterSpacing: 1.4,
                 textTransform: "uppercase",
@@ -601,7 +566,7 @@ export default function ClientPage() {
             <StepHeader number="01" title="Run AI Agent" />
             <h3 style={cardTitle}>Select agents, define task, and execute.</h3>
 
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(260px,360px) minmax(320px,1fr)", gap: 18, marginTop: 18 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 18, marginTop: 18 }}>
               <div>
                 <div style={labelStyle}>Active agents</div>
                 <div style={{ display: "grid", gap: 7 }}>
@@ -609,13 +574,13 @@ export default function ClientPage() {
                     const active = selectedAgents.includes(agent);
                     return (
                       <button
-                        key={getAgentDisplayName(agent)}
+                        key={agent}
                         onClick={() => toggleAgent(agent)}
                         style={{
                           border: active ? "1px solid #bfdbfe" : "1px solid #e5eaf2",
                           background: active ? "#eff6ff" : "#fff",
                           color: active ? "#2563eb" : "#0f172a",
-                          padding: "11px 12px",
+                          padding: "9px 10px",
                           borderRadius: 11,
                           cursor: "pointer",
                           textAlign: "left",
