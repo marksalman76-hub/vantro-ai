@@ -1,4 +1,16 @@
-from __future__ import annotations
+from pathlib import Path
+from datetime import datetime
+
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+BACKUPS = ROOT / "backups"
+BACKUPS.mkdir(exist_ok=True)
+
+runtime_path = ROOT / "backend" / "app" / "core" / "client_integrations_runtime.py"
+
+backup = BACKUPS / f"client_integrations_runtime_before_step_j_persistent_store_{datetime.now().strftime('%Y%m%d_%H%M%S')}.py"
+backup.write_text(runtime_path.read_text(encoding="utf-8", errors="ignore"), encoding="utf-8")
+
+runtime_path.write_text(r'''from __future__ import annotations
 
 import json
 import os
@@ -499,3 +511,34 @@ def integration_audit(limit: int = 50) -> Dict[str, Any]:
     data = _load_file_state()
     audit = list(reversed(data.get("audit", [])))[:limit]
     return {"success": True, "events": audit, "count": len(audit), "storage_mode": "file_fallback"}
+''', encoding="utf-8")
+
+test_path = ROOT / "test_step_j_persistent_integrations_store.py"
+test_path.write_text(r'''import requests
+
+BASE = "https://ecommerce-ai-agent-platform-1.onrender.com"
+HEADERS = {
+    "x-tenant-id": "client_demo_001",
+    "x-actor-role": "customer",
+    "Content-Type": "application/json",
+}
+
+payload = {
+    "integration_key": "email",
+    "provider": "Brevo",
+    "credential": "test_persistent_key_123456",
+    "connection_mode": "scoped_api_key",
+}
+
+r = requests.post(BASE + "/client/integrations/connect", json=payload, headers=HEADERS, timeout=60)
+print("connect", r.status_code, r.text)
+
+r = requests.post(BASE + "/client/integrations/test", json={"integration_key": "email"}, headers=HEADERS, timeout=60)
+print("test", r.status_code, r.text)
+
+r = requests.get(BASE + "/client/integrations", headers=HEADERS, timeout=60)
+print("list", r.status_code, r.text[:1200])
+''', encoding="utf-8")
+
+print("STEP_J_PERSISTENT_INTEGRATIONS_STORE_INSTALLED")
+print(f"Backup: {backup}")
