@@ -227,3 +227,31 @@ def integration_audit(limit: int = 50) -> Dict[str, Any]:
     data = _load()
     audit = list(reversed(data.get("audit", [])))[:limit]
     return {"success": True, "events": audit, "count": len(audit)}
+
+
+def get_client_integration_secret(tenant_id: str, integration_key: str) -> Dict[str, Any]:
+    data = _load()
+    connection = data.get("tenants", {}).get(tenant_id, {}).get("connections", {}).get(integration_key)
+    if not connection or not connection.get("connected"):
+        return {"success": False, "error": "integration_not_connected"}
+
+    # Current prototype stores proof-test state only. Production must use encrypted vault storage.
+    return {
+        "success": True,
+        "integration_key": integration_key,
+        "provider": connection.get("provider"),
+        "status": connection.get("status"),
+        "credential_hint": connection.get("credential_hint"),
+    }
+
+
+def log_email_proof_send(tenant_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    data = _load()
+    data.setdefault("audit", []).append({
+        "event": "email_proof_send",
+        "tenant_id": tenant_id,
+        **payload,
+        "created_at": _now(),
+    })
+    _save(data)
+    return {"success": True}

@@ -6,6 +6,8 @@ from backend.app.core.client_integrations_runtime import (
     list_client_integrations,
     save_client_integration,
     test_client_integration,
+    get_client_integration_secret,
+    log_email_proof_send,
 )
 from backend.app.api.storage_routes import router as storage_router
 from backend.app.api.media_routes import router as media_router
@@ -1337,4 +1339,57 @@ async def client_integrations_disconnect(payload: dict, x_tenant_id: str = Heade
 @app.get("/admin/integrations/audit")
 async def admin_integrations_audit(limit: int = 50):
     return integration_audit(limit=limit)
+
+
+@app.post("/client/integrations/email/send-proof")
+async def client_email_send_proof(payload: dict, x_tenant_id: str = Header(default="client_demo_001")):
+    recipient = str(payload.get("recipient") or "").strip()
+    if recipient.lower() != "leodavid2020@yahoo.com":
+        return {
+            "success": False,
+            "error": "recipient_not_allowed",
+            "message": "Controlled proof send is restricted to the approved test recipient.",
+        }
+
+    connection = get_client_integration_secret(x_tenant_id, "email")
+    if not connection.get("success"):
+        return connection
+
+    subject = "Email Reply Agent proof: live automation test"
+    body = (
+        "Hi Leo,\n\n"
+        "This is a controlled proof email from the Ecommerce AI Agent Platform.\n\n"
+        "What this proves:\n"
+        "- The client connected an email provider.\n"
+        "- The Email Reply Agent can prepare a client-ready message.\n"
+        "- The system can route the action through the connected email integration.\n"
+        "- The action is logged without exposing the provider credential.\n\n"
+        "Next production step: replace this proof mode with real provider send execution "
+        "using encrypted credential storage and approval-gated sending.\n\n"
+        "Regards,\n"
+        "Ecommerce AI Agent Platform"
+    )
+
+    log_email_proof_send(
+        x_tenant_id,
+        {
+            "recipient": recipient,
+            "subject": subject,
+            "provider": connection.get("provider"),
+            "status": "proof_prepared",
+            "credential_exposed": False,
+        },
+    )
+
+    return {
+        "success": True,
+        "mode": "proof_prepared",
+        "provider": connection.get("provider"),
+        "recipient": recipient,
+        "subject": subject,
+        "body": body,
+        "credential_exposed": False,
+        "approval_required_before_live_send": True,
+        "message": "Proof email prepared and logged. Live send requires final Brevo send adapter wiring.",
+    }
 
