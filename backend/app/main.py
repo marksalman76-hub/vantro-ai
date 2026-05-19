@@ -102,6 +102,9 @@ from backend.app.workflows.ecommerce_workflow_engine import (
 
 
 app = FastAPI(
+    title="Ecommerce AI Agent Platform",
+    version="1.1.0",
+)
 
 
 app.add_middleware(
@@ -117,9 +120,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-    title="Ecommerce AI Agent Platform",
-    version="1.1.0",
-)
 
 app.include_router(admin_deployment_control_router)
 
