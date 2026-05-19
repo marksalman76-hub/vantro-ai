@@ -7,8 +7,27 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 import psycopg
+from cryptography.fernet import Fernet
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+INTEGRATION_CREDENTIAL_SECRET = os.getenv(
+    "INTEGRATION_CREDENTIAL_SECRET",
+    "LOCAL_DEVELOPMENT_ONLY_CHANGE_IN_PRODUCTION_32B"
+)
+
+FERNET_KEY = Fernet.generate_key()
+
+try:
+    if len(INTEGRATION_CREDENTIAL_SECRET.encode("utf-8")) >= 32:
+        base = INTEGRATION_CREDENTIAL_SECRET.encode("utf-8")[:32]
+        import base64
+        FERNET_KEY = base64.urlsafe_b64encode(base)
+except Exception:
+    pass
+
+FERNET = Fernet(FERNET_KEY)
+
 
 DATA_DIR = Path("backend/app/data")
 DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -295,7 +314,7 @@ def save_client_integration(tenant_id: str, payload: Dict[str, Any]) -> Dict[str
                         updated_at = NOW(),
                         disconnected_at = NULL
                     """,
-                    (tenant_id, key, provider, mode, "connected_pending_test", credential, credential_hint),
+                    (tenant_id, key, provider, mode, "connected_pending_test", _encrypt_credential(credential), credential_hint),
                 )
             conn.commit()
     else:
@@ -307,7 +326,7 @@ def save_client_integration(tenant_id: str, payload: Dict[str, Any]) -> Dict[str
             "connection_mode": mode,
             "status": "connected_pending_test",
             "credential_stored": True,
-            "credential_value": credential,
+            "credential_value": _encrypt_credential(credential),
             "credential_hint": credential_hint,
             "updated_at": _now(),
         }
@@ -436,7 +455,7 @@ def get_client_integration_secret(tenant_id: str, integration_key: str) -> Dict[
             "provider": provider,
             "status": status,
             "credential_hint": credential_hint,
-            "credential_value": credential_value,
+            "credential_value": _decrypt_credential(credential_value),
             "storage_mode": "postgres",
         }
 
@@ -499,3 +518,18 @@ def integration_audit(limit: int = 50) -> Dict[str, Any]:
     data = _load_file_state()
     audit = list(reversed(data.get("audit", [])))[:limit]
     return {"success": True, "events": audit, "count": len(audit), "storage_mode": "file_fallback"}
+
+
+
+def _encrypt_credential(value: str) -> str:
+    try:
+        return FERNET.encrypt(str(value).encode("utf-8")).decode("utf-8")
+    except Exception:
+        return str(value)
+
+
+def _decrypt_credential(value: str) -> str:
+    try:
+        return FERNET.decrypt(str(value).encode("utf-8")).decode("utf-8")
+    except Exception:
+        return str(value)
