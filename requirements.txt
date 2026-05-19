@@ -7,3 +7,4 @@ stripe
 httpx
 requests
 psycopg[binary]
+cryptography
