@@ -152,6 +152,7 @@ type LiveDeliverable = {
 };
 
 const DEFAULT_AGENTS: string[] = [];
+const BACKEND_API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "https://ecommerce-ai-agent-platform-1.onrender.com";
 
 const AGENT_DISPLAY_NAMES: Record<string, string> = {
     product_research_agent: "Product Research Agent",
@@ -385,7 +386,7 @@ export default function ClientPage() {
 
   async function loadIntegrations() {
     try {
-      const response = await fetch("/api/client-integrations", { cache: "no-store" });
+      const response = await fetch(`${BACKEND_API_BASE}/client/integrations`, { cache: "no-store", headers: { "x-tenant-id": "client_demo_001", "x-actor-role": "customer" } });
       const data = await response.json();
       if (data?.success && Array.isArray(data.integrations)) {
         setIntegrations(data.integrations);
@@ -407,9 +408,9 @@ export default function ClientPage() {
       "";
     if (!credential.trim()) return;
 
-    const response = await fetch("/api/client-integrations-connect", {
+    const response = await fetch(`${BACKEND_API_BASE}/client/integrations/connect`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-tenant-id": "client_demo_001", "x-actor-role": "customer" },
       body: JSON.stringify({
         integration_key: integration.integration_key,
         provider,
@@ -443,9 +444,9 @@ export default function ClientPage() {
   }
 
   async function testIntegration(integration: ClientIntegration) {
-    const response = await fetch("/api/client-integrations-test", {
+    const response = await fetch(`${BACKEND_API_BASE}/client/integrations/test`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-tenant-id": "client_demo_001", "x-actor-role": "customer" },
       body: JSON.stringify({ integration_key: integration.integration_key }),
     });
 
@@ -466,9 +467,9 @@ export default function ClientPage() {
   }
 
   async function disconnectIntegration(integration: ClientIntegration) {
-    const response = await fetch("/api/client-integrations-disconnect", {
+    const response = await fetch(`${BACKEND_API_BASE}/client/integrations/disconnect`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-tenant-id": "client_demo_001", "x-actor-role": "customer" },
       body: JSON.stringify({ integration_key: integration.integration_key }),
     });
 
@@ -943,7 +944,7 @@ export default function ClientPage() {
                     try {
                       const response = await fetch("/api/run-agent", {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: { "Content-Type": "application/json", "x-tenant-id": "client_demo_001", "x-actor-role": "customer" },
                         credentials: "include",
                         body: JSON.stringify({
                           selected_agents: selectedAgents,
