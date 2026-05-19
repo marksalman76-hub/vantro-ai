@@ -159,6 +159,7 @@ def save_client_integration(tenant_id: str, payload: Dict[str, Any]) -> Dict[str
         "connection_mode": mode,
         "status": "connected_pending_test",
         "credential_stored": True,
+        "credential_value": credential,
         "credential_hint": _credential_hint(credential),
         "updated_at": _now(),
     }
@@ -242,6 +243,7 @@ def get_client_integration_secret(tenant_id: str, integration_key: str) -> Dict[
         "provider": connection.get("provider"),
         "status": connection.get("status"),
         "credential_hint": connection.get("credential_hint"),
+        "credential_value": connection.get("credential_value"),
     }
 
 

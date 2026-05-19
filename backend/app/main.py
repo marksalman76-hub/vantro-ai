@@ -1,3 +1,6 @@
+import urllib.request
+import urllib.error
+import json
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.core.client_integrations_runtime import (
     disconnect_client_integration,
@@ -1391,5 +1394,138 @@ async def client_email_send_proof(payload: dict, x_tenant_id: str = Header(defau
         "credential_exposed": False,
         "approval_required_before_live_send": True,
         "message": "Proof email prepared and logged. Live send requires final Brevo send adapter wiring.",
+    }
+
+
+@app.post("/client/integrations/email/send-live-proof")
+async def client_email_send_live_proof(payload: dict, x_tenant_id: str = Header(default="client_demo_001")):
+    recipient = str(payload.get("recipient") or "").strip()
+    sender_email = str(payload.get("sender_email") or "").strip()
+    sender_name = str(payload.get("sender_name") or "Ecommerce AI Agent Platform").strip()
+
+    if recipient.lower() not in {"leodavid2020@gmail.com", "leodavid2020@yahoo.com"}:
+        return {
+            "success": False,
+            "error": "recipient_not_allowed",
+            "message": "Controlled live proof send is restricted to the approved test recipient.",
+        }
+
+    if not sender_email:
+        return {
+            "success": False,
+            "error": "sender_email_required",
+            "message": "Brevo requires a verified sender email address.",
+        }
+
+    connection = get_client_integration_secret(x_tenant_id, "email")
+    if not connection.get("success"):
+        return connection
+
+    api_key = connection.get("credential_value")
+    if not api_key:
+        return {
+            "success": False,
+            "error": "credential_not_available",
+            "message": "Reconnect Brevo so the server can store the credential for live sending.",
+        }
+
+    subject = "Email Reply Agent proof: live Brevo send"
+    html_content = """
+    <p>Hi Leo,</p>
+    <p>This is a <strong>live Brevo send proof</strong> from the Ecommerce AI Agent Platform.</p>
+    <p>This proves:</p>
+    <ul>
+      <li>The client connected Brevo.</li>
+      <li>The platform stored the provider credential server-side.</li>
+      <li>The Email Reply Agent can prepare a client-ready message.</li>
+      <li>The backend can send through the connected provider without exposing the credential.</li>
+      <li>The action is logged for audit and review.</li>
+    </ul>
+    <p>Regards,<br/>Ecommerce AI Agent Platform</p>
+    """
+
+    brevo_payload = {
+        "sender": {"name": sender_name, "email": sender_email},
+        "to": [{"email": recipient}],
+        "subject": subject,
+        "htmlContent": html_content,
+    }
+
+    request = urllib.request.Request(
+        "https://api.brevo.com/v3/smtp/email",
+        data=json.dumps(brevo_payload).encode("utf-8"),
+        headers={
+            "accept": "application/json",
+            "api-key": api_key,
+            "content-type": "application/json",
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            response_body = response.read().decode("utf-8")
+            status_code = response.status
+    except urllib.error.HTTPError as error:
+        error_body = error.read().decode("utf-8")
+        log_email_proof_send(
+            x_tenant_id,
+            {
+                "recipient": recipient,
+                "subject": subject,
+                "provider": connection.get("provider"),
+                "status": "brevo_send_failed",
+                "brevo_status": error.code,
+                "credential_exposed": False,
+            },
+        )
+        return {
+            "success": False,
+            "error": "brevo_send_failed",
+            "status_code": error.code,
+            "provider_response": error_body,
+            "credential_exposed": False,
+        }
+    except Exception as error:
+        log_email_proof_send(
+            x_tenant_id,
+            {
+                "recipient": recipient,
+                "subject": subject,
+                "provider": connection.get("provider"),
+                "status": "send_exception",
+                "credential_exposed": False,
+            },
+        )
+        return {
+            "success": False,
+            "error": "send_exception",
+            "message": str(error),
+            "credential_exposed": False,
+        }
+
+    log_email_proof_send(
+        x_tenant_id,
+        {
+            "recipient": recipient,
+            "subject": subject,
+            "provider": connection.get("provider"),
+            "status": "sent",
+            "brevo_status": status_code,
+            "credential_exposed": False,
+        },
+    )
+
+    return {
+        "success": True,
+        "mode": "live_brevo_send",
+        "provider": connection.get("provider"),
+        "recipient": recipient,
+        "sender_email": sender_email,
+        "subject": subject,
+        "brevo_status": status_code,
+        "provider_response": response_body,
+        "credential_exposed": False,
+        "message": "Live Brevo email sent and logged.",
     }
 
