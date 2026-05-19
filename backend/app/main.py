@@ -1,3 +1,4 @@
+from fastapi.middleware.cors import CORSMiddleware
 from backend.app.core.client_integrations_runtime import (
     disconnect_client_integration,
     integration_audit,
@@ -101,6 +102,21 @@ from backend.app.workflows.ecommerce_workflow_engine import (
 
 
 app = FastAPI(
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://ecommerce-ai-agent-platform.vercel.app",
+        "https://ecommerce-ai-agent-platform-git-main-marksalman76-5799s-projects.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
     title="Ecommerce AI Agent Platform",
     version="1.1.0",
 )
