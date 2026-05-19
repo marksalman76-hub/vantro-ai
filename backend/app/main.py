@@ -1,3 +1,7 @@
+from backend.app.core.integration_live_adapter_registry import (
+    adapter_registry_summary,
+    execute_integration_action,
+)
 import urllib.request
 import urllib.error
 import json
@@ -1528,4 +1532,20 @@ async def client_email_send_live_proof(payload: dict, x_tenant_id: str = Header(
         "credential_exposed": False,
         "message": "Live Brevo email sent and logged.",
     }
+
+
+@app.get("/admin/integrations/live-adapter-registry")
+async def admin_live_adapter_registry():
+    return adapter_registry_summary()
+
+
+@app.post("/client/integrations/action")
+async def client_integration_action(payload: dict, x_tenant_id: str = Header(default="client_demo_001"), x_actor_role: str = Header(default="customer")):
+    return execute_integration_action(
+        tenant_id=x_tenant_id,
+        integration_key=str(payload.get("integration_key") or ""),
+        action=str(payload.get("action") or ""),
+        payload=dict(payload.get("payload") or {}),
+        actor_role=x_actor_role,
+    )
 
