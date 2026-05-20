@@ -10,9 +10,11 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from backend.app.integrations.execution_adapters import ExecutionAdapters, adapter_summary
+from backend.app.core.integration_live_adapter_registry import execute_integration_action
 
 
 SUPPORTED_EXECUTION_ACTIONS = [
+    "execute_live_integration_action",
     "create_shopify_product_page",
     "create_landing_page_brief",
     "create_ugc_video_brief",
@@ -95,6 +97,28 @@ class ExecutionStack:
                 execution_notes=[
                     "Add a controlled adapter before allowing this action."
                 ],
+            )
+
+        if request.action_type == "execute_live_integration_action":
+            live_result = execute_integration_action(
+                tenant_id=str(request.payload.get("tenant_id") or "client_demo_001"),
+                integration_key=str(request.payload.get("integration_key") or ""),
+                action=str(request.payload.get("action") or ""),
+                payload=dict(request.payload.get("payload") or {}),
+                actor_role=str(request.payload.get("actor_role") or "customer"),
+            )
+            return ExecutionResult(
+                success=bool(live_result.get("success")),
+                execution_status="live_integration_action_executed" if live_result.get("success") else "live_integration_action_failed",
+                action_type=request.action_type,
+                message="Live integration action routed through governed global adapter registry.",
+                execution_notes=[
+                    "Global integration adapter registry used.",
+                    "Credential exposure blocked.",
+                    "Owner approval protections remain enforced by adapter registry.",
+                ],
+                adapter="global_integration_live_adapter_registry",
+                adapter_result=live_result,
             )
 
         adapter = self._select_adapter(request.action_type)
