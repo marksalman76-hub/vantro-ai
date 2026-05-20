@@ -1306,12 +1306,19 @@ export default function ClientPage() {
                 const approvalStatus = event.approval_status || "not_required";
                 const qualityStatus = event.quality_status || "pending";
                 const executionStatus = event.execution_status || event.event_status || "tracked";
+                const isExecutionIssue = String(executionStatus).toLowerCase().includes("failed") || String(executionStatus).toLowerCase().includes("unsupported");
+                const isApprovalRequired = String(approvalStatus).toLowerCase().includes("approval") && !String(approvalStatus).toLowerCase().includes("approved_safe");
+                const statusTone = isExecutionIssue
+                  ? { bg: "#fff7ed", border: "#fed7aa", text: "#ea580c", label: "Needs attention" }
+                  : isApprovalRequired
+                    ? { bg: "#fffbeb", border: "#fde68a", text: "#ca8a04", label: "Approval gated" }
+                    : { bg: "#f0fdf4", border: "#bbf7d0", text: "#16a34a", label: "Governed ready" };
 
                 return (
                   <div
                     key={event.event_id || `${event.agent_id}-${event.event_type}`}
                     style={{
-                      border: "1px solid #e5eaf2",
+                      border: `1px solid ${statusTone.border}`,
                       borderRadius: 18,
                       padding: 16,
                       background: "#ffffff",
@@ -1330,7 +1337,10 @@ export default function ClientPage() {
                       </div>
 
                       <div style={{ textAlign: "right", color: "#64748b", fontSize: 13, fontWeight: 850 }}>
-                        {agentName}
+                        <div>{agentName}</div>
+                        <div style={{ marginTop: 8, display: "inline-flex", background: statusTone.bg, color: statusTone.text, border: `1px solid ${statusTone.border}`, borderRadius: 999, padding: "6px 9px", fontSize: 11.5, fontWeight: 950 }}>
+                          {statusTone.label}
+                        </div>
                       </div>
                     </div>
 
@@ -1344,8 +1354,11 @@ export default function ClientPage() {
                       <span style={{ background: "#fff7ed", color: "#ea580c", border: "1px solid #fed7aa", borderRadius: 999, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
                         Approval: {approvalStatus}
                       </span>
-                      <span style={{ background: "#f8fafc", color: "#334155", border: "1px solid #e2e8f0", borderRadius: 999, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
+                      <span style={{ background: statusTone.bg, color: statusTone.text, border: `1px solid ${statusTone.border}`, borderRadius: 999, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
                         Execution: {executionStatus}
+                      </span>
+                      <span style={{ background: "#f8fafc", color: "#334155", border: "1px solid #e2e8f0", borderRadius: 999, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
+                        Stage: {event.workflow_stage || "workflow"}
                       </span>
                     </div>
                   </div>
