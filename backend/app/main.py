@@ -228,21 +228,35 @@ def client_execution_events(
     project_id: str = "",
     limit: int = 25,
 ) -> Dict[str, object]:
-    safe_limit = max(1, min(int(limit or 25), 100))
-    events = execution_event_ledger.latest(
-        tenant_id=tenant_id,
-        project_id=project_id or None,
-        limit=safe_limit,
-        client_visible_only=True,
-    )
-    return {
-        "success": True,
-        "tenant_id": tenant_id,
-        "project_id": project_id or None,
-        "count": len(events),
-        "events": events,
-    }
+    try:
+        safe_limit = max(1, min(int(limit or 25), 100))
+        safe_tenant_id = str(tenant_id or "client_demo_001")
+        safe_project_id = str(project_id or "")
 
+        events = execution_event_ledger.latest(
+            tenant_id=safe_tenant_id,
+            project_id=safe_project_id or None,
+            limit=safe_limit,
+            client_visible_only=True,
+        )
+
+        return {
+            "success": True,
+            "tenant_id": safe_tenant_id,
+            "project_id": safe_project_id or None,
+            "count": len(events),
+            "events": events,
+        }
+    except Exception as error:
+        return {
+            "success": False,
+            "error": "execution_event_ledger_unavailable",
+            "message": str(error),
+            "tenant_id": str(tenant_id or "client_demo_001"),
+            "project_id": str(project_id or "") or None,
+            "count": 0,
+            "events": [],
+        }
 
 @app.post("/run-agent")
 def run_agent(request: RunAgentRequest) -> Dict[str, object]:
