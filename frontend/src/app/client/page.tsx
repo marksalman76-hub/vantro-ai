@@ -151,6 +151,24 @@ type LiveDeliverable = {
   tags?: string[];
 };
 
+
+type ExecutionTimelineEvent = {
+  event_id: string;
+  created_at: string;
+  agent_id: string;
+  event_type: string;
+  event_status: string;
+  workflow_stage: string;
+  action_type: string;
+  execution_action?: string;
+  approval_status?: string;
+  execution_status?: string;
+  quality_status?: string;
+  title?: string;
+  summary?: string;
+};
+
+
 const DEFAULT_AGENTS: string[] = [];
 const BACKEND_API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "https://ecommerce-ai-agent-platform-1.onrender.com";
 
@@ -202,6 +220,8 @@ export default function ClientPage() {
   const [selectedAssetIndex, setSelectedAssetIndex] = useState(0);
 
   const [integrations, setIntegrations] = useState<ClientIntegration[]>([]);
+  const [executionTimeline, setExecutionTimeline] = useState<ExecutionTimelineEvent[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
   const [integrationMessage, setIntegrationMessage] = useState("");
 
 
@@ -335,6 +355,10 @@ export default function ClientPage() {
     "";
 
   useEffect(() => {
+    loadExecutionTimeline();
+  }, []);
+
+  useEffect(() => {
     if (!toastMessage) return;
 
     const timer = window.setTimeout(() => {
@@ -383,6 +407,35 @@ export default function ClientPage() {
     }
   }
 
+
+
+
+  async function loadExecutionTimeline() {
+    try {
+      setTimelineLoading(true);
+
+      const response = await fetch(
+        `${BACKEND_API_BASE}/client/execution-events?tenant_id=client_manual_admin&project_id=live_readiness_matrix&limit=20`,
+        {
+          cache: "no-store",
+          headers: {
+            "x-tenant-id": "client_manual_admin",
+            "x-actor-role": "customer",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (data?.success && Array.isArray(data.events)) {
+        setExecutionTimeline(data.events);
+      }
+    } catch {
+      setExecutionTimeline([]);
+    } finally {
+      setTimelineLoading(false);
+    }
+  }
 
   async function loadIntegrations() {
     try {
@@ -1223,10 +1276,27 @@ export default function ClientPage() {
             <h3 style={cardTitle}>Execution timeline</h3>
 
             <div style={{ display: "grid", gap: 18, marginTop: 22 }}>
-              {[
-                [liveDeliverable?.created_at || "Live", liveDeliverable ? "Deliverable generated" : "Waiting for execution", selectedAgents.length ? getAgentDisplayName(selectedAgents[0]) : "Selected agent"],
-                [reviewStatus === "approved" ? "Complete" : "Pending", reviewStatus === "approved" ? "Approved by client" : "Awaiting review", "Client workspace"],
-              ].map(([time, event, actor]) => (
+              {(executionTimeline.length
+                ? executionTimeline.map((event) => [
+                    event.created_at
+                      ? new Date(event.created_at).toLocaleString()
+                      : "Live",
+                    event.title || event.event_type || "Execution event",
+                    getAgentDisplayName(event.agent_id || "agent"),
+                  ])
+                : [
+                    [
+                      liveDeliverable?.created_at || "Live",
+                      liveDeliverable
+                        ? "Deliverable generated"
+                        : timelineLoading
+                          ? "Loading execution timeline"
+                          : "Waiting for execution",
+                      selectedAgents.length
+                        ? getAgentDisplayName(selectedAgents[0])
+                        : "Selected agent",
+                    ],
+                  ]).map(([time, event, actor]) => (
                 <div
                   key={event}
                   style={{
