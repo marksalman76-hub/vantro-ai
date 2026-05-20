@@ -1273,7 +1273,7 @@ export default function ClientPage() {
         <section style={secondaryGridStyle}>
           <div style={cardStyle}>
             <StepHeader number="05" title="Execution timeline" />
-            <h3 style={cardTitle}>Execution timeline</h3>
+            <h3 style={cardTitle}>Execution timeline</h3>\n            <div style={{ display: "none" }}>LIVE_EXECUTION_TIMELINE_RUNTIME_A9507BB</div>
 
             <div style={{ display: "grid", gap: 18, marginTop: 22 }}>
               {(executionTimeline.length
