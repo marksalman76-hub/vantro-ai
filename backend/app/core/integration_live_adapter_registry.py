@@ -558,6 +558,7 @@ def _execute_gohighlevel_action(token: str, action: str, payload: Dict[str, Any]
             "firstName": first_name,
             "lastName": last_name,
             "phone": phone,
+            "source": payload.get("source") or "Ecommerce AI Agent Platform",
         }
 
         result = _crm_json_request(
@@ -570,11 +571,67 @@ def _execute_gohighlevel_action(token: str, action: str, payload: Dict[str, Any]
         result.update({"mode": "live_gohighlevel_create_contact", "action": action})
         return result
 
+    if action == "update_contact":
+        contact_id = str(payload.get("contact_id") or "").strip()
+        if not contact_id:
+            return {"success": False, "error": "contact_id_required"}
+
+        update_payload = {
+            "email": payload.get("email"),
+            "firstName": payload.get("first_name"),
+            "lastName": payload.get("last_name"),
+            "phone": payload.get("phone"),
+        }
+        update_payload = {k: v for k, v in update_payload.items() if v not in [None, ""]}
+
+        result = _crm_json_request(
+            f"https://services.leadconnectorhq.com/contacts/{contact_id}",
+            token,
+            "PUT",
+            update_payload,
+            provider="GoHighLevel",
+        )
+        result.update({"mode": "live_gohighlevel_update_contact", "action": action, "contact_id": contact_id})
+        return result
+
+    if action == "add_note":
+        contact_id = str(payload.get("contact_id") or "").strip()
+        body = str(payload.get("body") or payload.get("note") or "").strip()
+
+        if not contact_id:
+            return {"success": False, "error": "contact_id_required"}
+        if not body:
+            return {"success": False, "error": "note_body_required"}
+
+        note_payload = {
+            "body": body,
+        }
+
+        result = _crm_json_request(
+            f"https://services.leadconnectorhq.com/contacts/{contact_id}/notes",
+            token,
+            "POST",
+            note_payload,
+            provider="GoHighLevel",
+        )
+        result.update({"mode": "live_gohighlevel_add_note", "action": action, "contact_id": contact_id})
+        return result
+
+    if action == "create_deal":
+        return {
+            "success": False,
+            "error": "owner_approval_required",
+            "mode": "gohighlevel_create_deal_guarded",
+            "provider": "GoHighLevel",
+            "action": action,
+            "message": "Creating opportunities/deals remains approval-gated before live execution.",
+            "credential_exposed": False,
+        }
+
     return {
-        "success": True,
-        "mode": "gohighlevel_action_scaffold",
+        "success": False,
+        "error": "unsupported_gohighlevel_action",
         "provider": "GoHighLevel",
         "action": action,
-        "live_execution_ready": False,
         "credential_exposed": False,
     }
