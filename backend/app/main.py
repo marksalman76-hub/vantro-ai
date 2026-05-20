@@ -99,6 +99,7 @@ from backend.app.runtime.execution_stack import (
     execution_summary,
 )
 from backend.app.core.execution_event_ledger import execution_event_ledger
+from backend.app.core.execution_event_runtime import add_execution_event, list_execution_events
 from backend.app.runtime.learning_recommendation_engine import (
     LearningRecommendationEngine,
     learning_recommendation_summary,
@@ -234,6 +235,15 @@ def client_execution_events(
         safe_tenant_id = str(tenant_id or "client_demo_001")
         safe_project_id = str(project_id or "")
 
+        durable_result = list_execution_events(
+            tenant_id=safe_tenant_id,
+            project_id=safe_project_id or "default_project",
+            limit=safe_limit,
+        )
+
+        if durable_result.get("success"):
+            return durable_result
+
         events = execution_event_ledger.latest(
             tenant_id=safe_tenant_id,
             project_id=safe_project_id or None,
@@ -247,6 +257,7 @@ def client_execution_events(
             "project_id": safe_project_id or None,
             "count": len(events),
             "events": events,
+            "storage_mode": "file_fallback",
         }
     except Exception as error:
         return {
@@ -382,6 +393,24 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             record_type="blocked_execution",
             title=f"Blocked action: {request.action_type}",
             payload=blocked_payload,
+        )
+
+        add_execution_event(
+            tenant_id=request.tenant_id,
+            project_id=request.project_id,
+            event_type="approval_gate_blocked",
+            title=f"{requested_agent} action paused by approval gateway",
+            agent_id=requested_agent,
+            payload=blocked_payload,
+        )
+
+        add_execution_event(
+            tenant_id=request.tenant_id,
+            project_id=request.project_id,
+            event_type="quality_gate_failed",
+            title=f"{requested_agent} output rejected by premium quality gate",
+            agent_id=requested_agent,
+            payload=quality_failure_payload,
         )
 
         execution_event_ledger.record(
@@ -538,6 +567,15 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
         tenant_id=request.tenant_id,
         project_id=request.project_id,
         record_type="successful_execution",
+    )
+
+    add_execution_event(
+        tenant_id=request.tenant_id,
+        project_id=request.project_id,
+        event_type="agent_execution_completed",
+        title=f"{requested_agent} execution completed",
+        agent_id=requested_agent,
+        payload=successful_payload,
     )
 
     execution_event_ledger.record(
