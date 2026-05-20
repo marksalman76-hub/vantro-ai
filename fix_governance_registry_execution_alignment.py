@@ -1,4 +1,15 @@
-from __future__ import annotations
+from pathlib import Path
+from datetime import datetime
+
+path = Path("backend/app/core/governance_execution_registry.py")
+backup_dir = Path("backups")
+backup_dir.mkdir(exist_ok=True)
+
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+backup = backup_dir / f"governance_execution_registry_before_execution_alignment_{timestamp}.py"
+backup.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+
+content = r'''from __future__ import annotations
 
 from typing import Dict
 
@@ -159,3 +170,10 @@ def registry_summary() -> Dict[str, object]:
         "prohibited_autonomous_action_count": len(PROHIBITED_AUTONOMOUS_ACTION_TYPES),
         "agent_default_workflow_count": len(AGENT_DEFAULT_WORKFLOW_STAGE),
     }
+'''
+
+path.write_text(content, encoding="utf-8")
+
+print("GOVERNANCE_REGISTRY_EXECUTION_ALIGNMENT_FIXED")
+print(f"Backup: {backup}")
+print(f"Updated: {path}")
