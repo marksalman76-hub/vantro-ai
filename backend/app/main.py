@@ -222,6 +222,28 @@ def health() -> Dict[str, object]:
     }
 
 
+@app.get("/client/execution-events")
+def client_execution_events(
+    tenant_id: str = "client_demo_001",
+    project_id: str = "",
+    limit: int = 25,
+) -> Dict[str, object]:
+    safe_limit = max(1, min(int(limit or 25), 100))
+    events = execution_event_ledger.latest(
+        tenant_id=tenant_id,
+        project_id=project_id or None,
+        limit=safe_limit,
+        client_visible_only=True,
+    )
+    return {
+        "success": True,
+        "tenant_id": tenant_id,
+        "project_id": project_id or None,
+        "count": len(events),
+        "events": events,
+    }
+
+
 @app.post("/run-agent")
 def run_agent(request: RunAgentRequest) -> Dict[str, object]:
     requested_agent = normalize_agent_id(request.requested_agent)
@@ -347,6 +369,24 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             payload=blocked_payload,
         )
 
+        execution_event_ledger.record(
+            tenant_id=request.tenant_id,
+            project_id=request.project_id,
+            agent_id=requested_agent,
+            actor_role=request.actor_role,
+            workflow_stage=request.workflow_stage,
+            action_type=request.action_type,
+            execution_action=None,
+            event_type="approval_gate_blocked",
+            event_status=approval_decision.status,
+            title=f"{requested_agent} action paused by approval gateway",
+            summary="Action paused or rejected by owner approval gateway.",
+            workflow=workflow_summary(workflow_packet),
+            approval=approval_summary(approval_decision),
+            owner_approved=request.owner_approved,
+            client_visible=True,
+        )
+
         return {
             "success": False,
             "status": approval_decision.status,
@@ -402,6 +442,24 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             record_type="quality_gate_failure",
             title="Premium quality gate rejection",
             payload=quality_failure_payload,
+        )
+
+        execution_event_ledger.record(
+            tenant_id=request.tenant_id,
+            project_id=request.project_id,
+            agent_id=requested_agent,
+            actor_role=request.actor_role,
+            workflow_stage=request.workflow_stage,
+            action_type=request.action_type,
+            execution_action=None,
+            event_type="quality_gate_failed",
+            event_status="quality_gate_failed",
+            title=f"{requested_agent} output rejected by premium quality gate",
+            summary="Output rejected by premium quality gate.",
+            workflow=workflow_summary(workflow_packet),
+            quality=quality_summary(quality_result),
+            owner_approved=request.owner_approved,
+            client_visible=True,
         )
 
         return {
@@ -465,6 +523,26 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
         tenant_id=request.tenant_id,
         project_id=request.project_id,
         record_type="successful_execution",
+    )
+
+    execution_event_ledger.record(
+        tenant_id=request.tenant_id,
+        project_id=request.project_id,
+        agent_id=requested_agent,
+        actor_role=request.actor_role,
+        workflow_stage=request.workflow_stage,
+        action_type=request.action_type,
+        execution_action=execution_action,
+        event_type="agent_execution_completed",
+        event_status="agent_execution_completed",
+        title=f"{requested_agent} execution completed",
+        summary="Agent output passed workflow, approval, quality, and governed execution handling.",
+        workflow=workflow_summary(workflow_packet),
+        approval=approval_summary(approval_decision),
+        quality=quality_summary(quality_result),
+        execution=execution_summary(execution_result) if execution_result else None,
+        owner_approved=request.owner_approved,
+        client_visible=True,
     )
 
     latest_sqlite_record = sqlite_store.latest_record(
