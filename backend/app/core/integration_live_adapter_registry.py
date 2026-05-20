@@ -439,6 +439,10 @@ def _crm_json_request(url: str, token: str, method: str, payload: Dict[str, Any]
         "Authorization": f"Bearer {token}",
     }
 
+    if provider == "GoHighLevel":
+        headers["Version"] = "2021-07-28"
+        headers["Accept"] = "application/json"
+
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
 
