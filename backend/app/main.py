@@ -98,6 +98,7 @@ from backend.app.runtime.execution_stack import (
     ExecutionStack,
     execution_summary,
 )
+from backend.app.core.execution_event_ledger import execution_event_ledger
 from backend.app.runtime.learning_recommendation_engine import (
     LearningRecommendationEngine,
     learning_recommendation_summary,
