@@ -442,6 +442,11 @@ def _crm_json_request(url: str, token: str, method: str, payload: Dict[str, Any]
     if provider == "GoHighLevel":
         headers["Version"] = "2021-07-28"
         headers["Accept"] = "application/json"
+        headers["User-Agent"] = (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/136.0.0.0 Safari/537.36"
+        )
 
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
