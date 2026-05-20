@@ -100,6 +100,7 @@ from backend.app.runtime.execution_stack import (
 )
 from backend.app.core.execution_event_ledger import execution_event_ledger
 from backend.app.core.execution_event_runtime import add_execution_event, list_execution_events
+from backend.app.core.execution_queue_runtime import enqueue_execution, list_execution_queue, mark_execution_failed, queue_readiness
 from backend.app.runtime.learning_recommendation_engine import (
     LearningRecommendationEngine,
     learning_recommendation_summary,
@@ -649,6 +650,30 @@ try:
     from backend.app.core.provider_execution_audit_log import provider_execution_audit_log
 except Exception:
     provider_execution_audit_log = None
+
+
+
+@app.get("/admin/execution-queue/readiness")
+async def admin_execution_queue_readiness():
+    return queue_readiness()
+
+
+@app.get("/admin/execution-queue")
+async def admin_execution_queue(tenant_id: str = "", status: str = "", limit: int = 50):
+    return list_execution_queue(tenant_id=tenant_id, status=status, limit=limit)
+
+
+@app.post("/admin/execution-queue/enqueue")
+async def admin_execution_queue_enqueue(payload: dict):
+    return enqueue_execution(payload)
+
+
+@app.post("/admin/execution-queue/mark-failed")
+async def admin_execution_queue_mark_failed(payload: dict):
+    return mark_execution_failed(
+        int(payload.get("queue_id") or 0),
+        str(payload.get("error") or "manual_failure_test"),
+    )
 
 
 @app.get("/admin/provider-execution-audit")
