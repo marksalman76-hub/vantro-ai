@@ -28,7 +28,7 @@ LIVE_ADAPTER_REGISTRY: Dict[str, Dict[str, Any]] = {
     "store": {
         "status": "adapter_scaffold",
         "live_providers": ["Shopify", "WooCommerce", "BigCommerce"],
-        "supported_actions": ["create_product_draft", "update_product_draft", "read_products"],
+        "supported_actions": ["create_product_draft", "update_product_draft", "read_products", "diagnose_connection"],
         "approval_required_actions": ["publish_product", "change_price", "delete_product"],
     },
     "website": {
