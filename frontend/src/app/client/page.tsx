@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 
 type Account = {
+  tenant_id?: string;
+  client_id?: string;
   package?: string;
   package_name?: string;
   status?: string;
@@ -14,7 +16,6 @@ type Account = {
   credits_monthly?: number;
   credits_used?: number;
 };
-
 
 type ClientIntegration = {
   integration_key: string;
@@ -355,8 +356,10 @@ export default function ClientPage() {
     "";
 
   useEffect(() => {
-    loadExecutionTimeline();
-  }, []);
+    if (account) {
+      loadExecutionTimeline();
+    }
+  }, [account]);
 
   useEffect(() => {
     if (!toastMessage) return;
@@ -414,12 +417,17 @@ export default function ClientPage() {
     try {
       setTimelineLoading(true);
 
+      const tenantId =
+        account?.tenant_id ||
+        account?.client_id ||
+        "client_manual_admin";
+
       const response = await fetch(
-        `${BACKEND_API_BASE}/client/execution-events?tenant_id=client_manual_admin&project_id=live_readiness_matrix&limit=20`,
+        `${BACKEND_API_BASE}/client/execution-events?tenant_id=${encodeURIComponent(tenantId)}&project_id=live_readiness_matrix&limit=20`,
         {
           cache: "no-store",
           headers: {
-            "x-tenant-id": "client_manual_admin",
+            "x-tenant-id": tenantId,
             "x-actor-role": "customer",
           },
         }

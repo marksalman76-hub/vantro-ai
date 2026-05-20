@@ -64,6 +64,8 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     success: true,
     account: {
+      tenant_id: account.tenant_id || account.client_id || account.id || "",
+      client_id: account.client_id || account.tenant_id || account.id || "",
       company_name: account.company_name || "Client Workspace",
       contact_email: account.email || "",
       package_name: account.package || account.package_name || "Active package",
