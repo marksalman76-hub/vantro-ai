@@ -130,7 +130,7 @@ def execute_integration_action(
     if integration_key == "email" and action == "send_email":
         return _send_email_via_brevo(tenant_id, connection, payload)
 
-    if integration_key == "store" and action in {"read_products", "create_product_draft", "update_product_draft"}:
+    if integration_key == "store" and action in {"read_products", "create_product_draft", "update_product_draft", "diagnose_connection"}:
         return _execute_shopify_action(tenant_id, connection, action, payload)
 
     if integration_key == "crm" and action in {"create_contact", "add_note", "create_deal", "update_contact"}:
@@ -304,6 +304,9 @@ def _execute_shopify_action(tenant_id: str, connection: Dict[str, Any], action: 
             "message": "Provide Shopify store domain, for example your-store.myshopify.com.",
         }
 
+    if action == "diagnose_connection":
+        return _shopify_diagnose_connection(base_url, api_token)
+
     if action == "read_products":
         return _shopify_read_products(base_url, api_token)
 
@@ -372,6 +375,58 @@ def _shopify_read_products(base_url: str, api_token: str) -> Dict[str, Any]:
         "action": "read_products",
     })
     return result
+
+
+
+def _shopify_diagnose_connection(base_url: str, api_token: str) -> Dict[str, Any]:
+    token = str(api_token or "")
+    token_type = (
+        "admin_api_private_app_token"
+        if token.startswith("shpat_")
+        else "shopify_app_automation_token"
+        if token.startswith("atkn_")
+        else "shopify_secret"
+        if token.startswith("shpss_")
+        else "unknown_token_format"
+    )
+
+    shop_response = _shopify_request(
+        f"{base_url}/admin/api/2025-01/shop.json",
+        api_token,
+        method="GET",
+    )
+
+    products_response = _shopify_request(
+        f"{base_url}/admin/api/2025-01/products.json?limit=1",
+        api_token,
+        method="GET",
+    )
+
+    return {
+        "success": bool(shop_response.get("success") or products_response.get("success")),
+        "mode": "shopify_connection_diagnostic",
+        "provider": "Shopify",
+        "token_type": token_type,
+        "token_prefix": token[:5] if token else "",
+        "shop_endpoint": {
+            "success": shop_response.get("success"),
+            "status_code": shop_response.get("status_code"),
+            "error": shop_response.get("error"),
+            "provider_response": str(shop_response.get("provider_response", ""))[:800],
+        },
+        "products_endpoint": {
+            "success": products_response.get("success"),
+            "status_code": products_response.get("status_code"),
+            "error": products_response.get("error"),
+            "provider_response": str(products_response.get("provider_response", ""))[:800],
+        },
+        "credential_exposed": False,
+        "diagnosis": (
+            "Token can access Shopify Admin API."
+            if shop_response.get("success") or products_response.get("success")
+            else "Token cannot access Shopify Admin API with X-Shopify-Access-Token."
+        ),
+    }
 
 
 def _shopify_create_product_draft(base_url: str, api_token: str, payload: Dict[str, Any]) -> Dict[str, Any]:
