@@ -1,0 +1,15 @@
+
+
+# Local backups and generated helper scripts
+backups/
+runtime_data/
+data/security/
+data/saas_provisioning/
+data/learning/
+data/orchestration/
+*.pyc
+__pycache__/
+.pytest_cache/
+frontend/.next/
+frontend/out/
+frontend/node_modules/
