@@ -1,0 +1,69 @@
+{
+  "system": "premium_media_asset_library",
+  "purpose": "Reusable high-end audio and visual assets for landing pages, app UI, UGC, ads, product visuals, and agent-generated creative outputs.",
+  "locked_rules": {
+    "backend_runtime_touched": false,
+    "architecture_changed": false,
+    "frontend_asset_foundation_only": true
+  },
+  "asset_groups": {
+    "landing": {
+      "hero": "/media/landing/hero",
+      "motion": "/media/landing/motion",
+      "backgrounds": "/media/landing/backgrounds"
+    },
+    "agents": {
+      "avatars": "/media/agents/avatars",
+      "icons": "/media/agents/icons"
+    },
+    "ugc": {
+      "avatars": "/media/ugc/avatars",
+      "scenes": "/media/ugc/scenes",
+      "voice_previews": "/media/ugc/voice-previews"
+    },
+    "ads": {
+      "backgrounds": "/media/ads/backgrounds",
+      "templates": "/media/ads/templates"
+    },
+    "product_images": {
+      "mockups": "/media/product-images/mockups",
+      "lifestyle": "/media/product-images/lifestyle"
+    },
+    "audio": {
+      "music_beds": "/media/audio/music-beds",
+      "voice_packs": "/media/audio/voice-packs"
+    },
+    "video": {
+      "webm_loops": "/media/video/webm-loops",
+      "mp4_loops": "/media/video/mp4-loops"
+    },
+    "motion_formats": {
+      "lottie": "/media/lottie",
+      "spline": "/media/spline"
+    }
+  },
+  "future_provider_slots": {
+    "image_generation": [
+      "OpenAI image",
+      "Midjourney/manual exports",
+      "Runway image/video",
+      "Leonardo/Krea-style image workflows"
+    ],
+    "video_generation": [
+      "Runway",
+      "Pika",
+      "Luma",
+      "Kling-style workflows"
+    ],
+    "voice_generation": [
+      "OpenAI voice",
+      "ElevenLabs",
+      "Cartesia-style voice workflows"
+    ],
+    "music_sound": [
+      "licensed music beds",
+      "generated music beds",
+      "sound design packs"
+    ]
+  }
+}
