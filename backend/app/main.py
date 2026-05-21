@@ -71,6 +71,8 @@ SQLite production persistence, learning recommendations,
 behaviour optimisation, and execution stack routing.
 """
 
+from backend.app.core.priority5_final_security_readiness import priority5_final_security_readiness
+from backend.app.core.priority5_active_security_runtime import active_security_readiness, csrf_check_passed, csrf_check_required, log_security_event, rate_limit_check
 from fastapi import FastAPI, Header
 from pydantic import BaseModel
 from typing import Dict, List
@@ -2052,3 +2054,74 @@ def webhooks_stripe_live(payload: dict):
 def admin_final_deployment_readiness():
     return final_deployment_readiness()
 
+
+
+
+@app.get("/admin/security/final-readiness")
+def admin_security_final_readiness():
+    return priority5_final_security_readiness()
+
+
+
+@app.middleware("http")
+async def priority5_active_security_middleware(request, call_next):
+    protected_prefixes = (
+        "/admin",
+        "/client",
+        "/api/run-agent",
+        "/api/client-review-action",
+        "/api/client-integrations",
+        "/api/client-integrations-connect",
+        "/api/client-integrations-disconnect",
+        "/api/client-integrations-test",
+    )
+
+    path = request.url.path
+    is_protected = path.startswith(protected_prefixes)
+
+    if is_protected:
+        rate = rate_limit_check(request)
+        if not rate.get("allowed"):
+            log_security_event("rate_limit_exceeded", request, {"rate_limit": rate})
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "success": False,
+                    "error": "rate_limit_exceeded",
+                    "customer_safe_response_mode": True,
+                    "secret_values_exposed": False,
+                },
+            )
+
+        if csrf_check_required(request) and not csrf_check_passed(request):
+            log_security_event("csrf_token_missing", request, {"mode": "enforce"})
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "success": False,
+                    "error": "csrf_validation_failed",
+                    "customer_safe_response_mode": True,
+                    "secret_values_exposed": False,
+                },
+            )
+
+        if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
+            log_security_event("protected_state_changing_request", request, {"csrf_mode": "audit_or_enforce"})
+
+    response = await call_next(request)
+
+    if is_protected:
+        response.headers["X-Security-Profile"] = "priority5_active_security_runtime_v1"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+
+    return response
+
+
+
+@app.get("/admin/security/active-runtime-readiness")
+def admin_security_active_runtime_readiness():
+    return active_security_readiness()
