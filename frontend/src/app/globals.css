@@ -1,3 +1,48 @@
+
+/* Ecommerce AI Agent Platform — Unified UI Design System */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --color-brand: #4F46E5;
+  --color-teal: #0D9488;
+  --color-dark: #0F172A;
+  --color-surface: #1E293B;
+  --color-mid: #334155;
+  --color-muted: #64748B;
+  --color-border: #E2E8F0;
+  --color-border-dark: #2D3F55;
+  --color-bg-light: #F8FAFC;
+  --color-amber: #D97706;
+  --color-red: #DC2626;
+  --color-tag-ready-bg: #F0FDF4;
+  --color-tag-ready-text: #047857;
+
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --space-6: 48px;
+  --space-8: 64px;
+  --space-10: 80px;
+}
+
+html,
+body {
+  font-family: Inter, sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: Inter, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -46,4 +91,131 @@ a {
   html {
     color-scheme: dark;
   }
+}
+
+
+/* =========================================================
+   SHARED PLATFORM SHELL SYSTEM
+   ========================================================= */
+
+:root{
+  --shell-max-width: 1480px;
+
+  --space-xs:8px;
+  --space-sm:12px;
+  --space-md:18px;
+  --space-lg:24px;
+  --space-xl:32px;
+  --space-2xl:48px;
+  --space-3xl:72px;
+
+  --radius-sm:10px;
+  --radius-md:14px;
+  --radius-lg:18px;
+
+  --shadow-soft:0 10px 35px rgba(15,23,42,.05);
+
+  --surface-primary:#ffffff;
+  --surface-secondary:#f8fafc;
+}
+
+.platform-shell{
+  width:100%;
+  max-width:var(--shell-max-width);
+  margin:0 auto;
+  padding-left:24px;
+  padding-right:24px;
+}
+
+.platform-section{
+  margin-top:var(--space-2xl);
+}
+
+.platform-card{
+  background:var(--surface-primary);
+  border:1px solid var(--color-border);
+  border-radius:var(--radius-md);
+  box-shadow:var(--shadow-soft);
+}
+
+.platform-section-title{
+  font-size:clamp(28px,4vw,54px);
+  line-height:1.04;
+  letter-spacing:-0.03em;
+  color:var(--color-dark);
+  font-weight:900;
+}
+
+.platform-subtitle{
+  color:var(--color-mid);
+  line-height:1.7;
+  font-size:16px;
+}
+
+.platform-grid{
+  display:grid;
+  gap:24px;
+}
+
+.platform-metric-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:20px;
+}
+
+.platform-two-col{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+  gap:24px;
+}
+
+.platform-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  border-radius:999px;
+  padding:10px 16px;
+  font-size:13px;
+  font-weight:700;
+}
+
+.platform-button-primary{
+  border:none;
+  background:var(--color-brand);
+  color:#fff;
+  border-radius:12px;
+  padding:14px 22px;
+  font-weight:800;
+  cursor:pointer;
+}
+
+.platform-button-secondary{
+  border:1px solid var(--color-border);
+  background:#fff;
+  color:var(--color-dark);
+  border-radius:12px;
+  padding:14px 22px;
+  font-weight:700;
+  cursor:pointer;
+}
+
+@media (max-width:768px){
+
+  .platform-shell{
+    padding-left:18px;
+    padding-right:18px;
+  }
+
+  .platform-section{
+    margin-top:32px;
+  }
+
+  .platform-metric-grid{
+    grid-template-columns:1fr;
+  }
+
+  .platform-two-col{
+    grid-template-columns:1fr;
+  }
+
 }

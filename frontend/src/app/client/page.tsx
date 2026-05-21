@@ -274,7 +274,7 @@ export default function ClientPage() {
     gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,280px),1fr))",
     gap: 14,
     padding: 16,
-    borderRadius: 18,
+    borderRadius: 12,
     border: "1px solid #e5eaf2",
     background: "#fff",
   };
@@ -598,7 +598,7 @@ const modalContentGridStyle = {
       style={{
         minHeight: "100vh",
         background: "#f4f7fb",
-        color: "#0f172a",
+        color: "var(--color-dark)",
         fontFamily:
           'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
@@ -609,7 +609,7 @@ const modalContentGridStyle = {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
-            gap: 28,
+            gap: 24,
             marginBottom: 24,
             flexWrap: "wrap",
           }}
@@ -617,7 +617,7 @@ const modalContentGridStyle = {
           <div>
             <div
               style={{
-                color: "#2563eb",
+                color: "var(--color-brand)",
                 fontSize: 13,
                 fontWeight: 760,
                 letterSpacing: 1.4,
@@ -644,7 +644,7 @@ const modalContentGridStyle = {
               style={{
                 margin: "12px 0 0",
                 maxWidth: 700,
-                color: "#64748b",
+                color: "var(--color-muted)",
                 lineHeight: 1.42,
                 fontSize: 13,
               }}
@@ -658,9 +658,9 @@ const modalContentGridStyle = {
             <button
               style={{
                 border: "none",
-                borderRadius: 18,
+                borderRadius: 12,
                 padding: "12px 16px",
-                background: "#0f172a",
+                background: "var(--color-dark)",
                 color: "#fff",
                 fontWeight: 700,
                 cursor: "pointer",
@@ -680,7 +680,7 @@ const modalContentGridStyle = {
                 boxShadow: "0 8px 22px rgba(15,23,42,.045)",
               }}
             >
-              <span style={{ color: "#2563eb", marginRight: 8 }}>●</span>
+              <span style={{ color: "var(--color-brand)", marginRight: 8 }}>●</span>
               {accountStatus}
             </div>
 
@@ -706,7 +706,7 @@ const modalContentGridStyle = {
                   width: 8,
                   height: 8,
                   borderRadius: 16,
-                  background: "#2563eb",
+                  background: "var(--color-brand)",
                   border: "2px solid #fff",
                 }}
               />
@@ -717,7 +717,7 @@ const modalContentGridStyle = {
                 width: 44,
                 height: 44,
                 borderRadius: 16,
-                background: "#0f172a",
+                background: "var(--color-dark)",
                 color: "#fff",
                 display: "flex",
                 alignItems: "center",
@@ -762,7 +762,7 @@ const modalContentGridStyle = {
               <div>
                 <div
                   style={{
-                    color: "#64748b",
+                    color: "var(--color-muted)",
                     fontSize: 11,
                     fontWeight: 700,
                     letterSpacing: .4,
@@ -778,7 +778,7 @@ const modalContentGridStyle = {
                     display: "block",
                     fontSize: 17,
                     letterSpacing: -.2,
-                    color: "#0f172a",
+                    color: "var(--color-dark)",
                   }}
                 >
                   {value}
@@ -800,7 +800,7 @@ const modalContentGridStyle = {
                   width: 10,
                   height: 10,
                   borderRadius: 16,
-                  background: label === "Approvals" ? "#f59e0b" : "#2563eb",
+                  background: label === "Approvals" ? "#f59e0b" : "var(--color-brand)",
                   boxShadow:
                     label === "Approvals"
                       ? "0 0 0 5px rgba(245,158,11,.10)"
@@ -814,7 +814,7 @@ const modalContentGridStyle = {
         <section
           style={{
             background: "#fff",
-            borderRadius: 18,
+            borderRadius: 12,
             padding: "clamp(20px,2.2vw,30px)",
             boxShadow: "0 14px 34px rgba(15,23,42,.045)",
             marginBottom: 18,
@@ -833,7 +833,7 @@ const modalContentGridStyle = {
             <div>
               <div
                 style={{
-                  color: "#2563eb",
+                  color: "var(--color-brand)",
                   fontSize: 11.8,
                   fontWeight: 760,
                   letterSpacing: 1.4,
@@ -848,7 +848,7 @@ const modalContentGridStyle = {
                 Business context for tailored AI execution
               </h2>
 
-              <p style={{ marginTop: 10, color: "#64748b", maxWidth: 760, lineHeight: 1.55 }}>
+              <p style={{ marginTop: 10, color: "var(--color-muted)", maxWidth: 760, lineHeight: 1.55 }}>
                 Add business context once so every active AI agent can produce more accurate
                 deliverables, assets, copy, positioning, and execution recommendations.
               </p>
@@ -857,7 +857,7 @@ const modalContentGridStyle = {
             <div
               style={{
                 background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
-                color: "#2563eb",
+                color: "var(--color-brand)",
                 padding: "10px 14px",
                 borderRadius: 16,
                 fontWeight: 700,
@@ -886,7 +886,7 @@ const modalContentGridStyle = {
               ["Goals", "Sales, launches, retention, growth"],
             ].map(([label, value]) => (
               <label key={label}>
-                <div style={{ color: "#64748b", fontSize: 11.8, fontWeight: 700, marginBottom: 7 }}>
+                <div style={{ color: "var(--color-muted)", fontSize: 11.8, fontWeight: 700, marginBottom: 7 }}>
                   {label}
                 </div>
                 <textarea
@@ -905,7 +905,7 @@ const modalContentGridStyle = {
                     padding: "12px 13px",
                     fontSize: 11.8,
                     lineHeight: 1.42,
-                    color: "#0f172a",
+                    color: "var(--color-dark)",
                     outline: "none",
                     boxSizing: "border-box",
                     fontFamily: "inherit",
@@ -934,8 +934,8 @@ const modalContentGridStyle = {
             }}
           >
             <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "#0f172a" }}>Integrations</div>
-              <div style={{ color: "#64748b", fontSize: 11.8, marginTop: 2 }}>Connected systems</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-dark)" }}>Integrations</div>
+              <div style={{ color: "var(--color-muted)", fontSize: 11.8, marginTop: 2 }}>Connected systems</div>
             </div>
 
             <div
@@ -955,7 +955,7 @@ const modalContentGridStyle = {
                   style={{
                     border: "1px solid rgba(15, 23, 42, 0.10)",
                     background: "#ffffff",
-                    borderRadius: 14,
+                    borderRadius: 8,
                     padding: "9px 12px",
                     display: "inline-flex",
                     alignItems: "center",
@@ -975,7 +975,7 @@ const modalContentGridStyle = {
                       alignItems: "center",
                       justifyContent: "center",
                       background: integration.connected ? "#ecfdf5" : "#f1f5f9",
-                      color: integration.connected ? "#16a34a" : "#64748b",
+                      color: integration.connected ? "var(--color-teal)" : "var(--color-muted)",
                       fontWeight: 900,
                       fontSize: 11.8,
                     }}
@@ -983,8 +983,8 @@ const modalContentGridStyle = {
                     {integration.name.slice(0, 1)}
                   </span>
                   <span style={{ display: "grid", lineHeight: 1.1, textAlign: "left" }}>
-                    <span style={{ fontWeight: 800, color: "#0f172a", fontSize: 12 }}>{integration.name}</span>
-                    <span style={{ color: integration.connected ? "#16a34a" : "#64748b", fontSize: 11, fontWeight: 700 }}>
+                    <span style={{ fontWeight: 800, color: "var(--color-dark)", fontSize: 12 }}>{integration.name}</span>
+                    <span style={{ color: integration.connected ? "var(--color-teal)" : "var(--color-muted)", fontSize: 11, fontWeight: 700 }}>
                       {integration.connected ? "Connected" : "Connect"}
                     </span>
                   </span>
@@ -996,8 +996,8 @@ const modalContentGridStyle = {
                 style={{
                   border: "1px solid rgba(37, 99, 235, 0.16)",
                   background: "linear-gradient(135deg,#eff6ff,#ffffff)",
-                  color: "#2563eb",
-                  borderRadius: 14,
+                  color: "var(--color-brand)",
+                  borderRadius: 8,
                   padding: "8px 11px",
                   fontWeight: 800,
                   cursor: "pointer",
@@ -1030,7 +1030,7 @@ const modalContentGridStyle = {
                           background: active
                             ? "linear-gradient(135deg,#eff6ff,#ffffff)"
                             : "#ffffff",
-                          color: active ? "#2563eb" : "#0f172a",
+                          color: active ? "var(--color-brand)" : "var(--color-dark)",
                           padding: "7px 9px",
                           borderRadius: 12,
                           cursor: "pointer",
@@ -1114,8 +1114,8 @@ const modalContentGridStyle = {
                     borderRadius: 16,
                     background:
                       executionState === "running"
-                        ? "linear-gradient(135deg,#64748b,#475569)"
-                        : "linear-gradient(135deg,#2563eb,#06b6d4)",
+                        ? "linear-gradient(135deg,var(--color-muted),var(--color-mid))"
+                        : "linear-gradient(135deg,var(--color-brand),#06b6d4)",
                     color: "#fff",
                     padding: "13px 16px",
                     fontWeight: 760,
@@ -1128,7 +1128,7 @@ const modalContentGridStyle = {
               </div>
             </div>
 
-            <div style={{ marginTop: 12, color: "#64748b", fontSize: 12 }}>
+            <div style={{ marginTop: 12, color: "var(--color-muted)", fontSize: 12 }}>
               ⓘ Runs use your saved business profile.
             </div>
           </div>
@@ -1145,7 +1145,7 @@ const modalContentGridStyle = {
               {[
                 ["Execution requested", executionState === "idle" ? "Waiting" : "Started", liveDeliverable?.created_at || "Live"],
                 ["Deliverable status", executionState === "completed" ? "Ready" : "Pending", liveDeliverable?.created_at || "Live"],
-                ["Client review", reviewStatus === "approved" ? "Approved" : reviewStatus === "rejected" ? "Revision requested" : "Pending", reviewStatus === "approved" ? "Complete" : "Open"],
+                ["Client review", reviewStatus === "approved" ? "Approve ✓d" : reviewStatus === "rejected" ? "Revision requested" : "Pending", reviewStatus === "approved" ? "Complete" : "Open"],
                 ["Execution ready", "Next", "—"],
               ].map(([title, status, time], index) => (
                 <div key={title} style={{ display: "grid", gridTemplateColumns: "34px 1fr auto", gap: 12, alignItems: "center" }}>
@@ -1156,7 +1156,7 @@ const modalContentGridStyle = {
                       minWidth: 30,
                       minHeight: 30,
                       borderRadius: 999,
-                      background: index === 3 ? "#06b6d4" : "#2563eb",
+                      background: index === 3 ? "#06b6d4" : "var(--color-brand)",
                       color: "#fff",
                       display: "flex",
                       alignItems: "center",
@@ -1168,9 +1168,9 @@ const modalContentGridStyle = {
                   </div>
                   <div>
                     <div style={{ fontWeight: 850, fontSize: 13 }}>{title}</div>
-                    <div style={{ color: "#64748b", fontSize: 12 }}>{status}</div>
+                    <div style={{ color: "var(--color-muted)", fontSize: 12 }}>{status}</div>
                   </div>
-                  <div style={{ color: "#64748b", fontSize: 12 }}>{time}</div>
+                  <div style={{ color: "var(--color-muted)", fontSize: 12 }}>{time}</div>
                 </div>
               ))}
             </div>
@@ -1194,14 +1194,14 @@ const modalContentGridStyle = {
                     ? "linear-gradient(135deg,#eff6ff,#ffffff)"
                     : executionState === "completed"
                       ? "linear-gradient(135deg,#ecfdf5,#ffffff)"
-                      : "linear-gradient(135deg,#eff6ff,#f8fafc)",
+                      : "linear-gradient(135deg,#eff6ff,var(--color-bg-light))",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 color:
                   executionState === "completed"
-                    ? "#16a34a"
-                    : "#2563eb",
+                    ? "var(--color-teal)"
+                    : "var(--color-brand)",
                 fontWeight: 760,
                 textAlign: "center",
                 padding: 20,
@@ -1227,7 +1227,7 @@ const modalContentGridStyle = {
                         width: "72%",
                         height: "100%",
                         borderRadius: 16,
-                        background: "linear-gradient(135deg,#2563eb,#06b6d4)",
+                        background: "linear-gradient(135deg,var(--color-brand),#06b6d4)",
                       }}
                     />
                   </div>
@@ -1245,7 +1245,7 @@ const modalContentGridStyle = {
                   >
                     <div
                       style={{
-                        color: "#16a34a",
+                        color: "var(--color-teal)",
                         fontWeight: 760,
                         fontSize: 13,
                       }}
@@ -1255,7 +1255,7 @@ const modalContentGridStyle = {
 
                     <div
                       style={{
-                        color: "#64748b",
+                        color: "var(--color-muted)",
                         fontSize: 11.8,
                         fontWeight: 700,
                       }}
@@ -1266,7 +1266,7 @@ const modalContentGridStyle = {
 
                   <div
                     style={{
-                      color: "#0f172a",
+                      color: "var(--color-dark)",
                       fontSize: 18,
                       fontWeight: 760,
                       lineHeight: 1.25,
@@ -1278,7 +1278,7 @@ const modalContentGridStyle = {
 
                   <div
                     style={{
-                      color: "#64748b",
+                      color: "var(--color-muted)",
                       fontSize: 13,
                       lineHeight: 1.42,
                       maxWidth: 420,
@@ -1302,7 +1302,7 @@ const modalContentGridStyle = {
                         style={{
                           border: "1px solid rgba(37, 99, 235, 0.14)",
                           background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
-                          color: "#2563eb",
+                          color: "var(--color-brand)",
                           borderRadius: 16,
                           padding: "7px 10px",
                           fontSize: 11.8,
@@ -1318,7 +1318,7 @@ const modalContentGridStyle = {
                 <div>
                   <div style={{ fontSize: 28, marginBottom: 10 }}>✅</div>
                   <div>Deliverable ready for review</div>
-                  <div style={{ marginTop: 6, color: "#64748b", fontSize: 12 }}>
+                  <div style={{ marginTop: 6, color: "var(--color-muted)", fontSize: 12 }}>
                     Approval or feedback required
                   </div>
                 </div>
@@ -1357,7 +1357,7 @@ const modalContentGridStyle = {
           <div style={{ ...cardStyle, height: 560, overflow: "hidden" }}>
             <StepHeader number="05" title="Activity" />
             <h3 style={cardTitle}>Activity</h3>
-            <p style={{ color: "#2563eb", fontWeight: 700, fontSize: 13 }}>Latest governed activity</p>
+            <p style={{ color: "var(--color-brand)", fontWeight: 700, fontSize: 13 }}>Latest governed activity</p>
 
             <div style={{ display: "grid", gap: 10, marginTop: 10, maxHeight: 430, overflowY: "auto", paddingRight: 4 }}>
               {(executionTimeline.length
@@ -1392,10 +1392,10 @@ const modalContentGridStyle = {
                 const isExecutionIssue = String(executionStatus).toLowerCase().includes("failed") || String(executionStatus).toLowerCase().includes("unsupported");
                 const isApprovalRequired = String(approvalStatus).toLowerCase().includes("approval") && !String(approvalStatus).toLowerCase().includes("approved_safe");
                 const statusTone = isExecutionIssue
-                  ? { bg: "#fff7ed", border: "#fed7aa", text: "#ea580c", label: "Needs attention" }
+                  ? { bg: "#fff7ed", border: "#fed7aa", text: "var(--color-amber)", label: "Needs attention" }
                   : isApprovalRequired
                     ? { bg: "#fffbeb", border: "#fde68a", text: "#ca8a04", label: "Approval gated" }
-                    : { bg: "#f0fdf4", border: "#bbf7d0", text: "#16a34a", label: "Governed ready" };
+                    : { bg: "#f0fdf4", border: "#bbf7d0", text: "var(--color-teal)", label: "Governed ready" };
 
                 return (
                   <div
@@ -1411,16 +1411,16 @@ const modalContentGridStyle = {
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
                       <div>
-                        <div style={{ color: "#64748b", fontSize: 11.8, fontWeight: 700 }}>{time}</div>
-                        <div style={{ fontWeight: 800, color: "#0f172a", fontSize: 16, marginTop: 5 }}>
+                        <div style={{ color: "var(--color-muted)", fontSize: 11.8, fontWeight: 700 }}>{time}</div>
+                        <div style={{ fontWeight: 800, color: "var(--color-dark)", fontSize: 16, marginTop: 5 }}>
                           {event.title || event.event_type || "Execution event"}
                         </div>
-                        <div style={{ color: "#475569", fontSize: 11.8, lineHeight: 1.45, marginTop: 6 }}>
+                        <div style={{ color: "var(--color-mid)", fontSize: 11.8, lineHeight: 1.45, marginTop: 6 }}>
                           {event.summary || "Governed execution event recorded by the platform ledger."}
                         </div>
                       </div>
 
-                      <div style={{ textAlign: "right", color: "#64748b", fontSize: 13, fontWeight: 850 }}>
+                      <div style={{ textAlign: "right", color: "var(--color-muted)", fontSize: 13, fontWeight: 850 }}>
                         <div>{agentName}</div>
                         <div style={{ marginTop: 4, display: "inline-flex", background: statusTone.bg, color: statusTone.text, border: `1px solid ${statusTone.border}`, borderRadius: 16, padding: "3px 6px", fontSize: 10, fontWeight: 800 }}>
                           {statusTone.label}
@@ -1429,19 +1429,19 @@ const modalContentGridStyle = {
                     </div>
 
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-                      <span style={{ background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))", color: "#2563eb", border: "1px solid rgba(37, 99, 235, 0.14)", borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
+                      <span style={{ background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))", color: "var(--color-brand)", border: "1px solid rgba(37, 99, 235, 0.14)", borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
                         {event.execution_action || event.action_type || "Tracked action"}
                       </span>
-                      <span style={{ background: "#f0fdf4", color: "#16a34a", border: "1px solid #dcfce7", borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
+                      <span style={{ background: "#f0fdf4", color: "var(--color-teal)", border: "1px solid #dcfce7", borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
                         Quality: {qualityStatus}
                       </span>
-                      <span style={{ background: "#fff7ed", color: "#ea580c", border: "1px solid #fed7aa", borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
+                      <span style={{ background: "#fff7ed", color: "var(--color-amber)", border: "1px solid #fed7aa", borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
                         Approval: {approvalStatus}
                       </span>
                       <span style={{ background: statusTone.bg, color: statusTone.text, border: `1px solid ${statusTone.border}`, borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
                         Execution: {executionStatus}
                       </span>
-                      <span style={{ background: "#f8fafc", color: "#334155", border: "1px solid rgba(15, 23, 42, 0.08)", 
+                      <span style={{ background: "var(--color-bg-light)", color: "#334155", border: "1px solid rgba(15, 23, 42, 0.08)", 
                     boxShadow: "0 18px 55px rgba(15, 23, 42, 0.06)",
                     backdropFilter: "blur(10px)",
                     WebkitBackdropFilter: "blur(10px)",
@@ -1464,7 +1464,7 @@ const modalContentGridStyle = {
               <div
                 style={{
                   background: reviewStatus === "rejected" ? "#fee2e2" : "#dcfce7",
-                  color: reviewStatus === "rejected" ? "#dc2626" : "#16a34a",
+                  color: reviewStatus === "rejected" ? "var(--color-red)" : "var(--color-teal)",
                   padding: "10px 14px",
                   borderRadius: 16,
                   fontWeight: 760,
@@ -1472,7 +1472,7 @@ const modalContentGridStyle = {
                   height: "fit-content",
                 }}
               >
-                {reviewStatus === "approved" ? "Approved" : reviewStatus === "rejected" ? "Revision requested" : "Completed"}
+                {reviewStatus === "approved" ? "Approve ✓d" : reviewStatus === "rejected" ? "Revision requested" : "Completed"}
               </div>
             </div>
 
@@ -1481,7 +1481,7 @@ const modalContentGridStyle = {
                 style={{
                   minHeight: 190,
                   borderRadius: 16,
-                  background: "#f8fafc",
+                  background: "var(--color-bg-light)",
                   border: "1px solid #e5eaf2",
                   position: "relative",
                   overflow: "hidden",
@@ -1510,8 +1510,8 @@ const modalContentGridStyle = {
                       height: "100%",
                       width: "100%",
                       padding: 16,
-                      background: "linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)",
-                      color: "#64748b",
+                      background: "linear-gradient(180deg,#ffffff 0%,var(--color-bg-light) 100%)",
+                      color: "var(--color-muted)",
                       boxSizing: "border-box",
                     }}
                   >
@@ -1541,7 +1541,7 @@ const modalContentGridStyle = {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              color: "#2563eb",
+                              color: "var(--color-brand)",
                               fontSize: 18,
                               fontWeight: 760,
                               flex: "0 0 auto",
@@ -1553,7 +1553,7 @@ const modalContentGridStyle = {
                           <div>
                             <div
                               style={{
-                                color: "#0f172a",
+                                color: "var(--color-dark)",
                                 fontWeight: 760,
                                 fontSize: 13,
                                 marginBottom: 3,
@@ -1565,7 +1565,7 @@ const modalContentGridStyle = {
                             <div
                               style={{
                                 fontSize: 11,
-                                color: "#64748b",
+                                color: "var(--color-muted)",
                               }}
                             >
                               Waiting for uploaded or generated assets
@@ -1585,7 +1585,7 @@ const modalContentGridStyle = {
                             fontSize: 11,
                             fontWeight: 700,
                             background: "#fff",
-                            color: "#475569",
+                            color: "var(--color-mid)",
                             
                           }}
                         >
@@ -1597,7 +1597,7 @@ const modalContentGridStyle = {
                         style={{
                           borderRadius: 16,
                           border: "1px dashed #dbe4ee",
-                          background: "linear-gradient(135deg,#f8fafc 0%,#f1f5f9 100%)",
+                          background: "linear-gradient(135deg,var(--color-bg-light) 0%,#f1f5f9 100%)",
                           minHeight: 142,
                           display: "flex",
                           alignItems: "center",
@@ -1623,7 +1623,7 @@ const modalContentGridStyle = {
 
                           <div
                             style={{
-                              color: "#0f172a",
+                              color: "var(--color-dark)",
                               fontWeight: 700,
                               fontSize: 13,
                               marginBottom: 8,
@@ -1636,7 +1636,7 @@ const modalContentGridStyle = {
                             style={{
                               fontSize: 10,
                               lineHeight: 1.6,
-                              color: "#64748b",
+                              color: "var(--color-muted)",
                             }}
                           >
                             Generated assets, uploaded brand files, previews, and deliverable media will appear here automatically.
@@ -1713,12 +1713,12 @@ const modalContentGridStyle = {
                   <h4 style={{ margin: 0, fontSize: 20 }}>
                     {liveDeliverable?.title || "Latest client deliverable"}
                   </h4>
-                  <div style={{ color: "#64748b", fontSize: 12 }}>
+                  <div style={{ color: "var(--color-muted)", fontSize: 12 }}>
                     {liveDeliverable?.created_at || "Ready for review"}
                   </div>
                 </div>
 
-                <p style={{ color: "#475569", lineHeight: 1.6 }}>
+                <p style={{ color: "var(--color-mid)", lineHeight: 1.6 }}>
                   {liveDeliverable?.summary ||
                     "Client-specific deliverable generated from the latest execution, business profile, selected agents, and review requirements."}
                 </p>
@@ -1742,7 +1742,7 @@ const modalContentGridStyle = {
 
                 {attachedAssets.length > 1 ? (
                   <div style={{ marginBottom: 16 }}>
-                    <div style={{ color: "#64748b", fontSize: 11.8, fontWeight: 700, marginBottom: 8 }}>
+                    <div style={{ color: "var(--color-muted)", fontSize: 11.8, fontWeight: 700, marginBottom: 8 }}>
                       Attached media
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 8 }}>
@@ -1754,14 +1754,14 @@ const modalContentGridStyle = {
                             key={`${assetUrl || asset?.name || "asset"}-${index}`}
                             onClick={() => setSelectedAssetIndex(index)}
                             style={{
-                              border: selected ? "1px solid #2563eb" : "1px solid #e5eaf2",
+                              border: selected ? "1px solid var(--color-brand)" : "1px solid #e5eaf2",
                               borderRadius: 16,
                               padding: 10,
                               textAlign: "left",
                               fontSize: 11,
                               fontWeight: 700,
-                              color: selected ? "#2563eb" : "#475569",
-                              background: selected ? "#eff6ff" : "#f8fafc",
+                              color: selected ? "var(--color-brand)" : "var(--color-mid)",
+                              background: selected ? "#eff6ff" : "var(--color-bg-light)",
                               cursor: "pointer",
                             }}
                           >
@@ -1789,7 +1789,7 @@ const modalContentGridStyle = {
                     style={{
                       border: "1px solid rgba(37, 99, 235, 0.14)",
                       background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
-                      color: "#2563eb",
+                      color: "var(--color-brand)",
                       borderRadius: 16,
                       padding: "8px 11px",
                       fontWeight: 760,
@@ -1854,7 +1854,7 @@ const modalContentGridStyle = {
                     style={{
                       border: "1px solid rgba(37, 99, 235, 0.14)",
                       background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
-                      color: "#2563eb",
+                      color: "var(--color-brand)",
                       borderRadius: 16,
                       padding: "10px 14px",
                       fontWeight: 760,
@@ -1876,7 +1876,7 @@ const modalContentGridStyle = {
                     }}
                     style={{
                       border: "none",
-                      background: reviewActionLoading ? "#86efac" : "#22c55e",
+                      background: reviewActionLoading ? "#86efac" : "var(--color-teal)",
                       color: "#fff",
                       borderRadius: 16,
                       padding: "10px 14px",
@@ -1884,7 +1884,7 @@ const modalContentGridStyle = {
                       cursor: reviewActionLoading ? "not-allowed" : "pointer",
                     }}
                   >
-                    {reviewActionLoading ? "Saving..." : "👍 Approve"}
+                    {reviewActionLoading ? "Saving..." : "👍 Approve ✓"}
                   </button>
 
                   <button
@@ -1897,7 +1897,7 @@ const modalContentGridStyle = {
                     style={{
                       border: "1px solid #fecaca",
                       background: "#fff",
-                      color: "#dc2626",
+                      color: "var(--color-red)",
                       borderRadius: 16,
                       padding: "10px 14px",
                       fontWeight: 760,
@@ -1905,7 +1905,7 @@ const modalContentGridStyle = {
                       transition: "transform 0.16s ease, border-color 0.16s ease",
                     }}
                   >
-                    👎 Reject
+                    👎 Request changes
                   </button>
                 </div>
 
@@ -1949,7 +1949,7 @@ const modalContentGridStyle = {
               maxHeight: "calc(100vh - 32px)",
               overflow: "auto",
               background: "#fff",
-              borderRadius: 22,
+              borderRadius: 12,
               boxShadow: "0 30px 90px rgba(15,23,42,.24)",
               border: "1px solid #e5eaf2",
             }}
@@ -1968,7 +1968,7 @@ const modalContentGridStyle = {
               <div>
                 <div
                   style={{
-                    color: "#2563eb",
+                    color: "var(--color-brand)",
                     fontSize: 11.8,
                     fontWeight: 760,
                     letterSpacing: 1.2,
@@ -1990,7 +1990,7 @@ const modalContentGridStyle = {
                   {liveDeliverable?.title || "Client deliverable"}
                 </h2>
 
-                <div style={{ marginTop: 4, color: "#64748b", fontSize: 13 }}>
+                <div style={{ marginTop: 4, color: "var(--color-muted)", fontSize: 13 }}>
                   {liveDeliverable?.created_at || "Ready for review"}
                 </div>
 
@@ -2055,7 +2055,7 @@ const modalContentGridStyle = {
                   background: "#fff",
                   cursor: "pointer",
                   fontWeight: 760,
-                  color: "#0f172a",
+                  color: "var(--color-dark)",
                 }}
               >
                 ×
@@ -2065,9 +2065,9 @@ const modalContentGridStyle = {
             <div style={modalContentGridStyle}>
               <div
                 style={{
-                  borderRadius: 22,
+                  borderRadius: 12,
                   border: "1px solid #e5eaf2",
-                  background: "#f8fafc",
+                  background: "var(--color-bg-light)",
                   overflow: "hidden",
                   minHeight: "clamp(260px,38vw,360px)",
                 }}
@@ -2094,14 +2094,14 @@ const modalContentGridStyle = {
                       justifyContent: "center",
                       alignItems: "center",
                       textAlign: "center",
-                      background: "linear-gradient(135deg,#ffffff,#f8fafc)",
+                      background: "linear-gradient(135deg,#ffffff,var(--color-bg-light))",
                     }}
                   >
                     <div style={{ fontSize: 38, marginBottom: 8 }}>🖼️</div>
-                    <div style={{ color: "#0f172a", fontWeight: 760, fontSize: 16, marginBottom: 8 }}>
+                    <div style={{ color: "var(--color-dark)", fontWeight: 760, fontSize: 16, marginBottom: 8 }}>
                       No live asset attached
                     </div>
-                    <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.65, maxWidth: 280 }}>
+                    <div style={{ color: "var(--color-muted)", fontSize: 13, lineHeight: 1.65, maxWidth: 280 }}>
                       Generated assets, uploaded brand files, previews, and deliverable media will appear here once attached.
                     </div>
                   </div>
@@ -2116,7 +2116,7 @@ const modalContentGridStyle = {
                       style={{
                         border: "1px solid rgba(37, 99, 235, 0.14)",
                         background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
-                        color: "#2563eb",
+                        color: "var(--color-brand)",
                         borderRadius: 16,
                         padding: "8px 11px",
                         fontSize: 11.8,
@@ -2138,7 +2138,7 @@ const modalContentGridStyle = {
                   }}
                 >
                   <h3 style={{ margin: "0 0 10px", fontSize: 17 }}>Executive summary</h3>
-                  <p style={{ margin: 0, color: "#475569", lineHeight: 1.75, fontSize: 14.5 }}>
+                  <p style={{ margin: 0, color: "var(--color-mid)", lineHeight: 1.75, fontSize: 14.5 }}>
                     {liveDeliverable?.summary ||
                       "Client-specific deliverable generated from the latest execution, business profile, selected agents, and review requirements."}
                   </p>
@@ -2159,7 +2159,7 @@ const modalContentGridStyle = {
                       "Confirm brand fit and tone",
                       "Confirm offer and deliverable direction",
                       "Check media or asset requirements",
-                      "Approve for execution or request revision",
+                      "Approve ✓ for execution or request revision",
                     ].map((item) => (
                       <div
                         key={item}
@@ -2167,7 +2167,7 @@ const modalContentGridStyle = {
                           display: "flex",
                           alignItems: "center",
                           gap: 10,
-                          color: "#475569",
+                          color: "var(--color-mid)",
                           fontSize: 11.8,
                         }}
                       >
@@ -2177,7 +2177,7 @@ const modalContentGridStyle = {
                             height: 22,
                             borderRadius: 16,
                             background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
-                            color: "#2563eb",
+                            color: "var(--color-brand)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -2213,14 +2213,14 @@ const modalContentGridStyle = {
                             key={`${assetUrl || asset?.name || "asset"}-${index}`}
                             onClick={() => setSelectedAssetIndex(index)}
                             style={{
-                              border: selected ? "1px solid #2563eb" : "1px solid #e5eaf2",
+                              border: selected ? "1px solid var(--color-brand)" : "1px solid #e5eaf2",
                               borderRadius: 16,
                               padding: 20,
                               textAlign: "left",
                               fontSize: 11.8,
                               fontWeight: 700,
-                              color: selected ? "#2563eb" : "#475569",
-                              background: selected ? "#eff6ff" : "#f8fafc",
+                              color: selected ? "var(--color-brand)" : "var(--color-mid)",
+                              background: selected ? "#eff6ff" : "var(--color-bg-light)",
                               cursor: "pointer",
                             }}
                           >
@@ -2264,7 +2264,7 @@ const modalContentGridStyle = {
                     }}
                     style={{
                       border: "none",
-                      background: reviewActionLoading ? "#86efac" : "#22c55e",
+                      background: reviewActionLoading ? "#86efac" : "var(--color-teal)",
                       color: "#fff",
                       borderRadius: 16,
                       padding: "10px 14px",
@@ -2272,7 +2272,7 @@ const modalContentGridStyle = {
                       cursor: reviewActionLoading ? "not-allowed" : "pointer",
                     }}
                   >
-                    {reviewActionLoading ? "Saving..." : "Approve deliverable"}
+                    {reviewActionLoading ? "Saving..." : "Approve ✓ deliverable"}
                   </button>
 
                   <button
@@ -2286,7 +2286,7 @@ const modalContentGridStyle = {
                     style={{
                       border: "1px solid #fecaca",
                       background: "#fff",
-                      color: "#dc2626",
+                      color: "var(--color-red)",
                       borderRadius: 16,
                       padding: "10px 14px",
                       fontWeight: 760,
@@ -2309,7 +2309,7 @@ const modalContentGridStyle = {
             right: 24,
             bottom: 24,
             zIndex: 9998,
-            background: "#0f172a",
+            background: "var(--color-dark)",
             color: "#ffffff",
             borderRadius: 16,
             padding: "14px 18px",
@@ -2341,13 +2341,13 @@ const modalContentGridStyle = {
               width: 520,
               maxWidth: "100%",
               background: "#fff",
-              borderRadius: 18,
+              borderRadius: 12,
               padding: 30,
               boxShadow: "0 30px 80px rgba(15,23,42,.20)",
             }}
           >
             <h2 style={{ margin: 0, fontSize: 26 }}>Provide rejection feedback</h2>
-            <p style={{ color: "#64748b", lineHeight: 1.6 }}>
+            <p style={{ color: "var(--color-muted)", lineHeight: 1.6 }}>
               Explain what needs to change so the agent can improve the next output.
             </p>
 
@@ -2357,9 +2357,9 @@ const modalContentGridStyle = {
                   key={reason}
                   onClick={() => setFeedbackReason(reason)}
                   style={{
-                    border: feedbackReason === reason ? "1px solid #dc2626" : "1px solid #e5eaf2",
+                    border: feedbackReason === reason ? "1px solid var(--color-red)" : "1px solid #e5eaf2",
                     background: feedbackReason === reason ? "#fef2f2" : "#fff",
-                    color: feedbackReason === reason ? "#dc2626" : "#334155",
+                    color: feedbackReason === reason ? "var(--color-red)" : "#334155",
                     borderRadius: 16,
                     padding: "8px 11px",
                     fontWeight: 700,
@@ -2420,7 +2420,7 @@ const modalContentGridStyle = {
                 }}
                 style={{
                   border: "none",
-                  background: reviewActionLoading ? "#fca5a5" : "#dc2626",
+                  background: reviewActionLoading ? "#fca5a5" : "var(--color-red)",
                   color: "#fff",
                   borderRadius: 16,
                   padding: "10px 14px",
@@ -2447,14 +2447,14 @@ const cardStyle = {
 };
 
 const labelStyle = {
-  color: "#64748b",
+  color: "var(--color-muted)",
   fontSize: 11.8,
   fontWeight: 700,
   marginBottom: 8,
 };
 
 const mutedText = {
-  color: "#64748b",
+  color: "var(--color-muted)",
   lineHeight: 1.42,
   fontSize: 11.8,
 };
@@ -2472,7 +2472,7 @@ function StepHeader({ number, title }: { number: string; title: string }) {
         display: "flex",
         alignItems: "center",
         gap: 10,
-        color: "#2563eb",
+        color: "var(--color-brand)",
         fontSize: 11.8,
         fontWeight: 760,
         letterSpacing: 0.9,
@@ -2486,7 +2486,7 @@ function StepHeader({ number, title }: { number: string; title: string }) {
           height: 28,
           borderRadius: 16,
           background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
-          color: "#2563eb",
+          color: "var(--color-brand)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
