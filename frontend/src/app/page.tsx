@@ -143,22 +143,45 @@ export default async function Home() {
             </span>
           </div>
 
-          {health.data && (
-            <pre
+          <section
+            style={{
+              border: "1px solid rgba(148, 163, 184, 0.22)",
+              borderRadius: 18,
+              padding: 22,
+              background: "rgba(15, 23, 42, 0.56)",
+              marginTop: 24,
+            }}
+          >
+            <h2 style={{ margin: "0 0 10px", fontSize: 18 }}>Platform readiness</h2>
+            <p style={{ margin: 0, color: "#cbd5e1", lineHeight: 1.7 }}>
+              The ecommerce AI workforce is connected, monitored, and ready for governed execution.
+              Internal diagnostics are protected from the client-facing experience.
+            </p>
+            <div
               style={{
-                marginTop: 20,
-                padding: 20,
-                overflowX: "auto",
-                borderRadius: 16,
-                background: "rgba(2, 6, 23, .72)",
-                border: "1px solid rgba(148,163,184,.2)",
-                color: "#cbd5e1",
-                fontSize: 13,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: 14,
+                marginTop: 18,
               }}
             >
-              {JSON.stringify(health.data, null, 2)}
-            </pre>
-          )}
+              {["Secure runtime", "Governed execution", "White-label ready", "Learning enabled"].map((item) => (
+                <div
+                  key={item}
+                  style={{
+                    border: "1px solid rgba(148, 163, 184, 0.18)",
+                    borderRadius: 14,
+                    padding: 14,
+                    background: "rgba(2, 6, 23, 0.38)",
+                    color: "#f8fafc",
+                    fontWeight: 700,
+                  }}
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </section>
         </div>
       </section>
     </main>
