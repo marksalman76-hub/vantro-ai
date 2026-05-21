@@ -8,6 +8,8 @@ from typing import Any, Dict, List
 
 from backend.app.core.execution_queue_runtime import (
     mark_execution_failed,
+    mark_execution_completed,
+    mark_execution_succeeded,
     list_execution_queue,
 )
 
@@ -196,17 +198,37 @@ def _process_item_safely(item: Dict[str, Any]) -> Dict[str, Any]:
     tenant_id = str(item.get("tenant_id") or "unknown")
     agent_id = str(item.get("agent_id") or "unknown")
 
+    try:
+        queue_id_int = int(queue_id)
+    except Exception:
+        queue_id_int = None
+
     result = {
         "queue_id": queue_id,
         "tenant_id": tenant_id,
         "agent_id": agent_id,
         "action_type": action_type,
         "processed_at": _now_iso(),
-        "execution_mode": "worker_safe_foundation",
+        "execution_mode": "worker_lifecycle_completed",
         "provider_direct_execution": False,
         "governed_execution_required": True,
-        "status": "worker_foundation_processed",
+        "owner_approval_controls_preserved": True,
+        "status": "processed_successfully",
     }
+
+    # Safe completion: this worker currently performs lifecycle completion only.
+    # It does not bypass governance, entitlement, approval controls, or provider execution.
+    if queue_id_int is not None:
+        try:
+            mark_execution_completed(queue_id_int, result)
+        except NameError:
+            # Backward compatibility with earlier queue runtime naming.
+            try:
+                mark_execution_succeeded(queue_id_int, result)
+            except Exception as exc:
+                raise RuntimeError(f"Unable to mark queue item completed: {exc}") from exc
+        except Exception as exc:
+            raise RuntimeError(f"Unable to mark queue item completed: {exc}") from exc
 
     return result
 
@@ -263,3 +285,6 @@ def run_queue_worker_once(limit: int = 0) -> Dict[str, Any]:
     _WORKER_STATE["last_results"] = results[-10:]
 
     return batch_result
+
+
+# worker_lifecycle_completion_locked = True
