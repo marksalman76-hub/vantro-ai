@@ -1,0 +1,41 @@
+{
+  "step": 110,
+  "name": "Live Endpoint Validation Script Template",
+  "generated_at_utc": "2026-05-14T14:08:04.686793+00:00",
+  "status": "live_endpoint_validation_template_created",
+  "purpose": "Validate production frontend/backend availability after deployment.",
+  "required_live_values": {
+    "BACKEND_URL": "",
+    "FRONTEND_URL": ""
+  },
+  "validation_targets": [
+    {
+      "name": "backend_health",
+      "path": "/health",
+      "expected": "200 OK",
+      "status": "pending_live_url"
+    },
+    {
+      "name": "frontend_homepage",
+      "path": "/",
+      "expected": "200 OK",
+      "status": "pending_live_url"
+    },
+    {
+      "name": "admin_dashboard",
+      "path": "/admin",
+      "expected": "accessible",
+      "status": "pending_live_url"
+    },
+    {
+      "name": "client_portal",
+      "path": "/client",
+      "expected": "accessible",
+      "status": "pending_live_url"
+    }
+  ],
+  "release_decision": {
+    "can_continue": true,
+    "next_step": "live_provider_configuration_and_real_deployment_validation"
+  }
+}

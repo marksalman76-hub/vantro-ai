@@ -1,0 +1,84 @@
+{
+  "success": true,
+  "step": 262,
+  "status": "client_success_intelligence_locked",
+  "generated_at": "2026-05-17T03:30:10.657063Z",
+  "client_success_layers": {
+    "prompt_quality_coach": {
+      "enabled": true,
+      "capabilities": [
+        "prompt improvement suggestions",
+        "missing-detail detection",
+        "goal clarification assistance",
+        "recommended prompt structures",
+        "task refinement assistance"
+      ]
+    },
+    "brand_memory_system": {
+      "enabled": true,
+      "capabilities": [
+        "brand tone memory",
+        "visual style memory",
+        "offer memory",
+        "audience memory",
+        "preferred CTA memory",
+        "regional/language memory"
+      ]
+    },
+    "client_business_profile_builder": {
+      "enabled": true,
+      "capabilities": [
+        "niche capture",
+        "product/service capture",
+        "audience capture",
+        "competitor capture",
+        "margin/offer capture",
+        "brand positioning capture"
+      ]
+    },
+    "ai_recommendation_feed": {
+      "enabled": true,
+      "capabilities": [
+        "next-best-action recommendations",
+        "campaign opportunity suggestions",
+        "conversion improvement suggestions",
+        "retention suggestions",
+        "growth opportunity alerts"
+      ]
+    },
+    "performance_scorecards": {
+      "enabled": true,
+      "capabilities": [
+        "agent quality scoring",
+        "conversion readiness scoring",
+        "execution readiness scoring",
+        "content quality scoring",
+        "workflow success scoring"
+      ]
+    },
+    "campaign_playbooks": {
+      "enabled": true,
+      "capabilities": [
+        "product launch playbooks",
+        "BFCM playbooks",
+        "abandoned cart playbooks",
+        "subscription growth playbooks",
+        "retention/win-back playbooks",
+        "seasonal campaign playbooks"
+      ]
+    }
+  },
+  "quality_rules": {
+    "outputs_must_be_context_aware": true,
+    "outputs_must_use_brand_memory": true,
+    "outputs_must_use_business_profile": true,
+    "outputs_must_be_recommendation_driven": true,
+    "outputs_must_be_conversion_focused": true
+  },
+  "governance": {
+    "recommendations_allowed_without_approval": true,
+    "high_risk_actions_require_owner_approval": true,
+    "campaign_scaling_requires_owner_approval": true,
+    "pricing_changes_require_owner_approval": true
+  }
+}

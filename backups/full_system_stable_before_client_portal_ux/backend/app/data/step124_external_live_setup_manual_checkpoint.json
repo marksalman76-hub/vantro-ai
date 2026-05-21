@@ -1,0 +1,37 @@
+{
+  "step": 124,
+  "name": "External Live Setup Manual Checkpoint",
+  "generated_at_utc": "2026-05-14T14:48:31.098774+00:00",
+  "status": "external_live_setup_manual_checkpoint_created",
+  "completed_steps": "51-123",
+  "secret_values_included": false,
+  "manual_external_items_remaining": {
+    "backend_host_created": false,
+    "frontend_host_created": false,
+    "production_database_created": false,
+    "backend_environment_variables_configured": false,
+    "frontend_public_environment_variables_configured": false,
+    "llm_provider_key_configured": false,
+    "stripe_configured": false,
+    "email_provider_configured": false,
+    "domain_dns_configured": false,
+    "cors_locked_to_production_frontend": false,
+    "live_backend_url_confirmed": false,
+    "live_frontend_url_confirmed": false
+  },
+  "release_blocked_until": [
+    "live backend URL is available",
+    "live frontend URL is available",
+    "required provider dashboard environment variables are configured",
+    "production database is connected",
+    "CORS is locked to production frontend",
+    "security regression passes",
+    "owner approves final release"
+  ],
+  "release_decision": {
+    "can_continue_documentation": true,
+    "can_continue_live_validation": false,
+    "reason": "Live validation requires external provider setup and live URLs.",
+    "next_step": "production_release_pause_and_external_setup_summary"
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "step": 109,
+  "name": "Final External Configuration Checklist",
+  "generated_at_utc": "2026-05-14T14:06:56.264935+00:00",
+  "status": "external_configuration_checklist_created",
+  "secret_values_included": false,
+  "external_configuration_items": {
+    "backend_host": {
+      "required": true,
+      "configure_in": "Render/Railway/Fly/AWS/GCP/Azure dashboard",
+      "items": [
+        "production backend service",
+        "start command",
+        "environment variables",
+        "health endpoint"
+      ],
+      "status": "pending"
+    },
+    "frontend_host": {
+      "required": true,
+      "configure_in": "Vercel/Netlify/Cloudflare Pages dashboard",
+      "items": [
+        "production frontend deployment",
+        "backend API URL",
+        "admin route",
+        "client route"
+      ],
+      "status": "pending"
+    },
+    "database": {
+      "required": true,
+      "configure_in": "Database provider dashboard",
+      "items": [
+        "production database",
+        "DATABASE_URL",
+        "backup policy",
+        "restore test plan"
+      ],
+      "status": "pending"
+    },
+    "llm_provider": {
+      "required": true,
+      "configure_in": "Deployment provider environment variables",
+      "items": [
+        "OPENAI_API_KEY",
+        "fallback provider keys if used",
+        "live execution readiness"
+      ],
+      "status": "pending"
+    },
+    "stripe": {
+      "required": true,
+      "configure_in": "Stripe dashboard and deployment provider environment variables",
+      "items": [
+        "publishable key",
+        "secret key",
+        "webhook secret",
+        "success/cancel URLs",
+        "test/live mode decision"
+      ],
+      "status": "pending"
+    },
+    "email_notifications": {
+      "required": true,
+      "configure_in": "Email provider dashboard and deployment provider environment variables",
+      "items": [
+        "SMTP/API credentials",
+        "from email",
+        "owner notification email",
+        "delivery test"
+      ],
+      "status": "pending"
+    },
+    "domain_dns": {
+      "required": true,
+      "configure_in": "DNS provider dashboard",
+      "items": [
+        "custom domain",
+        "DNS records",
+        "TLS/HTTPS",
+        "frontend/backend domain mapping"
+      ],
+      "status": "pending"
+    },
+    "security": {
+      "required": true,
+      "configure_in": "Application and provider dashboards",
+      "items": [
+        "JWT secret",
+        "admin auth secret",
+        "CORS allowed origins",
+        "secret rotation plan",
+        "no secrets in repo"
+      ],
+      "status": "pending"
+    }
+  },
+  "release_decision": {
+    "can_continue": true,
+    "next_step": "create_live_endpoint_validation_script_template"
+  }
+}

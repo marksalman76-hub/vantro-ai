@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "step": 247,
+  "status": "customer_execution_smoke_requirements_locked",
+  "generated_at": "2026-05-16T14:12:03.841320Z",
+  "execution_flow": {
+    "customer_account_required": true,
+    "active_paid_agent_required": true,
+    "tenant_isolation_required": true,
+    "credit_gate_required": true,
+    "billing_gate_required": true,
+    "premium_output_required": true,
+    "quality_gate_required": true,
+    "provider_live_call_optional_until_approved": true,
+    "client_safe_output_required": true
+  }
+}

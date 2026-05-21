@@ -1,0 +1,82 @@
+{
+  "step": 106,
+  "name": "Production Provider Readiness Record",
+  "generated_at_utc": "2026-05-14T14:03:42.985233+00:00",
+  "status": "provider_readiness_record_created",
+  "required_provider_layers": {
+    "backend_host": {
+      "examples": [
+        "Render",
+        "Railway",
+        "Fly.io",
+        "AWS",
+        "GCP",
+        "Azure"
+      ],
+      "status": "pending_selection_or_confirmation",
+      "required": true
+    },
+    "frontend_host": {
+      "examples": [
+        "Vercel",
+        "Netlify",
+        "Cloudflare Pages"
+      ],
+      "status": "pending_selection_or_confirmation",
+      "required": true
+    },
+    "database_provider": {
+      "examples": [
+        "Postgres on Render",
+        "Supabase",
+        "Neon",
+        "Railway Postgres"
+      ],
+      "status": "pending_selection_or_confirmation",
+      "required": true
+    },
+    "llm_provider": {
+      "examples": [
+        "OpenAI primary",
+        "Anthropic fallback",
+        "Google Gemini fallback",
+        "xAI fallback"
+      ],
+      "status": "pending_live_credentials",
+      "required": true
+    },
+    "payment_provider": {
+      "examples": [
+        "Stripe"
+      ],
+      "status": "pending_live_or_test_mode_decision",
+      "required": true
+    },
+    "email_notification_provider": {
+      "examples": [
+        "SMTP",
+        "Brevo",
+        "SendGrid",
+        "Resend"
+      ],
+      "status": "pending_selection_or_confirmation",
+      "required": true
+    },
+    "domain_dns_provider": {
+      "examples": [
+        "Cloudflare",
+        "GoDaddy",
+        "Namecheap",
+        "Squarespace Domains"
+      ],
+      "status": "pending_selection_or_confirmation",
+      "required": true
+    }
+  },
+  "release_decision": {
+    "can_continue": true,
+    "blocking_issue": false,
+    "note": "Provider readiness record created. Final release still requires selected providers, live URLs, and production credentials configured outside source code.",
+    "next_step": "create_safe_provider_values_template_without_secrets"
+  }
+}

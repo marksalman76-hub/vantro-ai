@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+openai
+stripe
+httpx
+requests
+psycopg[binary]
+cryptography

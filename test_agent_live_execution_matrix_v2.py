@@ -36,16 +36,33 @@ AGENTS = [
 ]
 
 ACTION_TYPE_BY_AGENT = {
+    "head_agent": "prepare_analytics_report",
+    "strategist_agent": "prepare_analytics_report",
+    "business_growth_partnerships_agent": "prepare_analytics_report",
+    "lead_generator_appointment_setter_agent": "prepare_email_campaign",
+    "marketing_specialist_agent": "create_ad_copy_brief",
+    "social_media_manager_content_creator_agent": "create_ad_copy_brief",
+    "seo_agent": "prepare_analytics_report",
+    "email_reply_agent": "prepare_customer_support_reply",
+    "crm_ai_agent": "prepare_customer_support_reply",
+    "sales_closer_agent": "prepare_email_campaign",
+    "receptionist_agent": "prepare_customer_support_reply",
+    "website_landing_apps_agent": "create_landing_page_brief",
+    "product_development_agent": "prepare_analytics_report",
+    "ecommerce_agent": "create_shopify_product_page",
+    "product_research_agent": "prepare_analytics_report",
+    "competitor_intelligence_agent": "prepare_analytics_report",
+    "brand_strategy_agent": "prepare_analytics_report",
+    "store_builder_agent": "create_shopify_product_page",
+    "product_copywriting_agent": "create_ad_copy_brief",
+    "ugc_creative_agent": "create_ugc_video_brief",
+    "product_image_agent": "create_product_image_brief",
     "paid_ads_agent": "launch_paid_campaign",
-    "marketing_specialist_agent": "ad_copy_generation",
-    "email_reply_agent": "customer_support_reply",
-    "crm_ai_agent": "customer_support_reply",
-    "website_landing_apps_agent": "website_content_generation",
-    "product_copywriting_agent": "product_copy_generation",
-    "ugc_creative_agent": "ugc_script_generation",
-    "product_image_agent": "product_image_generation",
-    "influencer_collaboration_agent": "influencer_shortlist",
-    "analytics_optimisation_agent": "analytics_report",
+    "analytics_optimisation_agent": "prepare_analytics_report",
+    "influencer_collaboration_agent": "prepare_influencer_outreach",
+    "orchestration_agent": "prepare_analytics_report",
+    "security_compliance_agent": "prepare_analytics_report",
+    "integration_automation_agent": "execute_live_integration_action",
 }
 
 def post_json(path, payload):
@@ -78,12 +95,14 @@ def classify(result):
     text = json.dumps(result).lower()
 
     if result.get("success") is not True:
+        if "pending_owner_approval" in text or "blocked_pending_owner_approval" in text:
+            return "APPROVAL_GATED_READY"
         return "FAILED"
 
     if "pending_approval" in text or "awaiting_approval" in text or "owner_approval" in text:
         return "APPROVAL_GATED_READY"
 
-    if "executed" in text or "completed" in text or "delivered" in text:
+    if "executed" in text or "completed" in text or "delivered" in text or "adapter_prepared" in text:
         return "EXECUTION_READY"
 
     if "output" in text or "deliverable" in text or "artifact" in text:
@@ -100,7 +119,7 @@ def main():
             "requested_agent": agent,
             "workflow_stage": "live_execution_readiness_test",
             "task": "Run a premium live-readiness validation for this ecommerce client. Produce a client-safe result and route any real-world action through owner approval if required.",
-            "action_type": ACTION_TYPE_BY_AGENT.get(agent, "analytics_report"),
+            "action_type": ACTION_TYPE_BY_AGENT.get(agent, "prepare_analytics_report"),
             "region": "Australia",
             "language": "English",
             "currency": "AUD",
@@ -109,6 +128,16 @@ def main():
             "project_id": "live_readiness_matrix",
             "actor_role": "admin",
             "requested_credits": 1,
+            "payload": {
+                "tenant_id": "client_manual_admin",
+                "integration_key": "crm",
+                "action": "readiness_test",
+                "payload": {
+                    "source": "agent_live_execution_matrix_v2",
+                    "note": "Readiness test only. No unsafe live action requested."
+                },
+                "actor_role": "admin"
+            },
         }
 
         http_status, result = post_json("/run-agent", payload)
@@ -126,7 +155,7 @@ def main():
             "message": result.get("message"),
         }
         results.append(entry)
-        print(f"{agent}: {classification} HTTP={http_status} status={entry['status']} error={entry['error']}")
+        print(f"{agent}: {classification} HTTP={http_status} status={entry['status']} execution_status={entry['execution_status']} error={entry['error']}")
 
     summary = {
         "tested_at": datetime.utcnow().isoformat() + "Z",

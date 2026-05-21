@@ -1,0 +1,6 @@
+{"timestamp": "2026-05-20T23:12:57.684688+00:00", "event_type": "marketplace_state_upserted", "tenant_id": "tenant_priority9_state_test", "client_number": "CL-P9-STATE", "package": "growth"}
+{"timestamp": "2026-05-20T23:12:57.696644+00:00", "event_type": "marketplace_agent_activate", "tenant_id": "tenant_priority9_state_test", "client_number": "CL-P9-STATE", "agent_id": "product_image_agent", "success": true, "status": "agent_activated", "error": null}
+{"timestamp": "2026-05-20T23:12:57.758778+00:00", "event_type": "marketplace_agent_deactivate", "tenant_id": "tenant_priority9_state_test", "client_number": "CL-P9-STATE", "agent_id": "ugc_creative_agent", "success": true, "status": "agent_deactivated", "error": null}
+{"timestamp": "2026-05-20T23:16:24.914071+00:00", "event_type": "marketplace_state_upserted", "tenant_id": "tenant_priority9_commercial_test", "client_number": "CL-P9-COMMERCIAL", "package": "professional"}
+{"timestamp": "2026-05-20T23:24:16.560595+00:00", "event_type": "marketplace_state_upserted", "tenant_id": "tenant_priority10_billing_test", "client_number": "CL-P10-BILLING", "package": "professional"}
+{"timestamp": "2026-05-20T23:49:12.568710+00:00", "event_type": "marketplace_state_upserted", "tenant_id": "tenant_priority10_billing_test", "client_number": "CL-P10-BILLING", "package": "business"}

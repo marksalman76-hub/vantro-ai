@@ -1,0 +1,49 @@
+{
+  "step": 119,
+  "name": "Domain/DNS Production Configuration Pack",
+  "generated_at_utc": "2026-05-14T14:37:05.086913+00:00",
+  "status": "domain_dns_production_config_pack_created",
+  "secret_values_included": false,
+  "domain_dns_requirements": {
+    "recommended_dns_providers": [
+      "Cloudflare",
+      "GoDaddy",
+      "Namecheap",
+      "Squarespace Domains",
+      "Route 53"
+    ],
+    "required_domains": [
+      "frontend production domain",
+      "backend/API production domain or provider URL"
+    ],
+    "required_dns_records": [
+      "frontend host DNS record",
+      "backend/API DNS record if custom API domain is used",
+      "email SPF record if email sending is enabled",
+      "email DKIM record if email sending is enabled",
+      "DMARC record recommended"
+    ],
+    "required_controls": [
+      "HTTPS/TLS enabled",
+      "www/non-www redirect decision made",
+      "frontend domain added to backend CORS allowlist",
+      "backend API URL configured in frontend host",
+      "no mixed-content browser errors",
+      "admin route accessible only under intended production domain",
+      "client route accessible under intended production domain"
+    ],
+    "required_validation": [
+      "frontend URL loads over HTTPS",
+      "backend health endpoint responds over HTTPS",
+      "admin page route resolves",
+      "client page route resolves",
+      "frontend can reach backend API without CORS error",
+      "DNS propagation confirmed",
+      "email DNS records confirmed if email is enabled"
+    ]
+  },
+  "release_decision": {
+    "can_continue": true,
+    "next_step": "cors_security_production_config_pack"
+  }
+}

@@ -1,0 +1,137 @@
+import hashlib
+import hmac
+import json
+import requests
+
+BASE = "http://127.0.0.1:8000"
+HEADERS = {
+    "x-actor-role": "admin",
+    "x-tenant-id": "owner",
+    "Content-Type": "application/json",
+}
+
+def show(label, response):
+    print("\n" + "=" * 80)
+    print(label)
+    print("HTTP", response.status_code)
+    try:
+        print(json.dumps(response.json(), indent=2)[:14000])
+    except Exception:
+        print(response.text[:14000])
+
+tenant_payload = {
+    "tenant_id": "tenant_priority10_stripe_hardening_test",
+    "client_number": "CL-P10-STRIPE",
+    "customer_email": "sale@protekepoxy.com.au",
+    "target_package": "professional",
+    "package": "professional",
+    "purchased_agents": [
+        "head_agent",
+        "marketing_specialist_agent",
+        "crm_ai_agent",
+        "ugc_creative_agent",
+        "product_image_agent"
+    ],
+    "active_agents": [
+        "head_agent",
+        "marketing_specialist_agent",
+        "ugc_creative_agent",
+        "product_image_agent"
+    ],
+    "stripe_customer_id": "cus_test_priority10_hardening",
+    "stripe_subscription_id": "sub_test_priority10_hardening",
+}
+
+readiness = requests.get(f"{BASE}/billing/stripe-production-readiness", headers=HEADERS, timeout=30)
+show("STRIPE_PRODUCTION_READINESS", readiness)
+
+raw_body = '{"id":"evt_test","type":"invoice.payment_succeeded"}'
+secret = "whsec_test_priority10"
+signature = hmac.new(secret.encode("utf-8"), raw_body.encode("utf-8"), hashlib.sha256).hexdigest()
+
+verify = requests.post(
+    f"{BASE}/billing/verify-webhook-signature",
+    headers=HEADERS,
+    json={"raw_body": raw_body, "signature": signature, "test_webhook_secret": secret},
+    timeout=30,
+)
+show("VERIFY_WEBHOOK_SIGNATURE", verify)
+
+route = requests.post(
+    f"{BASE}/billing/stripe-webhook-route",
+    headers=HEADERS,
+    json={"event_type": "invoice.payment_succeeded", "payload": tenant_payload},
+    timeout=30,
+)
+show("ROUTE_STRIPE_WEBHOOK_EVENT", route)
+
+failed = requests.post(
+    f"{BASE}/billing/failed-payment-recovery",
+    headers=HEADERS,
+    json=tenant_payload,
+    timeout=30,
+)
+show("FAILED_PAYMENT_RECOVERY", failed)
+
+trial = requests.post(
+    f"{BASE}/billing/trial-to-paid",
+    headers=HEADERS,
+    json={**tenant_payload, "billing_status": "paid"},
+    timeout=30,
+)
+show("TRIAL_TO_PAID", trial)
+
+portal = requests.post(
+    f"{BASE}/client/billing/portal-payload",
+    headers=HEADERS,
+    json=tenant_payload,
+    timeout=30,
+)
+show("CUSTOMER_BILLING_PORTAL_PAYLOAD", portal)
+
+dashboard = requests.post(
+    f"{BASE}/admin/billing/dashboard",
+    headers=HEADERS,
+    json={"tenant_id": "tenant_priority10_stripe_hardening_test"},
+    timeout=30,
+)
+show("ADMIN_BILLING_DASHBOARD", dashboard)
+
+for response in [readiness, verify, route, failed, trial, portal, dashboard]:
+    assert response.status_code == 200
+
+readiness_json = readiness.json()
+verify_json = verify.json()
+route_json = route.json()
+failed_json = failed.json()
+trial_json = trial.json()
+portal_json = portal.json()
+dashboard_json = dashboard.json()
+
+assert readiness_json["success"] is True
+assert readiness_json["secret_values_exposed"] is False
+
+assert verify_json["success"] is True
+assert verify_json["verified"] is True
+assert verify_json["secret_exposure"] is False
+
+assert route_json["success"] is True
+assert route_json["stripe_event_type"] == "invoice.payment_succeeded"
+assert route_json["route_result"]["success"] is True
+
+assert failed_json["success"] is True
+assert failed_json["recovery_scheduled"] is True
+assert failed_json["retry_policy"] == "48_hour_retry_policy"
+
+assert trial_json["success"] is True
+assert trial_json["status"] == "trial_transitioned_to_paid"
+
+assert portal_json["success"] is True
+assert portal_json["portal_required"] is True
+assert portal_json["stripe_customer_id_present"] is True
+
+assert dashboard_json["success"] is True
+assert dashboard_json["env_readiness"]["secret_values_exposed"] is False
+assert dashboard_json["secret_exposure"] is False
+
+print("\nPRIORITY10_STRIPE_PRODUCTION_HARDENING_OK")

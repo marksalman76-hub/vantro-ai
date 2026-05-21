@@ -1,0 +1,96 @@
+{
+  "success": true,
+  "step": 258,
+  "status": "client_integrations_setup_layer_locked",
+  "generated_at": "2026-05-17T00:40:29.663006Z",
+  "usage_modes": {
+    "portal_only_mode": {
+      "description": "Client can activate, log in, run assigned agents, and generate outputs without connecting external systems.",
+      "requires_integrations": false
+    },
+    "connected_execution_mode": {
+      "description": "Client connects business tools so agents can prepare or execute real workflow actions.",
+      "requires_integrations": true
+    }
+  },
+  "integration_categories": {
+    "shopify": {
+      "purpose": "Store/product/page execution",
+      "required_for": [
+        "product publishing",
+        "store updates",
+        "product catalogue actions"
+      ],
+      "owner_approval_required_for": [
+        "major theme changes",
+        "bulk product changes"
+      ]
+    },
+    "crm": {
+      "purpose": "Lead/customer pipeline execution",
+      "examples": [
+        "GoHighLevel",
+        "HubSpot"
+      ],
+      "owner_approval_required_for": [
+        "bulk contact actions",
+        "deal-stage automation changes"
+      ]
+    },
+    "email_marketing": {
+      "purpose": "Campaign sending and automation",
+      "examples": [
+        "Brevo",
+        "Mailchimp",
+        "Klaviyo"
+      ],
+      "owner_approval_required_for": [
+        "live campaign send",
+        "large audience send"
+      ]
+    },
+    "ads": {
+      "purpose": "Campaign analysis and ad preparation",
+      "examples": [
+        "Meta",
+        "Google Ads",
+        "TikTok Ads"
+      ],
+      "owner_approval_required_for": [
+        "spend increase",
+        "campaign scaling",
+        "new budget commitment"
+      ]
+    },
+    "analytics": {
+      "purpose": "Performance analysis and optimisation",
+      "examples": [
+        "GA4",
+        "Search Console",
+        "Shopify Analytics"
+      ],
+      "owner_approval_required_for": []
+    },
+    "support": {
+      "purpose": "Customer support drafting and inbox workflows",
+      "examples": [
+        "Gmail",
+        "Helpdesk",
+        "Support inbox"
+      ],
+      "owner_approval_required_for": [
+        "bulk replies",
+        "refund/financial actions"
+      ]
+    }
+  },
+  "onboarding_flow": [
+    "Client activates account.",
+    "Client logs in.",
+    "Client completes business profile.",
+    "Client connects required integrations.",
+    "Client confirms permitted automation actions.",
+    "Agents run in portal-only or connected execution mode.",
+    "High-risk actions continue through owner approval gates."
+  ]
+}

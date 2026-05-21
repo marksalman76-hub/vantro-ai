@@ -1,0 +1,44 @@
+{
+  "step": 131,
+  "name": "Render / Vercel / Supabase External Setup Sequence",
+  "generated_at_utc": "2026-05-14T15:00:32.867120+00:00",
+  "status": "render_vercel_supabase_external_setup_sequence_created",
+  "completed_steps": "51-130",
+  "secret_values_included": false,
+  "selected_stack": {
+    "backend": "Render",
+    "frontend": "Vercel",
+    "database": "Supabase",
+    "llm": "OpenAI",
+    "payments": "Stripe"
+  },
+  "recommended_sequence": [
+    "Create Supabase project first",
+    "Copy Supabase database connection string into Render DATABASE_URL only",
+    "Create Render backend web service",
+    "Configure Render backend env vars",
+    "Deploy Render backend",
+    "Confirm Render /health endpoint",
+    "Create Vercel frontend project",
+    "Set Vercel BACKEND_URL to Render backend URL",
+    "Deploy Vercel frontend",
+    "Copy Vercel production URL",
+    "Update Render FRONTEND_URL and CORS allowlist to Vercel production URL",
+    "Redeploy/restart Render backend after CORS update",
+    "Run Step 122 live deployment validation command pack"
+  ],
+  "blocked_until": [
+    "Supabase project exists",
+    "Render backend service exists",
+    "Vercel frontend project exists",
+    "Render backend URL is available",
+    "Vercel frontend URL is available",
+    "CORS locked to Vercel production URL",
+    "Step 122 live validation passes"
+  ],
+  "release_decision": {
+    "can_continue_documentation": true,
+    "can_continue_live_validation": false,
+    "next_step": "create_render_env_var_checklist_for_selected_stack"
+  }
+}

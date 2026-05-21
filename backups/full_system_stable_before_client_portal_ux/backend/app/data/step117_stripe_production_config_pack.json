@@ -1,0 +1,49 @@
+{
+  "step": 117,
+  "name": "Stripe Production Configuration Pack",
+  "generated_at_utc": "2026-05-14T14:32:58.763614+00:00",
+  "status": "stripe_production_config_pack_created",
+  "secret_values_included": false,
+  "stripe_requirements": {
+    "provider": "Stripe",
+    "mode_decision_required": true,
+    "required_backend_env_vars": [
+      "STRIPE_SECRET_KEY",
+      "STRIPE_WEBHOOK_SECRET"
+    ],
+    "required_frontend_public_env_vars": [
+      "STRIPE_PUBLISHABLE_KEY"
+    ],
+    "required_dashboard_configuration": [
+      "products/packages created",
+      "prices created",
+      "checkout success URL configured",
+      "checkout cancel URL configured",
+      "webhook endpoint configured",
+      "webhook events selected",
+      "test mode verified before live mode",
+      "live mode enabled only after owner approval"
+    ],
+    "required_webhook_events": [
+      "checkout.session.completed",
+      "invoice.payment_succeeded",
+      "invoice.payment_failed",
+      "customer.subscription.created",
+      "customer.subscription.updated",
+      "customer.subscription.deleted"
+    ],
+    "required_validation": [
+      "checkout session can be created",
+      "successful payment activates correct package/entitlements",
+      "failed payment blocks or suspends access correctly",
+      "cancelled subscription downgrades or suspends access correctly",
+      "webhook signature verification works",
+      "client cannot activate unpaid features",
+      "owner/admin can see billing status safely"
+    ]
+  },
+  "release_decision": {
+    "can_continue": true,
+    "next_step": "email_notification_production_config_pack"
+  }
+}

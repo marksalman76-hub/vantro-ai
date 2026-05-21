@@ -1,0 +1,10 @@
+{
+  "live_llm_execution_enabled": false,
+  "updated_by": "step_100_final_release_readiness",
+  "updated_at": "2026-05-14T13:54:45.012397+00:00",
+  "reason": "Final local release readiness regression keeps live LLM execution blocked.",
+  "credential_values_stored": false,
+  "internal_prompts_stored": false,
+  "backend_config_stored": false,
+  "client_safe": true
+}

@@ -1,0 +1,45 @@
+{
+  "step": 123,
+  "name": "Live Environment Values Capture Template",
+  "generated_at_utc": "2026-05-14T14:47:19.614372+00:00",
+  "status": "live_environment_values_capture_template_created",
+  "secret_values_included": false,
+  "safe_to_store": true,
+  "capturable_non_secret_values": {
+    "backend_provider": "",
+    "frontend_provider": "",
+    "database_provider": "",
+    "dns_provider": "",
+    "email_provider": "",
+    "payment_provider": "Stripe",
+    "llm_primary_provider": "OpenAI",
+    "production_backend_url": "",
+    "production_frontend_url": "",
+    "admin_route": "/admin",
+    "client_route": "/client",
+    "health_route": "/health",
+    "stripe_mode": "test_or_live_pending_owner_decision",
+    "email_sender_domain": "",
+    "custom_domain": ""
+  },
+  "forbidden_values": [
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY",
+    "XAI_API_KEY",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "ADMIN_AUTH_SECRET",
+    "SMTP_PASSWORD",
+    "SHOPIFY_API_SECRET",
+    "any live API key",
+    "any password",
+    "any private token"
+  ],
+  "release_decision": {
+    "can_continue": true,
+    "next_step": "external_live_setup_manual_checkpoint"
+  }
+}

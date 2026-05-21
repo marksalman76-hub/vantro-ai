@@ -1,0 +1,36 @@
+{
+  "step": 126,
+  "name": "Final Pre-Live Release State Record",
+  "generated_at_utc": "2026-05-14T14:50:30.424714+00:00",
+  "status": "final_pre_live_release_state_record_created",
+  "completed_steps": "51-125",
+  "pre_live_release_state": "ready_for_external_provider_setup",
+  "secret_values_included": false,
+  "locked_state": {
+    "core_platform_ready": true,
+    "release_docs_ready": true,
+    "configuration_packs_ready": true,
+    "governance_locked": true,
+    "security_locked": true,
+    "secret_handling_locked": true,
+    "live_validation_blocked_until_external_setup": true
+  },
+  "remaining_before_live_validation": [
+    "backend host live URL",
+    "frontend host live URL",
+    "production database connection",
+    "backend provider environment variables",
+    "frontend public environment variables",
+    "LLM provider key",
+    "Stripe setup",
+    "email provider setup",
+    "DNS/custom domain setup if used",
+    "CORS production frontend allowlist"
+  ],
+  "release_decision": {
+    "can_continue_documentation": true,
+    "can_continue_live_validation": false,
+    "can_release_to_production": false,
+    "next_step": "prepare_external_provider_setup_action_list"
+  }
+}

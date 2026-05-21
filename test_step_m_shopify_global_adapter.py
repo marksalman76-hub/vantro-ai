@@ -14,7 +14,7 @@ payload = {
     "integration_key": "store",
     "action": "read_products",
     "payload": {
-        "store_domain": "REPLACE_WITH_SHOPIFY_STORE_DOMAIN"
+        "store_domain": "ncn1m2-ch.myshopify.com"
     },
 }
 

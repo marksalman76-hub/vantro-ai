@@ -1,0 +1,252 @@
+from __future__ import annotations
+
+import json
+import os
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict
+
+from backend.app.core.billing_automation_runtime import create_checkout_session_payload
+from backend.app.core.stripe_production_hardening_runtime import (
+    route_stripe_webhook_event,
+    verify_stripe_webhook_signature,
+)
+
+
+DATA_DIR = Path.cwd() / "runtime_data"
+LIVE_STRIPE_EVENTS_FILE = DATA_DIR / "live_stripe_bridge_events.jsonl"
+
+
+PACKAGE_PRICE_ENV = {
+    "starter": "STRIPE_PRICE_STARTER_MONTHLY",
+    "growth": "STRIPE_PRICE_GROWTH_MONTHLY",
+    "business": "STRIPE_PRICE_BUSINESS_MONTHLY",
+}
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _append_event(record: Dict[str, Any]) -> None:
+    LIVE_STRIPE_EVENTS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with LIVE_STRIPE_EVENTS_FILE.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _stripe_module():
+    try:
+        import stripe  # type: ignore
+        return stripe
+    except Exception:
+        return None
+
+
+def live_stripe_bridge_readiness() -> Dict[str, Any]:
+    stripe = _stripe_module()
+    stripe_secret = os.getenv("STRIPE_SECRET_KEY")
+    frontend_url = os.getenv("FRONTEND_URL")
+    backend_url = os.getenv("BACKEND_URL")
+
+    missing_price_keys = [
+        key for key in PACKAGE_PRICE_ENV.values()
+        if not os.getenv(key)
+    ]
+
+    sdk_available = stripe is not None
+    ready = bool(sdk_available and stripe_secret and frontend_url and backend_url and not missing_price_keys)
+
+    return {
+        "success": True,
+        "readiness_profile": "priority10_live_stripe_bridge_readiness_v1",
+        "live_stripe_ready": ready,
+        "stripe_sdk_available": sdk_available,
+        "stripe_secret_configured": bool(stripe_secret),
+        "frontend_url_configured": bool(frontend_url),
+        "backend_url_configured": bool(backend_url),
+        "missing_price_keys": missing_price_keys,
+        "safe_fallback_enabled": True,
+        "secret_exposure": False,
+    }
+
+
+def create_live_checkout_session(payload: Dict[str, Any]) -> Dict[str, Any]:
+    readiness = live_stripe_bridge_readiness()
+    base_payload = create_checkout_session_payload(payload)
+
+    target_package = base_payload.get("target_package")
+    price_env = PACKAGE_PRICE_ENV.get(str(target_package))
+    price_id = os.getenv(price_env or "")
+
+    if not readiness.get("live_stripe_ready"):
+        _append_event({
+            "timestamp": _now(),
+            "event_type": "live_checkout_session_fallback",
+            "tenant_id": payload.get("tenant_id"),
+            "target_package": target_package,
+            "reason": "stripe_not_ready",
+        })
+
+        return {
+            "success": True,
+            "mode": "safe_fallback",
+            "live_stripe_ready": False,
+            "checkout_session_created": False,
+            "checkout_payload": base_payload,
+            "readiness": readiness,
+            "secret_exposure": False,
+        }
+
+    stripe = _stripe_module()
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+
+    frontend_url = os.getenv("FRONTEND_URL", "").rstrip("/")
+    success_url = f"{frontend_url}{base_payload.get('success_url_path')}?session_id={{CHECKOUT_SESSION_ID}}"
+    cancel_url = f"{frontend_url}{base_payload.get('cancel_url_path')}"
+
+    try:
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            customer_email=base_payload.get("customer_email"),
+            line_items=[{"price": price_id, "quantity": 1}],
+            success_url=success_url,
+            cancel_url=cancel_url,
+            metadata=base_payload.get("metadata") or {},
+        )
+
+        _append_event({
+            "timestamp": _now(),
+            "event_type": "live_checkout_session_created",
+            "tenant_id": payload.get("tenant_id"),
+            "target_package": target_package,
+            "session_id": getattr(session, "id", None),
+        })
+
+        return {
+            "success": True,
+            "mode": "live_stripe",
+            "live_stripe_ready": True,
+            "checkout_session_created": True,
+            "session_id": getattr(session, "id", None),
+            "checkout_url": getattr(session, "url", None),
+            "secret_exposure": False,
+        }
+    except Exception as error:
+        _append_event({
+            "timestamp": _now(),
+            "event_type": "live_checkout_session_failed",
+            "tenant_id": payload.get("tenant_id"),
+            "target_package": target_package,
+            "error_type": type(error).__name__,
+        })
+
+        return {
+            "success": False,
+            "mode": "live_stripe",
+            "error": "stripe_checkout_session_failed",
+            "error_type": type(error).__name__,
+            "secret_exposure": False,
+        }
+
+
+def create_live_billing_portal_session(payload: Dict[str, Any]) -> Dict[str, Any]:
+    readiness = live_stripe_bridge_readiness()
+    stripe_customer_id = payload.get("stripe_customer_id")
+
+    if not readiness.get("live_stripe_ready") or not stripe_customer_id:
+        return {
+            "success": True,
+            "mode": "safe_fallback",
+            "portal_session_created": False,
+            "reason": "stripe_not_ready_or_missing_customer",
+            "readiness": readiness,
+            "secret_exposure": False,
+        }
+
+    stripe = _stripe_module()
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+
+    frontend_url = os.getenv("FRONTEND_URL", "").rstrip("/")
+    return_url = f"{frontend_url}/client/billing"
+
+    try:
+        session = stripe.billing_portal.Session.create(
+            customer=stripe_customer_id,
+            return_url=return_url,
+        )
+
+        _append_event({
+            "timestamp": _now(),
+            "event_type": "live_billing_portal_session_created",
+            "tenant_id": payload.get("tenant_id"),
+        })
+
+        return {
+            "success": True,
+            "mode": "live_stripe",
+            "portal_session_created": True,
+            "portal_url": getattr(session, "url", None),
+            "secret_exposure": False,
+        }
+    except Exception as error:
+        _append_event({
+            "timestamp": _now(),
+            "event_type": "live_billing_portal_session_failed",
+            "tenant_id": payload.get("tenant_id"),
+            "error_type": type(error).__name__,
+        })
+
+        return {
+            "success": False,
+            "mode": "live_stripe",
+            "error": "stripe_portal_session_failed",
+            "error_type": type(error).__name__,
+            "secret_exposure": False,
+        }
+
+
+def ingest_live_stripe_webhook(payload: Dict[str, Any]) -> Dict[str, Any]:
+    raw_body = str(payload.get("raw_body") or "")
+    signature = str(payload.get("signature") or "")
+    event_type = str(payload.get("event_type") or "")
+    event_payload = payload.get("payload") or {}
+
+    verify = verify_stripe_webhook_signature({
+        "raw_body": raw_body,
+        "signature": signature,
+        "test_webhook_secret": payload.get("test_webhook_secret"),
+    })
+
+    if not verify.get("verified"):
+        _append_event({
+            "timestamp": _now(),
+            "event_type": "live_webhook_rejected_invalid_signature",
+            "stripe_event_type": event_type,
+        })
+
+        return {
+            "success": False,
+            "error": "invalid_webhook_signature",
+            "verified": False,
+            "secret_exposure": False,
+        }
+
+    route_result = route_stripe_webhook_event({
+        "event_type": event_type,
+        "payload": event_payload,
+    })
+
+    _append_event({
+        "timestamp": _now(),
+        "event_type": "live_webhook_ingested",
+        "stripe_event_type": event_type,
+        "route_success": route_result.get("success"),
+    })
+
+    return {
+        "success": True,
+        "verified": True,
+        "stripe_event_type": event_type,
+        "route_result": route_result,
+        "secret_exposure": False,
+    }

@@ -1,0 +1,35 @@
+{
+  "tenants": {
+    "client_demo_001": {
+      "connections": {
+        "email": {
+          "connected": true,
+          "provider": "Brevo",
+          "connection_mode": "scoped_api_key",
+          "status": "test_passed",
+          "credential_stored": true,
+          "credential_hint": "stored credential ending 3456",
+          "updated_at": "2026-05-18T15:47:17.188193+00:00",
+          "last_tested_at": "2026-05-18T15:47:17.207909+00:00"
+        }
+      }
+    }
+  },
+  "audit": [
+    {
+      "event": "client_integration_connected",
+      "tenant_id": "client_demo_001",
+      "integration_key": "email",
+      "provider": "Brevo",
+      "connection_mode": "scoped_api_key",
+      "created_at": "2026-05-18T15:47:17.188193+00:00"
+    },
+    {
+      "event": "client_integration_tested",
+      "tenant_id": "client_demo_001",
+      "integration_key": "email",
+      "status": "test_passed",
+      "created_at": "2026-05-18T15:47:17.207909+00:00"
+    }
+  ]
+}

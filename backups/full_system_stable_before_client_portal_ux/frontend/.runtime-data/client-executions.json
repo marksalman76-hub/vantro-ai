@@ -1,0 +1,90 @@
+[
+  {
+    "id": "execution_1779028900435",
+    "status": "approval_required",
+    "selected_agents": [
+      "Product Copywriting Agent",
+      "Influencer Collaboration Agent",
+      "Product Image Agent",
+      "UGC Creative Agent"
+    ],
+    "task": "Create premium ecommerce campaign assets for a luxury skincare product launch.",
+    "created_at_iso": "2026-05-17T14:41:40.435Z",
+    "created_at": "18 May 2026, 12:41 am",
+    "deliverable": {
+      "title": "Live premium ecommerce launch campaign",
+      "summary": "A client-ready campaign deliverable has been generated for the selected ecommerce task, including positioning, offer framing, conversion messaging, audience targeting, and execution-ready campaign direction.",
+      "image_url": "",
+      "tags": [
+        "Live output",
+        "Product Copywriting Agent",
+        "Approval required",
+        "Client-ready"
+      ]
+    }
+  },
+  {
+    "id": "execution_1779028609032",
+    "status": "approval_required",
+    "selected_agents": [
+      "Product Copywriting Agent",
+      "UGC Creative Agent",
+      "Product Image Agent"
+    ],
+    "task": "Create premium ecommerce campaign assets for a luxury skincare product launch.",
+    "created_at_iso": "2026-05-17T14:36:49.032Z",
+    "created_at": "18 May 2026, 12:36 am",
+    "deliverable": {
+      "title": "Live premium ecommerce launch campaign",
+      "summary": "A client-ready campaign deliverable has been generated for the selected ecommerce task, including positioning, offer framing, conversion messaging, audience targeting, and execution-ready campaign direction.",
+      "image_url": "",
+      "tags": [
+        "Live output",
+        "Product Copywriting Agent",
+        "Approval required",
+        "Client-ready"
+      ]
+    }
+  },
+  {
+    "id": "execution_1779027498040",
+    "status": "approval_required",
+    "selected_agents": [
+      "Product Copywriting Agent"
+    ],
+    "task": "Create premium ecommerce campaign assets for a luxury skincare product launch.",
+    "created_at_iso": "2026-05-17T14:18:18.040Z",
+    "created_at": "18 May 2026, 12:18 am",
+    "deliverable": {
+      "title": "Live premium ecommerce launch campaign",
+      "summary": "A client-ready campaign deliverable has been generated for the selected ecommerce task, including positioning, offer framing, conversion messaging, audience targeting, and execution-ready campaign direction.",
+      "tags": [
+        "Live output",
+        "Product Copywriting Agent",
+        "Approval required",
+        "Client-ready"
+      ]
+    }
+  },
+  {
+    "id": "execution_1779027321854",
+    "status": "approval_required",
+    "selected_agents": [
+      "Product Copywriting Agent",
+      "Influencer Collaboration Agent"
+    ],
+    "task": "Create premium ecommerce campaign assets for a luxury skincare product launch.",
+    "created_at_iso": "2026-05-17T14:15:21.855Z",
+    "created_at": "18 May 2026, 12:15 am",
+    "deliverable": {
+      "title": "Live premium ecommerce launch campaign",
+      "summary": "A client-ready campaign deliverable has been generated for the selected ecommerce task, including positioning, offer framing, conversion messaging, audience targeting, and execution-ready campaign direction.",
+      "tags": [
+        "Live output",
+        "Product Copywriting Agent",
+        "Approval required",
+        "Client-ready"
+      ]
+    }
+  }
+]

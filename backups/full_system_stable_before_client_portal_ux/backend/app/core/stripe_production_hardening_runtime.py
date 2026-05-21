@@ -1,0 +1,269 @@
+from __future__ import annotations
+
+import hashlib
+import hmac
+import json
+import os
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from typing import Any, Dict, List
+
+from backend.app.core.billing_automation_runtime import (
+    billing_automation_summary,
+    handle_checkout_completed,
+    handle_invoice_payment_failed_runtime,
+    handle_invoice_payment_succeeded_runtime,
+    reactivate_subscription_runtime,
+)
+
+
+DATA_DIR = Path.cwd() / "runtime_data"
+STRIPE_HARDENING_EVENTS_FILE = DATA_DIR / "stripe_production_hardening_events.jsonl"
+
+REQUIRED_STRIPE_ENV_KEYS = [
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "STRIPE_PRICE_STARTER_MONTHLY",
+    "STRIPE_PRICE_GROWTH_MONTHLY",
+    "STRIPE_PRICE_BUSINESS_MONTHLY",
+    "FRONTEND_URL",
+    "BACKEND_URL",
+]
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _append_jsonl(path: Path, record: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def _read_jsonl(path: Path, limit: int = 5000) -> List[Dict[str, Any]]:
+    if not path.exists():
+        return []
+    records = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            try:
+                records.append(json.loads(line))
+            except Exception:
+                continue
+    return records[-limit:]
+
+
+def stripe_production_env_readiness() -> Dict[str, Any]:
+    present = []
+    missing = []
+
+    for key in REQUIRED_STRIPE_ENV_KEYS:
+        if os.getenv(key):
+            present.append(key)
+        else:
+            missing.append(key)
+
+    ready = len(missing) == 0
+
+    return {
+        "success": True,
+        "readiness_profile": "priority10_stripe_production_env_readiness_v1",
+        "production_ready": ready,
+        "required_key_count": len(REQUIRED_STRIPE_ENV_KEYS),
+        "present_key_count": len(present),
+        "missing_key_count": len(missing),
+        "present_keys": present,
+        "missing_keys": missing,
+        "webhook_signature_verification_configured": bool(os.getenv("STRIPE_WEBHOOK_SECRET")),
+        "stripe_secret_configured": bool(os.getenv("STRIPE_SECRET_KEY")),
+        "price_mapping_configured": all(os.getenv(k) for k in [
+            "STRIPE_PRICE_STARTER_MONTHLY",
+            "STRIPE_PRICE_GROWTH_MONTHLY",
+            "STRIPE_PRICE_BUSINESS_MONTHLY",
+        ]),
+        "secret_values_exposed": False,
+        "customer_safe_response_mode": True,
+    }
+
+
+def verify_stripe_webhook_signature(payload: Dict[str, Any]) -> Dict[str, Any]:
+    raw_body = str(payload.get("raw_body") or "")
+    signature = str(payload.get("signature") or "")
+    webhook_secret = str(payload.get("test_webhook_secret") or "").strip() or os.getenv("STRIPE_WEBHOOK_SECRET") or ""
+
+    if not webhook_secret:
+        return {
+            "success": False,
+            "verified": False,
+            "error": "stripe_webhook_secret_missing",
+            "secret_exposure": False,
+        }
+
+    expected = hmac.new(
+        webhook_secret.encode("utf-8"),
+        raw_body.encode("utf-8"),
+        hashlib.sha256,
+    ).hexdigest()
+
+    verified = hmac.compare_digest(expected, signature)
+
+    _append_jsonl(STRIPE_HARDENING_EVENTS_FILE, {
+        "timestamp": _now(),
+        "event_type": "stripe_webhook_signature_checked",
+        "verified": verified,
+    })
+
+    return {
+        "success": True,
+        "verified": verified,
+        "signature_algorithm": "hmac_sha256",
+        "secret_exposure": False,
+    }
+
+
+def route_stripe_webhook_event(payload: Dict[str, Any]) -> Dict[str, Any]:
+    event_type = str(payload.get("event_type") or "").strip()
+    event_payload = payload.get("payload") or {}
+
+    if event_type == "checkout.session.completed":
+        result = handle_checkout_completed(event_payload)
+    elif event_type == "invoice.payment_succeeded":
+        result = handle_invoice_payment_succeeded_runtime(event_payload)
+    elif event_type == "invoice.payment_failed":
+        result = handle_invoice_payment_failed_runtime(event_payload)
+    elif event_type == "customer.subscription.deleted":
+        result = {
+            "success": True,
+            "status": "subscription_deleted_received",
+            "requires_cancel_sync": True,
+            "tenant_id": event_payload.get("tenant_id"),
+        }
+    else:
+        result = {
+            "success": True,
+            "status": "ignored_unhandled_stripe_event",
+            "event_type": event_type,
+        }
+
+    _append_jsonl(STRIPE_HARDENING_EVENTS_FILE, {
+        "timestamp": _now(),
+        "event_type": "stripe_webhook_event_routed",
+        "stripe_event_type": event_type,
+        "success": result.get("success"),
+    })
+
+    return {
+        "success": True,
+        "stripe_event_type": event_type,
+        "route_result": result,
+        "secret_exposure": False,
+    }
+
+
+def schedule_failed_payment_recovery(payload: Dict[str, Any]) -> Dict[str, Any]:
+    tenant_id = payload.get("tenant_id")
+    retry_hours = int(payload.get("retry_hours") or 48)
+    retry_at = datetime.now(timezone.utc) + timedelta(hours=retry_hours)
+
+    recovery = {
+        "timestamp": _now(),
+        "event_type": "failed_payment_recovery_scheduled",
+        "tenant_id": tenant_id,
+        "client_number": payload.get("client_number"),
+        "retry_at": retry_at.isoformat(),
+        "retry_policy": "48_hour_retry_policy",
+        "billing_cycle_anchor_rule": "preserve_original_cycle_date",
+        "client_access_suspended": True,
+    }
+
+    _append_jsonl(STRIPE_HARDENING_EVENTS_FILE, recovery)
+
+    return {
+        "success": True,
+        "recovery_scheduled": True,
+        "tenant_id": tenant_id,
+        "retry_at": retry_at.isoformat(),
+        "retry_policy": "48_hour_retry_policy",
+        "client_access_suspended": True,
+        "secret_exposure": False,
+    }
+
+
+def transition_trial_to_paid(payload: Dict[str, Any]) -> Dict[str, Any]:
+    tenant_id = payload.get("tenant_id")
+    billing_status = str(payload.get("billing_status") or "paid").lower()
+
+    if billing_status not in {"paid", "active"}:
+        return {
+            "success": False,
+            "error": "trial_to_paid_requires_active_billing",
+            "billing_status": billing_status,
+            "secret_exposure": False,
+        }
+
+    result = reactivate_subscription_runtime({
+        **payload,
+        "billing_status": "paid",
+        "subscription_status": "active",
+    })
+
+    _append_jsonl(STRIPE_HARDENING_EVENTS_FILE, {
+        "timestamp": _now(),
+        "event_type": "trial_transitioned_to_paid",
+        "tenant_id": tenant_id,
+        "success": result.get("success"),
+    })
+
+    return {
+        "success": True,
+        "status": "trial_transitioned_to_paid",
+        "tenant_id": tenant_id,
+        "billing_result": result,
+        "secret_exposure": False,
+    }
+
+
+def build_customer_billing_portal_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    tenant_id = payload.get("tenant_id")
+    customer_email = payload.get("customer_email")
+    stripe_customer_id = payload.get("stripe_customer_id")
+
+    return {
+        "success": True,
+        "portal_profile": "priority10_customer_billing_portal_payload_v1",
+        "tenant_id": tenant_id,
+        "customer_email": customer_email,
+        "stripe_customer_id_present": bool(stripe_customer_id),
+        "portal_required": True,
+        "customer_actions": [
+            "view_invoices",
+            "update_payment_method",
+            "manage_subscription",
+            "cancel_subscription",
+        ],
+        "return_url_path": "/client/billing",
+        "secret_exposure": False,
+        "customer_safe_response_mode": True,
+    }
+
+
+def admin_billing_dashboard(payload: Dict[str, Any]) -> Dict[str, Any]:
+    tenant_id = payload.get("tenant_id")
+    billing_summary = billing_automation_summary({"tenant_id": tenant_id})
+    hardening_events = _read_jsonl(STRIPE_HARDENING_EVENTS_FILE, limit=5000)
+
+    if tenant_id:
+        hardening_events = [e for e in hardening_events if e.get("tenant_id") in {tenant_id, None}]
+
+    return {
+        "success": True,
+        "dashboard_profile": "priority10_admin_billing_dashboard_v1",
+        "tenant_id": tenant_id,
+        "billing_summary": billing_summary,
+        "stripe_hardening_event_count": len(hardening_events),
+        "recent_stripe_hardening_events": hardening_events[-25:],
+        "env_readiness": stripe_production_env_readiness(),
+        "secret_exposure": False,
+        "customer_safe_response_mode": True,
+    }

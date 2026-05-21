@@ -1,0 +1,107 @@
+import json
+import requests
+
+BASE = "http://127.0.0.1:8000"
+HEADERS = {
+    "x-actor-role": "admin",
+    "x-tenant-id": "owner",
+    "Content-Type": "application/json",
+}
+
+def show(label, response):
+    print("\n" + "=" * 80)
+    print(label)
+    print("HTTP", response.status_code)
+    try:
+        print(json.dumps(response.json(), indent=2)[:12000])
+    except Exception:
+        print(response.text[:12000])
+
+payload = {
+    "tenant_id": "tenant_priority10_billing_test",
+    "client_number": "CL-P10-BILLING",
+    "customer_email": "sale@protekepoxy.com.au",
+    "target_package": "business",
+    "purchased_agents": [
+        "head_agent",
+        "marketing_specialist_agent",
+        "crm_ai_agent",
+        "ugc_creative_agent",
+        "product_image_agent"
+    ],
+    "active_agents": [
+        "head_agent",
+        "marketing_specialist_agent",
+        "ugc_creative_agent",
+        "product_image_agent"
+    ],
+    "stripe_customer_id": "cus_test_priority10",
+    "stripe_subscription_id": "sub_test_priority10",
+    "stripe_checkout_session_id": "cs_test_priority10"
+}
+
+checkout = requests.post(f"{BASE}/billing/checkout-session-payload", headers=HEADERS, json=payload, timeout=30)
+show("CHECKOUT_SESSION_PAYLOAD", checkout)
+
+completed = requests.post(f"{BASE}/billing/checkout-completed", headers=HEADERS, json=payload, timeout=30)
+show("CHECKOUT_COMPLETED", completed)
+
+invoice_success = requests.post(f"{BASE}/billing/invoice-payment-succeeded", headers=HEADERS, json=payload, timeout=30)
+show("INVOICE_PAYMENT_SUCCEEDED", invoice_success)
+
+invoice_failed = requests.post(f"{BASE}/billing/invoice-payment-failed", headers=HEADERS, json=payload, timeout=30)
+show("INVOICE_PAYMENT_FAILED", invoice_failed)
+
+cancel = requests.post(f"{BASE}/billing/cancel-subscription", headers=HEADERS, json={**payload, "cancel_at_period_end": True}, timeout=30)
+show("CANCEL_SUBSCRIPTION", cancel)
+
+reactivate = requests.post(f"{BASE}/billing/reactivate-subscription", headers=HEADERS, json=payload, timeout=30)
+show("REACTIVATE_SUBSCRIPTION", reactivate)
+
+summary = requests.post(f"{BASE}/billing/automation-summary", headers=HEADERS, json={"tenant_id": "tenant_priority10_billing_test"}, timeout=30)
+show("BILLING_AUTOMATION_SUMMARY", summary)
+
+for response in [checkout, completed, invoice_success, invoice_failed, cancel, reactivate, summary]:
+    assert response.status_code == 200
+
+checkout_json = checkout.json()
+completed_json = completed.json()
+success_json = invoice_success.json()
+failed_json = invoice_failed.json()
+cancel_json = cancel.json()
+reactivate_json = reactivate.json()
+summary_json = summary.json()
+
+assert checkout_json["success"] is True
+assert checkout_json["stripe_ready"] is True
+assert checkout_json["target_package"] == "business"
+assert checkout_json["monthly_amount_aud"] == 1997
+assert checkout_json["secret_exposure"] is False
+
+assert completed_json["success"] is True
+assert completed_json["billing_state"]["subscription_status"] == "active"
+assert completed_json["entitlement_sync"]["success"] is True
+
+assert success_json["success"] is True
+assert success_json["credits_reset"] is True
+assert success_json["client_access_suspended"] is False
+
+assert failed_json["success"] is True
+assert failed_json["subscription_status"] == "past_due"
+assert failed_json["client_access_suspended"] is True
+assert failed_json["retry_policy"] == "48_hour_retry_policy"
+
+assert cancel_json["success"] is True
+assert cancel_json["status"] == "subscription_cancelled"
+assert cancel_json["client_access_suspended"] is True
+
+assert reactivate_json["success"] is True
+assert reactivate_json["status"] == "subscription_reactivated"
+assert reactivate_json["client_access_suspended"] is False
+
+assert summary_json["success"] is True
+assert summary_json["event_count"] >= 6
+assert summary_json["latest_state"]["subscription_status"] == "active"
+assert summary_json["secret_exposure"] is False
+
+print("\nPRIORITY10_BILLING_AUTOMATION_RUNTIME_OK")

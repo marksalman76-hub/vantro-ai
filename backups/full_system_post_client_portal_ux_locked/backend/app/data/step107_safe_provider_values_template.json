@@ -1,0 +1,85 @@
+{
+  "step": 107,
+  "name": "Safe Provider Values Template",
+  "generated_at_utc": "2026-05-14T14:04:50.563063+00:00",
+  "status": "safe_provider_values_template_created",
+  "secret_values_included": false,
+  "providers": {
+    "backend_host": {
+      "selected_provider": "",
+      "production_backend_url": "",
+      "health_endpoint": "/health",
+      "secret_fields_required": [],
+      "status": "pending"
+    },
+    "frontend_host": {
+      "selected_provider": "",
+      "production_frontend_url": "",
+      "admin_dashboard_path": "/admin",
+      "client_portal_path": "/client",
+      "secret_fields_required": [],
+      "status": "pending"
+    },
+    "database_provider": {
+      "selected_provider": "",
+      "database_url_configured_in_provider_dashboard": false,
+      "secret_fields_required": [
+        "DATABASE_URL"
+      ],
+      "status": "pending"
+    },
+    "llm_provider_stack": {
+      "primary": "OpenAI",
+      "fallbacks": [
+        "Anthropic",
+        "Google Gemini",
+        "xAI"
+      ],
+      "secret_fields_required": [
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GOOGLE_API_KEY",
+        "XAI_API_KEY"
+      ],
+      "live_credentials_configured_in_provider_dashboard": false,
+      "status": "pending"
+    },
+    "payment_provider": {
+      "selected_provider": "Stripe",
+      "mode": "",
+      "secret_fields_required": [
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET"
+      ],
+      "public_fields_required": [
+        "STRIPE_PUBLISHABLE_KEY"
+      ],
+      "status": "pending"
+    },
+    "email_notification_provider": {
+      "selected_provider": "",
+      "secret_fields_required": [
+        "SMTP_PASSWORD"
+      ],
+      "config_fields_required": [
+        "SMTP_HOST",
+        "SMTP_PORT",
+        "SMTP_USER",
+        "FROM_EMAIL"
+      ],
+      "status": "pending"
+    },
+    "domain_dns_provider": {
+      "selected_provider": "",
+      "custom_domain": "",
+      "dns_configured": false,
+      "https_enabled": false,
+      "status": "pending"
+    }
+  },
+  "release_decision": {
+    "can_continue": true,
+    "note": "Template contains no secret values. Real values must only be entered in deployment provider dashboards.",
+    "next_step": "production_readiness_matrix_update"
+  }
+}

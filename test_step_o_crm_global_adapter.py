@@ -15,6 +15,7 @@ payload = {
         "first_name": "CRM",
         "last_name": "Proof",
         "phone": "+61400000000",
+        "location_id": "mlWJi2CdN2cXHRe06d5b",
         "company": "Ecommerce AI Agent Platform"
     },
 }

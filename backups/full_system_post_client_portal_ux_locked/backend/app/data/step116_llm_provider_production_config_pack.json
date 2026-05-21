@@ -1,0 +1,44 @@
+{
+  "step": 116,
+  "name": "LLM Provider Production Configuration Pack",
+  "generated_at_utc": "2026-05-14T14:13:51.365185+00:00",
+  "status": "llm_provider_production_config_pack_created",
+  "secret_values_included": false,
+  "llm_provider_requirements": {
+    "primary_provider": "OpenAI",
+    "fallback_providers": [
+      "Anthropic",
+      "Google Gemini",
+      "xAI"
+    ],
+    "required_env_vars": [
+      "OPENAI_API_KEY"
+    ],
+    "optional_env_vars": [
+      "ANTHROPIC_API_KEY",
+      "GOOGLE_API_KEY",
+      "XAI_API_KEY"
+    ],
+    "required_controls": [
+      "LLM keys stored only in backend deployment provider dashboard",
+      "LLM keys never exposed to frontend runtime",
+      "live execution remains owner-governed where authority-sensitive",
+      "provider readiness endpoint does not print secret values",
+      "fallback providers only enabled if credentials are intentionally configured",
+      "client cannot access provider routing internals",
+      "client cannot access prompts, system rules, learning logic, or governance logic"
+    ],
+    "required_validation": [
+      "OpenAI credential configured in backend provider dashboard",
+      "backend confirms provider readiness without exposing key",
+      "live LLM readiness dashboard reports configured provider",
+      "one governed live LLM execution tested",
+      "fallback path remains safe when fallback credentials are absent",
+      "client-facing output remains premium and client-safe"
+    ]
+  },
+  "release_decision": {
+    "can_continue": true,
+    "next_step": "stripe_production_configuration_pack"
+  }
+}

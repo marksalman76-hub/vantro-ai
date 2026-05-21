@@ -1,0 +1,46 @@
+{
+  "step": 133,
+  "name": "Vercel Environment Variable Checklist",
+  "generated_at_utc": "2026-05-14T15:02:46.000692+00:00",
+  "status": "vercel_env_var_checklist_created",
+  "completed_steps": "51-132",
+  "secret_values_included": false,
+  "vercel_allowed_public_env_vars": {
+    "FRONTEND_URL": "Vercel production frontend URL",
+    "BACKEND_URL": "Render production backend URL",
+    "STRIPE_PUBLISHABLE_KEY": "Stripe public publishable key only"
+  },
+  "vercel_forbidden_env_vars": [
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_API_KEY",
+    "XAI_API_KEY",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "ADMIN_AUTH_SECRET",
+    "SMTP_PASSWORD",
+    "SHOPIFY_API_SECRET",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "SUPABASE_DB_PASSWORD",
+    "any private API key",
+    "any database connection string",
+    "any backend-only token"
+  ],
+  "required_vercel_checks": [
+    "Vercel FRONTEND_URL points to the deployed frontend URL",
+    "Vercel BACKEND_URL points to the Render backend URL",
+    "No backend secrets exist in Vercel env vars",
+    "No database credentials exist in Vercel env vars",
+    "Customer portal does not expose internal logic",
+    "Admin dashboard does not expose raw secrets",
+    "Frontend successfully calls Render backend after deployment",
+    "Render CORS allows the Vercel production URL only"
+  ],
+  "release_decision": {
+    "can_continue_documentation": true,
+    "can_continue_live_validation": false,
+    "next_step": "create_supabase_connection_checklist_for_selected_stack"
+  }
+}

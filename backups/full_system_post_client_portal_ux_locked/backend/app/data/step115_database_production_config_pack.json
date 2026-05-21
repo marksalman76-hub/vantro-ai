@@ -1,0 +1,42 @@
+{
+  "step": 115,
+  "name": "Database Production Configuration Pack",
+  "generated_at_utc": "2026-05-14T14:12:55.277768+00:00",
+  "status": "database_production_config_pack_created",
+  "secret_values_included": false,
+  "database_requirements": {
+    "recommended_type": "Managed Postgres",
+    "recommended_providers": [
+      "Render Postgres",
+      "Supabase",
+      "Neon",
+      "Railway Postgres",
+      "AWS RDS",
+      "GCP Cloud SQL",
+      "Azure Database for PostgreSQL"
+    ],
+    "required_env_vars": [
+      "DATABASE_URL"
+    ],
+    "required_controls": [
+      "private connection where available",
+      "SSL required",
+      "automated backups enabled",
+      "restore process documented",
+      "least privilege database user",
+      "production and test databases separated",
+      "no database URL committed to repository"
+    ],
+    "required_validation": [
+      "backend can connect to production database",
+      "app starts without fallback to local storage",
+      "write/read persistence verified",
+      "backup policy verified",
+      "restore plan documented"
+    ]
+  },
+  "release_decision": {
+    "can_continue": true,
+    "next_step": "llm_provider_production_configuration_pack"
+  }
+}

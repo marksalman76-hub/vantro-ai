@@ -1,0 +1,44 @@
+{
+  "step": 135,
+  "name": "External Setup Execution Checkpoint",
+  "generated_at_utc": "2026-05-14T15:05:36.139949+00:00",
+  "status": "external_setup_execution_checkpoint_created",
+  "completed_steps": "51-134",
+  "secret_values_included": false,
+  "selected_stack": {
+    "backend": "Render",
+    "frontend": "Vercel",
+    "database": "Supabase",
+    "llm": "OpenAI",
+    "payments": "Stripe"
+  },
+  "external_execution_order": [
+    "Create Supabase project",
+    "Copy Supabase DATABASE_URL into Render only",
+    "Create Render backend Web Service",
+    "Configure Render required env vars",
+    "Deploy Render backend",
+    "Confirm Render backend /health URL",
+    "Create Vercel frontend project",
+    "Configure Vercel public env vars only",
+    "Deploy Vercel frontend",
+    "Copy Vercel frontend URL into Render FRONTEND_URL",
+    "Lock Render CORS to Vercel frontend URL",
+    "Redeploy/restart Render backend",
+    "Run live validation command pack"
+  ],
+  "manual_inputs_needed_next": [
+    "Render live backend URL",
+    "Vercel live frontend URL",
+    "Supabase project created confirmation",
+    "Render env vars configured confirmation",
+    "Vercel public env vars configured confirmation"
+  ],
+  "release_decision": {
+    "documentation_can_continue": true,
+    "external_setup_can_begin": true,
+    "live_validation_can_continue": false,
+    "production_release_can_be_approved": false,
+    "next_step": "start_external_provider_setup_supabase_first"
+  }
+}

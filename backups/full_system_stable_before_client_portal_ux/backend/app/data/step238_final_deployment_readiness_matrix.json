@@ -1,0 +1,63 @@
+{
+  "success": true,
+  "step": 238,
+  "status": "final_deployment_readiness_locked",
+  "generated_at": "2026-05-16T13:00:22.565557Z",
+  "backend": {
+    "health_runtime": true,
+    "run_agent_runtime": true,
+    "governance_runtime": true,
+    "premium_output_runtime": true,
+    "memory_persistence": true,
+    "sqlite_persistence": true,
+    "postgres_account_runtime": true,
+    "billing_runtime": true,
+    "stripe_runtime": true,
+    "provider_governance": true,
+    "operational_recovery": true
+  },
+  "frontend": {
+    "client_workspace": true,
+    "client_same_origin_proxy": true,
+    "client_output_viewer": true,
+    "admin_command_centre": true,
+    "admin_provider_visibility": true,
+    "admin_operations_visibility": true,
+    "production_build_passing": true
+  },
+  "billing": {
+    "stripe_live_checkout": true,
+    "month_to_month": true,
+    "annual_billing": true,
+    "free_trials": true,
+    "cancel_reactivate": true,
+    "webhook_lifecycle": true,
+    "billing_portal_readiness": true,
+    "topup_runtime_ready": true,
+    "topup_live_prices_deferred": true
+  },
+  "security": {
+    "owner_approval_for_spend": true,
+    "tenant_isolation": true,
+    "credit_gate": true,
+    "secret_exposure_blocked": true,
+    "internal_prompt_exposure_blocked": true,
+    "client_safe_rendering": true,
+    "provider_live_execution_gated": true
+  },
+  "operations": {
+    "artifact_registry": true,
+    "replay_preparation": true,
+    "retry_preparation": true,
+    "provider_audit": true,
+    "runtime_observability": true,
+    "deployment_readiness_visibility": true
+  },
+  "remaining_pre_launch_actions": [
+    "Rotate exposed Stripe secret before production launch.",
+    "Set production Render/Vercel environment variables.",
+    "Add optional top-up Stripe price IDs when top-up packages are finalised.",
+    "Connect live OpenAI/provider keys only when owner approves live generation.",
+    "Run live domain smoke tests after deployment."
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "step": 254,
+  "status": "legal_support_pages_pack_locked",
+  "generated_at": "2026-05-16T23:45:20.970424Z",
+  "pages": [
+    "terms-of-service.md",
+    "privacy-policy.md",
+    "refund-cancellation-policy.md",
+    "acceptable-use-policy.md",
+    "ai-output-disclaimer.md",
+    "support-contact-policy.md"
+  ],
+  "legal_review_required": true,
+  "public_launch_gate": {
+    "draft_pages_created": true,
+    "lawyer_review_required_before_public_launch": true
+  }
+}
