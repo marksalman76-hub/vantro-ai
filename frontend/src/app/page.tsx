@@ -28,7 +28,7 @@ const plans = [
     name: "Enterprise",
     price: "Custom",
     description: "Tailored enterprise and white-label deployment.",
-    href: "/admin-login",
+    href: "/signup?plan=enterprise",
     icon: "◇",
     features: ["Custom agent stack", "White-label setup", "Dedicated onboarding"],
   },
@@ -98,7 +98,7 @@ export default function HomePage() {
           </div>
 
           <nav style={{ display: "flex", gap: 28, alignItems: "center", fontWeight: 800 }}>
-            <a href="#agents" style={{ color: "#344054", textDecoration: "none" }}>Agents</a>
+            <a href="/agents" style={{ color: "#344054", textDecoration: "none" }}>Agents</a>
             <a href="#plans" style={{ color: "#344054", textDecoration: "none" }}>Pricing</a>
             <a
               href="/client?demo=true"
