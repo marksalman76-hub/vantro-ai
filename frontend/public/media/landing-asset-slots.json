@@ -1,0 +1,24 @@
+{
+  "landing_hero_video_webm": {
+    "path": "/media/landing/hero/hero-command-centre.webm",
+    "fallback": "/media/landing/hero/hero-command-centre.mp4",
+    "purpose": "Primary cinematic hero animation loop."
+  },
+  "landing_hero_poster": {
+    "path": "/media/landing/hero/hero-command-centre-poster.webp",
+    "purpose": "Static poster fallback for hero video."
+  },
+  "landing_agent_orbit_lottie": {
+    "path": "/media/lottie/agent-orbit-network.json",
+    "purpose": "Animated orbiting AI team network."
+  },
+  "landing_product_preview": {
+    "path": "/media/landing/backgrounds/product-preview-dashboard.webp",
+    "purpose": "High-end dashboard/product preview visual."
+  },
+  "brand_motion_loop": {
+    "path": "/media/video/webm-loops/brand-motion-loop.webm",
+    "fallback": "/media/video/mp4-loops/brand-motion-loop.mp4",
+    "purpose": "Reusable abstract brand motion loop."
+  }
+}
