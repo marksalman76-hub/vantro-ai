@@ -31,7 +31,6 @@ const agents = [
   ["pricing_profit_agent", "Pricing & Profit Agent", "Ecommerce", "Pricing recommendations, margin review, offer economics, bundles, and profit optimisation."],
   ["inventory_operations_agent", "Inventory & Operations Agent", "Operations", "Inventory planning, stock movement, operational workflows, and fulfilment coordination support."],
   ["ads_campaign_agent", "Ads Campaign Agent", "Growth & Marketing", "Paid ad strategy, campaign briefs, audience targeting, creative direction, and optimisation recommendations."],
-  ["landing_page_agent", "Landing Page Agent", "Content & Creative", "Landing page structure, offer sections, conversion copy, page flow, and CTA optimisation."],
   ["website_app_developer_agent", "Custom Websites, Landing Pages & Apps Developer Agent", "Content & Creative", "Website, landing page, portal, app, and interface planning for client-ready digital experiences."],
   ["brand_manager_agent", "Brand Manager Agent", "Strategy", "Brand voice, positioning, messaging consistency, visual direction, and premium brand presentation."],
   ["content_strategy_agent", "Content Strategy Agent", "Content & Creative", "Content planning, topics, calendars, channel strategy, and long-form content direction."],
