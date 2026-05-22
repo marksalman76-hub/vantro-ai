@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import smtplib
 from email.message import EmailMessage
+from email.headerregistry import Address
 from typing import Any, Dict
 
 
@@ -110,10 +111,10 @@ Thank you.
 
     message = EmailMessage()
     message["Subject"] = subject
-    message["From"] = f"{smtp_from_name} <{smtp_from}>"
+    message["From"] = Address(display_name=smtp_from_name, addr_spec=smtp_from)
     message["To"] = contact_email
-    message.set_content(text_body)
-    message.add_alternative(html_body, subtype="html")
+    message.set_content(text_body, charset="utf-8")
+    message.add_alternative(html_body, subtype="html", charset="utf-8")
 
     try:
         with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:

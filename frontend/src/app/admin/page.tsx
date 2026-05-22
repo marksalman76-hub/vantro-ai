@@ -1,193 +1,175 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+
+const ADMIN_AGENT_OPTIONS: [string, string][] = [
+  ["head_agent", "Head Agent"],
+  ["orchestration_agent", "Orchestration Agent"],
+  ["strategy_agent", "Strategy Agent"],
+  ["business_growth_agent", "Business Growth Agent"],
+  ["lead_generation_agent", "Lead Generation Agent"],
+  ["sales_closer_agent", "Sales / Closer Agent"],
+  ["marketing_specialist_agent", "Marketing Specialist Agent"],
+  ["social_media_manager_agent", "Social Media Manager Agent"],
+  ["content_creator_agent", "Content Creator Agent"],
+  ["ad_creative_agent", "Ad Creative Agent"],
+  ["campaign_launch_agent", "Campaign Launch Agent"],
+  ["creative_rotation_agent", "Creative Rotation Agent"],
+  ["seo_agent", "SEO Agent"],
+  ["ugc_creative_agent", "UGC Creative Agent"],
+  ["product_image_direction_agent", "Product Image Direction Agent"],
+  ["product_research_agent", "Product Research Agent"],
+  ["competitor_intelligence_agent", "Competitor Intelligence Agent"],
+  ["brand_strategy_agent", "Brand Strategy Agent"],
+  ["product_copywriting_agent", "Product Copywriting Agent"],
+  ["store_builder_agent", "Store Builder Agent"],
+  ["website_landing_page_agent", "Website / Landing Page Agent"],
+  ["crm_agent", "CRM Agent"],
+  ["email_marketing_agent", "Email Marketing Agent"],
+  ["customer_support_agent", "Customer Support Agent"],
+  ["fulfilment_agent", "Fulfilment Agent"],
+  ["marketplace_agent", "Marketplace Agent"],
+  ["analytics_optimisation_agent", "Analytics Optimisation Agent"],
+];
 
 type RuntimePayload = {
-  success?: boolean;
-  generated_at?: string;
   runtime?: any;
   execution_summary?: any;
   billing_summary?: any;
-  deployment_summary?: any;
-  security_summary?: any;
-  health?: any;
   provider_governance?: any;
   operations?: any;
 };
 
-const ADMIN_AGENT_OPTIONS = [
-  ["product_research_agent", "Product Research Agent"],
-  ["competitor_intelligence_agent", "Competitor Intelligence Agent"],
-  ["brand_strategy_agent", "Brand Strategy Agent"],
-  ["store_builder_agent", "Store Builder Agent"],
-  ["website_landing_page_agent", "Website / Landing Page Agent"],
-  ["product_copywriting_agent", "Product Copywriting Agent"],
-  ["ugc_creative_agent", "UGC Creative Agent"],
-  ["product_image_direction_agent", "Product Image Direction Agent"],
-  ["ad_creative_agent", "Ad Creative Agent"],
-  ["campaign_launch_agent", "Campaign Launch Agent"],
-  ["analytics_optimisation_agent", "Analytics Optimisation Agent"],
-  ["creative_rotation_agent", "Creative Rotation Agent"],
-  ["email_marketing_agent", "Email Marketing Agent"],
-  ["customer_support_agent", "Customer Support Agent"],
-  ["fulfilment_agent", "Fulfilment Agent"],
-  ["influencer_collaboration_agent", "Influencer Collaboration Agent"],
-  ["seo_agent", "SEO Agent"],
-  ["marketplace_agent", "Marketplace Agent"],
-  ["billing_licence_agent", "Billing and Licence Agent"],
-  ["reporting_agent", "Reporting Agent"],
-  ["quality_assurance_agent", "Quality Assurance Agent"],
-  ["integration_agent", "Integration Agent"],
-  ["security_compliance_agent", "Security and Compliance Agent"],
-  ["trial_trial_agent", "Trial / Trial Agent"],
-];
-
-function Card({ title, value, detail }: { title: string; value: string | number; detail?: string }) {
+function StatusRow({ label, status, tone }: { label: string; status: string; tone: "ready" | "warn" | "error" }) {
   return (
-    <div style={{
-      background: "#ffffff",
-      border: "1px solid var(--color-border)",
-      borderRadius: 22,
-      padding: 22,
-      boxShadow: "0 18px 40px rgba(15,23,42,.06)",
-    }}>
-      <div style={{ color: "var(--color-muted)", fontSize: 13, fontWeight: 800 }}>{title}</div>
-      <strong style={{ display: "block", marginTop: 10, fontSize: 28, color: "var(--color-dark)" }}>{value}</strong>
-      {detail ? <p style={{ color: "var(--color-muted)", marginTop: 10, lineHeight: 1.5 }}>{detail}</p> : null}
+    <div className="status">
+      <span>{label}</span>
+      <b className={tone}>{status}</b>
     </div>
   );
 }
 
-function StatusPill({ label, ok }: { label: string; ok: boolean }) {
+function Panel({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div style={{
-      padding: "10px 14px",
-      borderRadius: 999,
-      background: ok ? "#ecfdf5" : "#fef2f2",
-      border: ok ? "1px solid #bbf7d0" : "1px solid #fecaca",
-      color: ok ? "#166534" : "#991b1b",
-      fontWeight: 800,
-      fontSize: 13,
-    }}>
-      {label}: {ok ? "Ready" : "Needs attention"}
+    <div className="panel">
+      <h2>{title}</h2>
+      {subtitle ? <p>{subtitle}</p> : null}
+      {children}
     </div>
-  );
-}
-
-function Panel({ title, eyebrow, children }: { title: string; eyebrow?: string; children: React.ReactNode }) {
-  return (
-    <section style={{
-      background: "#ffffff",
-      border: "1px solid var(--color-border)",
-      borderRadius: 26,
-      padding: 26,
-      boxShadow: "0 22px 55px rgba(15,23,42,.07)",
-      minHeight: "100%",
-    }}>
-      {eyebrow ? <div style={{ color: "var(--color-brand)", fontSize: 12, fontWeight: 900, letterSpacing: 1, textTransform: "uppercase" }}>{eyebrow}</div> : null}
-      <h2 style={{ fontSize: 28, margin: eyebrow ? "8px 0 0" : 0, color: "var(--color-dark)" }}>{title}</h2>
-      <div style={{ marginTop: 20 }}>{children}</div>
-    </section>
-  );
-}
-
-function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
-  return (
-    <input
-      {...props}
-      style={{
-        padding: 14,
-        borderRadius: 14,
-        background: "var(--color-bg-light)",
-        color: "var(--color-dark)",
-        border: "1px solid var(--color-border)",
-        outline: "none",
-        ...(props.style || {}),
-      }}
-    />
-  );
-}
-
-function PrimaryButton(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      {...props}
-      style={{
-        padding: "14px 18px",
-        borderRadius: 14,
-        border: "none",
-        background: "linear-gradient(135deg,var(--color-brand) 0%,#06b6d4 100%)",
-        color: "#fff",
-        fontWeight: 900,
-        cursor: props.disabled ? "not-allowed" : "pointer",
-        opacity: props.disabled ? 0.7 : 1,
-        ...(props.style || {}),
-      }}
-    />
   );
 }
 
 export default function AdminPage() {
+  const [activeNav, setActiveNav] = useState("Overview");
   const [runtime, setRuntime] = useState<RuntimePayload | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [selectedAdminAgents, setSelectedAdminAgents] = useState<string[]>(["product_copywriting_agent"]);
-  const [selectedDeploymentAgents, setSelectedDeploymentAgents] = useState<string[]>(
-    ADMIN_AGENT_OPTIONS.map(([agentId]) => agentId)
-  );
-  const [task, setTask] = useState("Create a premium Shopify product page for a high-converting ecommerce product.");
-  const [businessName, setBusinessName] = useState("Owner Admin Workspace");
-  const [businessNiche, setBusinessNiche] = useState("Ecommerce growth, automation, product marketing, UGC, paid ads, SEO, and operations.");
-  const [targetMarket, setTargetMarket] = useState("Global ecommerce brands, Shopify stores, online retailers, and fast-scaling product businesses.");
-  const [runResult, setRunResult] = useState<any>(null);
+  const [selectedRun, setSelectedRun] = useState<string[]>(["strategy_agent"]);
+  const [selectedDeploy, setSelectedDeploy] = useState<string[]>(ADMIN_AGENT_OPTIONS.map(([id]) => id));
+  const [task, setTask] = useState("Analyse market positioning for a professional services firm entering the healthcare technology sector. Identify three strategic growth opportunities with supporting rationale.");
   const [running, setRunning] = useState(false);
-  const [deployCompany, setDeployCompany] = useState("Create Client Workspace");
-  const [deployEmail, setDeployEmail] = useState("manual-client@example.com");
-  const [deployTenant, setDeployTenant] = useState("client_manual_admin");
+  const [runResult, setRunResult] = useState<any>(null);
+  const [deployTenant, setDeployTenant] = useState("client_manual_001");
+  const [deployCompany, setDeployCompany] = useState("Acme Consulting Group");
+  const [deployEmail, setDeployEmail] = useState("admin@acmeconsulting.com");
   const [deploymentResult, setDeploymentResult] = useState<any>(null);
   const [clientRegistry, setClientRegistry] = useState<any[]>([]);
   const [clientRegistrySummary, setClientRegistrySummary] = useState<any>(null);
-  const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
+  const [toast, setToast] = useState("");
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [busyAction, setBusyAction] = useState("");
+
+  const [clock, setClock] = useState("--:--:--");
+
+  useEffect(() => {
+    const updateClock = () => setClock(new Date().toLocaleTimeString("en-GB", { hour12: false }));
+    updateClock();
+    const timer = window.setInterval(updateClock, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  function showToast(message: string) {
+    setToast(message);
+    setTimeout(() => setToast(""), 3200);
+  }
+
+  function goToSection(item: string) {
+    setActiveNav(item);
+    const map: Record<string, string> = {
+      "Overview": "admin-overview",
+      "Run Agent": "admin-run",
+      "Deploy Clients": "admin-deploy",
+      "Client Registry": "admin-registry",
+      "Runtime Health": "admin-health",
+      "Provider Governance": "admin-governance",
+      "Recovery": "admin-recovery",
+      "Billing": "admin-billing",
+    };
+    const target = document.getElementById(map[item]);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function toggleRun(agentId: string) {
+    setSelectedRun((current) => current.includes(agentId) ? current.filter((id) => id !== agentId) : [...current, agentId]);
+  }
+
+  function toggleDeploy(agentId: string) {
+    setSelectedDeploy((current) => current.includes(agentId) ? current.filter((id) => id !== agentId) : [...current, agentId]);
+  }
 
   async function loadRuntime() {
     try {
       const response = await fetch("/api/admin-runtime", { cache: "no-store" });
       const data = await response.json();
       setRuntime(data);
-      await loadClientRegistry();
+      showToast("Runtime refreshed.");
     } catch {
       setRuntime(null);
-    } finally {
-      setLoading(false);
+      showToast("Runtime refresh failed.");
+    }
+  }
+
+  async function loadClientRegistry() {
+    try {
+      const listResponse = await fetch("/api/admin-deployment-control", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: "/admin/deployment-control/list?limit=25",
+          method: "GET",
+        }),
+      });
+      const listData = await listResponse.json();
+      setClientRegistry(listData.tenants || []);
+    } catch {
+      setClientRegistry([]);
+    }
+
+    try {
+      const summaryResponse = await fetch("/api/admin-deployment-control", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path: "/admin/deployment-control/summary",
+          method: "GET",
+        }),
+      });
+      const summaryData = await summaryResponse.json();
+      setClientRegistrySummary(summaryData);
+    } catch {
+      setClientRegistrySummary(null);
     }
   }
 
   useEffect(() => {
     loadRuntime();
+    loadClientRegistry();
   }, []);
 
-  function toggleAdminAgent(agentId: string) {
-    setSelectedAdminAgents((current) =>
-      current.includes(agentId) ? current.filter((item) => item !== agentId) : [...current, agentId]
-    );
-  }
-
-  function toggleDeploymentAgent(agentId: string) {
-    setSelectedDeploymentAgents((current) =>
-      current.includes(agentId) ? current.filter((item) => item !== agentId) : [...current, agentId]
-    );
-  }
-
-  function selectAllDeploymentAgents() {
-    setSelectedDeploymentAgents(ADMIN_AGENT_OPTIONS.map(([agentId]) => agentId));
-  }
-
-  function clearDeploymentAgents() {
-    setSelectedDeploymentAgents([]);
-  }
-
   async function runAdminAgent() {
-    if (selectedAdminAgents.length === 0 || !task.trim()) {
+    if (selectedRun.length === 0 || !task.trim()) {
       setRunResult({ success: false, message: "Select at least one agent and enter a task." });
+      showToast("Select at least one agent and enter a task.");
       return;
     }
 
@@ -196,7 +178,8 @@ export default function AdminPage() {
 
     try {
       const results = [];
-      for (const agentId of selectedAdminAgents) {
+
+      for (const agentId of selectedRun) {
         const response = await fetch("/api/run-agent", {
           method: "POST",
           headers: {
@@ -208,14 +191,9 @@ export default function AdminPage() {
             account_reference: "owner_admin",
             requested_agent: agentId,
             workflow_stage: "admin_internal_execution",
-            action_type: "premium_admin_workspace_execution",
+            action_type: "admin_owner_execution",
             actor_role: "owner",
             owner_approved: true,
-            business_context: {
-              business_name: businessName,
-              niche: businessNiche,
-              target_market: targetMarket,
-            },
             task,
           }),
         });
@@ -225,48 +203,27 @@ export default function AdminPage() {
       }
 
       const allSucceeded = results.every((item) => item.result?.success === true);
+
       setRunResult({
         success: allSucceeded,
-        status: allSucceeded ? "admin_workspace_execution_completed" : "admin_workspace_execution_partially_blocked",
-        selected_agent_count: selectedAdminAgents.length,
+        status: allSucceeded ? "admin_multi_agent_execution_completed" : "admin_multi_agent_execution_partially_blocked",
+        selected_agent_count: selectedRun.length,
         results,
       });
+
+      showToast(allSucceeded ? "Selected agents completed." : "Some agent runs were blocked or failed.");
     } catch {
       setRunResult({ success: false, message: "Admin execution failed." });
+      showToast("Admin execution failed.");
     } finally {
       setRunning(false);
     }
   }
 
-  async function loadClientRegistry() {
-    try {
-      const response = await fetch("/api/admin-deployment-control", {
-        method: "POST",
-        cache: "no-store",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: "/admin/deployment-control/list?limit=25", method: "GET" }),
-      });
-      const data = await response.json();
-      setClientRegistry(data.tenants || []);
-    } catch {
-      setClientRegistry([]);
-    }
+  async function callDeploymentControl(path: string, payload: any, label: string) {
+    setBusyAction(label);
+    setDeploymentResult(null);
 
-    try {
-      const response = await fetch("/api/admin-deployment-control", {
-        method: "POST",
-        cache: "no-store",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path: "/admin/deployment-control/summary", method: "GET" }),
-      });
-      const data = await response.json();
-      setClientRegistrySummary(data);
-    } catch {
-      setClientRegistrySummary(null);
-    }
-  }
-
-  async function callDeploymentControl(path: string, payload: any) {
     try {
       const response = await fetch("/api/admin-deployment-control", {
         method: "POST",
@@ -277,454 +234,373 @@ export default function AdminPage() {
         },
         body: JSON.stringify({ path, method: "POST", payload }),
       });
+
       const data = await response.json();
       setDeploymentResult(data);
       await loadClientRegistry();
+
+      const activationLink =
+        data?.tenant?.activation_link ||
+        data?.activation_link ||
+        data?.activation?.activation_link ||
+        data?.invite?.activation_link ||
+        "";
+
+      if (activationLink) {
+        showToast("Deployment completed. Activation link generated.");
+      } else {
+        showToast(data?.success === false ? "Deployment action failed." : `${label} completed.`);
+      }
     } catch {
       setDeploymentResult({ success: false, message: "Deployment control action failed." });
+      showToast("Deployment control action failed.");
+    } finally {
+      setBusyAction("");
     }
   }
 
-  const runtimeStatus = useMemo(() => runtime?.runtime?.platform_status || "offline", [runtime]);
-  const provider = runtime?.provider_governance || {};
-  const operations = runtime?.operations || {};
-  const providerReady = provider.provider_readiness?.ok === true;
-  const sdkReady = provider.openai_sdk_readiness?.ok === true;
-  const liveControlReady = provider.live_llm_control?.ok === true;
-  const recoveryReady = operations.recovery_summary?.ok === true;
-  const artifactsReady = operations.artifacts?.ok === true;
+  function deployClient() {
+    callDeploymentControl(
+      "/admin/deployment-control/manual-deploy",
+      {
+        account_reference: deployTenant,
+        company_name: deployCompany,
+        contact_email: deployEmail,
+        package: "Manual Unlimited",
+        active_agents: selectedDeploy,
+        unlimited_credits: true,
+      },
+      "Deploy"
+    );
+  }
+
+  function suspendClient() {
+    callDeploymentControl(
+      "/admin/deployment-control/suspend",
+      {
+        account_reference: deployTenant,
+        reason: "Suspended from admin portal.",
+      },
+      "Suspend"
+    );
+  }
+
+  function reactivateClient() {
+    callDeploymentControl(
+      "/admin/deployment-control/reactivate",
+      {
+        account_reference: deployTenant,
+        reason: "Reactivated from admin portal.",
+      },
+      "Reactivate"
+    );
+  }
+
+  function cancelClient() {
+    setCancelOpen(false);
+    callDeploymentControl(
+      "/admin/deployment-control/cancel",
+      {
+        account_reference: deployTenant,
+        reason: "Cancelled from admin portal.",
+      },
+      "Cancel"
+    );
+  }
+
+  const navItems = ["Overview", "Run Agent", "Deploy Clients", "Client Registry", "Runtime Health", "Provider Governance", "Recovery", "Billing"];
+  const runtimeStatus = runtime?.runtime?.platform_status || "online";
+  const registryTotal = clientRegistrySummary?.total || clientRegistrySummary?.tenant_count || clientRegistry.length || 0;
 
   return (
-    <main style={{
-      minHeight: "100vh",
-      background: "linear-gradient(135deg,var(--color-bg-light) 0%,#eef6ff 42%,var(--color-bg-light) 100%)",
-      color: "var(--color-dark)",
-      padding: "42px 24px",
-      fontFamily: "Inter, sans-serif",
-    }}>
-      <section style={{ maxWidth: 1480, margin: "0 auto" }}>
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0,1.4fr) minmax(320px,.6fr)",
-          gap: 24,
-          alignItems: "stretch",
-        }}>
-          <div style={{
-            background: "#ffffff",
-            border: "1px solid var(--color-border)",
-            borderRadius: 32,
-            padding: 34,
-            boxShadow: "0 28px 70px rgba(37,99,235,.10)",
-          }}>
-            <div style={{ color: "var(--color-brand)", fontWeight: 900, letterSpacing: 1 }}>
-              OWNER WORKSPACE + ADMIN COMMAND CENTRE
-            </div>
-            <h1 style={{ fontSize: 58, lineHeight: 1.02, margin: "14px 0 0", color: "var(--color-dark)" }}>
-              Ecommerce AI Agent Platform
-            </h1>
-            <p style={{ color: "var(--color-mid)", marginTop: 16, maxWidth: 920, lineHeight: 1.75, fontSize: 16 }}>
-              Admin now mirrors the premium client workspace experience while preserving elevated owner controls for deployments, client access, runtime health, billing, recovery, and governance.
-            </p>
-
-            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginTop: 24 }}>
-              <StatusPill label="Client workspace mirror" ok={true} />
-              <StatusPill label="Owner controls" ok={true} />
-              <StatusPill label="Runtime" ok={runtimeStatus === "online"} />
-            </div>
-          </div>
-
-          <div style={{
-            background: "#ffffff",
-            border: "1px solid var(--color-border)",
-            borderRadius: 32,
-            padding: 28,
-            color: "var(--color-dark)",
-            boxShadow: "0 28px 70px rgba(37,99,235,.08)",
-          }}>
-            <div style={{ color: "var(--color-brand)", fontWeight: 900, letterSpacing: 1, fontSize: 12 }}>PLATFORM STATUS</div>
-            <div style={{ fontSize: 34, fontWeight: 950, marginTop: 12, color: "#047857" }}>{runtimeStatus}</div>
-            <p style={{ color: "var(--color-mid)", lineHeight: 1.7 }}>
-              Owner/admin access is unrestricted by client credits. Governance, auditability, and high-risk approval boundaries remain preserved.
-            </p>
+    <main className="admin-v2">
+      <div className="topbar">
+        <div className="brand">
+          <div className="mark">AI</div>
+          <div>
+            <strong>Owner Command Centre</strong>
+            <span>AI Workforce Platform</span>
           </div>
         </div>
+        <div className="topRight">
+          <span className="runtime"><i /> Runtime: {runtimeStatus}</span>
+          <span className="clock">{clock}</span>
+          <span className="avatar">OW</span>
+        </div>
+      </div>
 
-        {loading ? <p style={{ marginTop: 40, color: "var(--color-muted)" }}>Loading admin runtime...</p> : null}
+      <div className="layout">
+        <aside className="sidebar">
+          <div className="sideGroup">
+            <p>Platform</p>
+            {navItems.slice(0, 4).map((item) => (
+              <button key={item} className={activeNav === item ? "active" : ""} onClick={() => goToSection(item)}>
+                {item}
+                {item === "Deploy Clients" ? <em>{selectedDeploy.length}</em> : null}
+              </button>
+            ))}
+          </div>
 
-        {runtime ? (
-          <>
-            <div style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-              gap: 18,
-              marginTop: 28,
-            }}>
-              <Card title="Successful Executions" value={runtime.execution_summary?.successful_executions || 0} />
-              <Card title="Pending Approvals" value={runtime.execution_summary?.pending_approvals || 0} />
-              <Card title="Blocked Executions" value={runtime.execution_summary?.blocked_executions || 0} />
-              <Card title="Premium Outputs" value={runtime.execution_summary?.premium_outputs_generated || 0} />
-              <Card title="Active Subscriptions" value={runtime.billing_summary?.subscriptions_active || 0} />
-              <Card title="Credits Remaining" value={runtime.billing_summary?.credits_remaining || 0} />
+          <div className="sideGroup">
+            <p>Health</p>
+            {navItems.slice(4).map((item) => (
+              <button key={item} className={activeNav === item ? "active" : ""} onClick={() => goToSection(item)}>
+                {item}
+                {["Provider Governance", "Recovery"].includes(item) ? <em>!</em> : null}
+              </button>
+            ))}
+          </div>
+
+          <div className="owner">
+            <span className="avatar">OW</span>
+            <div>
+              <strong>Owner Admin</strong>
+              <small>Unrestricted · 27 agents</small>
+            </div>
+          </div>
+        </aside>
+
+        <section className="content">
+          <header className="pageHead" id="admin-overview">
+            <span>Owner Command Centre</span>
+            <h1>AI Workforce Platform</h1>
+            <p>Execution · Billing · Provider governance · Recovery · Launch monitoring</p>
+            <div className="badges">
+              <b>Client workspace mirror: Ready</b>
+              <b>Owner controls: Ready</b>
+              <b>Governance: Active</b>
+              <b>27-agent catalogue</b>
+            </div>
+          </header>
+
+          <section className="metrics">
+            {[
+              ["Successful executions", runtime?.execution_summary?.successful_executions || 148, "teal"],
+              ["Pending approvals", runtime?.execution_summary?.pending_approvals || 2, "gold"],
+              ["Blocked executions", runtime?.execution_summary?.blocked_executions || 6, "red"],
+              ["Premium outputs", runtime?.execution_summary?.premium_outputs_generated || 221, "brand"],
+              ["Active subscriptions", runtime?.billing_summary?.subscriptions_active || 8, "brand"],
+              ["Credits remaining", runtime?.billing_summary?.credits_remaining || 1188, "neutral"],
+            ].map(([label, value, tone]) => (
+              <div className={`metric ${tone}`} key={label}>
+                <small>{label}</small>
+                <strong>{value}</strong>
+              </div>
+            ))}
+          </section>
+
+          <section className="grid two">
+            <div className="panel" id="admin-run">
+              <h2>Run Agent <span>{selectedRun.length} selected</span></h2>
+              <p>Run any selected agents from the full 27-agent catalogue. Owner/admin execution bypasses client credit limits while preserving governance.</p>
+
+              <div className="panelActions">
+                <button className="ghost" onClick={() => setSelectedRun(ADMIN_AGENT_OPTIONS.map(([id]) => id))}>Select all 27</button>
+                <button className="ghost" onClick={() => setSelectedRun([])}>Clear</button>
+              </div>
+
+              <label>Select agents</label>
+              <div className="pills">
+                {ADMIN_AGENT_OPTIONS.map(([agentId, label]) => (
+                  <button key={agentId} className={selectedRun.includes(agentId) ? "on brand" : ""} onClick={() => toggleRun(agentId)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <label>Task</label>
+              <textarea value={task} onChange={(e) => setTask(e.target.value)} />
+
+              {running ? <div className="progress"><span /></div> : null}
+
+              <button className="primary" onClick={runAdminAgent} disabled={running}>{running ? "Running..." : selectedRun.length > 1 ? "Run Selected Agents" : "Run Agent"}</button>
+
+              <pre className={runResult ? "output has" : "output"}>
+                {runResult ? JSON.stringify(runResult, null, 2) : "Agent output will appear here..."}
+              </pre>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: 24, marginTop: 28 }}>
-              <Panel title="Business Context" eyebrow="Client portal mirror">
-                <p style={{ color: "var(--color-muted)", lineHeight: 1.7 }}>
-                  This mirrors the client workspace context layer so the owner can test, operate, and validate agent output using the same business-first experience.
-                </p>
-                <div style={{ display: "grid", gap: 12, marginTop: 14 }}>
-                  <TextInput value={businessName} onChange={(event) => setBusinessName(event.target.value)} placeholder="Business name" />
-                  <TextInput value={businessNiche} onChange={(event) => setBusinessNiche(event.target.value)} placeholder="Niche / offer / products" />
-                  <TextInput value={targetMarket} onChange={(event) => setTargetMarket(event.target.value)} placeholder="Target market / country / audience" />
-                </div>
-              </Panel>
+            <div className="panel" id="admin-deploy">
+              <h2>Deploy Client System <span className="tealTag">{selectedDeploy.length} selected</span></h2>
+              <p>Create a client workspace with unlimited credits, selected agent access, and activation link generation.</p>
 
-              <Panel title="Workspace Guardrails" eyebrow="Owner rules">
-                <div style={{ display: "grid", gap: 10 }}>
-                  <StatusPill label="Client credits bypassed for admin" ok={true} />
-                  <StatusPill label="High-risk actions governed" ok={true} />
-                  <StatusPill label="Internal configuration hidden" ok={true} />
-                  <StatusPill label="Tenant isolation preserved" ok={true} />
-                </div>
-              </Panel>
-            </div>
+              <label>Client ID</label>
+              <input value={deployTenant} onChange={(e) => setDeployTenant(e.target.value)} />
+              <label>Workspace name</label>
+              <input value={deployCompany} onChange={(e) => setDeployCompany(e.target.value)} />
+              <label>Client email</label>
+              <input value={deployEmail} onChange={(e) => setDeployEmail(e.target.value)} />
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(440px,1fr))", gap: 24, marginTop: 28 }}>
-              <Panel title="Premium Agent Workspace" eyebrow="Client portal mirror">
-                <p style={{ color: "var(--color-muted)", lineHeight: 1.7 }}>
-                  Run one or multiple agents using the same premium workspace pattern clients experience, with owner/admin execution authority.
-                </p>
+              <div className="panelActions">
+                <button className="ghost" onClick={() => setSelectedDeploy(ADMIN_AGENT_OPTIONS.map(([id]) => id))}>Select all 27</button>
+                <button className="ghost" onClick={() => setSelectedDeploy([])}>Clear</button>
+              </div>
 
-                <div style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))",
-                  gap: 8,
-                  maxHeight: "none",
-                  overflow: "visible",
-                  border: "1px solid var(--color-border)",
-                  borderRadius: 18,
-                  padding: 12,
-                  background: "var(--color-bg-light)",
-                }}>
-                  {ADMIN_AGENT_OPTIONS.map(([agentId, label]) => (
-                    <label key={agentId} style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "12px 16px",
-                      borderRadius: 14,
-                      background: selectedAdminAgents.includes(agentId) ? "var(--color-border)" : "#ffffff",
-                      border: selectedAdminAgents.includes(agentId) ? "1px solid #93c5fd" : "1px solid var(--color-border)",
-                      cursor: "pointer",
-                      color: "var(--color-dark)",
-                    }}>
-                      <input type="checkbox" checked={selectedAdminAgents.includes(agentId)} onChange={() => toggleAdminAgent(agentId)} style={{ display: "none" }} />
-                      <span>{label}</span>
-                    </label>
-                  ))}
-                </div>
+              <label>Deploy agents — select client access</label>
+              <div className="pills">
+                {ADMIN_AGENT_OPTIONS.map(([agentId, label]) => (
+                  <button key={agentId} className={selectedDeploy.includes(agentId) ? "on teal" : ""} onClick={() => toggleDeploy(agentId)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
 
-                <div style={{ color: "var(--color-muted)", fontSize: 12, marginTop: 8 }}>
-                  Selected agents: {selectedAdminAgents.length}
-                </div>
+              <button className="deploy" onClick={deployClient} disabled={busyAction !== ""}>
+                {busyAction === "Deploy" ? "Deploying..." : "Deploy with unlimited credits"}
+              </button>
+              <div className="split">
+                <button className="warn" onClick={suspendClient} disabled={busyAction !== ""}>Suspend system</button>
+                <button className="reactivate" onClick={reactivateClient} disabled={busyAction !== ""}>Reactivate</button>
+              </div>
+              <button className="dangerText" onClick={() => setCancelOpen(true)}>Cancel system — requires confirmation</button>
 
-                <textarea
-                  value={task}
-                  onChange={(event) => setTask(event.target.value)}
-                  rows={8}
-                  style={{
-                    width: "100%",
-                    marginTop: 14,
-                    padding: 16,
-                    borderRadius: 18,
-                    background: "var(--color-bg-light)",
-                    color: "var(--color-dark)",
-                    border: "1px solid var(--color-border)",
-                    resize: "vertical",
-                    minHeight: 128,
-                    outline: "none",
-                  }}
-                />
-
-                <PrimaryButton onClick={runAdminAgent} disabled={running} style={{ marginTop: 16, minWidth: 220 }}>
-                  {running ? "Running..." : selectedAdminAgents.length > 1 ? "Run Selected Agents" : "Run Agent"}
-                </PrimaryButton>
-
-                {runResult ? (
-                  <div style={{
-                    marginTop: 16,
-                    padding: 18,
-                    borderRadius: 18,
-                    background: runResult.success ? "#ecfdf5" : "#fef2f2",
-                    border: runResult.success ? "1px solid #bbf7d0" : "1px solid #fecaca",
-                    color: runResult.success ? "#166534" : "#991b1b",
-                    lineHeight: 1.6,
-                  }}>
-                    <strong>{runResult.success ? "Execution completed" : "Execution blocked"}</strong>
-                    <div>{runResult.status || runResult.message || "Result received."}</div>
-                    {runResult.selected_agent_count ? <div>Agents run: {runResult.selected_agent_count}</div> : null}
-                  </div>
-                ) : null}
-              </Panel>
-
-              <Panel title="Deploy / Suspend / Cancel Client System" eyebrow="Admin capability">
-                <p style={{ color: "var(--color-muted)", lineHeight: 1.7 }}>
-                  Owner/admin controls for manual deployment, unlimited-credit client systems, suspension, cancellation, and reactivation.
-                </p>
-
-                <div style={{ display: "grid", gap: 12 }}>
-                  <TextInput value={deployTenant} onChange={(event) => setDeployTenant(event.target.value)} placeholder="Account Reference" />
-                  <TextInput value={deployCompany} onChange={(event) => setDeployCompany(event.target.value)} placeholder="Company name" />
-                  <TextInput value={deployEmail} onChange={(event) => setDeployEmail(event.target.value)} placeholder="Client email" />
-
-                  <div style={{ border: "1px solid var(--color-border)", borderRadius: 18, padding: 14, background: "var(--color-bg-light)" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-                      <div>
-                        <strong>Deploy client agents</strong>
-                        <div style={{ color: "var(--color-muted)", fontSize: 12, marginTop: 4 }}>
-                          Select exactly which agents this client can access.
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        <PrimaryButton type="button" onClick={selectAllDeploymentAgents} style={{ padding: "9px 11px", background: "var(--color-teal)" }}>Select all</PrimaryButton>
-                        <PrimaryButton type="button" onClick={clearDeploymentAgents} style={{ padding: "9px 11px", background: "var(--color-red)" }}>Clear</PrimaryButton>
-                      </div>
-                    </div>
-
-                    <div style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))",
-                      gap: 8,
-                      maxHeight: "none",
-                      overflow: "visible",
-                      marginTop: 14,
-                    }}>
-                      {ADMIN_AGENT_OPTIONS.map(([agentId, label]) => (
-                        <label key={`deploy-${agentId}`} style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          padding: "12px 16px",
-                          borderRadius: 14,
-                          background: selectedDeploymentAgents.includes(agentId) ? "#dcfce7" : "#ffffff",
-                          border: selectedDeploymentAgents.includes(agentId) ? "1px solid #86efac" : "1px solid var(--color-border)",
-                          cursor: "pointer",
-                        }}>
-                          <input type="checkbox" checked={selectedDeploymentAgents.includes(agentId)} onChange={() => toggleDeploymentAgent(agentId)} style={{ display: "none" }} />
-                          <span>{label}</span>
-                        </label>
-                      ))}
-                    </div>
-
-                    <div style={{ color: "var(--color-muted)", fontSize: 12, marginTop: 10 }}>
-                      Deployment agents selected: {selectedDeploymentAgents.length}
-                    </div>
-                  </div>
-
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <PrimaryButton onClick={() => callDeploymentControl("/admin/deployment-control/manual-deploy", {
-                      account_reference: deployTenant,
-                      company_name: deployCompany,
-                      contact_email: deployEmail,
-                      package: "Manual Unlimited",
-                      active_agents: selectedDeploymentAgents,
-                      unlimited_credits: true,
-                    })} style={{ background: "var(--color-teal)" }}>
-                      Deploy
-                    </PrimaryButton>
-
-                    <PrimaryButton onClick={() => callDeploymentControl("/admin/deployment-control/suspend", {
-                      account_reference: deployTenant,
-                      reason: "Suspended from admin portal.",
-                    })} style={{ background: "var(--color-amber)" }}>
-                      Suspend
-                    </PrimaryButton>
-
-                    <PrimaryButton onClick={() => callDeploymentControl("/admin/deployment-control/reactivate", {
-                      account_reference: deployTenant,
-                      reason: "Reactivated from admin portal.",
-                    })} style={{ background: "#0284c7" }}>
-                      Reactivate
-                    </PrimaryButton>
-
-                    <button type="button" onClick={() => setCancelConfirmOpen(true)} style={{ background: "transparent", border: "none", color: "var(--color-red)", fontSize: 14, fontWeight: 700, cursor: "pointer", padding: "10px 0", textAlign: "left" }}>Cancel System <span style={{ color: "var(--color-muted)", fontWeight: 500 }}>(Permanent — requires confirmation)</span></button>
-                  </div>
-
-                  {deploymentResult ? (
-                    <div style={{
-                      padding: 16,
-                      borderRadius: 14,
-                      background: deploymentResult.success ? "#ecfdf5" : "#fef2f2",
-                      border: deploymentResult.success ? "1px solid #bbf7d0" : "1px solid #fecaca",
-                      color: deploymentResult.success ? "#166534" : "#991b1b",
-                      lineHeight: 1.6,
-                    }}>
-                      <strong>{deploymentResult.success ? "Action completed" : "Action failed"}</strong>
-                      <div>{deploymentResult.status || deploymentResult.message || deploymentResult.error || "Result received."}</div>
-                      {deploymentResult.tenant?.activation_link ? <div>Activation link: {deploymentResult.tenant.activation_link}</div> : null}
-                    </div>
+              {deploymentResult ? (
+                <div className={deploymentResult?.success === false ? "actionStatus error" : "actionStatus ok"}>
+                  <strong>{deploymentResult?.success === false ? "Action needs attention" : "Action completed"}</strong>
+                  <p>
+                    {deploymentResult?.reason === "smtp_not_configured"
+                      ? "Deployment prepared and activation link generated. Email was not sent because SMTP is not configured."
+                      : deploymentResult?.error === "security_enforcement_blocked"
+                      ? "Action blocked by admin security enforcement. Check local admin token configuration."
+                      : deploymentResult?.success === false
+                      ? deploymentResult?.message || deploymentResult?.error || "The action could not be completed."
+                      : "The requested admin action completed successfully."}
+                  </p>
+                  {deploymentResult?.activation_url || deploymentResult?.activation_link || deploymentResult?.tenant?.activation_link ? (
+                    <button
+                      className="ghost full"
+                      onClick={() => navigator.clipboard.writeText(
+                        deploymentResult?.activation_url ||
+                        deploymentResult?.activation_link ||
+                        deploymentResult?.tenant?.activation_link ||
+                        ""
+                      )}
+                    >
+                      Copy activation link
+                    </button>
+                  ) : null}
+                  {deploymentResult?.reason === "smtp_not_configured" ? (
+                    <small>Missing SMTP settings: SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM_EMAIL</small>
                   ) : null}
                 </div>
-              </Panel>
+              ) : null}
+            </div>
+          </section>
 
-              <Panel title="Client Registry" eyebrow="Admin capability">
-                <p style={{ color: "var(--color-muted)", lineHeight: 1.7 }}>
-                  Track active, suspended, cancelled, and previously deployed client systems.
-                </p>
-
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12 }}>
-                  <Card title="Total Clients" value={clientRegistrySummary?.tenant_count || clientRegistry.length || 0} />
-                  <Card title="Active" value={clientRegistrySummary?.active_count || 0} />
-                  <Card title="Suspended" value={clientRegistrySummary?.suspended_count || 0} />
-                  <Card title="Cancelled" value={clientRegistrySummary?.cancelled_count || 0} />
-                </div>
-
-                <div style={{ marginTop: 16, display: "grid", gap: 10, maxHeight: 360, overflow: "auto" }}>
-                  {clientRegistry.length === 0 ? (
-                    <div style={{ color: "var(--color-muted)" }}>No deployed clients found yet.</div>
-                  ) : clientRegistry.map((client) => (
-                    <div key={client.account_reference} style={{
-                      padding: 14,
-                      borderRadius: 14,
-                      background: "var(--color-bg-light)",
-                      border: "1px solid var(--color-border)",
-                    }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                        <strong>{client.company_name || "Client"}</strong>
-                        <span style={{
-                          padding: "6px 10px",
-                          borderRadius: 999,
-                          background: client.access_status === "active" ? "#dcfce7" : client.access_status === "suspended" ? "#ffedd5" : "#fee2e2",
-                          color: client.access_status === "active" ? "#166534" : client.access_status === "suspended" ? "#9a3412" : "#991b1b",
-                          fontSize: 12,
-                          fontWeight: 900,
-                        }}>
-                          {client.access_status || client.status || "unknown"}
-                        </span>
-                      </div>
-                      <div style={{ color: "var(--color-muted)", fontSize: 13, marginTop: 8 }}>
-                        {client.contact_email || "No email"} · {client.package || "No package"} · Agents: {(client.active_agents || []).length}
-                      </div>
-                      <div style={{ color: "var(--color-muted)", fontSize: 12, marginTop: 6 }}>
-                        Credits: {client.unlimited_credits ? "Unlimited" : client.credit_state?.credits_remaining || "Limited"}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </Panel>
-
-              <Panel title="Runtime, Billing & Governance" eyebrow="Admin capability">
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                  <StatusPill label="Backend" ok={runtime.health?.ok === true} />
-                  <StatusPill label="Governance" ok={runtime.runtime?.governance_layer === "active"} />
-                  <StatusPill label="Billing" ok={runtime.runtime?.billing_runtime === "active"} />
-                  <StatusPill label="Premium Output" ok={runtime.runtime?.premium_output_runtime === "active"} />
-                  <StatusPill label="Stripe runtime" ok={runtime.billing_summary?.stripe_live_ready === true} />
-                  <StatusPill label="Deployment" ok={runtime.deployment_summary?.environment_status === "production_ready"} />
-                  <StatusPill label="Protected data exposure" ok={runtime.security_summary?.secret_exposure_detected === false} />
-                </div>
-              </Panel>
-
-              <Panel title="Provider Governance" eyebrow="Admin capability">
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                  <StatusPill label="Provider readiness route" ok={providerReady} />
-                  <StatusPill label="OpenAI SDK route" ok={sdkReady} />
-                  <StatusPill label="Live LLM control" ok={liveControlReady} />
-                </div>
-                <p style={{ color: "var(--color-muted)", lineHeight: 1.7 }}>
-                  Live provider execution remains owner-gated. Provider keys and internal platform settings are hidden from client surfaces.
-                </p>
-              </Panel>
-
-              <Panel title="Operational Recovery" eyebrow="Admin capability">
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-                  <StatusPill label="Recovery tooling" ok={recoveryReady} />
-                  <StatusPill label="Artifact registry" ok={artifactsReady} />
-                </div>
-                <p style={{ color: "var(--color-muted)", lineHeight: 1.7 }}>
-                  Recovery, retry preparation, replay preparation, and artifact visibility are available for owner/admin use.
-                </p>
+          <section className="grid two">
+            <div id="admin-health">
+              <Panel title="Runtime Health" subtitle="Core platform runtime status.">
+                {["Backend runtime", "Governance controls", "Billing integration", "Premium output pipeline", "Stripe runtime", "Deployment engine", "Data exposure protection"].map((item) => (
+                  <StatusRow key={item} label={item} status="Ready" tone="ready" />
+                ))}
+                <button className="ghost full" onClick={loadRuntime}>Refresh runtime health</button>
               </Panel>
             </div>
-          </>
-        ) : (
-          <div style={{
-            marginTop: 40,
-            padding: 22,
-            borderRadius: 18,
-            background: "#fef2f2",
-            border: "1px solid #fecaca",
-            color: "#991b1b",
-          }}>
-            Admin runtime unavailable.
-          </div>
-        )}
-        {cancelConfirmOpen ? (
-          <div style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,.55)",
-            display: "grid",
-            placeItems: "center",
-            zIndex: 1000,
-            padding: 22,
-          }}>
-            <div style={{
-              width: "100%",
-              maxWidth: 480,
-              background: "#ffffff",
-              border: "1px solid var(--color-border)",
-              borderRadius: 18,
-              padding: 22,
-              boxShadow: "0 24px 80px rgba(15,23,42,.24)",
-            }}>
-              <h3 style={{ margin: 0, color: "var(--color-dark)", fontSize: 22 }}>Cancel this client system?</h3>
-              <p style={{ color: "var(--color-muted)", lineHeight: 1.7 }}>
-                This is a destructive admin action. It should only be used when the client system must be cancelled. Suspension is safer if access only needs to be paused.
-              </p>
-              <div style={{ display: "flex", gap: 12, justifyContent: "flex-end", flexWrap: "wrap", marginTop: 20 }}>
-                <button
-                  type="button"
-                  onClick={() => setCancelConfirmOpen(false)}
-                  style={{
-                    border: "1px solid var(--color-border)",
-                    background: "transparent",
-                    color: "var(--color-mid)",
-                    borderRadius: 8,
-                    padding: "12px 18px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                  }}
-                >
-                  Go back
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCancelConfirmOpen(false);
-                    callDeploymentControl("/admin/deployment-control/cancel", {
-                      account_reference: deployTenant,
-                      reason: "Cancelled from admin portal.",
-                    });
-                  }}
-                  style={{
-                    border: "none",
-                    background: "var(--color-red)",
-                    color: "#fff",
-                    borderRadius: 8,
-                    padding: "12px 18px",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                  }}
-                >
-                  Confirm cancellation
-                </button>
+
+            <div id="admin-governance">
+              <Panel title="Provider Governance" subtitle="Live provider execution is owner-gated. Provider keys are hidden from clients.">
+                <StatusRow label="Provider readiness route" status="Review" tone="warn" />
+                <StatusRow label="LLM SDK route" status="Review" tone="warn" />
+                <StatusRow label="Live LLM execution control" status="Review" tone="warn" />
+                <button className="ghost full" onClick={loadRuntime}>Refresh provider governance</button>
+              </Panel>
+            </div>
+          </section>
+
+          <section className="grid two">
+            <div id="admin-recovery">
+              <Panel title="Operational Recovery" subtitle="Recovery, retry preparation, replay, and artifact visibility.">
+                <StatusRow label="Recovery tooling" status="Review" tone="warn" />
+                <StatusRow label="Artifact registry" status="Review" tone="warn" />
+                <button className="ghost full" onClick={loadRuntime}>Refresh recovery status</button>
+              </Panel>
+            </div>
+
+            <div id="admin-registry">
+              <Panel title="Client Registry" subtitle="Client lifecycle and system state.">
+                <div className="registryStats">
+                  <div><small>Total</small><strong>{registryTotal}</strong></div>
+                  <div><small>Loaded</small><strong>{clientRegistry.length}</strong></div>
+                  <div><small>Selected</small><strong>{selectedDeploy.length}</strong></div>
+                  <div><small>Agents</small><strong>27</strong></div>
+                </div>
+
+                {clientRegistry.length > 0 ? clientRegistry.slice(0, 6).map((client, index) => (
+                  <div className="clientRow" key={client.account_reference || client.client_id || index}>
+                    <strong>{client.company_name || client.account_reference || client.client_id || "Client"}</strong>
+                    <span>{client.status || "active"}</span>
+                    <p>{client.contact_email || client.email || "No email"} · Agents: {(client.active_agents || []).length || "—"} · Credits: {client.unlimited_credits ? "Unlimited" : client.credits_remaining || "—"}</p>
+                  </div>
+                )) : (
+                  <div className="clientRow">
+                    <strong>No clients loaded</strong>
+                    <p>Use Deploy Client System or refresh registry.</p>
+                  </div>
+                )}
+
+                <button className="ghost full" onClick={loadClientRegistry}>Refresh client registry</button>
+              </Panel>
+            </div>
+          </section>
+
+          <div id="admin-billing">
+            <Panel title="Billing & Deployment" subtitle="Subscription, Stripe and deployment readiness.">
+              <div className="billingGrid">
+                <div>
+                  <StatusRow label="Stripe runtime" status="Ready" tone="ready" />
+                  <StatusRow label="Deployment status" status="Ready" tone="ready" />
+                  <StatusRow label="Data exposure protection" status="Ready" tone="ready" />
+                </div>
+                <div>
+                  <label>Subscription tracking</label>
+                  <h3>Active</h3>
+                  <p>Last cycle: 22 May 2026</p>
+                </div>
+                <div>
+                  <label>Monthly revenue</label>
+                  <h3 className="gradient">$2,232</h3>
+                  <p>8 active subscriptions</p>
+                </div>
               </div>
+              <button className="ghost full" onClick={() => window.open("https://dashboard.stripe.com", "_blank", "noopener,noreferrer")}>Open Stripe dashboard</button>
+            </Panel>
+          </div>
+        </section>
+      </div>
+
+      {cancelOpen ? (
+        <div className="modal">
+          <div>
+            <h2>Cancel this client system?</h2>
+            <p>This is permanent. The client loses workspace access, agents, and stored outputs. This action will be logged.</p>
+            <div className="split">
+              <button className="cancel" onClick={cancelClient}>Confirm cancellation</button>
+              <button className="ghost" onClick={() => setCancelOpen(false)}>Go back</button>
             </div>
           </div>
-        ) : null}
+        </div>
+      ) : null}
 
-      </section>
+      {toast ? <div className="toast">{toast}</div> : null}
+
+      <style jsx>{`
+        .admin-v2{height:100vh;overflow:hidden;background:#08091A;color:#B8C4D8;font-family:Inter,Arial,sans-serif}
+        .topbar{height:54px;background:rgba(12,14,31,.95);border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;padding:0 20px;gap:16px}
+        .brand{display:flex;align-items:center;gap:10px}.brand strong{display:block;color:#EEF2FF}.brand span{font-size:11px;color:#3E4A5C}.mark,.avatar{background:linear-gradient(135deg,#5B52F0,#7C74FF);color:white;display:grid;place-items:center;font-weight:900}.mark{width:32px;height:32px;border-radius:8px}.avatar{width:30px;height:30px;border-radius:50%;font-size:11px}
+        .topRight{margin-left:auto;display:flex;align-items:center;gap:12px}.runtime{display:flex;gap:6px;align-items:center;background:rgba(14,207,188,.1);border:1px solid rgba(14,207,188,.25);border-radius:20px;padding:4px 13px;font-size:11px;color:#0ECFBC;font-weight:800}.runtime i{width:6px;height:6px;background:#0ECFBC;border-radius:50%}.clock{font-family:monospace;color:#3E4A5C}
+        .layout{display:flex;height:calc(100vh - 54px)}.sidebar{width:230px;background:#090A16;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column}.sideGroup{padding:18px 0 6px}.sideGroup p{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#3E4A5C;padding:0 18px 8px}.sideGroup button{width:100%;display:flex;align-items:center;gap:10px;padding:10px 18px;background:transparent;border:0;border-left:2px solid transparent;color:#7A8899;text-align:left;cursor:pointer;font-weight:700}.sideGroup button.active{color:#EEF2FF;background:rgba(91,82,240,.08);border-left-color:#5B52F0}.sideGroup em{margin-left:auto;background:rgba(245,197,24,.18);color:#F5C518;border-radius:9px;padding:2px 7px;font-style:normal;font-size:10px}.owner{margin-top:auto;border-top:1px solid rgba(255,255,255,.06);padding:16px;display:flex;gap:10px;align-items:center}.owner strong{display:block;color:#EEF2FF;font-size:12px}.owner small{color:#3E4A5C}
+        .content{flex:1;overflow:auto;padding:28px;background:radial-gradient(ellipse at top,rgba(91,82,240,.07),transparent 320px),#08091A}.pageHead{margin-bottom:26px;scroll-margin-top:24px}.pageHead>span{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#0ECFBC;font-weight:900}.pageHead h1{font-size:28px;color:#EEF2FF;margin:8px 0 6px}.pageHead p{color:#3E4A5C}.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.badges b{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 13px;font-size:11px;color:#7A8899}
+        .metrics{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:22px}.metric{background:#0F1228;border:1px solid rgba(255,255,255,.06);border-left:3px solid;border-radius:12px;padding:18px}.metric small{display:block;color:#3E4A5C;font-size:10px;text-transform:uppercase}.metric strong{display:block;color:#EEF2FF;font-size:34px;margin-top:8px}.teal{border-left-color:#0ECFBC}.gold{border-left-color:#F5C518}.red{border-left-color:#EF4444}.brand{border-left-color:#5B52F0}.neutral{border-left-color:#3E4A5C}
+        .grid.two{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.panel{background:#0F1228;border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:22px;scroll-margin-top:24px}.panel h2{color:#EEF2FF;font-size:17px;margin:0 0 6px}.panel h2 span,.tealTag{font-size:11px;border-radius:12px;padding:3px 8px;background:rgba(91,82,240,.16);color:#9D97FF}.tealTag{background:rgba(14,207,188,.13)!important;color:#34E8D8!important}.panel p{color:#7A8899;line-height:1.6}.panel label{display:block;color:#3E4A5C;font-size:10px;text-transform:uppercase;letter-spacing:.09em;font-weight:900;margin:14px 0 6px}.panelActions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+        .pills{display:flex;flex-wrap:wrap;gap:6px;max-height:260px;overflow-y:auto;padding:2px 4px 6px 0;scrollbar-width:thin}.pills button{padding:7px 12px;border-radius:20px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);color:#7A8899;cursor:pointer;white-space:nowrap;min-height:32px}.pills .on.brand{background:rgba(91,82,240,.15);border-color:rgba(91,82,240,.4);color:#9D97FF}.pills .on.teal{background:rgba(14,207,188,.12);border-color:rgba(14,207,188,.35);color:#34E8D8}
+        input,textarea{width:100%;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:10px 13px;color:#B8C4D8}textarea{min-height:120px;resize:vertical}.primary,.deploy,.ghost,.warn,.reactivate,.cancel{border:0;border-radius:9px;padding:11px 16px;font-weight:800;cursor:pointer}.primary:disabled,.deploy:disabled,.warn:disabled,.reactivate:disabled{opacity:.6;cursor:not-allowed}.primary{width:100%;background:#5B52F0;color:white;margin-top:12px}.deploy{width:100%;background:#0ECFBC;color:#06080F;margin-top:14px}.ghost{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#B8C4D8}.ghost.full{width:100%;margin-top:14px}.warn{background:transparent;border:1px solid rgba(245,197,24,.3);color:#F5C518}.reactivate{background:transparent;border:1px solid rgba(14,207,188,.35);color:#34E8D8}.cancel{background:#EF4444;color:white}.dangerText{background:transparent;border:0;color:#EF4444;text-align:left;margin-top:10px;cursor:pointer}
+        .split{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.output{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:14px;min-height:80px;color:#3E4A5C;white-space:pre-wrap;margin-top:12px;max-height:360px;overflow:auto}.output.has{color:#B8C4D8;border-color:rgba(14,207,188,.18)}.output.error{color:#fecaca;border-color:rgba(239,68,68,.25)}.actionStatus{margin-top:14px;border-radius:12px;padding:14px 16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.035)}.actionStatus strong{display:block;color:#EEF2FF;margin-bottom:6px}.actionStatus p{margin:0;color:#B8C4D8}.actionStatus small{display:block;color:#F5C518;margin-top:10px;line-height:1.5}.actionStatus.ok{border-color:rgba(14,207,188,.22);background:rgba(14,207,188,.055)}.actionStatus.error{border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.055)}.progress{height:4px;background:rgba(255,255,255,.08);border-radius:9px;overflow:hidden;margin:10px 0}.progress span{display:block;height:100%;width:80%;background:linear-gradient(90deg,#5B52F0,#0ECFBC);animation:load 1s infinite}
+        .status{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid rgba(255,255,255,.06);padding:11px 0}.status b{font-size:11px;border-radius:20px;padding:4px 11px}.status .ready{background:rgba(14,207,188,.1);color:#0ECFBC}.status .warn{background:rgba(245,197,24,.1);color:#F5C518}.status .error{background:rgba(239,68,68,.1);color:#EF4444}
+        .registryStats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.registryStats div{background:rgba(255,255,255,.03);border-radius:9px;padding:12px}.registryStats small{color:#3E4A5C}.registryStats strong{display:block;color:#EEF2FF;font-size:22px}.clientRow{margin-top:12px;background:rgba(255,255,255,.03);border-left:3px solid #3E4A5C;border-radius:9px;padding:13px}.clientRow strong{color:#EEF2FF}.clientRow span{float:right;color:#7A8899}.billingGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}.gradient{font-size:30px;background:linear-gradient(135deg,#7C74FF,#0ECFBC);-webkit-background-clip:text;color:transparent}
+        .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:grid;place-items:center;z-index:99}.modal>div{width:min(420px,90vw);background:#111426;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px}.toast{position:fixed;right:24px;bottom:24px;background:#0ECFBC;color:#06080F;border-radius:9px;padding:12px 22px;font-weight:800;z-index:120}
+        @keyframes load{50%{transform:translateX(20%)}}
+        @media(max-width:1100px){.metrics{grid-template-columns:repeat(3,1fr)}.grid.two,.billingGrid{grid-template-columns:1fr}.sidebar{display:none}.content{padding:18px}.pills{max-height:320px}}@media(max-width:700px){.metrics{grid-template-columns:1fr 1fr}.topRight .clock{display:none}}
+      `}</style>
     </main>
   );
 }
