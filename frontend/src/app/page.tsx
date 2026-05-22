@@ -1,5 +1,7 @@
 "use client";
 
+import PremiumHeroMedia from "@/components/media/PremiumHeroMedia";
+
 import Link from "next/link";
 
 const ticker = [
@@ -145,7 +147,56 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="pricing" className="section pricing">
+      
+      <section className="premium-media-landing-marker" style={{
+        background: "#080B14",
+        padding: "96px 24px",
+        borderTop: "1px solid rgba(255,255,255,.08)",
+        borderBottom: "1px solid rgba(255,255,255,.08)",
+      }}>
+        <div style={{
+          maxWidth: 1240,
+          margin: "0 auto",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))",
+          gap: 42,
+          alignItems: "center",
+        }}>
+          <div>
+            <div style={{
+              color: "#0ECFBC",
+              fontSize: 12,
+              fontWeight: 900,
+              letterSpacing: ".14em",
+              textTransform: "uppercase",
+              marginBottom: 16,
+            }}>
+              Premium motion layer
+            </div>
+            <h2 style={{
+              color: "#fff",
+              fontSize: "clamp(36px,5vw,64px)",
+              lineHeight: 1,
+              letterSpacing: "-.04em",
+              margin: 0,
+            }}>
+              Your AI team, visualised as a live command centre.
+            </h2>
+            <p style={{
+              color: "#94A3B8",
+              fontSize: 17,
+              lineHeight: 1.8,
+              marginTop: 20,
+              maxWidth: 580,
+            }}>
+              This section is ready for WebM, MP4, poster, Spline, or Lottie assets. Until custom assets are produced, it uses a premium animated fallback.
+            </p>
+          </div>
+          <PremiumHeroMedia mode="fallback" />
+        </div>
+      </section>
+
+<section id="pricing" className="section pricing">
         <div className="sectionHead">
           <span>Pricing</span>
           <h2>Choose your<br /><b>AI workforce plan.</b></h2>
