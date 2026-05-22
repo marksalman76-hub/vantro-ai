@@ -96,15 +96,25 @@ def _trusted_origin_valid(request: Request) -> bool:
 
 
 def _admin_token_valid(request: Request) -> bool:
-    expected = os.getenv("ADMIN_PLATFORM_TOKEN", "") or os.getenv("ADMIN_AUTH_SECRET", "")
-    if not expected:
+    expected_tokens = [
+        os.getenv("ADMIN_PLATFORM_TOKEN", ""),
+        os.getenv("ADMIN_AUTH_SECRET", ""),
+        os.getenv("ADMIN_AUTH_TOKEN", ""),
+    ]
+    expected_tokens = [str(token).strip() for token in expected_tokens if str(token).strip()]
+
+    if not expected_tokens:
         return not _is_production()
 
-    supplied = _header(request, "x-admin-token") or _header(request, "authorization").replace("Bearer ", "")
+    supplied = (
+        _header(request, "x-admin-token")
+        or _header(request, "authorization").replace("Bearer ", "")
+    ).strip()
+
     if not supplied:
         return False
 
-    return hmac.compare_digest(str(supplied), str(expected))
+    return any(hmac.compare_digest(str(supplied), expected) for expected in expected_tokens)
 
 
 def _is_admin_path(path: str) -> bool:
