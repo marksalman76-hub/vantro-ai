@@ -219,3 +219,135 @@ a {
   }
 
 }
+
+
+/* Premium media runtime */
+.premium-media-shell {
+  position: relative;
+  width: 100%;
+  min-height: 520px;
+  border-radius: 32px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.12);
+  background: radial-gradient(circle at top, rgba(91,82,240,.22), rgba(8,11,20,.92));
+  box-shadow: 0 32px 100px rgba(0,0,0,.45);
+}
+
+.premium-hero-video {
+  width: 100%;
+  height: 100%;
+  min-height: 520px;
+  object-fit: cover;
+  display: block;
+}
+
+.premium-media-fallback {
+  position: relative;
+  min-height: 520px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.premium-core {
+  position: relative;
+  z-index: 3;
+  width: 150px;
+  height: 150px;
+  border-radius: 36px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #5B52F0, #0ECFBC);
+  box-shadow: 0 0 80px rgba(91,82,240,.55);
+  animation: premiumCorePulse 4s ease-in-out infinite;
+}
+
+.premium-core span {
+  font-size: 52px;
+  font-weight: 900;
+  color: white;
+}
+
+.premium-orbit {
+  position: absolute;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  animation: premiumOrbit 18s linear infinite;
+}
+
+.premium-orbit-one {
+  width: 360px;
+  height: 360px;
+}
+
+.premium-orbit-two {
+  width: 520px;
+  height: 520px;
+  animation-duration: 28s;
+  animation-direction: reverse;
+}
+
+.premium-panel {
+  position: absolute;
+  z-index: 4;
+  padding: 14px 18px;
+  border-radius: 18px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(18px);
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 20px 60px rgba(0,0,0,.28);
+}
+
+.premium-panel-one {
+  top: 110px;
+  left: 12%;
+  animation: premiumFloat 5s ease-in-out infinite;
+}
+
+.premium-panel-two {
+  right: 10%;
+  top: 210px;
+  animation: premiumFloat 6s ease-in-out infinite reverse;
+}
+
+.premium-panel-three {
+  bottom: 120px;
+  left: 24%;
+  animation: premiumFloat 7s ease-in-out infinite;
+}
+
+@keyframes premiumOrbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes premiumFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-16px); }
+}
+
+@keyframes premiumCorePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.035); }
+}
+
+@media (max-width: 768px) {
+  .premium-media-shell,
+  .premium-hero-video,
+  .premium-media-fallback {
+    min-height: 420px;
+  }
+
+  .premium-orbit-two {
+    width: 390px;
+    height: 390px;
+  }
+
+  .premium-panel {
+    font-size: 12px;
+    padding: 10px 12px;
+  }
+}
