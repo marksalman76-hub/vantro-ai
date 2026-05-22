@@ -7,6 +7,7 @@ const BACKEND_URL =
   "https://ecommerce-ai-agent-platform-1.onrender.com";
 
 const ADMIN_TOKEN =
+  process.env.ADMIN_PLATFORM_TOKEN ||
   process.env.ADMIN_AUTH_SECRET ||
   process.env.ADMIN_AUTH_TOKEN ||
   process.env.ADMIN_BEARER_TOKEN ||
@@ -41,7 +42,17 @@ export async function POST(request: NextRequest) {
 
     if (ADMIN_TOKEN) {
       headers.Authorization = `Bearer ${ADMIN_TOKEN}`;
+      headers["x-admin-token"] = ADMIN_TOKEN;
     }
+
+    const frontendOrigin =
+      process.env.FRONTEND_PUBLIC_URL ||
+      process.env.FRONTEND_URL ||
+      process.env.NEXT_PUBLIC_FRONTEND_URL ||
+      "https://app.trance-formation.com.au";
+
+    headers.Origin = frontendOrigin;
+    headers.Referer = `${frontendOrigin}/admin`;
 
     const response = await fetch(`${BACKEND_URL}${path}`, {
       method,
