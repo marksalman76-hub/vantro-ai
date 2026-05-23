@@ -793,7 +793,7 @@ const modalContentGridStyle = {
                   listStyle: "none",
                 }}
               >
-                PD
+                {clientInitials}
               </summary>
 
               <div
@@ -813,7 +813,7 @@ const modalContentGridStyle = {
                 <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: "1px solid #edf1f6" }}>
                   <div style={{ width: 46, height: 46, borderRadius: 999, background: "var(--color-dark)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{clientInitials}</div>
                   <div>
-                    <div style={{ fontWeight: 800, color: "var(--color-dark)" }}>{clientInitials}</div>
+                    <div style={{ fontWeight: 800, color: "var(--color-dark)" }}>{clientDisplayName}</div>
                     <div style={{ fontSize: 12, color: "var(--color-muted)" }}>{clientEmail || accountPackage}</div>
                     <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4, color: "var(--color-muted)" }}>
                       <span style={{ color: accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444", marginRight: 6 }}>●</span>
