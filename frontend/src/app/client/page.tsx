@@ -1,5 +1,4 @@
 "use client";
-import { Bell, Settings, User, KeyRound, ShieldCheck, Moon, Sun, LogOut } from "lucide-react";
 
 import { useEffect, useState } from "react";
 
@@ -227,51 +226,6 @@ function getAgentDisplayName(agentId: string) {
 // client_portal_bottom_cards_aligned_locked
 // client_portal_activity_premium_polish_locked
 // client_portal_responsive_motion_locked
-
-function ClientHeaderAccountMenu() {
-  const [open, setOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
-
-  const workspaceActive = true;
-  const accountState = workspaceActive ? "ACTIVE" : "INACTIVE";
-  const statusDotClass = workspaceActive ? "bg-emerald-500" : "bg-red-500";
-
-  useEffect(() => {
-    if (darkMode) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
-  }, [darkMode]);
-
-  return (
-    <ClientHeaderAccountMenu />
-          </div>
-
-          <div className="space-y-1 border-b border-slate-100 py-3">
-            <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold hover:bg-slate-50"><Settings className="h-4 w-4" /> Settings</button>
-            <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold hover:bg-slate-50"><User className="h-4 w-4" /> Profile</button>
-            <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold hover:bg-slate-50"><KeyRound className="h-4 w-4" /> Password reset</button>
-            <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold hover:bg-slate-50"><ShieldCheck className="h-4 w-4" /> 2FA</button>
-          </div>
-
-          <div className="flex items-center justify-between border-b border-slate-100 py-3">
-            <div className="flex items-center gap-3 text-sm font-bold">
-              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-              {darkMode ? "Light mode" : "Dark mode"}
-            </div>
-            <button type="button" onClick={() => setDarkMode((value) => !value)} className={`relative h-7 w-12 rounded-full transition ${darkMode ? "bg-slate-950" : "bg-slate-300"}`}>
-              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${darkMode ? "left-6" : "left-1"}`} />
-            </button>
-          </div>
-
-          <button className="mt-3 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50">
-            <LogOut className="h-4 w-4" /> Sign out
-          </button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-
 export default function ClientPage() {
   const [account, setAccount] = useState<Account | null>(null);
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
