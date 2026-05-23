@@ -1,4 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+from pathlib import Path
+from datetime import datetime
+
+path = Path("frontend/src/app/api/client-business-profile/route.ts")
+
+if not path.exists():
+    raise SystemExit("Route file not found. Run this from ecommerce-ai-agent-platform root.")
+
+text = path.read_text(encoding="utf-8")
+
+backup_dir = Path("backups")
+backup_dir.mkdir(exist_ok=True)
+backup = backup_dir / f"client_business_profile_route_before_session_cookie_{datetime.now().strftime('%Y%m%d_%H%M%S')}.ts"
+backup.write_text(text, encoding="utf-8")
+
+replacement = r'''import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND_URL =
   process.env.BACKEND_URL ||
@@ -115,3 +130,9 @@ export async function POST(request: NextRequest) {
     sessionToken
   );
 }
+'''
+
+path.write_text(replacement, encoding="utf-8")
+
+print("CLIENT_BUSINESS_PROFILE_SESSION_COOKIE_FIXED")
+print(f"Backup: {backup}")
