@@ -344,7 +344,6 @@ const modalContentGridStyle = {
   const accountPackage = account?.package_name || account?.package || "Active workspace";
   const accountStatus = account?.status || "active";
   const activeAgentCount = account?.active_agents?.length || 0;
-  const [activeAccountPanel, setActiveAccountPanel] = useState("");
   const accountAny = account as any;
   const clientDisplayName =
     accountAny?.company_name ||
@@ -825,8 +824,8 @@ const modalContentGridStyle = {
 
                 <button
                   onClick={() => {
-                    setActiveAccountPanel("settings");
                     window.location.hash = "settings";
+                    alert("Settings panel selected.");
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
@@ -835,8 +834,8 @@ const modalContentGridStyle = {
 
                 <button
                   onClick={() => {
-                    setActiveAccountPanel("profile");
                     window.location.hash = "profile";
+                    alert("Profile panel selected.");
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
@@ -845,8 +844,8 @@ const modalContentGridStyle = {
 
                 <button
                   onClick={() => {
-                    setActiveAccountPanel("password-reset");
                     window.location.hash = "password-reset";
+                    alert("Password reset selected.");
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
@@ -855,8 +854,8 @@ const modalContentGridStyle = {
 
                 <button
                   onClick={() => {
-                    setActiveAccountPanel("two-factor-authentication");
                     window.location.hash = "two-factor-authentication";
+                    alert("2FA selected.");
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
@@ -978,71 +977,6 @@ const modalContentGridStyle = {
             </div>
           ))}
         </section>
-
-        {activeAccountPanel ? (
-          <section
-            id={activeAccountPanel}
-            style={{
-              ...cardStyle,
-              padding: 18,
-              marginBottom: 18,
-              border: "1px solid #e5eaf2",
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", flexWrap: "wrap" }}>
-              <div>
-                <div style={{ color: "var(--color-brand)", fontSize: 12, fontWeight: 800, letterSpacing: .6, textTransform: "uppercase", marginBottom: 8 }}>
-                  Account settings
-                </div>
-                <h2 style={{ margin: 0, color: "var(--color-dark)", fontSize: 24, letterSpacing: -.6 }}>
-                  {activeAccountPanel === "settings" && "Settings"}
-                  {activeAccountPanel === "profile" && "Profile"}
-                  {activeAccountPanel === "password-reset" && "Password reset"}
-                  {activeAccountPanel === "two-factor-authentication" && "Two-factor authentication"}
-                </h2>
-                <p style={{ margin: "8px 0 0", color: "var(--color-muted)", maxWidth: 720, lineHeight: 1.5 }}>
-                  {activeAccountPanel === "settings" && "Manage workspace preferences, display options, and account controls."}
-                  {activeAccountPanel === "profile" && "Review the client profile details connected to this workspace."}
-                  {activeAccountPanel === "password-reset" && "Start a secure password reset flow for this account."}
-                  {activeAccountPanel === "two-factor-authentication" && "Prepare stronger login protection for this workspace."}
-                </p>
-              </div>
-
-              <button
-                onClick={() => {
-                  setActiveAccountPanel("");
-                  window.location.hash = "";
-                }}
-                style={{
-                  border: "1px solid #e5eaf2",
-                  background: "#fff",
-                  borderRadius: 999,
-                  padding: "9px 13px",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                  color: "var(--color-dark)",
-                }}
-              >
-                Close
-              </button>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12, marginTop: 16 }}>
-              <div style={{ border: "1px solid #edf1f6", borderRadius: 14, padding: 14, background: "#fff" }}>
-                <strong style={{ color: "var(--color-dark)" }}>Client</strong>
-                <div style={{ marginTop: 6, color: "var(--color-muted)", fontSize: 13 }}>{clientDisplayName}</div>
-              </div>
-              <div style={{ border: "1px solid #edf1f6", borderRadius: 14, padding: 14, background: "#fff" }}>
-                <strong style={{ color: "var(--color-dark)" }}>Package</strong>
-                <div style={{ marginTop: 6, color: "var(--color-muted)", fontSize: 13 }}>{accountPackage}</div>
-              </div>
-              <div style={{ border: "1px solid #edf1f6", borderRadius: 14, padding: 14, background: "#fff" }}>
-                <strong style={{ color: "var(--color-dark)" }}>Status</strong>
-                <div style={{ marginTop: 6, color: "var(--color-muted)", fontSize: 13 }}>{accountStatus}</div>
-              </div>
-            </div>
-          </section>
-        ) : null}
 
         <section style={{ ...cardStyle, padding: 18, marginBottom: 18 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", marginBottom: 18, flexWrap: "wrap" }}>
