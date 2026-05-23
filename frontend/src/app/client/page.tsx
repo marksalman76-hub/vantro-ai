@@ -964,7 +964,7 @@ const modalContentGridStyle = {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
               gap: 0,
               alignItems: "center",
             }}
@@ -1186,12 +1186,12 @@ const modalContentGridStyle = {
               ["brand_voice", "◁", "Brand voice", "Premium, playful, clinical, bold, friendly", "textarea", "normal"],
               ["positioning", "◎", "Positioning", "Why customers should choose you", "textarea", "normal"],
               ["goals", "⚑", "Goals", "Sales, launches, retention, growth", "textarea", "normal"],
-              ["notes", "◌", "Key differentiators", "What makes your business unique? Benefits, values, or competitive advantages.", "textarea", "normal"],
+              ["notes", "◌", "Key differentiators", "What makes your business unique? Benefits, values, or competitive advantages.", "textarea", "wide"],
             ].map(([key, icon, label, placeholder, fieldType, size]) => (
               <div
                 key={String(key)}
                 style={{
-                  gridColumn: "span 1",
+                  gridColumn: label === "Key differentiators" ? "span 3" : "span 1",
                   borderRadius: 16,
                   border: "1px solid rgba(15,23,42,.08)",
                   background: "#fff",
