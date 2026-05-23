@@ -361,7 +361,6 @@ const modalContentGridStyle = {
       }
     };
 
-    applyHorizontalExecutionLayout();
     window.setTimeout(applyHorizontalExecutionLayout, 300);
   }, [selectedAgents]);
 
@@ -560,7 +559,6 @@ const modalContentGridStyle = {
       }
     };
 
-    applyPremiumExecutionSectionLayout();
     window.setTimeout(applyPremiumExecutionSectionLayout, 350);
     window.setTimeout(applyPremiumExecutionSectionLayout, 900);
   }, [selectedAgents, activeAccountPanel]);
