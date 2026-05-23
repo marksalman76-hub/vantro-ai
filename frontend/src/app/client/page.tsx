@@ -772,7 +772,7 @@ const modalContentGridStyle = {
               style={{
                 border: "none",
                 borderRadius: 12,
-                padding: "10px 12px",
+                padding: "8px 10px",
                 background: "var(--color-dark)",
                 color: "#fff",
                 fontWeight: 700,
@@ -787,7 +787,7 @@ const modalContentGridStyle = {
               style={{
                 background: "#fff",
                 borderRadius: 16,
-                padding: "10px 12px",
+                padding: "8px 10px",
                 border: "1px solid #e5eaf2",
                 fontWeight: 800,
                 boxShadow: "0 8px 22px rgba(15,23,42,.045)",
@@ -1094,7 +1094,7 @@ const modalContentGridStyle = {
                         marginTop: 12,
                         border: 0,
                         borderRadius: 12,
-                        padding: "10px 12px",
+                        padding: "8px 10px",
                         background: "linear-gradient(135deg,#4f46e5,#4338ca)",
                         color: "#fff",
                         fontSize: 12.4,
@@ -1127,7 +1127,7 @@ const modalContentGridStyle = {
                   <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Password reset</div>
                   <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Secure reset request</div>
                   <p style={{ color: "var(--color-muted)", fontSize: 12, lineHeight: 1.45 }}>Use this panel to trigger the secure password reset flow once the backend route is connected.</p>
-                  <button type="button" onClick={() => setToastMessage("Password reset request panel opened. Secure email flow is ready for backend connection.")} style={{ border: 0, background: "var(--color-dark)", color: "#fff", borderRadius: 12, padding: "10px 12px", fontWeight: 850, cursor: "pointer" }}>
+                  <button type="button" onClick={() => setToastMessage("Password reset request panel opened. Secure email flow is ready for backend connection.")} style={{ border: 0, background: "var(--color-dark)", color: "#fff", borderRadius: 12, padding: "8px 10px", fontWeight: 850, cursor: "pointer" }}>
                     Send reset link
                   </button>
                 </div>
@@ -1138,7 +1138,7 @@ const modalContentGridStyle = {
                   <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Two-factor authentication</div>
                   <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Extra account protection</div>
                   <p style={{ color: "var(--color-muted)", fontSize: 12, lineHeight: 1.45 }}>2FA setup panel is now functional in the workspace UI and ready for secure backend connection.</p>
-                  <button type="button" onClick={() => setToastMessage("2FA setup panel opened. Secure setup flow is ready for backend connection.")} style={{ border: 0, background: "var(--color-dark)", color: "#fff", borderRadius: 12, padding: "10px 12px", fontWeight: 850, cursor: "pointer" }}>
+                  <button type="button" onClick={() => setToastMessage("2FA setup panel opened. Secure setup flow is ready for backend connection.")} style={{ border: 0, background: "var(--color-dark)", color: "#fff", borderRadius: 12, padding: "8px 10px", fontWeight: 850, cursor: "pointer" }}>
                     Start 2FA setup
                   </button>
                 </div>
@@ -1171,7 +1171,7 @@ const modalContentGridStyle = {
             </div>
           </div>
 
-          <div style={{ marginBottom: 12, borderRadius: 14, border: "1px solid rgba(79,70,229,.12)", background: "rgba(238,242,255,.45)", padding: "10px 12px", color: "#334155", fontSize: 12.4, fontWeight: 750 }}>
+          <div style={{ marginBottom: 12, borderRadius: 14, border: "1px solid rgba(79,70,229,.12)", background: "rgba(238,242,255,.45)", padding: "8px 10px", color: "#334155", fontSize: 12.4, fontWeight: 750 }}>
             Start with <strong>Business name</strong>. This controls the client initials and account name shown in the top-right profile menu.
           </div>
 
@@ -1283,9 +1283,9 @@ const modalContentGridStyle = {
 
           <div style={{ marginTop: 14, borderRadius: 16, border: "1px solid rgba(79,70,229,.10)", background: "#fff", padding: 10, boxShadow: "0 10px 28px rgba(15,23,42,.04)", position: "relative", zIndex: 25 }}>
             <div style={{ display: "grid", gridTemplateColumns: "180px 180px 180px 1fr", gap: 10, alignItems: "center" }}>
-              <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "10px 12px", height: 44, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "#fff", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>▣ Save business profile</button>
-              <button type="button" onClick={loadBusinessProfile} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "10px 12px", height: 44, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>↻ Reset to last save</button>
-              <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "10px 12px", height: 44, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>◉ Preview profile</button>
+              <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "8px 10px", height: 44, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "#fff", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>▣ Save business profile</button>
+              <button type="button" onClick={loadBusinessProfile} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 44, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>↻ Reset to last save</button>
+              <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 44, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>◉ Preview profile</button>
               <div style={{ borderLeft: "1px solid rgba(79,70,229,.12)", paddingLeft: 14, minHeight: 44, display: "flex", flexDirection: "column", justifyContent: "center" }}>
                 <div style={{ fontWeight: 900, color: "#0f172a", fontSize: 12.5, marginBottom: 2 }}>One workspace. One business.</div>
                 <div style={{ color: "#64748b", fontSize: 11.4, lineHeight: 1.3 }}>You can refine this profile, but changing business identity requires approval unless Enterprise multi-business access is enabled.</div>
@@ -2624,7 +2624,7 @@ const modalContentGridStyle = {
                       background: "#fff",
                       color: "#334155",
                       borderRadius: 16,
-                      padding: "10px 12px",
+                      padding: "8px 10px",
                       fontWeight: 760,
                       cursor: "pointer",
                     }}
@@ -2781,7 +2781,7 @@ const modalContentGridStyle = {
                   border: "1px solid #e5eaf2",
                   background: "#fff",
                   borderRadius: 16,
-                  padding: "10px 12px",
+                  padding: "8px 10px",
                   fontWeight: 700,
                   cursor: "pointer",
                 }}
