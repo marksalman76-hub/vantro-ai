@@ -37,8 +37,10 @@ export default async function ActivatePage({ searchParams }: ActivatePageProps) 
   const isValid =
     invite &&
     invite.success === true &&
-    invite.expired === false &&
-    invite.used === false;
+    (
+      invite.valid === true ||
+      (invite.expired === false && invite.used === false)
+    );
 
   return (
     <main
