@@ -1041,6 +1041,24 @@ const modalContentGridStyle = {
                     <div style={{ marginTop: 8, color: "var(--color-muted)", fontSize: 12 }}>
                       {clientEmail || "No email shown"}
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={saveBusinessProfile}
+                      style={{
+                        marginTop: 12,
+                        border: 0,
+                        borderRadius: 12,
+                        padding: "10px 12px",
+                        background: "linear-gradient(135deg,#4f46e5,#4338ca)",
+                        color: "#fff",
+                        fontSize: 12.4,
+                        fontWeight: 900,
+                        cursor: "pointer",
+                      }}
+                    >
+                      Save profile
+                    </button>
                   </div>
 
                   <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
