@@ -170,26 +170,12 @@ type ExecutionTimelineEvent = {
 };
 
 
-const STARTER_PACKAGE_AGENTS: string[] = [
-  "product_research_agent",
-  "product_copywriting_agent",
-  "ugc_creative_agent",
-];
-
-const GROWTH_PACKAGE_AGENTS: string[] = [
-  "product_research_agent",
-  "product_copywriting_agent",
-  "ugc_creative_agent",
-  "product_image_agent",
-  "crm_ai_agent",
-  "email_reply_agent",
-  "analytics_optimisation_agent",
-];
-
-const BUSINESS_PACKAGE_AGENTS: string[] = [
+const DEFAULT_AGENTS: string[] = [
   "product_research_agent",
   "competitor_intelligence_agent",
   "brand_strategy_agent",
+  "store_builder_agent",
+  "website_landing_apps_agent",
   "product_copywriting_agent",
   "ugc_creative_agent",
   "product_image_agent",
@@ -197,9 +183,17 @@ const BUSINESS_PACKAGE_AGENTS: string[] = [
   "analytics_optimisation_agent",
   "email_reply_agent",
   "crm_ai_agent",
+  "seo_agent",
+  "social_media_manager_content_creator_agent",
+  "influencer_collaboration_agent",
+  "lead_generator_appointment_setter_agent",
+  "sales_closer_agent",
+  "receptionist_agent",
+  "product_development_agent",
+  "ecommerce_agent",
+  "customer_support_agent",
+  "business_growth_partnerships_agent",
 ];
-
-const DEFAULT_AGENTS: string[] = STARTER_PACKAGE_AGENTS;
 const BACKEND_API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.trance-formation.com.au";
 
 const AGENT_DISPLAY_NAMES: Record<string, string> = {
@@ -227,32 +221,52 @@ const AGENT_DISPLAY_NAMES: Record<string, string> = {
     business_growth_partnerships_agent: "Business Growth & Partnerships Agent",
 };
 
+const ENTERPRISE_RESERVED_AGENT_IDS = new Set([
+  "head_agent",
+  "orchestration_agent",
+  "multi_agent_orchestration_agent",
+]);
+
+const NON_ENTERPRISE_AGENT_CATALOGUE: string[] = Object.keys(AGENT_DISPLAY_NAMES).filter(
+  (agentId) => !ENTERPRISE_RESERVED_AGENT_IDS.has(agentId)
+);
+
 const ENTERPRISE_PACKAGE_AGENTS: string[] = Object.keys(AGENT_DISPLAY_NAMES);
 
-function getPackageAgentCatalogue(packageName: string, activeAgents?: string[]) {
-  if (activeAgents && Array.isArray(activeAgents) && activeAgents.length > 0) {
-    return activeAgents;
-  }
-
+function getPackageAgentLimit(packageName: string) {
   const normalisedPackage = String(packageName || "").toLowerCase();
 
-  if (normalisedPackage.includes("enterprise")) return ENTERPRISE_PACKAGE_AGENTS;
-  if (normalisedPackage.includes("business")) return BUSINESS_PACKAGE_AGENTS;
-  if (normalisedPackage.includes("growth")) return GROWTH_PACKAGE_AGENTS;
-  if (normalisedPackage.includes("starter")) return STARTER_PACKAGE_AGENTS;
+  if (normalisedPackage.includes("enterprise")) return null;
+  if (normalisedPackage.includes("business")) return 10;
+  if (normalisedPackage.includes("growth")) return 7;
+  if (normalisedPackage.includes("starter")) return 3;
 
-  return STARTER_PACKAGE_AGENTS;
+  return 3;
+}
+
+function getPackageAgentCatalogue(packageName: string, activeAgents?: string[]) {
+  const normalisedPackage = String(packageName || "").toLowerCase();
+  const allowedBaseCatalogue = normalisedPackage.includes("enterprise")
+    ? ENTERPRISE_PACKAGE_AGENTS
+    : NON_ENTERPRISE_AGENT_CATALOGUE;
+
+  const cleanActiveAgents = (activeAgents || []).filter((agentId) =>
+    allowedBaseCatalogue.includes(agentId)
+  );
+
+  if (cleanActiveAgents.length > 0) {
+    return cleanActiveAgents;
+  }
+
+  return allowedBaseCatalogue;
 }
 
 function getPackageAgentLimitLabel(packageName: string, visibleCount: number) {
-  const normalisedPackage = String(packageName || "").toLowerCase();
+  const packageLimit = getPackageAgentLimit(packageName);
 
-  if (normalisedPackage.includes("enterprise")) return `${visibleCount} available`;
-  if (normalisedPackage.includes("business")) return `${visibleCount}/10 available`;
-  if (normalisedPackage.includes("growth")) return `${visibleCount}/7 available`;
-  if (normalisedPackage.includes("starter")) return `${visibleCount}/3 available`;
+  if (packageLimit === null) return `${visibleCount} available`;
 
-  return `${visibleCount} available`;
+  return `${visibleCount}/${packageLimit} active`;
 }
 
 function getAgentDisplayName(agentId: string) {
