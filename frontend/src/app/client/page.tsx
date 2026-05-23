@@ -1779,104 +1779,116 @@ useEffect(() => {
 
 
         <section style={{ ...responsiveSecondaryGridStyle, alignItems: "stretch" }}>
-          <div style={{ ...cardStyle, height: 560, overflow: "hidden" }}>
+          <div style={{ ...cardStyle, minHeight: 430, overflow: "hidden" }}>
             <StepHeader number="05" title="Activity" />
-            <h3 style={cardTitle}>Activity</h3>
-            <p style={{ color: "var(--color-brand)", fontWeight: 700, fontSize: 13 }}>Latest governed activity</p>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14 }}>
+              <div>
+                <h3 style={cardTitle}>Activity</h3>
+                <p style={{ ...mutedText, margin: "5px 0 0", color: "var(--color-brand)", fontWeight: 800 }}>
+                  Latest governed activity
+                </p>
+              </div>
+              <span
+                style={{
+                  background: "#ecfdf5",
+                  color: "var(--color-teal)",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: 999,
+                  padding: "7px 10px",
+                  fontSize: 11.5,
+                  fontWeight: 900,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Live tracking
+              </span>
+            </div>
 
-            <div style={{ display: "grid", gap: 10, marginTop: 10, maxHeight: 430, overflowY: "auto", paddingRight: 4 }}>
-              {(executionTimeline.length
-                ? executionTimeline
-                : [{
-                    event_id: "pending_execution_timeline",
-                    created_at: liveDeliverable?.created_at || "",
-                    agent_id: selectedAgents[0] || "agent",
-                    event_type: timelineLoading ? "loading_execution_timeline" : "waiting_for_execution",
-                    event_status: liveDeliverable ? "deliverable_generated" : "waiting",
-                    workflow_stage: "client_workspace",
-                    action_type: "client_execution",
-                    title: liveDeliverable
-                      ? "Deliverable generated"
-                      : timelineLoading
-                        ? "Loading execution timeline"
-                        : "Waiting for execution",
-                    summary: liveDeliverable
-                      ? "The latest client deliverable is ready for review."
-                      : "Run selected agents to generate live governed execution events.",
-                    approval_status: reviewStatus,
-                    quality_status: liveDeliverable ? "ready_for_review" : "pending",
-                    execution_status: executionState,
-                  }]).slice(0, 2).map((event) => {
-                const time = event.created_at
-                  ? new Date(event.created_at).toLocaleString()
-                  : "Live";
-                const agentName = getAgentDisplayName(event.agent_id || "agent");
-                const approvalStatus = event.approval_status || "not_required";
-                const qualityStatus = event.quality_status || "pending";
-                const executionStatus = event.execution_status || event.event_status || "tracked";
-                const isExecutionIssue = String(executionStatus).toLowerCase().includes("failed") || String(executionStatus).toLowerCase().includes("unsupported");
-                const isApprovalRequired = String(approvalStatus).toLowerCase().includes("approval") && !String(approvalStatus).toLowerCase().includes("approved_safe");
-                const statusTone = isExecutionIssue
-                  ? { bg: "#fff7ed", border: "#fed7aa", text: "var(--color-amber)", label: "Needs attention" }
-                  : isApprovalRequired
-                    ? { bg: "#fffbeb", border: "#fde68a", text: "#ca8a04", label: "Approval gated" }
-                    : { bg: "#f0fdf4", border: "#bbf7d0", text: "var(--color-teal)", label: "Governed ready" };
-
-                return (
+            <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
+              {[
+                {
+                  title: liveDeliverable ? "Deliverable generated" : "Ready for execution",
+                  detail: liveDeliverable
+                    ? "Latest client deliverable is ready for review."
+                    : "Run selected agents to generate a new client deliverable.",
+                  status: liveDeliverable ? "Ready" : "Waiting",
+                  tone: liveDeliverable ? "#22c55e" : "var(--color-brand)",
+                  icon: liveDeliverable ? "✓" : "→",
+                },
+                {
+                  title: executionState === "completed" ? "Execution completed" : executionState === "running" ? "Execution running" : "Execution prepared",
+                  detail: executionState === "running"
+                    ? "Agent workflow is processing the current request."
+                    : "Governed execution is prepared for the selected agents.",
+                  status: executionState === "completed" ? "Complete" : executionState === "running" ? "Running" : "Prepared",
+                  tone: executionState === "running" ? "#f59e0b" : "#06b6d4",
+                  icon: executionState === "running" ? "…" : "⚡",
+                },
+                {
+                  title: reviewStatus === "approved" ? "Client approved" : reviewStatus === "rejected" ? "Changes requested" : "Client review",
+                  detail: reviewStatus === "approved"
+                    ? "The deliverable has been approved."
+                    : reviewStatus === "rejected"
+                      ? "Feedback has been submitted for revision."
+                      : "Approval controls are ready when the output is reviewed.",
+                  status: reviewStatus === "approved" ? "Approved" : reviewStatus === "rejected" ? "Revision" : "Pending",
+                  tone: reviewStatus === "rejected" ? "#ef4444" : "var(--color-brand)",
+                  icon: reviewStatus === "approved" ? "✓" : reviewStatus === "rejected" ? "!" : "○",
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  style={{
+                    border: "1px solid #e5eaf2",
+                    borderRadius: 16,
+                    background: "#fff",
+                    padding: "12px 14px",
+                    display: "grid",
+                    gridTemplateColumns: "34px minmax(0,1fr) auto",
+                    gap: 12,
+                    alignItems: "center",
+                    boxShadow: "0 8px 22px rgba(15,23,42,.035)",
+                  }}
+                >
                   <div
-                    key={event.event_id || `${event.agent_id}-${event.event_type}`}
                     style={{
-                      border: `1px solid ${statusTone.border}`,
-                      borderRadius: 16,
-                      padding: 20,
-                      background: "rgba(255, 255, 255, 0.94)",
-                      boxShadow: "0 20px 55px rgba(15,23,42,0.06)",
-                      transition: "transform 0.18s ease, box-shadow 0.18s ease",
+                      width: 32,
+                      height: 32,
+                      borderRadius: 12,
+                      background: `${item.tone}18`,
+                      color: item.tone,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 950,
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
-                      <div>
-                        <div style={{ color: "var(--color-muted)", fontSize: 11.8, fontWeight: 700 }}>{time}</div>
-                        <div style={{ fontWeight: 800, color: "var(--color-dark)", fontSize: 16, marginTop: 5 }}>
-                          {event.title || event.event_type || "Execution event"}
-                        </div>
-                        <div style={{ color: "var(--color-mid)", fontSize: 11.8, lineHeight: 1.45, marginTop: 6 }}>
-                          {event.summary || "Governed execution event recorded by the platform ledger."}
-                        </div>
-                      </div>
+                    {item.icon}
+                  </div>
 
-                      <div style={{ textAlign: "right", color: "var(--color-muted)", fontSize: 13, fontWeight: 850 }}>
-                        <div>{agentName}</div>
-                        <div style={{ marginTop: 4, display: "inline-flex", background: statusTone.bg, color: statusTone.text, border: `1px solid ${statusTone.border}`, borderRadius: 16, padding: "3px 6px", fontSize: 10, fontWeight: 800 }}>
-                          {statusTone.label}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-                      <span style={{ background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))", color: "var(--color-brand)", border: "1px solid rgba(37, 99, 235, 0.14)", borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
-                        {event.execution_action || event.action_type || "Tracked action"}
-                      </span>
-                      <span style={{ background: "#f0fdf4", color: "var(--color-teal)", border: "1px solid #dcfce7", borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
-                        Quality: {qualityStatus}
-                      </span>
-                      <span style={{ background: "#fff7ed", color: "var(--color-amber)", border: "1px solid #fed7aa", borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
-                        Approval: {approvalStatus}
-                      </span>
-                      <span style={{ background: statusTone.bg, color: statusTone.text, border: `1px solid ${statusTone.border}`, borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
-                        Execution: {executionStatus}
-                      </span>
-                      <span style={{ background: "var(--color-bg-light)", color: "#334155", border: "1px solid rgba(15, 23, 42, 0.08)", 
-                    boxShadow: "0 18px 55px rgba(15, 23, 42, 0.06)",
-                    backdropFilter: "blur(10px)",
-                    WebkitBackdropFilter: "blur(10px)",
-                    borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
-                        Stage: {event.workflow_stage || "workflow"}
-                      </span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 950, color: "var(--color-dark)" }}>{item.title}</div>
+                    <div style={{ marginTop: 3, fontSize: 12, fontWeight: 700, color: "var(--color-muted)", lineHeight: 1.35 }}>
+                      {item.detail}
                     </div>
                   </div>
-                );
-              })}
+
+                  <span
+                    style={{
+                      border: "1px solid #e5eaf2",
+                      background: "#f8fafc",
+                      borderRadius: 999,
+                      padding: "6px 9px",
+                      color: item.tone,
+                      fontSize: 11.5,
+                      fontWeight: 900,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {item.status}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
