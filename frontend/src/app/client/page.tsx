@@ -308,6 +308,63 @@ const modalContentGridStyle = {
     padding: "clamp(18px,2.4vw,28px)",
   };
 
+
+  useEffect(() => {
+    const applyHorizontalExecutionLayout = () => {
+      const headings = Array.from(document.querySelectorAll("h1,h2,h3,div,p,span,label"));
+      const activeAgentsLabel = headings.find((node) => node.textContent?.trim() === "Active agents");
+
+      if (!activeAgentsLabel) return;
+
+      const runCard =
+        activeAgentsLabel.closest("section") ||
+        activeAgentsLabel.closest("div");
+
+      if (!runCard) return;
+
+      const possibleLists = Array.from(runCard.querySelectorAll("div")).filter((node) => {
+        const text = node.textContent || "";
+        return text.includes("Head Agent") && text.includes("Strategist Agent");
+      });
+
+      const agentList = possibleLists[possibleLists.length - 1] as HTMLElement | undefined;
+
+      if (agentList) {
+        agentList.style.display = "flex";
+        agentList.style.flexDirection = "row";
+        agentList.style.flexWrap = "nowrap";
+        agentList.style.gap = "8px";
+        agentList.style.overflowX = "auto";
+        agentList.style.overflowY = "hidden";
+        agentList.style.maxHeight = "76px";
+        agentList.style.paddingBottom = "6px";
+        agentList.style.alignItems = "center";
+
+        Array.from(agentList.children).forEach((child) => {
+          const item = child as HTMLElement;
+          item.style.flex = "0 0 auto";
+          item.style.minWidth = "170px";
+          item.style.maxWidth = "220px";
+          item.style.padding = "8px 10px";
+          item.style.borderRadius = "12px";
+          item.style.whiteSpace = "nowrap";
+          item.style.overflow = "hidden";
+          item.style.textOverflow = "ellipsis";
+        });
+      }
+
+      const taskLabel = headings.find((node) => node.textContent?.trim() === "Task");
+      const taskCard = taskLabel?.parentElement?.querySelector("textarea, div") as HTMLElement | null;
+
+      if (taskCard) {
+        taskCard.style.minHeight = "96px";
+      }
+    };
+
+    applyHorizontalExecutionLayout();
+    window.setTimeout(applyHorizontalExecutionLayout, 300);
+  }, [selectedAgents]);
+
   useEffect(() => {
     fetch("/api/client-me")
       .then((r) => r.json())
