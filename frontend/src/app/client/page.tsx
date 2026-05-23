@@ -1299,96 +1299,108 @@ const modalContentGridStyle = {
         </section>
 
         <section
+        style={{
+          ...cardStyle,
+          padding: "14px 18px",
+          marginBottom: 18,
+        }}
+      >
+        <div
           style={{
-            ...cardStyle,
-            padding: 18,
-            marginBottom: 18,
+            display: "grid",
+            gridTemplateColumns: "150px repeat(6, minmax(130px, 1fr)) 155px",
+            gap: 10,
+            alignItems: "center",
+            width: "100%",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 16,
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: "var(--color-dark)" }}>Integrations</div>
-              <div style={{ color: "var(--color-muted)", fontSize: 11.8, marginTop: 2 }}>Connected systems</div>
-            </div>
+          <div>
+            <h2 style={{ margin: 0, fontSize: 16 }}>Integrations</h2>
+            <p style={{ margin: "4px 0 0", color: "var(--color-muted)", fontSize: 13 }}>
+              Connected systems
+            </p>
+          </div>
 
-            <div
+          {[
+            ["E", "Email"],
+            ["C", "CRM"],
+            ["E", "Ecommerce Store"],
+            ["W", "Website / CMS"],
+            ["C", "Calendar"],
+            ["S", "SMS / Phone"],
+          ].map(([letter, label]) => (
+            <button
+              key={label}
+              type="button"
               style={{
+                border: "1px solid #e5eaf2",
+                borderRadius: 12,
+                background: "#fff",
+                padding: "8px 10px",
                 display: "flex",
-                gap: 10,
-                flexWrap: "wrap",
                 alignItems: "center",
-                flex: 1,
+                gap: 8,
+                minHeight: 48,
+                cursor: "pointer",
+                boxShadow: "0 8px 20px rgba(15,23,42,.04)",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
               }}
             >
-              {(integrations.length ? integrations : DEFAULT_CLIENT_INTEGRATIONS).slice(0, 6).map((integration) => (
-                <button
-                  key={integration.integration_key}
-                  type="button"
-                  onClick={() => integration.connected ? testIntegration(integration) : connectIntegration(integration)}
-                  style={{
-                    border: "1px solid rgba(15, 23, 42, 0.10)",
-                    background: "#ffffff",
-                    borderRadius: 8,
-                    padding: "8px 12px",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 9,
-                    cursor: "pointer",
-                    transition: "transform 0.16s ease, box-shadow 0.16s ease",
-                    boxShadow: "0 5px 18px rgba(15,23,42,0.035)",
-                    minWidth: 148,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: 10,
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: integration.connected ? "#ecfdf5" : "#f1f5f9",
-                      color: integration.connected ? "var(--color-teal)" : "var(--color-muted)",
-                      fontWeight: 900,
-                      fontSize: 11.8,
-                    }}
-                  >
-                    {integration.name.slice(0, 1)}
-                  </span>
-                  <span style={{ display: "grid", lineHeight: 1.1, textAlign: "left" }}>
-                    <span style={{ fontWeight: 800, color: "var(--color-dark)", fontSize: 12 }}>{integration.name}</span>
-                    <span style={{ color: integration.connected ? "var(--color-teal)" : "var(--color-muted)", fontSize: 11, fontWeight: 700 }}>
-                      {integration.connected ? "Connected" : "Connect"}
-                    </span>
-                  </span>
-                </button>
-              ))}
-
-              <button
-                type="button"
+              <span
                 style={{
-                  border: "1px solid rgba(37, 99, 235, 0.16)",
-                  background: "linear-gradient(135deg,#eff6ff,#ffffff)",
-                  color: "var(--color-brand)",
-                  borderRadius: 8,
-                  padding: "8px 11px",
-                  fontWeight: 800,
-                  cursor: "pointer",
+                  width: 28,
+                  height: 28,
+                  borderRadius: 9,
+                  background: "#eef2f7",
+                  color: "#64748b",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 900,
+                  flex: "0 0 auto",
                 }}
               >
-                + Add integration
-              </button>
-            </div>
-          </div>
-        </section>
+                {letter}
+              </span>
+              <span style={{ minWidth: 0, textAlign: "left", lineHeight: 1.1 }}>
+                <span
+                  style={{
+                    display: "block",
+                    fontWeight: 900,
+                    color: "var(--color-dark)",
+                    fontSize: 13,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {label}
+                </span>
+                <span style={{ display: "block", color: "var(--color-muted)", fontSize: 12, fontWeight: 800, marginTop: 3 }}>
+                  Connect
+                </span>
+              </span>
+            </button>
+          ))}
+
+          <button
+            type="button"
+            style={{
+              border: "1px solid #d8dcff",
+              borderRadius: 12,
+              background: "#fff",
+              color: "var(--color-primary)",
+              padding: "8px 12px",
+              minHeight: 48,
+              fontWeight: 900,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            + Add integration
+          </button>
+        </div>
+      </section>
 
 
         <section style={responsiveWorkspaceGridStyle}>
