@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 type Account = {
   tenant_id?: string;
   client_id?: string;
+  tenant_id?: string;
   package?: string;
   package_name?: string;
   status?: string;
@@ -177,7 +178,7 @@ const DEFAULT_AGENTS: string[] = [
   "product_image_agent",
   "crm_ai_agent",
 ];
-const BACKEND_API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "https://ecommerce-ai-agent-platform-1.onrender.com";
+const BACKEND_API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.trance-formation.com.au";
 
 const AGENT_DISPLAY_NAMES: Record<string, string> = {
     product_research_agent: "Product Research Agent",
@@ -340,7 +341,10 @@ const modalContentGridStyle = {
   }, []);
 
   const creditsRemaining = account?.credits_remaining ?? 0;
+  const tenantId = account?.tenant_id || account?.client_id || "unknown_client";
   const accountPackage = account?.package_name || account?.package || "Active workspace";
+  const accountStatus = account?.status || "active";
+  const activeAgentCount = account?.active_agents?.length || 0;
   const accountStatus = account?.package_status || account?.status || "Active";
   const directMediaAssets: DeliverableAsset[] = [
     liveDeliverable?.image_url
@@ -497,8 +501,7 @@ const modalContentGridStyle = {
 
       const tenantId =
         account?.tenant_id ||
-        account?.client_id ||
-        "client_manual_admin";
+        tenantId;
 
       const response = await fetch(
         `${BACKEND_API_BASE}/client/execution-events?tenant_id=${encodeURIComponent(tenantId)}&project_id=live_readiness_matrix&limit=20`,
@@ -525,7 +528,7 @@ const modalContentGridStyle = {
 
   async function loadIntegrations() {
     try {
-      const response = await fetch(`${BACKEND_API_BASE}/client/integrations`, { cache: "no-store", headers: { "x-tenant-id": "client_demo_001", "x-actor-role": "customer" } });
+      const response = await fetch(`${BACKEND_API_BASE}/client/integrations`, { cache: "no-store", headers: { "x-tenant-id": tenantId, "x-actor-role": "customer" } });
       const data = await response.json();
       if (data?.success && Array.isArray(data.integrations)) {
         setIntegrations(data.integrations);
@@ -549,7 +552,7 @@ const modalContentGridStyle = {
 
     const response = await fetch(`${BACKEND_API_BASE}/client/integrations/connect`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-tenant-id": "client_demo_001", "x-actor-role": "customer" },
+      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId, "x-actor-role": "customer" },
       body: JSON.stringify({
         integration_key: integration.integration_key,
         provider,
@@ -585,7 +588,7 @@ const modalContentGridStyle = {
   async function testIntegration(integration: ClientIntegration) {
     const response = await fetch(`${BACKEND_API_BASE}/client/integrations/test`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-tenant-id": "client_demo_001", "x-actor-role": "customer" },
+      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId, "x-actor-role": "customer" },
       body: JSON.stringify({ integration_key: integration.integration_key }),
     });
 
@@ -608,7 +611,7 @@ const modalContentGridStyle = {
   async function disconnectIntegration(integration: ClientIntegration) {
     const response = await fetch(`${BACKEND_API_BASE}/client/integrations/disconnect`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-tenant-id": "client_demo_001", "x-actor-role": "customer" },
+      headers: { "Content-Type": "application/json", "x-tenant-id": tenantId, "x-actor-role": "customer" },
       body: JSON.stringify({ integration_key: integration.integration_key }),
     });
 
@@ -781,9 +784,9 @@ const modalContentGridStyle = {
           }}
         >
           {[
-            ["Workspace status", "Ready for execution", accountPackage],
+            ["Workspace status", accountStatus === "active" ? "Ready for execution" : accountStatus, accountPackage],
             ["Approvals", reviewStatus === "pending" && liveDeliverable ? "1 pending" : "0 pending", liveDeliverable ? "Client review" : "No pending review"],
-            ["Workflows", liveDeliverable ? "1 tracked" : "0 tracked", liveDeliverable ? "Latest execution" : "No active workflow"],
+            ["Agents", String(activeAgentCount), activeAgentCount ? "Active in this workspace" : "No active agents"],
             ["Credits", String(creditsRemaining), "Available balance"],
           ].map(([label, value, note]) => (
             <div
@@ -1169,15 +1172,15 @@ const modalContentGridStyle = {
                     try {
                       const response = await fetch("/api/run-agent", {
                         method: "POST",
-                        headers: { "Content-Type": "application/json", "x-tenant-id": "client_demo_001", "x-actor-role": "customer" },
+                        headers: { "Content-Type": "application/json", "x-tenant-id": tenantId, "x-actor-role": "customer" },
                         credentials: "include",
                         body: JSON.stringify({
                           selected_agents: selectedAgents,
                           task: "Create a client-specific client deliverable using the saved business profile, selected active agents, current offer, target audience, goals, and execution requirements.",
                           business_profile: {
-                            niche: "Saved client business profile",
-                            target_audience: "Saved target audience and customer context",
-                            positioning: "Client-specific commercial positioning and execution requirements",
+                            niche: businessProfile.business_niche || "Saved client business profile",
+                            target_audience: businessProfile.target_audience || "Saved target audience and customer context",
+                            positioning: businessProfile.notes || "Client-specific commercial positioning and execution requirements",
                           },
                         }),
                       });
