@@ -261,7 +261,7 @@ export default function ClientPage() {
   const primaryGridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: 18,
+    gap: 14,
     alignItems: "stretch",
     marginBottom: 20,
   };
@@ -269,7 +269,7 @@ export default function ClientPage() {
   const secondaryGridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: 18,
+    gap: 14,
     alignItems: "start",
   };
 
@@ -288,7 +288,7 @@ export default function ClientPage() {
   const responsiveWorkspaceGridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: 18,
+    gap: 14,
     alignItems: "stretch",
     marginBottom: 20,
   };
@@ -296,7 +296,7 @@ export default function ClientPage() {
   const responsiveSecondaryGridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-    gap: 18,
+    gap: 14,
     alignItems: "start",
   };
 
@@ -304,7 +304,7 @@ export default function ClientPage() {
 const modalContentGridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))",
-    gap: 24,
+    gap: 14,
     padding: "clamp(18px,2.4vw,28px)",
   };
 
@@ -722,8 +722,8 @@ const modalContentGridStyle = {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
-            gap: 24,
-            marginBottom: 24,
+            gap: 14,
+            marginBottom: 14,
             flexWrap: "wrap",
           }}
         >
@@ -808,8 +808,8 @@ const modalContentGridStyle = {
             <button
               aria-label="Notifications"
               style={{
-                width: 44,
-                height: 44,
+                width: 34,
+                height: 34,
                 borderRadius: 16,
                 border: "1px solid #e5eaf2",
                 background: "#fff",
@@ -836,8 +836,8 @@ const modalContentGridStyle = {
             <details ref={profileMenuRef} style={{ position: "relative", zIndex: 100 }}>
               <summary
                 style={{
-                  width: 44,
-                  height: 44,
+                  width: 34,
+                  height: 34,
                   borderRadius: 16,
                   background: "var(--color-dark)",
                   color: "#fff",
@@ -1070,7 +1070,7 @@ const modalContentGridStyle = {
                       style={{
                         marginTop: 8,
                         width: "100%",
-                        height: 42,
+                        height: 34,
                         border: "1.5px solid rgba(79,70,229,.35)",
                         borderRadius: 10,
                         padding: "9px 11px",
@@ -1162,16 +1162,16 @@ const modalContentGridStyle = {
             </div>
 
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <div style={{ background: "rgba(238,242,255,.95)", color: "var(--color-brand)", padding: "9px 13px", borderRadius: 14, fontWeight: 850, fontSize: 12 }}>
+              <div style={{ background: "rgba(238,242,255,.95)", color: "var(--color-brand)", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12 }}>
                 ● {businessProfileSaved ? "Saved" : "Not saved yet"}
               </div>
-              <button type="button" onClick={() => setToastMessage("Add business details, save the profile, then future AI executions will use this context.")} style={{ border: "1px solid rgba(79,70,229,.18)", background: "#fff", color: "#334155", padding: "9px 13px", borderRadius: 14, fontWeight: 850, fontSize: 12, cursor: "pointer" }}>
+              <button type="button" onClick={() => setToastMessage("Add business details, save the profile, then future AI executions will use this context.")} style={{ border: "1px solid rgba(79,70,229,.18)", background: "#fff", color: "#334155", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12, cursor: "pointer" }}>
                 ? How it works
               </button>
             </div>
           </div>
 
-          <div style={{ marginBottom: 12, borderRadius: 14, border: "1px solid rgba(79,70,229,.12)", background: "rgba(238,242,255,.45)", padding: "8px 10px", color: "#334155", fontSize: 12.4, fontWeight: 750 }}>
+          <div style={{ marginBottom: 12, borderRadius: 12, border: "1px solid rgba(79,70,229,.12)", background: "rgba(238,242,255,.45)", padding: "8px 10px", color: "#334155", fontSize: 12.4, fontWeight: 750 }}>
             Start with <strong>Business name</strong>. This controls the client initials and account name shown in the top-right profile menu.
           </div>
 
@@ -1225,7 +1225,7 @@ const modalContentGridStyle = {
                     autoComplete="organization"
                     style={{
                       width: "100%",
-                      height: 42,
+                      height: 34,
                       border: "1.5px solid rgba(79,70,229,.35)",
                       background: "#fff",
                       padding: "9px 11px",
@@ -1283,9 +1283,9 @@ const modalContentGridStyle = {
 
           <div style={{ marginTop: 14, borderRadius: 16, border: "1px solid rgba(79,70,229,.10)", background: "#fff", padding: 10, boxShadow: "0 10px 28px rgba(15,23,42,.04)", position: "relative", zIndex: 25 }}>
             <div style={{ display: "grid", gridTemplateColumns: "180px 180px 180px 1fr", gap: 10, alignItems: "center" }}>
-              <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "8px 10px", height: 44, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "#fff", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>▣ Save business profile</button>
-              <button type="button" onClick={loadBusinessProfile} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 44, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>↻ Reset to last save</button>
-              <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 44, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>◉ Preview profile</button>
+              <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "8px 10px", height: 34, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "#fff", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>▣ Save business profile</button>
+              <button type="button" onClick={loadBusinessProfile} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>↻ Reset to last save</button>
+              <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>◉ Preview profile</button>
               <div style={{ borderLeft: "1px solid rgba(79,70,229,.12)", paddingLeft: 14, minHeight: 44, display: "flex", flexDirection: "column", justifyContent: "center" }}>
                 <div style={{ fontWeight: 900, color: "#0f172a", fontSize: 12.5, marginBottom: 2 }}>One workspace. One business.</div>
                 <div style={{ color: "#64748b", fontSize: 11.4, lineHeight: 1.3 }}>You can refine this profile, but changing business identity requires approval unless Enterprise multi-business access is enabled.</div>
@@ -1579,7 +1579,7 @@ const modalContentGridStyle = {
 
             <div
               style={{
-                marginTop: 24,
+                marginTop: 14,
                 minHeight: 185,
                 borderRadius: 16,
                 background:
@@ -1858,7 +1858,7 @@ const modalContentGridStyle = {
                 style={{
                   background: reviewStatus === "rejected" ? "#fee2e2" : "#dcfce7",
                   color: reviewStatus === "rejected" ? "var(--color-red)" : "var(--color-teal)",
-                  padding: "10px 14px",
+                  padding: "8px 12px",
                   borderRadius: 16,
                   fontWeight: 760,
                   fontSize: 11.8,
@@ -1872,7 +1872,7 @@ const modalContentGridStyle = {
             <div style={deliverableCardGridStyle}>
               <div
                 style={{
-                  minHeight: 190,
+                  minHeight: 150,
                   borderRadius: 16,
                   background: "var(--color-bg-light)",
                   border: "1px solid #e5eaf2",
@@ -1927,8 +1927,8 @@ const modalContentGridStyle = {
                         >
                           <div
                             style={{
-                              width: 42,
-                              height: 42,
+                              width: 34,
+                              height: 34,
                               borderRadius: 16,
                               background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
                               display: "flex",
@@ -2249,7 +2249,7 @@ const modalContentGridStyle = {
                       background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
                       color: "var(--color-brand)",
                       borderRadius: 16,
-                      padding: "10px 14px",
+                      padding: "8px 12px",
                       fontWeight: 760,
                       cursor: "pointer",
                     }}
@@ -2272,7 +2272,7 @@ const modalContentGridStyle = {
                       background: reviewActionLoading ? "#86efac" : "var(--color-teal)",
                       color: "#fff",
                       borderRadius: 16,
-                      padding: "10px 14px",
+                      padding: "8px 12px",
                       fontWeight: 760,
                       cursor: reviewActionLoading ? "not-allowed" : "pointer",
                     }}
@@ -2292,7 +2292,7 @@ const modalContentGridStyle = {
                       background: "#fff",
                       color: "var(--color-red)",
                       borderRadius: 16,
-                      padding: "10px 14px",
+                      padding: "8px 12px",
                       fontWeight: 760,
                       cursor: reviewActionLoading ? "not-allowed" : "pointer",
                       transition: "transform 0.16s ease, border-color 0.16s ease",
@@ -2353,7 +2353,7 @@ const modalContentGridStyle = {
                 borderBottom: "1px solid #eef2f7",
                 display: "flex",
                 justifyContent: "space-between",
-                gap: 18,
+                gap: 14,
                 alignItems: "flex-start",
                 flexWrap: "wrap",
               }}
@@ -2441,8 +2441,8 @@ const modalContentGridStyle = {
                 onClick={() => setShowDeliverableModal(false)}
                 aria-label="Close full deliverable review"
                 style={{
-                  width: 42,
-                  height: 42,
+                  width: 34,
+                  height: 34,
                   borderRadius: 16,
                   border: "1px solid #e5eaf2",
                   background: "#fff",
@@ -2660,7 +2660,7 @@ const modalContentGridStyle = {
                       background: reviewActionLoading ? "#86efac" : "var(--color-teal)",
                       color: "#fff",
                       borderRadius: 16,
-                      padding: "10px 14px",
+                      padding: "8px 12px",
                       fontWeight: 760,
                       cursor: reviewActionLoading ? "not-allowed" : "pointer",
                     }}
@@ -2681,7 +2681,7 @@ const modalContentGridStyle = {
                       background: "#fff",
                       color: "var(--color-red)",
                       borderRadius: 16,
-                      padding: "10px 14px",
+                      padding: "8px 12px",
                       fontWeight: 760,
                       cursor: reviewActionLoading ? "not-allowed" : "pointer",
                     }}
@@ -2816,7 +2816,7 @@ const modalContentGridStyle = {
                   background: reviewActionLoading ? "#fca5a5" : "var(--color-red)",
                   color: "#fff",
                   borderRadius: 16,
-                  padding: "10px 14px",
+                  padding: "8px 12px",
                   fontWeight: 760,
                   cursor: reviewActionLoading ? "not-allowed" : "pointer",
                 }}
