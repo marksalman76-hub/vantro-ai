@@ -893,22 +893,6 @@ const modalContentGridStyle = {
                 Add business context once so every active AI agent can produce more accurate
                 deliverables, assets, copy, positioning, and execution recommendations.
               </p>
-              <button
-                type="button"
-                onClick={saveBusinessProfile}
-                style={{
-                  marginTop: 14,
-                  border: 0,
-                  borderRadius: 12,
-                  padding: "12px 16px",
-                  background: "var(--color-blue)",
-                  color: "white",
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                Save business profile
-              </button>
             </div>
 
             <div
@@ -947,6 +931,7 @@ const modalContentGridStyle = {
                   {label}
                 </div>
                 <textarea
+                  placeholder={String(value)}
                   value={businessProfile[String(key)] || ""} onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [String(key)]: e.target.value }))}
                   rows={4}
                   style={{
@@ -970,6 +955,55 @@ const modalContentGridStyle = {
                 />
               </label>
             ))}
+          </div>
+
+          <div
+            style={{
+              marginTop: 18,
+              display: "grid",
+              gridTemplateColumns: "minmax(220px, 280px) 1fr",
+              gap: 16,
+              alignItems: "stretch",
+            }}
+          >
+            <button
+              type="button"
+              onClick={saveBusinessProfile}
+              style={{
+                border: 0,
+                borderRadius: 18,
+                padding: "18px 22px",
+                background: "#4f46e5",
+                color: "#ffffff",
+                fontSize: 15,
+                fontWeight: 900,
+                cursor: "pointer",
+                boxShadow: "0 18px 50px rgba(79,70,229,0.22)",
+              }}
+            >
+              Save business profile
+            </button>
+
+            <div
+              style={{
+                borderRadius: 18,
+                border: "1px solid rgba(15, 23, 42, 0.08)",
+                background: "#ffffff",
+                padding: "16px 18px",
+                boxShadow: "0 18px 55px rgba(15, 23, 42, 0.06)",
+              }}
+            >
+              <div style={{ fontWeight: 900, color: "#0f172a", marginBottom: 6 }}>
+                One workspace. One business.
+              </div>
+              <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.55 }}>
+                You can refine this profile for the same business. Changing this workspace to a different
+                business or business type requires owner approval, unless Enterprise multi-business access is enabled.
+              </div>
+              <div style={{ marginTop: 10, color: businessProfileSaved ? "#16a34a" : "#64748b", fontSize: 12.5, fontWeight: 800 }}>
+                {businessProfileSaved ? "Saved to execution context" : "Not saved yet"}
+              </div>
+            </div>
           </div>
         </section>
 
