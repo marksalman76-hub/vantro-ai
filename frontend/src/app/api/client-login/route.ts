@@ -4,9 +4,10 @@ const BACKEND_URL =
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "https://ecommerce-ai-agent-platform-1.onrender.com";
+  "https://api.trance-formation.com.au";
 
 const ADMIN_TOKEN =
+  process.env.ADMIN_PLATFORM_TOKEN ||
   process.env.ADMIN_AUTH_SECRET ||
   process.env.ADMIN_AUTH_TOKEN ||
   process.env.ADMIN_BEARER_TOKEN ||
@@ -16,12 +17,15 @@ const ADMIN_TOKEN =
 function backendHeaders() {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "x-tenant-id": "owner",
-    "x-actor-role": "owner",
+    "x-tenant-id": "public_login",
+    "x-actor-role": "customer",
+    "Origin": "https://ecommerce-ai-agent-platform.vercel.app",
+    "Referer": "https://ecommerce-ai-agent-platform.vercel.app/login",
   };
 
   if (ADMIN_TOKEN) {
     headers.Authorization = `Bearer ${ADMIN_TOKEN}`;
+    headers["x-admin-token"] = ADMIN_TOKEN;
   }
 
   return headers;
@@ -38,6 +42,7 @@ export async function POST(request: NextRequest) {
     method: "POST",
     headers: backendHeaders(),
     body: JSON.stringify({ email, password }),
+    cache: "no-store",
   });
 
   const result = await response.json().catch(() => ({
