@@ -1175,7 +1175,7 @@ const modalContentGridStyle = {
             Start with <strong>Business name</strong>. This controls the client initials and account name shown in the top-right profile menu.
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0, 1fr))", gap: 12, position: "relative", zIndex: 20, pointerEvents: "auto" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 12, position: "relative", zIndex: 20, pointerEvents: "auto" }}>
             {[
               ["business_name", "◆", "Business name", "Type business name here", "input", "normal"],
               ["business_niche", "▦", "Business niche", "Describe your business niche, product category, and market position", "textarea", "normal"],
