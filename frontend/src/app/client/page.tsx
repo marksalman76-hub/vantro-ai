@@ -262,7 +262,12 @@ function getPackageAgentCatalogue(packageName: string, activeAgents?: string[]) 
 }
 
 function getPackageAgentLimitLabel(packageName: string, visibleCount: number) {
+  const normalisedPackage = String(packageName || "").toLowerCase();
   const packageLimit = getPackageAgentLimit(packageName);
+
+  if (normalisedPackage.includes("enterprise")) {
+    return `${visibleCount}/${visibleCount} available`;
+  }
 
   if (packageLimit === null) return `${visibleCount} available`;
 
