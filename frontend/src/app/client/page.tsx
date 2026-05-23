@@ -509,23 +509,44 @@ const modalContentGridStyle = {
 
   async function saveBusinessProfile() {
     try {
+      const cleanedProfile = {
+        ...businessProfile,
+        business_name: (businessProfile.business_name || "").trim(),
+      };
+
       const response = await fetch("/api/client-business-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile: businessProfile }),
+        credentials: "include",
+        body: JSON.stringify({ profile: cleanedProfile }),
       });
 
-      const data = await response.json();
+      const result = await response.json().catch(() => ({
+        success: false,
+        error: "invalid_json_response",
+      }));
 
-      if (!response.ok || !data?.success) {
-        setToastMessage("Business profile could not be saved.");
+      if (!response.ok || !result?.success) {
+        console.error("Business profile save failed", result);
+        setToastMessage(
+          result?.error
+            ? `Business profile save failed: ${result.error}`
+            : "Business profile could not be saved."
+        );
         return;
       }
 
-      setBusinessProfile(data.profile || businessProfile);
+      const savedProfile =
+        result?.profile && typeof result.profile === "object"
+          ? result.profile
+          : cleanedProfile;
+
+      setBusinessProfile(savedProfile);
       setBusinessProfileSaved(true);
-      setToastMessage("Business profile saved. Future agent runs will use this context.");
-    } catch {
+      localStorage.setItem("client_business_profile", JSON.stringify(savedProfile));
+      setToastMessage("Business profile saved successfully.");
+    } catch (error) {
+      console.error("Business profile save runtime failure", error);
       setToastMessage("Business profile could not be saved.");
     }
   }
