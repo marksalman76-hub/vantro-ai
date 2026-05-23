@@ -1779,7 +1779,7 @@ useEffect(() => {
 
 
         <section style={{ ...responsiveSecondaryGridStyle, alignItems: "stretch" }}>
-          <div style={{ ...cardStyle, minHeight: 430, overflow: "hidden" }}>
+          <div style={{ ...cardStyle, minHeight: 355, overflow: "hidden" }}>
             <StepHeader number="05" title="Activity" />
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 14 }}>
               <div>
@@ -1892,7 +1892,7 @@ useEffect(() => {
             </div>
           </div>
 
-          <div style={{ ...cardStyle, height: 560, overflow: "hidden" }}>
+          <div style={{ ...cardStyle, minHeight: 355, overflow: "hidden" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
               <div>
                 <StepHeader number="06" title="Execution output viewer" />
@@ -1916,7 +1916,7 @@ useEffect(() => {
             <div style={deliverableCardGridStyle}>
               <div
                 style={{
-                  minHeight: 150,
+                  minHeight: 118,
                   borderRadius: 16,
                   background: "var(--color-bg-light)",
                   border: "1px solid #e5eaf2",
@@ -1946,7 +1946,7 @@ useEffect(() => {
                       justifyContent: "space-between",
                       height: "100%",
                       width: "100%",
-                      padding: 16,
+                      padding: 12,
                       background: "linear-gradient(180deg,#ffffff 0%,var(--color-bg-light) 100%)",
                       color: "var(--color-muted)",
                       boxSizing: "border-box",
