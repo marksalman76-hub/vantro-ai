@@ -805,17 +805,64 @@ const modalContentGridStyle = {
                   </div>
                 </div>
 
-                {["Settings", "Profile", "Password reset", "2FA"].map((item) => (
-                  <button key={item} style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}>
-                    {item}
-                  </button>
-                ))}
+                <button
+                  onClick={() => {
+                    window.location.hash = "settings";
+                    alert("Settings panel selected.");
+                  }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
+                >
+                  ⚙️ Settings
+                </button>
+
+                <button
+                  onClick={() => {
+                    window.location.hash = "profile";
+                    alert("Profile panel selected.");
+                  }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
+                >
+                  👤 Profile
+                </button>
+
+                <button
+                  onClick={() => {
+                    window.location.hash = "password-reset";
+                    alert("Password reset selected.");
+                  }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
+                >
+                  🔐 Password reset
+                </button>
+
+                <button
+                  onClick={() => {
+                    window.location.hash = "two-factor-authentication";
+                    alert("2FA selected.");
+                  }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
+                >
+                  🛡️ 2FA
+                </button>
 
                 <button
                   onClick={() => document.documentElement.classList.toggle("dark")}
                   style={{ width: "100%", border: "none", borderTop: "1px solid #edf1f6", background: "transparent", padding: "12px 8px", textAlign: "left", fontWeight: 800, cursor: "pointer", color: "var(--color-dark)" }}
                 >
-                  Toggle dark / light mode
+                  🌙 Toggle dark / light mode
+                </button>
+
+                <button
+                  onClick={async () => {
+                    try {
+                      await fetch("/api/logout", { method: "POST" });
+                    } finally {
+                      window.location.href = "/login";
+                    }
+                  }}
+                  style={{ width: "100%", border: "none", borderTop: "1px solid #edf1f6", background: "transparent", padding: "12px 8px", textAlign: "left", fontWeight: 800, cursor: "pointer", color: "#ef4444" }}
+                >
+                  🚪 Logout
                 </button>
               </div>
             </details>
