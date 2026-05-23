@@ -1048,28 +1048,56 @@ const modalContentGridStyle = {
                     {label}{label === "Key differentiators" ? <span style={{ color: "#64748b", fontWeight: 700 }}> (optional)</span> : null}
                   </div>
                 </div>
-                <textarea
-                  placeholder={String(value)}
-                  value={businessProfile[String(key)] || ""}
-                  onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [String(key)]: e.target.value }))}
-                  rows={String(key) === "business_name" ? 1 : 2}
-                  style={{
-                    width: "100%",
-                    resize: "vertical",
-                    minHeight: String(key) === "business_name" ? 38 : 52,
-                    border: "1px solid rgba(79,70,229,.14)",
-                    background: "#fff",
-                    padding: "9px 10px",
-                    borderRadius: 10,
-                    fontSize: 12.4,
-                    lineHeight: 1.38,
-                    color: "var(--color-dark)",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    fontFamily: "inherit",
-                    marginTop: 8,
-                  }}
-                />
+                {String(key) === "business_name" ? (
+                  <input
+                    type="text"
+                    placeholder="Type business name here"
+                    value={businessProfile.business_name || ""}
+                    onChange={(e) => setBusinessProfile((prev) => ({ ...prev, business_name: e.target.value }))}
+                    onClick={(e) => e.currentTarget.focus()}
+                    style={{
+                      width: "100%",
+                      height: 42,
+                      border: "1.5px solid rgba(79,70,229,.35)",
+                      background: "#fff",
+                      padding: "9px 11px",
+                      borderRadius: 10,
+                      fontSize: 13,
+                      color: "var(--color-dark)",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      fontFamily: "inherit",
+                      marginTop: 8,
+                      cursor: "text",
+                      position: "relative",
+                      zIndex: 5,
+                    }}
+                  />
+                ) : (
+                  <textarea
+                    placeholder={String(value)}
+                    value={businessProfile[String(key)] || ""}
+                    onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [String(key)]: e.target.value }))}
+                    rows={2}
+                    style={{
+                      width: "100%",
+                      resize: "vertical",
+                      minHeight: 52,
+                      border: "1px solid rgba(79,70,229,.18)",
+                      background: "#fff",
+                      padding: "9px 10px",
+                      borderRadius: 10,
+                      fontSize: 12.4,
+                      lineHeight: 1.38,
+                      color: "var(--color-dark)",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      fontFamily: "inherit",
+                      marginTop: 8,
+                      cursor: "text",
+                    }}
+                  />
+                )}
               </label>
             ))}
           </div>
