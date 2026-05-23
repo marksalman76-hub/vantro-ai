@@ -13,3 +13,5 @@ __pycache__/
 frontend/.next/
 frontend/out/
 frontend/node_modules/
+.vercel
+.env*
