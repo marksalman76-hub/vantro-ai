@@ -6,36 +6,12 @@ const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ||
   "https://api.trance-formation.com.au";
 
-const ADMIN_TOKEN =
-  process.env.ADMIN_PLATFORM_TOKEN ||
-  process.env.ADMIN_AUTH_SECRET ||
-  process.env.ADMIN_AUTH_TOKEN ||
-  process.env.ADMIN_BEARER_TOKEN ||
-  process.env.OWNER_ADMIN_TOKEN ||
-  "";
-
-function backendHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-tenant-id": "public_activation",
-    "x-actor-role": "admin",
-    "Origin": "https://ecommerce-ai-agent-platform.vercel.app",
-    "Referer": "https://ecommerce-ai-agent-platform.vercel.app/activate",
-  };
-
-  if (ADMIN_TOKEN) {
-    headers.Authorization = `Bearer ${ADMIN_TOKEN}`;
-    headers["x-admin-token"] = ADMIN_TOKEN;
-  }
-
-  return headers;
-}
-
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
 
   const token = String(formData.get("token") || "");
-  const clientEmail = String(formData.get("email") || formData.get("client_email") || "");
+  const password = String(formData.get("password") || "");
+  const confirmPassword = String(formData.get("confirm_password") || "");
 
   if (!token) {
     return NextResponse.json(
@@ -44,12 +20,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const response = await fetch(`${BACKEND_URL}/admin/saas-provisioning/validate-one-time-link`, {
+  const response = await fetch(`${BACKEND_URL}/client/activate-account`, {
     method: "POST",
-    headers: backendHeaders(),
+    headers: {
+      "Content-Type": "application/json",
+      "x-tenant-id": "public_activation",
+      "x-actor-role": "customer",
+      "Origin": "https://ecommerce-ai-agent-platform.vercel.app",
+      "Referer": "https://ecommerce-ai-agent-platform.vercel.app/activate",
+    },
     body: JSON.stringify({
       token,
-      client_email: clientEmail,
+      password,
+      confirm_password: confirmPassword,
     }),
     cache: "no-store",
   });
@@ -59,7 +42,7 @@ export async function POST(request: NextRequest) {
     error: "activation_backend_response_not_json",
   }));
 
-  if (!response.ok || !result.success || result.valid === false) {
+  if (!response.ok || !result.success) {
     return NextResponse.json(
       {
         success: false,
@@ -71,5 +54,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.redirect(new URL("/login", request.url), { status: 303 });
+  return NextResponse.redirect(
+    new URL("/login?activated=1", request.url),
+    { status: 303 }
+  );
 }
