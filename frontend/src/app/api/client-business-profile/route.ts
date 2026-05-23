@@ -15,20 +15,6 @@ function getFrontendOrigin(request: NextRequest) {
   );
 }
 
-function createClientSessionToken() {
-  const randomPart =
-    typeof crypto !== "undefined" && "randomUUID" in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-  return `client_session_${randomPart}`;
-}
-
-function getOrCreateSessionToken(request: NextRequest) {
-  const existing = request.cookies.get("client_session")?.value || "";
-  return existing || createClientSessionToken();
-}
-
 function getTenantId(request: NextRequest, fallbackProfile?: Record<string, unknown>) {
   return (
     request.cookies.get("tenant_id")?.value ||
@@ -51,20 +37,16 @@ function backendHeaders(request: NextRequest, tenantId: string) {
   };
 }
 
-function attachSessionCookie(response: NextResponse, sessionToken: string) {
-  response.cookies.set("client_session", sessionToken, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: true,
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
-
-  return response;
-}
-
 export async function GET(request: NextRequest) {
-  const sessionToken = getOrCreateSessionToken(request);
+  const sessionToken = request.cookies.get("client_session")?.value || "";
+
+  if (!sessionToken) {
+    return NextResponse.json(
+      { success: false, error: "client_session_required" },
+      { status: 401 }
+    );
+  }
+
   const tenantId = getTenantId(request);
 
   const response = await fetch(
@@ -81,17 +63,21 @@ export async function GET(request: NextRequest) {
     error: "business_profile_backend_response_not_json",
   }));
 
-  return attachSessionCookie(
-    NextResponse.json(result, { status: response.ok ? 200 : response.status }),
-    sessionToken
-  );
+  return NextResponse.json(result, { status: response.ok ? 200 : response.status });
 }
 
 export async function POST(request: NextRequest) {
+  const sessionToken = request.cookies.get("client_session")?.value || "";
+
+  if (!sessionToken) {
+    return NextResponse.json(
+      { success: false, error: "client_session_required" },
+      { status: 401 }
+    );
+  }
+
   const body = await request.json().catch(() => ({}));
   const profile = body?.profile && typeof body.profile === "object" ? body.profile : {};
-
-  const sessionToken = getOrCreateSessionToken(request);
   const tenantId = getTenantId(request, profile);
 
   const response = await fetch(`${BACKEND_URL}/client/business-profile`, {
@@ -110,8 +96,5 @@ export async function POST(request: NextRequest) {
     error: "business_profile_backend_response_not_json",
   }));
 
-  return attachSessionCookie(
-    NextResponse.json(result, { status: response.ok ? 200 : response.status }),
-    sessionToken
-  );
+  return NextResponse.json(result, { status: response.ok ? 200 : response.status });
 }

@@ -14,13 +14,19 @@ const ADMIN_TOKEN =
   process.env.OWNER_ADMIN_TOKEN ||
   "";
 
-function backendHeaders() {
+function backendHeaders(request: NextRequest) {
+  const origin =
+    process.env.NEXT_PUBLIC_FRONTEND_URL ||
+    process.env.FRONTEND_URL ||
+    request.nextUrl.origin ||
+    "https://app.trance-formation.com.au";
+
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     "x-tenant-id": "public_login",
     "x-actor-role": "customer",
-    "Origin": "https://ecommerce-ai-agent-platform.vercel.app",
-    "Referer": "https://ecommerce-ai-agent-platform.vercel.app/login",
+    Origin: origin,
+    Referer: `${origin}/login`,
   };
 
   if (ADMIN_TOKEN) {
@@ -29,6 +35,18 @@ function backendHeaders() {
   }
 
   return headers;
+}
+
+function setClientCookie(response: NextResponse, name: string, value: string, maxAge: number) {
+  if (!value) return;
+
+  response.cookies.set(name, value, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: true,
+    path: "/",
+    maxAge,
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -40,7 +58,7 @@ export async function POST(request: NextRequest) {
 
   const response = await fetch(`${BACKEND_URL}/client/login`, {
     method: "POST",
-    headers: backendHeaders(),
+    headers: backendHeaders(request),
     body: JSON.stringify({ email, password }),
     cache: "no-store",
   });
@@ -57,17 +75,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const account = result.account || {};
+  const tenantId =
+    String(result.tenant_id || account.tenant_id || account.client_id || "").trim();
+
   const redirect = NextResponse.redirect(new URL(nextPath || "/client", request.url), {
     status: 303,
   });
 
-  redirect.cookies.set("client_session", result.session_token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: true,
-    path: "/",
-    maxAge: 60 * 60 * 8,
-  });
+  const maxAge = 60 * 60 * 8;
+
+  setClientCookie(redirect, "client_session", result.session_token, maxAge);
+  setClientCookie(redirect, "tenant_id", tenantId, maxAge);
+  setClientCookie(redirect, "client_tenant_id", tenantId, maxAge);
+  setClientCookie(redirect, "client_id", tenantId, maxAge);
 
   return redirect;
 }
