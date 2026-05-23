@@ -1947,6 +1947,44 @@ useEffect(() => {
                   </div>
                 ))}
               </div>
+
+              <div
+                style={{
+                  marginTop: 13,
+                  borderTop: "1px solid #edf1f6",
+                  paddingTop: 12,
+                  display: "grid",
+                  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+                  gap: 8,
+                }}
+              >
+                {[
+                  ["Review latest output", liveDeliverable ? "Ready" : "Waiting", liveDeliverable ? "✓" : "○"],
+                  ["Approve or request changes", reviewStatus === "pending" ? "Next" : reviewStatus === "approved" ? "Done" : "Revision", reviewStatus === "approved" ? "✓" : "→"],
+                  ["Run next optimisation", reviewStatus === "approved" ? "Available" : "After review", "↗"],
+                ].map(([title, status, icon]) => (
+                  <div
+                    key={title}
+                    style={{
+                      border: "1px solid #e5eaf2",
+                      background: "#fff",
+                      borderRadius: 14,
+                      padding: "9px 10px",
+                      minHeight: 58,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <span style={{ color: "var(--color-brand)", fontWeight: 950 }}>{icon}</span>
+                      <span style={{ fontSize: 11.5, fontWeight: 950, color: "var(--color-dark)", lineHeight: 1.2 }}>
+                        {title}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: 5, fontSize: 11, fontWeight: 850, color: "var(--color-muted)" }}>
+                      {status}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
