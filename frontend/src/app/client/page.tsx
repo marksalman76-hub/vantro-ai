@@ -964,7 +964,7 @@ const modalContentGridStyle = {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
               gap: 0,
               alignItems: "center",
             }}
@@ -1186,17 +1186,17 @@ const modalContentGridStyle = {
               ["brand_voice", "◁", "Brand voice", "Premium, playful, clinical, bold, friendly", "textarea", "normal"],
               ["positioning", "◎", "Positioning", "Why customers should choose you", "textarea", "normal"],
               ["goals", "⚑", "Goals", "Sales, launches, retention, growth", "textarea", "normal"],
-              ["notes", "◌", "Key differentiators", "What makes your business unique? Benefits, values, or competitive advantages.", "textarea", "wide"],
+              ["notes", "◌", "Key differentiators", "What makes your business unique? Benefits, values, or competitive advantages.", "textarea", "normal"],
             ].map(([key, icon, label, placeholder, fieldType, size]) => (
               <div
                 key={String(key)}
                 style={{
-                  gridColumn: label === "Key differentiators" ? "span 3" : "span 1",
+                  gridColumn: "span 1",
                   borderRadius: 16,
                   border: "1px solid rgba(15,23,42,.08)",
                   background: "#fff",
-                  padding: 13,
-                  minHeight: 104,
+                  padding: 12,
+                  minHeight: 98,
                   boxShadow: "0 14px 38px rgba(15,23,42,.04)",
                   boxSizing: "border-box",
                   position: "relative",
@@ -1257,7 +1257,7 @@ const modalContentGridStyle = {
                     style={{
                       width: "100%",
                       resize: "vertical",
-                      minHeight: 52,
+                      minHeight: 48,
                       border: "1px solid rgba(79,70,229,.18)",
                       background: "#fff",
                       padding: "9px 10px",
