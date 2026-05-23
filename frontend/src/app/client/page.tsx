@@ -932,7 +932,7 @@ const modalContentGridStyle = {
                 <textarea
                   placeholder={String(value)}
                   value={businessProfile[String(key)] || ""} onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [String(key)]: e.target.value }))}
-                  rows={4}
+                  rows={3}
                   style={{
                     width: "100%",
                     resize: "none",
@@ -959,9 +959,13 @@ const modalContentGridStyle = {
           <div
             style={{
               marginTop: 18,
+              borderRadius: 18,
+              border: "1px solid rgba(79, 70, 229, 0.12)",
+              background: "linear-gradient(135deg, rgba(238,242,255,0.72), rgba(255,255,255,0.96))",
+              padding: 12,
               display: "grid",
-              gridTemplateColumns: "minmax(220px, 280px) 1fr",
-              gap: 16,
+              gridTemplateColumns: "minmax(220px, 300px) minmax(180px, 1fr) minmax(180px, 1fr)",
+              gap: 12,
               alignItems: "stretch",
             }}
           >
@@ -970,38 +974,72 @@ const modalContentGridStyle = {
               onClick={saveBusinessProfile}
               style={{
                 border: 0,
-                borderRadius: 18,
-                padding: "18px 22px",
+                borderRadius: 14,
+                padding: "14px 18px",
                 background: "#4f46e5",
                 color: "#ffffff",
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: 900,
                 cursor: "pointer",
-                boxShadow: "0 18px 50px rgba(79,70,229,0.22)",
+                boxShadow: "0 14px 38px rgba(79,70,229,0.22)",
               }}
             >
               Save business profile
             </button>
 
-            <div
+            <button
+              type="button"
+              onClick={loadBusinessProfile}
               style={{
-                borderRadius: 18,
-                border: "1px solid rgba(15, 23, 42, 0.08)",
+                border: "1px solid rgba(79,70,229,0.18)",
+                borderRadius: 14,
+                padding: "14px 18px",
                 background: "#ffffff",
-                padding: "16px 18px",
-                boxShadow: "0 18px 55px rgba(15, 23, 42, 0.06)",
+                color: "#4f46e5",
+                fontSize: 14,
+                fontWeight: 900,
+                cursor: "pointer",
               }}
             >
-              <div style={{ fontWeight: 900, color: "#0f172a", marginBottom: 6 }}>
-                One workspace. One business.
-              </div>
-              <div style={{ color: "#64748b", fontSize: 13, lineHeight: 1.55 }}>
-                You can refine this profile for the same business. Changing this workspace to a different
-                business or business type requires owner approval, unless Enterprise multi-business access is enabled.
-              </div>
-              <div style={{ marginTop: 10, color: businessProfileSaved ? "#16a34a" : "#64748b", fontSize: 12.5, fontWeight: 800 }}>
-                {businessProfileSaved ? "Saved to execution context" : "Not saved yet"}
-              </div>
+              Reset to last save
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setToastMessage("Preview will show how agents use this business profile in the next workspace pass.")}
+              style={{
+                border: "1px solid rgba(79,70,229,0.18)",
+                borderRadius: 14,
+                padding: "14px 18px",
+                background: "#ffffff",
+                color: "#4f46e5",
+                fontSize: 14,
+                fontWeight: 900,
+                cursor: "pointer",
+              }}
+            >
+              Preview profile
+            </button>
+
+            <div
+              style={{
+                gridColumn: "1 / -1",
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "8px 4px 0",
+                color: "#64748b",
+                fontSize: 12.5,
+                fontWeight: 700,
+              }}
+            >
+              <span>
+                One workspace. One business. You can refine this profile, but changing business identity requires approval unless Enterprise multi-business access is enabled.
+              </span>
+              <span style={{ color: businessProfileSaved ? "#16a34a" : "#4f46e5", whiteSpace: "nowrap" }}>
+                {businessProfileSaved ? "Saved" : "Not saved yet"}
+              </span>
             </div>
           </div>
         </section>
