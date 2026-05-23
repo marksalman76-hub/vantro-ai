@@ -248,6 +248,7 @@ export default function ClientPage() {
   const [integrationMessage, setIntegrationMessage] = useState("");
   const [activeAccountPanel, setActiveAccountPanel] = useState("");
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+  const profileMenuRef = useRef<HTMLDetailsElement | null>(null);
 
 
   const shellStyle = {
@@ -491,6 +492,20 @@ const modalContentGridStyle = {
 
 
 
+
+
+  useEffect(() => {
+    function handleProfileMenuOutsideClick(event: MouseEvent) {
+      const menu = profileMenuRef.current;
+      if (!menu) return;
+      if (!menu.open) return;
+      if (event.target instanceof Node && menu.contains(event.target)) return;
+      menu.open = false;
+    }
+
+    document.addEventListener("mousedown", handleProfileMenuOutsideClick);
+    return () => document.removeEventListener("mousedown", handleProfileMenuOutsideClick);
+  }, []);
 
 
   async function loadBusinessProfile() {
@@ -818,7 +833,7 @@ const modalContentGridStyle = {
               />
             </button>
 
-            <details style={{ position: "relative", zIndex: 100 }}>
+            <details ref={profileMenuRef} style={{ position: "relative", zIndex: 100 }}>
               <summary
                 style={{
                   width: 44,
