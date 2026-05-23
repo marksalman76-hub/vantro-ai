@@ -345,7 +345,12 @@ const modalContentGridStyle = {
   const accountStatus = account?.status || "active";
   const activeAgentCount = account?.active_agents?.length || 0;
   const accountAny = account as any;
+  const businessProfileAny = businessProfile as any;
   const clientDisplayName =
+    businessProfileAny?.business_name ||
+    businessProfileAny?.company_name ||
+    businessProfileAny?.brand_name ||
+    businessProfileAny?.business_niche ||
     accountAny?.company_name ||
     accountAny?.business_name ||
     accountAny?.client_name ||
