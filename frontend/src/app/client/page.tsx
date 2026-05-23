@@ -851,266 +851,66 @@ const modalContentGridStyle = {
           ))}
         </section>
 
-        <section
-          style={{
-            ...cardStyle,
-            padding: 22,
-            marginBottom: 18,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: 16,
-              alignItems: "flex-start",
-              marginBottom: 22,
-              flexWrap: "wrap",
-            }}
-          >
+        <section style={{ ...cardStyle, padding: 18, marginBottom: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", marginBottom: 18, flexWrap: "wrap" }}>
             <div>
-              <div
-                style={{
-                  color: "var(--color-brand)",
-                  fontSize: 11.8,
-                  fontWeight: 800,
-                  letterSpacing: 1.4,
-                  textTransform: "uppercase",
-                  marginBottom: 8,
-                }}
-              >
+              <div style={{ color: "var(--color-brand)", fontSize: 11.5, fontWeight: 850, letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 7 }}>
                 Business profile intelligence ✨
               </div>
-
-              <h2 style={{ margin: 0, fontSize: 28, letterSpacing: -0.9 }}>
+              <h2 style={{ margin: 0, fontSize: 25, letterSpacing: -0.8 }}>
                 Business context for tailored AI execution
               </h2>
-
-              <p style={{ marginTop: 10, color: "var(--color-muted)", maxWidth: 760, lineHeight: 1.55 }}>
-                Add business context once so every active AI agent can produce more accurate
-                deliverables, assets, copy, positioning, and execution recommendations.
+              <p style={{ marginTop: 9, color: "var(--color-muted)", maxWidth: 760, lineHeight: 1.5 }}>
+                Add business context once so every active AI agent can produce more accurate deliverables, assets, copy, positioning, and execution recommendations.
               </p>
             </div>
 
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <div
-                style={{
-                  background: "rgba(238, 242, 255, 0.95)",
-                  color: "var(--color-brand)",
-                  padding: "10px 14px",
-                  borderRadius: 16,
-                  fontWeight: 800,
-                  fontSize: 12,
-                }}
-              >
+              <div style={{ background: "rgba(238,242,255,.95)", color: "var(--color-brand)", padding: "9px 13px", borderRadius: 14, fontWeight: 850, fontSize: 12 }}>
                 ● {businessProfileSaved ? "Saved" : "Not saved yet"}
               </div>
-
-              <button
-                type="button"
-                onClick={() => setToastMessage("Add business details, save the profile, then future AI executions will use this context.")}
-                style={{
-                  border: "1px solid rgba(79,70,229,0.18)",
-                  background: "#ffffff",
-                  color: "#334155",
-                  padding: "10px 14px",
-                  borderRadius: 16,
-                  fontWeight: 800,
-                  fontSize: 12,
-                  cursor: "pointer",
-                }}
-              >
+              <button type="button" onClick={() => setToastMessage("Add business details, save the profile, then future AI executions will use this context.")} style={{ border: "1px solid rgba(79,70,229,.18)", background: "#fff", color: "#334155", padding: "9px 13px", borderRadius: 14, fontWeight: 850, fontSize: 12, cursor: "pointer" }}>
                 ? How it works
               </button>
             </div>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(5, minmax(150px, 1fr))",
-              gap: 14,
-            }}
-          >
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 12 }}>
             {[
-              ["business_niche", "▦", "Business niche", "Describe your business niche, product category, and market position", "1 / span 1"],
-              ["products_services", "◇", "Products & services", "Main products, bundles, offers", "1 / span 1"],
-              ["target_audience", "♙", "Target audience", "Customer type, location, needs", "1 / span 1"],
-              ["competitors", "♕", "Competitors", "Competitor names, websites, market examples", "1 / span 1"],
-              ["offers", "⌑", "Offers", "Current promotions, bundles, guarantees", "1 / span 1"],
-              ["brand_voice", "◁", "Brand voice", "Premium, playful, clinical, bold, friendly", "1 / span 1"],
-              ["positioning", "◎", "Positioning", "Why customers should choose you", "1 / span 1"],
-              ["goals", "⚑", "Goals", "Sales, launches, retention, growth", "1 / span 1"],
-              ["notes", "◌", "Key differentiators", "What makes your business unique? Benefits, values, or competitive advantages.", "4 / span 2"],
-            ].map(([key, icon, label, value, span]) => (
-              <label
-                key={label}
-                style={{
-                  gridColumn: String(span),
-                  borderRadius: 18,
-                  border: "1px solid rgba(15, 23, 42, 0.08)",
-                  background: "#ffffff",
-                  padding: 14,
-                  minHeight: 132,
-                  boxShadow: "0 16px 45px rgba(15, 23, 42, 0.045)",
-                  boxSizing: "border-box",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                  <div
-                    style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 12,
-                      display: "grid",
-                      placeItems: "center",
-                      background: "rgba(238, 242, 255, 0.95)",
-                      color: "#4f46e5",
-                      fontWeight: 900,
-                      fontSize: 16,
-                      border: "1px solid rgba(79,70,229,0.12)",
-                    }}
-                  >
-                    {icon}
-                  </div>
+              ["business_niche", "▦", "Business niche", "Describe your business niche, product category, and market position", "normal"],
+              ["products_services", "◇", "Products & services", "Main products, bundles, offers", "normal"],
+              ["target_audience", "♙", "Target audience", "Customer type, location, needs", "normal"],
+              ["competitors", "♕", "Competitors", "Competitor names, websites, market examples", "normal"],
+              ["offers", "⌑", "Offers", "Current promotions, bundles, guarantees", "normal"],
+              ["brand_voice", "◁", "Brand voice", "Premium, playful, clinical, bold, friendly", "normal"],
+              ["positioning", "◎", "Positioning", "Why customers should choose you", "normal"],
+              ["goals", "⚑", "Goals", "Sales, launches, retention, growth", "normal"],
+              ["notes", "◌", "Key differentiators", "What makes your business unique? Benefits, values, or competitive advantages.", "wide"],
+            ].map(([key, icon, label, value, size]) => (
+              <label key={label} style={{ gridColumn: size === "wide" ? "span 2" : "span 1", borderRadius: 16, border: "1px solid rgba(15,23,42,.08)", background: "#fff", padding: 13, minHeight: 104, boxShadow: "0 14px 38px rgba(15,23,42,.04)", boxSizing: "border-box" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: 10, display: "grid", placeItems: "center", background: "rgba(238,242,255,.95)", color: "#4f46e5", fontWeight: 900, fontSize: 13, border: "1px solid rgba(79,70,229,.12)" }}>{icon}</div>
                   <div style={{ color: "#0f172a", fontSize: 12.5, fontWeight: 900 }}>
-                    {label}
-                    {label === "Key differentiators" ? (
-                      <span style={{ color: "#64748b", fontWeight: 700 }}> (optional)</span>
-                    ) : null}
+                    {label}{label === "Key differentiators" ? <span style={{ color: "#64748b", fontWeight: 700 }}> (optional)</span> : null}
                   </div>
                 </div>
-
-                <textarea
-                  placeholder={String(value)}
-                  value={businessProfile[String(key)] || ""}
-                  onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [String(key)]: e.target.value }))}
-                  rows={3}
-                  style={{
-                    width: "100%",
-                    resize: "none",
-                    border: 0,
-                    background: "transparent",
-                    padding: 0,
-                    fontSize: 13,
-                    lineHeight: 1.45,
-                    color: "var(--color-dark)",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    fontFamily: "inherit",
-                  }}
-                />
+                <textarea placeholder={String(value)} value={businessProfile[String(key)] || ""} onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [String(key)]: e.target.value }))} rows={2} style={{ width: "100%", resize: "none", border: 0, background: "transparent", padding: 0, fontSize: 12.2, lineHeight: 1.38, color: "var(--color-dark)", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
               </label>
             ))}
           </div>
 
-          <div
-            style={{
-              marginTop: 16,
-              borderRadius: 18,
-              border: "1px solid rgba(79,70,229,0.10)",
-              background: "#ffffff",
-              padding: 12,
-              boxShadow: "0 10px 30px rgba(15,23,42,0.04)",
-            }}
-          >
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(3, minmax(170px, 1fr)) 1.35fr",
-                gap: 10,
-                alignItems: "stretch",
-              }}
-            >
-              <button
-                type="button"
-                onClick={saveBusinessProfile}
-                style={{
-                  border: 0,
-                  borderRadius: 14,
-                  padding: "10px 14px",
-                  minHeight: 44,
-                  background: "linear-gradient(135deg, #4f46e5, #4338ca)",
-                  color: "#ffffff",
-                  fontSize: 13,
-                  fontWeight: 900,
-                  cursor: "pointer",
-                  boxShadow: "0 12px 32px rgba(79,70,229,0.20)",
-                }}
-              >
-                ▣ Save business profile
-              </button>
-
-              <button
-                type="button"
-                onClick={loadBusinessProfile}
-                style={{
-                  border: "1px solid rgba(79,70,229,0.18)",
-                  borderRadius: 14,
-                  padding: "10px 14px",
-                  minHeight: 44,
-                  background: "#ffffff",
-                  color: "#4f46e5",
-                  fontSize: 13,
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                ↻ Reset to last save
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")}
-                style={{
-                  border: "1px solid rgba(79,70,229,0.18)",
-                  borderRadius: 14,
-                  padding: "10px 14px",
-                  minHeight: 44,
-                  background: "#ffffff",
-                  color: "#4f46e5",
-                  fontSize: 13,
-                  fontWeight: 900,
-                  cursor: "pointer",
-                }}
-              >
-                ◉ Preview profile
-              </button>
-
-              <div
-                style={{
-                  borderLeft: "1px solid rgba(79,70,229,0.14)",
-                  padding: "2px 4px 2px 14px",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "center",
-                }}
-              >
-                <div style={{ fontWeight: 900, color: "#0f172a", marginBottom: 4, fontSize: 12.8 }}>
-                  One workspace. One business.
-                </div>
-                <div style={{ color: "#64748b", fontSize: 11.8, lineHeight: 1.35 }}>
-                  You can refine this profile, but changing business identity requires approval unless Enterprise multi-business access is enabled.
-                </div>
-                <div style={{ marginTop: 4, color: businessProfileSaved ? "#16a34a" : "#4f46e5", fontSize: 12, fontWeight: 900 }}>
-                  Status: {businessProfileSaved ? "Saved" : "Not saved yet"}
-                </div>
+          <div style={{ marginTop: 14, borderRadius: 16, border: "1px solid rgba(79,70,229,.10)", background: "#fff", padding: 10, boxShadow: "0 10px 28px rgba(15,23,42,.04)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "180px 180px 180px 1fr", gap: 10, alignItems: "center" }}>
+              <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "10px 12px", height: 44, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "#fff", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>▣ Save business profile</button>
+              <button type="button" onClick={loadBusinessProfile} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "10px 12px", height: 44, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>↻ Reset to last save</button>
+              <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "10px 12px", height: 44, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>◉ Preview profile</button>
+              <div style={{ borderLeft: "1px solid rgba(79,70,229,.12)", paddingLeft: 14, minHeight: 44, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                <div style={{ fontWeight: 900, color: "#0f172a", fontSize: 12.5, marginBottom: 2 }}>One workspace. One business.</div>
+                <div style={{ color: "#64748b", fontSize: 11.4, lineHeight: 1.3 }}>You can refine this profile, but changing business identity requires approval unless Enterprise multi-business access is enabled.</div>
+                <div style={{ marginTop: 2, color: businessProfileSaved ? "#16a34a" : "#4f46e5", fontSize: 11.4, fontWeight: 900 }}>Status: {businessProfileSaved ? "Saved" : "Not saved yet"}</div>
               </div>
             </div>
-
-            <div
-              style={{
-                marginTop: 8,
-                borderRadius: 12,
-                border: "1px solid rgba(79,70,229,0.10)",
-                background: "rgba(238,242,255,0.50)",
-                padding: "8px 12px",
-                color: "#475569",
-                fontSize: 12,
-                lineHeight: 1.4,
-                fontWeight: 700,
-              }}
-            >
+            <div style={{ marginTop: 8, borderRadius: 11, border: "1px solid rgba(79,70,229,.10)", background: "rgba(238,242,255,.50)", padding: "7px 11px", color: "#475569", fontSize: 11.7, lineHeight: 1.35, fontWeight: 700 }}>
               ✨ Pro tip: The more specific you are, the better your AI agents can create content, copy, and strategies tailored to your business.
             </div>
           </div>
