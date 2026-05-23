@@ -243,12 +243,22 @@ function ClientHeaderAccountMenu() {
 
   return (
     <ClientHeaderAccountMenu />
-            <button
-              type="button"
-              onClick={() => setDarkMode(!darkMode)}
-              className={`relative h-7 w-12 rounded-full ${darkMode ? "bg-slate-950" : "bg-slate-300"}`}
-            >
-              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow ${darkMode ? "left-6" : "left-1"}`} />
+          </div>
+
+          <div className="space-y-1 border-b border-slate-100 py-3">
+            <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold hover:bg-slate-50"><Settings className="h-4 w-4" /> Settings</button>
+            <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold hover:bg-slate-50"><User className="h-4 w-4" /> Profile</button>
+            <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold hover:bg-slate-50"><KeyRound className="h-4 w-4" /> Password reset</button>
+            <button className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold hover:bg-slate-50"><ShieldCheck className="h-4 w-4" /> 2FA</button>
+          </div>
+
+          <div className="flex items-center justify-between border-b border-slate-100 py-3">
+            <div className="flex items-center gap-3 text-sm font-bold">
+              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {darkMode ? "Light mode" : "Dark mode"}
+            </div>
+            <button type="button" onClick={() => setDarkMode((value) => !value)} className={`relative h-7 w-12 rounded-full transition ${darkMode ? "bg-slate-950" : "bg-slate-300"}`}>
+              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow transition ${darkMode ? "left-6" : "left-1"}`} />
             </button>
           </div>
 
@@ -256,7 +266,7 @@ function ClientHeaderAccountMenu() {
             <LogOut className="h-4 w-4" /> Sign out
           </button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
