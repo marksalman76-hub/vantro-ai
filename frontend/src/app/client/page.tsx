@@ -1,7 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 type Account = {
   tenant_id?: string;
