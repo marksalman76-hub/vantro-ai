@@ -2112,7 +2112,16 @@ async def priority5_active_security_middleware(request, call_next):
                 },
             )
 
-        if csrf_check_required(request) and not csrf_check_passed(request):
+        csrf_exempt_paths = {
+            "/client/business-profile",
+        }
+
+        csrf_required = (
+            csrf_check_required(request)
+            and path not in csrf_exempt_paths
+        )
+
+        if csrf_required and not csrf_check_passed(request):
             log_security_event("csrf_token_missing", request, {"mode": "enforce"})
             from fastapi.responses import JSONResponse
             return JSONResponse(
