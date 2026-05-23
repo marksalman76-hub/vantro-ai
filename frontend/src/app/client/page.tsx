@@ -347,11 +347,11 @@ const modalContentGridStyle = {
   const activeAgentCount = account?.active_agents?.length || 0;
   const accountAny = account as any;
   const businessProfileAny = businessProfile as any;
+  const typedBusinessName = String(businessProfile.business_name || "").trim();
   const clientDisplayName =
-    businessProfileAny?.business_name ||
+    typedBusinessName ||
     businessProfileAny?.company_name ||
     businessProfileAny?.brand_name ||
-    businessProfileAny?.business_niche ||
     accountAny?.company_name ||
     accountAny?.business_name ||
     accountAny?.client_name ||
@@ -967,9 +967,13 @@ const modalContentGridStyle = {
             </div>
           </div>
 
+          <div style={{ marginBottom: 12, borderRadius: 14, border: "1px solid rgba(79,70,229,.12)", background: "rgba(238,242,255,.45)", padding: "10px 12px", color: "#334155", fontSize: 12.4, fontWeight: 750 }}>
+            Start with <strong>Business name</strong>. This controls the client initials and account name shown in the top-right profile menu.
+          </div>
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 12 }}>
             {[
-              ["business_name", "◆", "Business name", "Your company, store, or brand name", "normal"],
+              ["business_name", "◆", "Business name", "Type your company, store, or brand name here", "normal"],
               ["business_niche", "▦", "Business niche", "Describe your business niche, product category, and market position", "normal"],
               ["products_services", "◇", "Products & services", "Main products, bundles, offers", "normal"],
               ["target_audience", "♙", "Target audience", "Customer type, location, needs", "normal"],
