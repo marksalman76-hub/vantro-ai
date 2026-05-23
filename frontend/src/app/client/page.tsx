@@ -933,21 +933,21 @@ const modalContentGridStyle = {
             }}
           >
             {[
-              ["Business niche", "Describe your business niche, product category, and market position"],
-              ["Products & services", "Main products, bundles, offers"],
-              ["Target audience", "Customer type, location, needs"],
-              ["Competitors", "Competitor names, websites, market examples"],
-              ["Offers", "Current promotions, bundles, guarantees"],
-              ["Brand voice", "Premium, playful, clinical, bold, friendly"],
-              ["Positioning", "Why customers should choose you"],
-              ["Goals", "Sales, launches, retention, growth"],
-            ].map(([label, value]) => (
+              ["business_niche", "Business niche", "Describe your business niche, product category, and market position"],
+              ["products_services", "Products & services", "Main products, bundles, offers"],
+              ["target_audience", "Target audience", "Customer type, location, needs"],
+              ["competitors", "Competitors", "Competitor names, websites, market examples"],
+              ["offers", "Offers", "Current promotions, bundles, guarantees"],
+              ["brand_voice", "Brand voice", "Premium, playful, clinical, bold, friendly"],
+              ["notes", "Positioning", "Why customers should choose you"],
+              ["goals", "Goals", "Sales, launches, retention, growth"],
+            ].map(([key, label, value]) => (
               <label key={label}>
                 <div style={{ color: "var(--color-muted)", fontSize: 11.8, fontWeight: 700, marginBottom: 7 }}>
                   {label}
                 </div>
                 <textarea
-                  value={businessProfile[key] || ""} onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [key]: e.target.value }))}
+                  value={businessProfile[String(key)] || ""} onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [String(key)]: e.target.value }))}
                   rows={3}
                   style={{
                     width: "100%",
