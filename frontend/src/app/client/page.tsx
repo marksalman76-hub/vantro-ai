@@ -853,10 +853,8 @@ const modalContentGridStyle = {
 
         <section
           style={{
-            background: "#fff",
-            borderRadius: 12,
-            padding: "clamp(20px,2.2vw,30px)",
-            boxShadow: "0 14px 34px rgba(15,23,42,.045)",
+            ...cardStyle,
+            padding: 22,
             marginBottom: 18,
           }}
         >
@@ -864,7 +862,7 @@ const modalContentGridStyle = {
             style={{
               display: "flex",
               justifyContent: "space-between",
-              gap: 18,
+              gap: 16,
               alignItems: "flex-start",
               marginBottom: 22,
               flexWrap: "wrap",
@@ -875,16 +873,16 @@ const modalContentGridStyle = {
                 style={{
                   color: "var(--color-brand)",
                   fontSize: 11.8,
-                  fontWeight: 760,
+                  fontWeight: 800,
                   letterSpacing: 1.4,
                   textTransform: "uppercase",
                   marginBottom: 8,
                 }}
               >
-                Business profile intelligence
+                Business profile intelligence ✨
               </div>
 
-              <h2 style={{ margin: 0, fontSize: 26, letterSpacing: -0.8 }}>
+              <h2 style={{ margin: 0, fontSize: 28, letterSpacing: -0.9 }}>
                 Business context for tailored AI execution
               </h2>
 
@@ -894,58 +892,108 @@ const modalContentGridStyle = {
               </p>
             </div>
 
-            <div
-              style={{
-                background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
-                color: "var(--color-brand)",
-                padding: "10px 14px",
-                borderRadius: 16,
-                fontWeight: 700,
-                fontSize: 11.8,
-              }}
-            >
-              {businessProfileSaved ? "✓ Saved to execution context" : "Not saved yet"}
+            <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+              <div
+                style={{
+                  background: "rgba(238, 242, 255, 0.95)",
+                  color: "var(--color-brand)",
+                  padding: "10px 14px",
+                  borderRadius: 16,
+                  fontWeight: 800,
+                  fontSize: 12,
+                }}
+              >
+                ● {businessProfileSaved ? "Saved" : "Not saved yet"}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setToastMessage("Add business details, save the profile, then future AI executions will use this context.")}
+                style={{
+                  border: "1px solid rgba(79,70,229,0.18)",
+                  background: "#ffffff",
+                  color: "#334155",
+                  padding: "10px 14px",
+                  borderRadius: 16,
+                  fontWeight: 800,
+                  fontSize: 12,
+                  cursor: "pointer",
+                }}
+              >
+                ? How it works
+              </button>
             </div>
           </div>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+              gridTemplateColumns: "repeat(5, minmax(150px, 1fr))",
               gap: 14,
             }}
           >
             {[
-              ["business_niche", "Business niche", "Describe your business niche, product category, and market position"],
-              ["products_services", "Products & services", "Main products, bundles, offers"],
-              ["target_audience", "Target audience", "Customer type, location, needs"],
-              ["competitors", "Competitors", "Competitor names, websites, market examples"],
-              ["offers", "Offers", "Current promotions, bundles, guarantees"],
-              ["brand_voice", "Brand voice", "Premium, playful, clinical, bold, friendly"],
-              ["notes", "Positioning", "Why customers should choose you"],
-              ["goals", "Goals", "Sales, launches, retention, growth"],
-            ].map(([key, label, value]) => (
-              <label key={label}>
-                <div style={{ color: "var(--color-muted)", fontSize: 11.8, fontWeight: 700, marginBottom: 7 }}>
-                  {label}
+              ["business_niche", "▦", "Business niche", "Describe your business niche, product category, and market position", "1 / span 1"],
+              ["products_services", "◇", "Products & services", "Main products, bundles, offers", "1 / span 1"],
+              ["target_audience", "♙", "Target audience", "Customer type, location, needs", "1 / span 1"],
+              ["competitors", "♕", "Competitors", "Competitor names, websites, market examples", "1 / span 1"],
+              ["offers", "⌑", "Offers", "Current promotions, bundles, guarantees", "1 / span 1"],
+              ["brand_voice", "◁", "Brand voice", "Premium, playful, clinical, bold, friendly", "1 / span 1"],
+              ["positioning", "◎", "Positioning", "Why customers should choose you", "1 / span 1"],
+              ["goals", "⚑", "Goals", "Sales, launches, retention, growth", "1 / span 1"],
+              ["notes", "◌", "Key differentiators", "What makes your business unique? Benefits, values, or competitive advantages.", "4 / span 2"],
+            ].map(([key, icon, label, value, span]) => (
+              <label
+                key={label}
+                style={{
+                  gridColumn: String(span),
+                  borderRadius: 18,
+                  border: "1px solid rgba(15, 23, 42, 0.08)",
+                  background: "#ffffff",
+                  padding: 14,
+                  minHeight: 132,
+                  boxShadow: "0 16px 45px rgba(15, 23, 42, 0.045)",
+                  boxSizing: "border-box",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+                  <div
+                    style={{
+                      width: 34,
+                      height: 34,
+                      borderRadius: 12,
+                      display: "grid",
+                      placeItems: "center",
+                      background: "rgba(238, 242, 255, 0.95)",
+                      color: "#4f46e5",
+                      fontWeight: 900,
+                      fontSize: 16,
+                      border: "1px solid rgba(79,70,229,0.12)",
+                    }}
+                  >
+                    {icon}
+                  </div>
+                  <div style={{ color: "#0f172a", fontSize: 13, fontWeight: 900 }}>
+                    {label}
+                    {label === "Key differentiators" ? (
+                      <span style={{ color: "#64748b", fontWeight: 700 }}> (optional)</span>
+                    ) : null}
+                  </div>
                 </div>
+
                 <textarea
                   placeholder={String(value)}
-                  value={businessProfile[String(key)] || ""} onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [String(key)]: e.target.value }))}
+                  value={businessProfile[String(key)] || ""}
+                  onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [String(key)]: e.target.value }))}
                   rows={3}
                   style={{
                     width: "100%",
                     resize: "none",
-                    borderRadius: 16,
-                    border: "1px solid rgba(15, 23, 42, 0.08)",
-                    
-                    boxShadow: "0 18px 55px rgba(15, 23, 42, 0.06)",
-                    backdropFilter: "blur(10px)",
-                    WebkitBackdropFilter: "blur(10px)",
-                    background: "#fff",
-                    padding: "12px 13px",
-                    fontSize: 11.8,
-                    lineHeight: 1.42,
+                    border: 0,
+                    background: "transparent",
+                    padding: 0,
+                    fontSize: 13,
+                    lineHeight: 1.45,
                     color: "var(--color-dark)",
                     outline: "none",
                     boxSizing: "border-box",
@@ -958,19 +1006,19 @@ const modalContentGridStyle = {
 
           <div
             style={{
-              marginTop: 18,
+              marginTop: 16,
               borderRadius: 18,
-              border: "1px solid rgba(79,70,229,0.14)",
+              border: "1px solid rgba(79,70,229,0.10)",
               background: "#ffffff",
-              padding: 14,
-              boxShadow: "0 18px 55px rgba(15,23,42,0.05)",
+              padding: 12,
+              boxShadow: "0 10px 30px rgba(15,23,42,0.04)",
             }}
           >
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "minmax(230px, 300px) minmax(190px, 1fr) minmax(190px, 1fr) minmax(280px, 1.25fr)",
-                gap: 12,
+                gridTemplateColumns: "1fr 1fr 1fr 1.25fr",
+                gap: 10,
                 alignItems: "stretch",
               }}
             >
@@ -980,17 +1028,17 @@ const modalContentGridStyle = {
                 style={{
                   border: 0,
                   borderRadius: 14,
-                  padding: "14px 18px",
-                  minHeight: 62,
+                  padding: "12px 14px",
+                  minHeight: 56,
                   background: "linear-gradient(135deg, #4f46e5, #4338ca)",
                   color: "#ffffff",
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: 900,
                   cursor: "pointer",
-                  boxShadow: "0 16px 38px rgba(79,70,229,0.22)",
+                  boxShadow: "0 12px 32px rgba(79,70,229,0.20)",
                 }}
               >
-                Save business profile
+                ▣ Save business profile
               </button>
 
               <button
@@ -999,16 +1047,16 @@ const modalContentGridStyle = {
                 style={{
                   border: "1px solid rgba(79,70,229,0.18)",
                   borderRadius: 14,
-                  padding: "14px 18px",
-                  minHeight: 62,
+                  padding: "12px 14px",
+                  minHeight: 56,
                   background: "#ffffff",
                   color: "#4f46e5",
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: 900,
                   cursor: "pointer",
                 }}
               >
-                Reset to last save
+                ↻ Reset to last save
               </button>
 
               <button
@@ -1017,35 +1065,34 @@ const modalContentGridStyle = {
                 style={{
                   border: "1px solid rgba(79,70,229,0.18)",
                   borderRadius: 14,
-                  padding: "14px 18px",
-                  minHeight: 62,
+                  padding: "12px 14px",
+                  minHeight: 56,
                   background: "#ffffff",
                   color: "#4f46e5",
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: 900,
                   cursor: "pointer",
                 }}
               >
-                Preview profile
+                ◉ Preview profile
               </button>
 
               <div
                 style={{
                   borderLeft: "1px solid rgba(79,70,229,0.14)",
-                  padding: "8px 4px 8px 18px",
+                  padding: "4px 4px 4px 16px",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
-                  minHeight: 62,
                 }}
               >
-                <div style={{ fontWeight: 900, color: "#0f172a", marginBottom: 5 }}>
+                <div style={{ fontWeight: 900, color: "#0f172a", marginBottom: 4, fontSize: 13.5 }}>
                   One workspace. One business.
                 </div>
-                <div style={{ color: "#64748b", fontSize: 12.5, lineHeight: 1.45 }}>
-                  You can refine this profile, but changing business identity requires owner approval unless Enterprise multi-business access is enabled.
+                <div style={{ color: "#64748b", fontSize: 12, lineHeight: 1.42 }}>
+                  You can refine this profile, but changing business identity requires approval unless Enterprise multi-business access is enabled.
                 </div>
-                <div style={{ marginTop: 6, color: businessProfileSaved ? "#16a34a" : "#4f46e5", fontSize: 12.5, fontWeight: 900 }}>
+                <div style={{ marginTop: 5, color: businessProfileSaved ? "#16a34a" : "#4f46e5", fontSize: 12, fontWeight: 900 }}>
                   Status: {businessProfileSaved ? "Saved" : "Not saved yet"}
                 </div>
               </div>
@@ -1056,19 +1103,18 @@ const modalContentGridStyle = {
                 marginTop: 10,
                 borderRadius: 12,
                 border: "1px solid rgba(79,70,229,0.10)",
-                background: "rgba(238,242,255,0.55)",
-                padding: "10px 13px",
+                background: "rgba(238,242,255,0.50)",
+                padding: "9px 12px",
                 color: "#475569",
-                fontSize: 12.5,
-                lineHeight: 1.45,
+                fontSize: 12,
+                lineHeight: 1.4,
                 fontWeight: 700,
               }}
             >
-              Pro tip: The more specific you are, the better your AI agents can create content, copy, and strategies tailored to your business.
+              ✨ Pro tip: The more specific you are, the better your AI agents can create content, copy, and strategies tailored to your business.
             </div>
           </div>
         </section>
-
 
         <section
           style={{
