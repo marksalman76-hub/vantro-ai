@@ -344,22 +344,6 @@ const modalContentGridStyle = {
   const accountPackage = account?.package_name || account?.package || "Active workspace";
   const accountStatus = account?.status || "active";
   const activeAgentCount = account?.active_agents?.length || 0;
-  const clientDisplayName =
-    account?.company_name ||
-    account?.business_name ||
-    account?.client_name ||
-    account?.name ||
-    account?.email ||
-    "Client";
-  const clientEmail = account?.email || account?.contact_email || "";
-  const clientInitials = String(clientDisplayName)
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("") || "CL";
-  const activeAccount =
-    activeAccount;
   const directMediaAssets: DeliverableAsset[] = [
     liveDeliverable?.image_url
       ? {
@@ -739,13 +723,13 @@ const modalContentGridStyle = {
             >
               <span
                 style={{
-                  color: activeAccount ? "#22c55e" : "#ef4444",
+                  color: accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444",
                   marginRight: 8,
                 }}
               >
                 ●
               </span>
-              {activeAccount ? "ACTIVE" : "INACTIVE"}
+              {accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "ACTIVE" : "INACTIVE"}
             </div>
 
             <button
@@ -770,7 +754,7 @@ const modalContentGridStyle = {
                   width: 8,
                   height: 8,
                   borderRadius: 16,
-                  background: activeAccount ? "#22c55e" : "#ef4444",
+                  background: accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444",
                   border: "2px solid #fff",
                 }}
               />
@@ -810,20 +794,21 @@ const modalContentGridStyle = {
                 }}
               >
                 <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: "1px solid #edf1f6" }}>
-                  <div style={{ width: 46, height: 46, borderRadius: 999, background: "var(--color-dark)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{clientInitials}</div>
+                  <div style={{ width: 46, height: 46, borderRadius: 999, background: "var(--color-dark)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>PD</div>
                   <div>
-                    <div style={{ fontWeight: 800, color: "var(--color-dark)" }}>{clientInitials}</div>
-                    <div style={{ fontSize: 12, color: "var(--color-muted)" }}>{clientEmail || accountPackage}</div>
+                    <div style={{ fontWeight: 800, color: "var(--color-dark)" }}>PD</div>
+                    <div style={{ fontSize: 12, color: "var(--color-muted)" }}>pd@trance-formation.com.au</div>
                     <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4, color: "var(--color-muted)" }}>
-                      <span style={{ color: activeAccount ? "#22c55e" : "#ef4444", marginRight: 6 }}>●</span>
-                      {activeAccount ? "ACTIVE" : "INACTIVE"} · Paid plan
+                      <span style={{ color: accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444", marginRight: 6 }}>●</span>
+                      {accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "ACTIVE" : "INACTIVE"} · Paid plan
                     </div>
                   </div>
                 </div>
 
                 <button
                   onClick={() => {
-                    window.location.hash = "account-settings";
+                    window.location.hash = "settings";
+                    alert("Settings panel selected.");
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
@@ -832,7 +817,8 @@ const modalContentGridStyle = {
 
                 <button
                   onClick={() => {
-                    window.location.hash = "account-profile";
+                    window.location.hash = "profile";
+                    alert("Profile panel selected.");
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
@@ -842,6 +828,7 @@ const modalContentGridStyle = {
                 <button
                   onClick={() => {
                     window.location.hash = "password-reset";
+                    alert("Password reset selected.");
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
@@ -851,6 +838,7 @@ const modalContentGridStyle = {
                 <button
                   onClick={() => {
                     window.location.hash = "two-factor-authentication";
+                    alert("2FA selected.");
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
@@ -955,7 +943,7 @@ const modalContentGridStyle = {
                     label === "Approvals"
                       ? "#f59e0b"
                       : label === "Workspace status"
-                        ? activeAccount
+                        ? accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing"
                           ? "#22c55e"
                           : "#ef4444"
                         : "var(--color-brand)",
@@ -963,7 +951,7 @@ const modalContentGridStyle = {
                     label === "Approvals"
                       ? "0 0 0 5px rgba(245,158,11,.10)"
                       : label === "Workspace status"
-                        ? activeAccount
+                        ? accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing"
                           ? "0 0 0 5px rgba(34,197,94,.12)"
                           : "0 0 0 5px rgba(239,68,68,.12)"
                         : "0 0 0 5px rgba(37,99,235,.08)",
