@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 type Account = {
   tenant_id?: string;
   client_id?: string;
-  tenant_id?: string;
   package?: string;
   package_name?: string;
   status?: string;
