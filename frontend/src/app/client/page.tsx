@@ -497,12 +497,10 @@ const modalContentGridStyle = {
     try {
       setTimelineLoading(true);
 
-      const tenantId =
-        account?.tenant_id ||
-        tenantId;
+      const eventTenantId = account?.tenant_id || account?.client_id || "unknown_client";
 
       const response = await fetch(
-        `${BACKEND_API_BASE}/client/execution-events?tenant_id=${encodeURIComponent(tenantId)}&project_id=live_readiness_matrix&limit=20`,
+        `${BACKEND_API_BASE}/client/execution-events?tenant_id=${encodeURIComponent(eventTenantId)}&project_id=live_readiness_matrix&limit=20`,
         {
           cache: "no-store",
           headers: {
