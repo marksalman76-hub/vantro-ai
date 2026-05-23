@@ -772,7 +772,7 @@ const modalContentGridStyle = {
               style={{
                 border: "none",
                 borderRadius: 12,
-                padding: "12px 16px",
+                padding: "10px 12px",
                 background: "var(--color-dark)",
                 color: "#fff",
                 fontWeight: 700,
@@ -787,7 +787,7 @@ const modalContentGridStyle = {
               style={{
                 background: "#fff",
                 borderRadius: 16,
-                padding: "12px 16px",
+                padding: "10px 12px",
                 border: "1px solid #e5eaf2",
                 fontWeight: 800,
                 boxShadow: "0 8px 22px rgba(15,23,42,.045)",
@@ -2624,7 +2624,7 @@ const modalContentGridStyle = {
                       background: "#fff",
                       color: "#334155",
                       borderRadius: 16,
-                      padding: "12px 16px",
+                      padding: "10px 12px",
                       fontWeight: 760,
                       cursor: "pointer",
                     }}
@@ -2781,7 +2781,7 @@ const modalContentGridStyle = {
                   border: "1px solid #e5eaf2",
                   background: "#fff",
                   borderRadius: 16,
-                  padding: "12px 16px",
+                  padding: "10px 12px",
                   fontWeight: 700,
                   cursor: "pointer",
                 }}
