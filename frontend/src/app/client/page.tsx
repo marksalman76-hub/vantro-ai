@@ -658,7 +658,7 @@ const modalContentGridStyle = {
             <div
               style={{
                 color: "var(--color-brand)",
-                fontSize: 13,
+                fontSize: 12.5,
                 fontWeight: 760,
                 letterSpacing: 1.4,
                 textTransform: "uppercase",
@@ -686,7 +686,7 @@ const modalContentGridStyle = {
                 maxWidth: 700,
                 color: "var(--color-muted)",
                 lineHeight: 1.42,
-                fontSize: 13,
+                fontSize: 12.5,
               }}
             >
               Run selected AI agents, generate governed outputs, manage
@@ -973,7 +973,7 @@ const modalContentGridStyle = {
                   >
                     {icon}
                   </div>
-                  <div style={{ color: "#0f172a", fontSize: 13, fontWeight: 900 }}>
+                  <div style={{ color: "#0f172a", fontSize: 12.5, fontWeight: 900 }}>
                     {label}
                     {label === "Key differentiators" ? (
                       <span style={{ color: "#64748b", fontWeight: 700 }}> (optional)</span>
@@ -1017,7 +1017,7 @@ const modalContentGridStyle = {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr 1fr 1.25fr",
+                gridTemplateColumns: "repeat(3, minmax(170px, 1fr)) 1.35fr",
                 gap: 10,
                 alignItems: "stretch",
               }}
@@ -1028,8 +1028,8 @@ const modalContentGridStyle = {
                 style={{
                   border: 0,
                   borderRadius: 14,
-                  padding: "12px 14px",
-                  minHeight: 56,
+                  padding: "10px 14px",
+                  minHeight: 44,
                   background: "linear-gradient(135deg, #4f46e5, #4338ca)",
                   color: "#ffffff",
                   fontSize: 13,
@@ -1047,8 +1047,8 @@ const modalContentGridStyle = {
                 style={{
                   border: "1px solid rgba(79,70,229,0.18)",
                   borderRadius: 14,
-                  padding: "12px 14px",
-                  minHeight: 56,
+                  padding: "10px 14px",
+                  minHeight: 44,
                   background: "#ffffff",
                   color: "#4f46e5",
                   fontSize: 13,
@@ -1065,8 +1065,8 @@ const modalContentGridStyle = {
                 style={{
                   border: "1px solid rgba(79,70,229,0.18)",
                   borderRadius: 14,
-                  padding: "12px 14px",
-                  minHeight: 56,
+                  padding: "10px 14px",
+                  minHeight: 44,
                   background: "#ffffff",
                   color: "#4f46e5",
                   fontSize: 13,
@@ -1080,19 +1080,19 @@ const modalContentGridStyle = {
               <div
                 style={{
                   borderLeft: "1px solid rgba(79,70,229,0.14)",
-                  padding: "4px 4px 4px 16px",
+                  padding: "2px 4px 2px 14px",
                   display: "flex",
                   flexDirection: "column",
                   justifyContent: "center",
                 }}
               >
-                <div style={{ fontWeight: 900, color: "#0f172a", marginBottom: 4, fontSize: 13.5 }}>
+                <div style={{ fontWeight: 900, color: "#0f172a", marginBottom: 4, fontSize: 12.8 }}>
                   One workspace. One business.
                 </div>
-                <div style={{ color: "#64748b", fontSize: 12, lineHeight: 1.42 }}>
+                <div style={{ color: "#64748b", fontSize: 11.8, lineHeight: 1.35 }}>
                   You can refine this profile, but changing business identity requires approval unless Enterprise multi-business access is enabled.
                 </div>
-                <div style={{ marginTop: 5, color: businessProfileSaved ? "#16a34a" : "#4f46e5", fontSize: 12, fontWeight: 900 }}>
+                <div style={{ marginTop: 4, color: businessProfileSaved ? "#16a34a" : "#4f46e5", fontSize: 12, fontWeight: 900 }}>
                   Status: {businessProfileSaved ? "Saved" : "Not saved yet"}
                 </div>
               </div>
@@ -1100,11 +1100,11 @@ const modalContentGridStyle = {
 
             <div
               style={{
-                marginTop: 10,
+                marginTop: 8,
                 borderRadius: 12,
                 border: "1px solid rgba(79,70,229,0.10)",
                 background: "rgba(238,242,255,0.50)",
-                padding: "9px 12px",
+                padding: "8px 12px",
                 color: "#475569",
                 fontSize: 12,
                 lineHeight: 1.4,
@@ -1155,7 +1155,7 @@ const modalContentGridStyle = {
                     border: "1px solid rgba(15, 23, 42, 0.10)",
                     background: "#ffffff",
                     borderRadius: 8,
-                    padding: "9px 12px",
+                    padding: "8px 12px",
                     display: "inline-flex",
                     alignItems: "center",
                     gap: 9,
