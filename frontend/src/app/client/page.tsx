@@ -236,6 +236,8 @@ export default function ClientPage() {
   const [reviewActionLoading, setReviewActionLoading] = useState(false);
   const [liveDeliverable, setLiveDeliverable] = useState<LiveDeliverable | null>(null);
   const [executionState, setExecutionState] = useState<"idle" | "running" | "completed" | "rejected">("idle");
+  const [businessProfile, setBusinessProfile] = useState<Record<string, string>>({});
+  const [businessProfileSaved, setBusinessProfileSaved] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [showDeliverableModal, setShowDeliverableModal] = useState(false);
   const [selectedAssetIndex, setSelectedAssetIndex] = useState(0);
@@ -394,6 +396,7 @@ const modalContentGridStyle = {
 
   useEffect(() => {
     if (account) {
+      loadBusinessProfile();
       loadExecutionTimeline();
     }
   }, [account]);
@@ -449,6 +452,44 @@ const modalContentGridStyle = {
 
 
 
+
+
+  async function loadBusinessProfile() {
+    try {
+      const response = await fetch("/api/client-business-profile", { cache: "no-store" });
+      const data = await response.json();
+
+      if (data?.success && data.profile) {
+        setBusinessProfile(data.profile);
+        setBusinessProfileSaved(Boolean(data.profile_saved));
+      }
+    } catch {
+      setBusinessProfileSaved(false);
+    }
+  }
+
+  async function saveBusinessProfile() {
+    try {
+      const response = await fetch("/api/client-business-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile: businessProfile }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data?.success) {
+        setToastMessage("Business profile could not be saved.");
+        return;
+      }
+
+      setBusinessProfile(data.profile || businessProfile);
+      setBusinessProfileSaved(true);
+      setToastMessage("Business profile saved. Future agent runs will use this context.");
+    } catch {
+      setToastMessage("Business profile could not be saved.");
+    }
+  }
 
   async function loadExecutionTimeline() {
     try {
@@ -852,6 +893,22 @@ const modalContentGridStyle = {
                 Add business context once so every active AI agent can produce more accurate
                 deliverables, assets, copy, positioning, and execution recommendations.
               </p>
+              <button
+                type="button"
+                onClick={saveBusinessProfile}
+                style={{
+                  marginTop: 14,
+                  border: 0,
+                  borderRadius: 12,
+                  padding: "12px 16px",
+                  background: "var(--color-blue)",
+                  color: "white",
+                  fontWeight: 900,
+                  cursor: "pointer",
+                }}
+              >
+                Save business profile
+              </button>
             </div>
 
             <div
@@ -890,7 +947,7 @@ const modalContentGridStyle = {
                   {label}
                 </div>
                 <textarea
-                  defaultValue={value}
+                  value={businessProfile[key] || ""} onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [key]: e.target.value }))}
                   rows={3}
                   style={{
                     width: "100%",
