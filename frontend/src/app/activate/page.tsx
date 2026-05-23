@@ -34,13 +34,7 @@ export default async function ActivatePage({ searchParams }: ActivatePageProps) 
   const token = resolvedSearchParams.token || "";
   const invite = token ? await getInviteStatus(token) : null;
 
-  const isValid =
-    invite &&
-    invite.success === true &&
-    (
-      invite.valid === true ||
-      (invite.expired === false && invite.used === false)
-    );
+  const isValid = Boolean(invite?.success === true && invite?.valid === true);
 
   return (
     <main
