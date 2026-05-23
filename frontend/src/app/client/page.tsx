@@ -345,7 +345,6 @@ const modalContentGridStyle = {
   const accountPackage = account?.package_name || account?.package || "Active workspace";
   const accountStatus = account?.status || "active";
   const activeAgentCount = account?.active_agents?.length || 0;
-  const accountStatus = account?.package_status || account?.status || "Active";
   const directMediaAssets: DeliverableAsset[] = [
     liveDeliverable?.image_url
       ? {
