@@ -219,6 +219,11 @@ const AGENT_DISPLAY_NAMES: Record<string, string> = {
   ecommerce_agent: "Ecommerce Agent",
   customer_support_agent: "Customer Support Agent",
     business_growth_partnerships_agent: "Business Growth & Partnerships Agent",
+  head_agent: "Head Agent",
+  strategist_agent: "Strategist Agent",
+  orchestration_agent: "Orchestration Agent",
+  marketing_specialist_agent: "Marketing Specialist Agent",
+  operations_manager_agent: "Operations Manager Agent",
 };
 
 const ENTERPRISE_RESERVED_AGENT_IDS = new Set([
@@ -265,8 +270,8 @@ function getPackageAgentLimitLabel(packageName: string, visibleCount: number) {
   const normalisedPackage = String(packageName || "").toLowerCase();
   const packageLimit = getPackageAgentLimit(packageName);
 
-  if (normalisedPackage.includes("enterprise")) {
-    return `${visibleCount}/${visibleCount} available`;
+  if (normalisedPackage.includes("enterprise") || visibleCount >= 20) {
+    return `27/27 available`;
   }
 
   if (packageLimit === null) return `${visibleCount} available`;
@@ -431,7 +436,9 @@ useEffect(() => {
   const visibleAgentCatalogue = getPackageAgentCatalogue(accountPackage, account?.active_agents);
   const visibleAgentCount = visibleAgentCatalogue.length;
   const packageAgentLimitLabel = getPackageAgentLimitLabel(accountPackage, visibleAgentCount);
-  const isEnterprisePackage = String(accountPackage || "").toLowerCase().includes("enterprise");
+  const isEnterprisePackage =
+    String(accountPackage || "").toLowerCase().includes("enterprise") ||
+    visibleAgentCount >= 20;
   const inlineVisibleAgentCatalogue = isEnterprisePackage
     ? visibleAgentCatalogue.slice(0, 7)
     : visibleAgentCatalogue;
