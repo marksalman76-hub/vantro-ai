@@ -825,7 +825,7 @@ const modalContentGridStyle = {
                 <button
                   onClick={() => {
                     window.location.hash = "settings";
-                    alert("Settings panel selected.");
+                    
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
@@ -835,7 +835,7 @@ const modalContentGridStyle = {
                 <button
                   onClick={() => {
                     window.location.hash = "profile";
-                    alert("Profile panel selected.");
+                    
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
@@ -845,7 +845,7 @@ const modalContentGridStyle = {
                 <button
                   onClick={() => {
                     window.location.hash = "password-reset";
-                    alert("Password reset selected.");
+                    
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
@@ -855,7 +855,7 @@ const modalContentGridStyle = {
                 <button
                   onClick={() => {
                     window.location.hash = "two-factor-authentication";
-                    alert("2FA selected.");
+                    
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
