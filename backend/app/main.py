@@ -6,6 +6,7 @@ import urllib.request
 import urllib.error
 import json
 from fastapi.middleware.cors import CORSMiddleware
+from backend.app.core.client_business_profile_runtime import get_client_business_profile, save_client_business_profile
 from backend.app.core.client_integrations_runtime import (
     disconnect_client_integration,
     integration_audit,
@@ -1512,6 +1513,21 @@ app.include_router(media_router)
 # Batch G production storage routes
 app.include_router(storage_router)
 
+
+
+# Client business profile persistence runtime
+@app.get("/client/business-profile")
+async def client_business_profile_get(session_token: str):
+    return get_client_business_profile(session_token)
+
+
+@app.post("/client/business-profile")
+async def client_business_profile_save(payload: dict):
+    session_token = str(payload.get("session_token") or "")
+    profile = payload.get("profile") or {}
+    if not isinstance(profile, dict):
+        profile = {}
+    return save_client_business_profile(session_token, profile)
 
 @app.get("/client/integrations/catalogue")
 async def client_integrations_catalogue():
