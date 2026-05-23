@@ -247,6 +247,7 @@ export default function ClientPage() {
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [integrationMessage, setIntegrationMessage] = useState("");
   const [activeAccountPanel, setActiveAccountPanel] = useState("");
+  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
 
 
   const shellStyle = {
@@ -673,8 +674,8 @@ const modalContentGridStyle = {
     <main
       style={{
         minHeight: "100vh",
-        background: "#f4f7fb",
-        color: "var(--color-dark)",
+        background: darkModeEnabled ? "#0f172a" : "#f4f7fb",
+        color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)",
         fontFamily:
           'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
@@ -891,10 +892,13 @@ const modalContentGridStyle = {
                 </button>
 
                 <button
-                  onClick={() => document.documentElement.classList.toggle("dark")}
+                  onClick={() => {
+                    setDarkModeEnabled((previous) => !previous);
+                    setToastMessage(darkModeEnabled ? "Light mode enabled." : "Dark mode enabled.");
+                  }}
                   style={{ width: "100%", border: "none", borderTop: "1px solid #edf1f6", background: "transparent", padding: "12px 8px", textAlign: "left", fontWeight: 800, cursor: "pointer", color: "var(--color-dark)" }}
                 >
-                  🌙 Toggle dark / light mode
+                  {darkModeEnabled ? "☀️ Switch to light mode" : "🌙 Toggle dark / light mode"}
                 </button>
 
                 <button
