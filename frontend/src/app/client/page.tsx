@@ -775,7 +775,7 @@ const modalContentGridStyle = {
           style={{
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-            gap: 12,
+            gap: 14,
             alignItems: "stretch",
             marginBottom: 22,
           }}
@@ -921,14 +921,14 @@ const modalContentGridStyle = {
                 fontSize: 11.8,
               }}
             >
-              ✓ Applied to execution
+              {businessProfileSaved ? "✓ Saved to execution context" : "Not saved yet"}
             </div>
           </div>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(8, minmax(150px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
               gap: 12,
             }}
           >
@@ -948,7 +948,7 @@ const modalContentGridStyle = {
                 </div>
                 <textarea
                   value={businessProfile[String(key)] || ""} onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [String(key)]: e.target.value }))}
-                  rows={3}
+                  rows={4}
                   style={{
                     width: "100%",
                     resize: "none",
