@@ -957,7 +957,7 @@ const modalContentGridStyle = {
         </section>
 
         {activeAccountPanel ? (
-          <section style={{ ...cardStyle, padding: 18, marginBottom: 18 }}>
+          <section style={{ ...cardStyle, padding: 18, marginBottom: 18, position: "relative", zIndex: 3 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
               <div>
                 <div style={{ color: "var(--color-brand)", fontSize: 12, fontWeight: 900, letterSpacing: .6, textTransform: "uppercase", marginBottom: 6 }}>
@@ -967,7 +967,7 @@ const modalContentGridStyle = {
                   {activeAccountPanel === "settings" ? "Settings" : activeAccountPanel === "profile" ? "Profile" : activeAccountPanel === "password-reset" ? "Password reset" : "Two-factor authentication"}
                 </h2>
                 <p style={{ margin: "7px 0 0", color: "var(--color-muted)", fontSize: 13, lineHeight: 1.45 }}>
-                  {activeAccountPanel === "settings" ? "Manage workspace preferences and display controls." : activeAccountPanel === "profile" ? "Review the business identity and account attached to this workspace." : activeAccountPanel === "password-reset" ? "Password reset controls will connect to the secure account flow." : "Two-factor authentication controls will connect to the secure login flow."}
+                  Manage client account controls without leaving the workspace.
                 </p>
               </div>
 
@@ -983,24 +983,99 @@ const modalContentGridStyle = {
               </button>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10, marginTop: 14 }}>
-              <div style={{ border: "1px solid #edf1f6", borderRadius: 14, padding: 12, background: "#fff" }}>
-                <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 800, textTransform: "uppercase" }}>Client</div>
-                <div style={{ marginTop: 4, color: "var(--color-dark)", fontWeight: 900 }}>{clientDisplayName}</div>
-              </div>
-              <div style={{ border: "1px solid #edf1f6", borderRadius: 14, padding: 12, background: "#fff" }}>
-                <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 800, textTransform: "uppercase" }}>Package</div>
-                <div style={{ marginTop: 4, color: "var(--color-dark)", fontWeight: 900 }}>{accountPackage}</div>
-              </div>
-              <div style={{ border: "1px solid #edf1f6", borderRadius: 14, padding: 12, background: "#fff" }}>
-                <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 800, textTransform: "uppercase" }}>Status</div>
-                <div style={{ marginTop: 4, color: "var(--color-dark)", fontWeight: 900 }}>{accountStatus}</div>
-              </div>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
+              {[
+                ["settings", "⚙️ Settings"],
+                ["profile", "👤 Profile"],
+                ["password-reset", "🔐 Password reset"],
+                ["two-factor-authentication", "🛡️ 2FA"],
+              ].map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => {
+                    setActiveAccountPanel(key);
+                    window.location.hash = key;
+                  }}
+                  style={{
+                    border: activeAccountPanel === key ? "1px solid rgba(79,70,229,.35)" : "1px solid #e5eaf2",
+                    background: activeAccountPanel === key ? "rgba(238,242,255,.95)" : "#fff",
+                    color: activeAccountPanel === key ? "#4f46e5" : "#334155",
+                    borderRadius: 999,
+                    padding: "9px 12px",
+                    fontWeight: 850,
+                    cursor: "pointer",
+                    fontSize: 12,
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
+              {activeAccountPanel === "settings" ? (
+                <>
+                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                    <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Theme</div>
+                    <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Display mode</div>
+                    <button
+                      type="button"
+                      onClick={() => document.documentElement.classList.toggle("dark")}
+                      style={{ marginTop: 10, border: "1px solid rgba(79,70,229,.18)", background: "#fff", color: "#4f46e5", borderRadius: 12, padding: "9px 11px", fontWeight: 850, cursor: "pointer" }}
+                    >
+                      Toggle dark / light mode
+                    </button>
+                  </div>
+                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                    <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Workspace</div>
+                    <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>{accountPackage}</div>
+                    <div style={{ marginTop: 5, color: "var(--color-muted)", fontSize: 12 }}>Status: {accountStatus}</div>
+                  </div>
+                </>
+              ) : null}
+
+              {activeAccountPanel === "profile" ? (
+                <>
+                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                    <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Client</div>
+                    <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>{clientDisplayName}</div>
+                    <div style={{ marginTop: 5, color: "var(--color-muted)", fontSize: 12 }}>{clientEmail || "No email shown"}</div>
+                  </div>
+                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                    <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Business profile</div>
+                    <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>{businessProfile.business_name || "Not saved yet"}</div>
+                    <div style={{ marginTop: 5, color: "var(--color-muted)", fontSize: 12 }}>Edit the Business Profile Intelligence section below.</div>
+                  </div>
+                </>
+              ) : null}
+
+              {activeAccountPanel === "password-reset" ? (
+                <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                  <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Password reset</div>
+                  <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Secure reset request</div>
+                  <p style={{ color: "var(--color-muted)", fontSize: 12, lineHeight: 1.45 }}>Use this panel to trigger the secure password reset flow once the backend route is connected.</p>
+                  <button type="button" onClick={() => setToastMessage("Password reset request panel opened. Secure email flow is ready for backend connection.")} style={{ border: 0, background: "var(--color-dark)", color: "#fff", borderRadius: 12, padding: "10px 12px", fontWeight: 850, cursor: "pointer" }}>
+                    Send reset link
+                  </button>
+                </div>
+              ) : null}
+
+              {activeAccountPanel === "two-factor-authentication" ? (
+                <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                  <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Two-factor authentication</div>
+                  <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Extra account protection</div>
+                  <p style={{ color: "var(--color-muted)", fontSize: 12, lineHeight: 1.45 }}>2FA setup panel is now functional in the workspace UI and ready for secure backend connection.</p>
+                  <button type="button" onClick={() => setToastMessage("2FA setup panel opened. Secure setup flow is ready for backend connection.")} style={{ border: 0, background: "var(--color-dark)", color: "#fff", borderRadius: 12, padding: "10px 12px", fontWeight: 850, cursor: "pointer" }}>
+                    Start 2FA setup
+                  </button>
+                </div>
+              ) : null}
             </div>
           </section>
         ) : null}
 
-        <section style={{ ...cardStyle, padding: 18, marginBottom: 18 }}>
+        <section style={{ ...cardStyle, padding: 18, marginBottom: 18, position: "relative", zIndex: 2, overflow: "visible" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", marginBottom: 18, flexWrap: "wrap" }}>
             <div>
               <div style={{ color: "var(--color-brand)", fontSize: 11.5, fontWeight: 850, letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 7 }}>
@@ -1028,33 +1103,54 @@ const modalContentGridStyle = {
             Start with <strong>Business name</strong>. This controls the client initials and account name shown in the top-right profile menu.
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 12 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 12, position: "relative", zIndex: 20, pointerEvents: "auto" }}>
             {[
-              ["business_name", "◆", "Business name", "Type your company, store, or brand name here", "normal"],
-              ["business_niche", "▦", "Business niche", "Describe your business niche, product category, and market position", "normal"],
-              ["products_services", "◇", "Products & services", "Main products, bundles, offers", "normal"],
-              ["target_audience", "♙", "Target audience", "Customer type, location, needs", "normal"],
-              ["competitors", "♕", "Competitors", "Competitor names, websites, market examples", "normal"],
-              ["offers", "⌑", "Offers", "Current promotions, bundles, guarantees", "normal"],
-              ["brand_voice", "◁", "Brand voice", "Premium, playful, clinical, bold, friendly", "normal"],
-              ["positioning", "◎", "Positioning", "Why customers should choose you", "normal"],
-              ["goals", "⚑", "Goals", "Sales, launches, retention, growth", "normal"],
-              ["notes", "◌", "Key differentiators", "What makes your business unique? Benefits, values, or competitive advantages.", "wide"],
-            ].map(([key, icon, label, value, size]) => (
-              <label key={label} style={{ gridColumn: size === "wide" ? "span 2" : "span 1", borderRadius: 16, border: "1px solid rgba(15,23,42,.08)", background: "#fff", padding: 13, minHeight: 104, boxShadow: "0 14px 38px rgba(15,23,42,.04)", boxSizing: "border-box" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9 }}>
+              ["business_name", "◆", "Business name", "Type business name here", "input", "normal"],
+              ["business_niche", "▦", "Business niche", "Describe your business niche, product category, and market position", "textarea", "normal"],
+              ["products_services", "◇", "Products & services", "Main products, bundles, offers", "textarea", "normal"],
+              ["target_audience", "♙", "Target audience", "Customer type, location, needs", "textarea", "normal"],
+              ["competitors", "♕", "Competitors", "Competitor names, websites, market examples", "textarea", "normal"],
+              ["offers", "⌑", "Offers", "Current promotions, bundles, guarantees", "textarea", "normal"],
+              ["brand_voice", "◁", "Brand voice", "Premium, playful, clinical, bold, friendly", "textarea", "normal"],
+              ["positioning", "◎", "Positioning", "Why customers should choose you", "textarea", "normal"],
+              ["goals", "⚑", "Goals", "Sales, launches, retention, growth", "textarea", "normal"],
+              ["notes", "◌", "Key differentiators", "What makes your business unique? Benefits, values, or competitive advantages.", "textarea", "wide"],
+            ].map(([key, icon, label, placeholder, fieldType, size]) => (
+              <div
+                key={String(key)}
+                style={{
+                  gridColumn: size === "wide" ? "span 2" : "span 1",
+                  borderRadius: 16,
+                  border: "1px solid rgba(15,23,42,.08)",
+                  background: "#fff",
+                  padding: 13,
+                  minHeight: 104,
+                  boxShadow: "0 14px 38px rgba(15,23,42,.04)",
+                  boxSizing: "border-box",
+                  position: "relative",
+                  zIndex: 21,
+                  pointerEvents: "auto",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9, pointerEvents: "none" }}>
                   <div style={{ width: 28, height: 28, borderRadius: 10, display: "grid", placeItems: "center", background: "rgba(238,242,255,.95)", color: "#4f46e5", fontWeight: 900, fontSize: 13, border: "1px solid rgba(79,70,229,.12)" }}>{icon}</div>
                   <div style={{ color: "#0f172a", fontSize: 12.5, fontWeight: 900 }}>
                     {label}{label === "Key differentiators" ? <span style={{ color: "#64748b", fontWeight: 700 }}> (optional)</span> : null}
                   </div>
                 </div>
-                {String(key) === "business_name" ? (
+
+                {fieldType === "input" ? (
                   <input
                     type="text"
-                    placeholder="Type business name here"
-                    value={businessProfile.business_name || ""}
-                    onChange={(e) => setBusinessProfile((prev) => ({ ...prev, business_name: e.target.value }))}
-                    onClick={(e) => e.currentTarget.focus()}
+                    aria-label={String(label)}
+                    placeholder={String(placeholder)}
+                    value={businessProfile[String(key)] || ""}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      setBusinessProfile((prev) => ({ ...prev, [String(key)]: nextValue }));
+                      setBusinessProfileSaved(false);
+                    }}
+                    autoComplete="organization"
                     style={{
                       width: "100%",
                       height: 42,
@@ -1063,21 +1159,28 @@ const modalContentGridStyle = {
                       padding: "9px 11px",
                       borderRadius: 10,
                       fontSize: 13,
-                      color: "var(--color-dark)",
+                      color: "#0f172a",
                       outline: "none",
                       boxSizing: "border-box",
                       fontFamily: "inherit",
                       marginTop: 8,
                       cursor: "text",
                       position: "relative",
-                      zIndex: 5,
+                      zIndex: 50,
+                      pointerEvents: "auto",
+                      userSelect: "text",
                     }}
                   />
                 ) : (
                   <textarea
-                    placeholder={String(value)}
+                    aria-label={String(label)}
+                    placeholder={String(placeholder)}
                     value={businessProfile[String(key)] || ""}
-                    onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [String(key)]: e.target.value }))}
+                    onChange={(e) => {
+                      const nextValue = e.target.value;
+                      setBusinessProfile((prev) => ({ ...prev, [String(key)]: nextValue }));
+                      setBusinessProfileSaved(false);
+                    }}
                     rows={2}
                     style={{
                       width: "100%",
@@ -1089,20 +1192,24 @@ const modalContentGridStyle = {
                       borderRadius: 10,
                       fontSize: 12.4,
                       lineHeight: 1.38,
-                      color: "var(--color-dark)",
+                      color: "#0f172a",
                       outline: "none",
                       boxSizing: "border-box",
                       fontFamily: "inherit",
                       marginTop: 8,
                       cursor: "text",
+                      position: "relative",
+                      zIndex: 50,
+                      pointerEvents: "auto",
+                      userSelect: "text",
                     }}
                   />
                 )}
-              </label>
+              </div>
             ))}
           </div>
 
-          <div style={{ marginTop: 14, borderRadius: 16, border: "1px solid rgba(79,70,229,.10)", background: "#fff", padding: 10, boxShadow: "0 10px 28px rgba(15,23,42,.04)" }}>
+          <div style={{ marginTop: 14, borderRadius: 16, border: "1px solid rgba(79,70,229,.10)", background: "#fff", padding: 10, boxShadow: "0 10px 28px rgba(15,23,42,.04)", position: "relative", zIndex: 25 }}>
             <div style={{ display: "grid", gridTemplateColumns: "180px 180px 180px 1fr", gap: 10, alignItems: "center" }}>
               <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "10px 12px", height: 44, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "#fff", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>▣ Save business profile</button>
               <button type="button" onClick={loadBusinessProfile} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "10px 12px", height: 44, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>↻ Reset to last save</button>
