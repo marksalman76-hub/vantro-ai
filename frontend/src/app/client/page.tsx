@@ -344,6 +344,23 @@ const modalContentGridStyle = {
   const accountPackage = account?.package_name || account?.package || "Active workspace";
   const accountStatus = account?.status || "active";
   const activeAgentCount = account?.active_agents?.length || 0;
+  const accountAny = account as any;
+  const clientDisplayName =
+    accountAny?.company_name ||
+    accountAny?.business_name ||
+    accountAny?.client_name ||
+    accountAny?.contact_name ||
+    accountAny?.full_name ||
+    accountAny?.email ||
+    "Client";
+  const clientEmail = accountAny?.email || accountAny?.contact_email || "";
+  const clientInitials =
+    String(clientDisplayName)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "CL";
   const directMediaAssets: DeliverableAsset[] = [
     liveDeliverable?.image_url
       ? {
@@ -794,10 +811,10 @@ const modalContentGridStyle = {
                 }}
               >
                 <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: "1px solid #edf1f6" }}>
-                  <div style={{ width: 46, height: 46, borderRadius: 999, background: "var(--color-dark)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>PD</div>
+                  <div style={{ width: 46, height: 46, borderRadius: 999, background: "var(--color-dark)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{clientInitials}</div>
                   <div>
-                    <div style={{ fontWeight: 800, color: "var(--color-dark)" }}>PD</div>
-                    <div style={{ fontSize: 12, color: "var(--color-muted)" }}>pd@trance-formation.com.au</div>
+                    <div style={{ fontWeight: 800, color: "var(--color-dark)" }}>{clientInitials}</div>
+                    <div style={{ fontSize: 12, color: "var(--color-muted)" }}>{clientEmail || accountPackage}</div>
                     <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4, color: "var(--color-muted)" }}>
                       <span style={{ color: accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444", marginRight: 6 }}>●</span>
                       {accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "ACTIVE" : "INACTIVE"} · Paid plan
