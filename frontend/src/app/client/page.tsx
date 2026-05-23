@@ -1779,112 +1779,125 @@ useEffect(() => {
 
 
         <section style={{ ...responsiveSecondaryGridStyle, alignItems: "stretch" }}>
-          <div style={{ ...cardStyle, height: 560, overflow: "hidden" }}>
+          <div style={{ ...cardStyle, minHeight: 360 }}>
             <StepHeader number="05" title="Activity" />
-            <h3 style={cardTitle}>Activity</h3>
-            <p style={{ color: "var(--color-brand)", fontWeight: 700, fontSize: 13 }}>Latest governed activity</p>
+            <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 14 }}>
+              <div>
+                <h3 style={cardTitle}>Activity</h3>
+                <p style={{ ...mutedText, margin: "5px 0 0", color: "var(--color-brand)", fontWeight: 800 }}>
+                  Latest governed activity
+                </p>
+              </div>
+              <span
+                style={{
+                  background: "#ecfdf5",
+                  color: "var(--color-teal)",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: 999,
+                  padding: "7px 10px",
+                  fontSize: 11.5,
+                  fontWeight: 900,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Live tracking
+              </span>
+            </div>
 
-            <div style={{ display: "grid", gap: 10, marginTop: 10, maxHeight: 430, overflowY: "auto", paddingRight: 4 }}>
-              {(executionTimeline.length
-                ? executionTimeline
-                : [{
-                    event_id: "pending_execution_timeline",
-                    created_at: liveDeliverable?.created_at || "",
-                    agent_id: selectedAgents[0] || "agent",
-                    event_type: timelineLoading ? "loading_execution_timeline" : "waiting_for_execution",
-                    event_status: liveDeliverable ? "deliverable_generated" : "waiting",
-                    workflow_stage: "client_workspace",
-                    action_type: "client_execution",
-                    title: liveDeliverable
-                      ? "Deliverable generated"
-                      : timelineLoading
-                        ? "Loading execution timeline"
-                        : "Waiting for execution",
-                    summary: liveDeliverable
-                      ? "The latest client deliverable is ready for review."
-                      : "Run selected agents to generate live governed execution events.",
-                    approval_status: reviewStatus,
-                    quality_status: liveDeliverable ? "ready_for_review" : "pending",
-                    execution_status: executionState,
-                  }]).slice(0, 2).map((event) => {
-                const time = event.created_at
-                  ? new Date(event.created_at).toLocaleString()
-                  : "Live";
-                const agentName = getAgentDisplayName(event.agent_id || "agent");
-                const approvalStatus = event.approval_status || "not_required";
-                const qualityStatus = event.quality_status || "pending";
-                const executionStatus = event.execution_status || event.event_status || "tracked";
-                const isExecutionIssue = String(executionStatus).toLowerCase().includes("failed") || String(executionStatus).toLowerCase().includes("unsupported");
-                const isApprovalRequired = String(approvalStatus).toLowerCase().includes("approval") && !String(approvalStatus).toLowerCase().includes("approved_safe");
-                const statusTone = isExecutionIssue
-                  ? { bg: "#fff7ed", border: "#fed7aa", text: "var(--color-amber)", label: "Needs attention" }
-                  : isApprovalRequired
-                    ? { bg: "#fffbeb", border: "#fde68a", text: "#ca8a04", label: "Approval gated" }
-                    : { bg: "#f0fdf4", border: "#bbf7d0", text: "var(--color-teal)", label: "Governed ready" };
-
-                return (
+            <div style={{ display: "grid", gap: 10, marginTop: 16 }}>
+              {[
+                {
+                  title: liveDeliverable ? "Deliverable generated" : "Ready for execution",
+                  detail: liveDeliverable
+                    ? "Latest client deliverable is ready for review."
+                    : "Run selected agents to generate a new client deliverable.",
+                  status: liveDeliverable ? "Ready for review" : "Waiting",
+                  tone: liveDeliverable ? "#22c55e" : "var(--color-brand)",
+                  icon: liveDeliverable ? "✓" : "→",
+                },
+                {
+                  title: executionState === "completed" ? "Execution completed" : executionState === "running" ? "Execution running" : "Execution prepared",
+                  detail: executionState === "running"
+                    ? "Agent workflow is processing the current request."
+                    : "Governed execution flow is prepared for the selected agents.",
+                  status: executionState === "completed" ? "Completed" : executionState === "running" ? "Running" : "Prepared",
+                  tone: executionState === "running" ? "#f59e0b" : "#06b6d4",
+                  icon: executionState === "running" ? "…" : "⚡",
+                },
+                {
+                  title: reviewStatus === "approved" ? "Client approved" : reviewStatus === "rejected" ? "Changes requested" : "Client review",
+                  detail: reviewStatus === "approved"
+                    ? "The deliverable has been approved."
+                    : reviewStatus === "rejected"
+                      ? "Feedback has been submitted for revision."
+                      : "Approval controls are ready when the output is reviewed.",
+                  status: reviewStatus === "approved" ? "Approved" : reviewStatus === "rejected" ? "Revision" : "Pending",
+                  tone: reviewStatus === "rejected" ? "#ef4444" : "var(--color-brand)",
+                  icon: reviewStatus === "approved" ? "✓" : reviewStatus === "rejected" ? "!" : "○",
+                },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  style={{
+                    border: "1px solid #e5eaf2",
+                    borderRadius: 16,
+                    background: "#fff",
+                    padding: "12px 14px",
+                    display: "grid",
+                    gridTemplateColumns: "34px minmax(0,1fr) auto",
+                    gap: 12,
+                    alignItems: "center",
+                    boxShadow: "0 8px 22px rgba(15,23,42,.035)",
+                  }}
+                >
                   <div
-                    key={event.event_id || `${event.agent_id}-${event.event_type}`}
                     style={{
-                      border: `1px solid ${statusTone.border}`,
-                      borderRadius: 16,
-                      padding: 20,
-                      background: "rgba(255, 255, 255, 0.94)",
-                      boxShadow: "0 20px 55px rgba(15,23,42,0.06)",
-                      transition: "transform 0.18s ease, box-shadow 0.18s ease",
+                      width: 32,
+                      height: 32,
+                      borderRadius: 12,
+                      background: `${item.tone}18`,
+                      color: item.tone,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontWeight: 950,
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "flex-start" }}>
-                      <div>
-                        <div style={{ color: "var(--color-muted)", fontSize: 11.8, fontWeight: 700 }}>{time}</div>
-                        <div style={{ fontWeight: 800, color: "var(--color-dark)", fontSize: 16, marginTop: 5 }}>
-                          {event.title || event.event_type || "Execution event"}
-                        </div>
-                        <div style={{ color: "var(--color-mid)", fontSize: 11.8, lineHeight: 1.45, marginTop: 6 }}>
-                          {event.summary || "Governed execution event recorded by the platform ledger."}
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: "right", color: "var(--color-muted)", fontSize: 13, fontWeight: 850 }}>
-                        <div>{agentName}</div>
-                        <div style={{ marginTop: 4, display: "inline-flex", background: statusTone.bg, color: statusTone.text, border: `1px solid ${statusTone.border}`, borderRadius: 16, padding: "3px 6px", fontSize: 10, fontWeight: 800 }}>
-                          {statusTone.label}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-                      <span style={{ background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))", color: "var(--color-brand)", border: "1px solid rgba(37, 99, 235, 0.14)", borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
-                        {event.execution_action || event.action_type || "Tracked action"}
-                      </span>
-                      <span style={{ background: "#f0fdf4", color: "var(--color-teal)", border: "1px solid #dcfce7", borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
-                        Quality: {qualityStatus}
-                      </span>
-                      <span style={{ background: "#fff7ed", color: "var(--color-amber)", border: "1px solid #fed7aa", borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
-                        Approval: {approvalStatus}
-                      </span>
-                      <span style={{ background: statusTone.bg, color: statusTone.text, border: `1px solid ${statusTone.border}`, borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
-                        Execution: {executionStatus}
-                      </span>
-                      <span style={{ background: "var(--color-bg-light)", color: "#334155", border: "1px solid rgba(15, 23, 42, 0.08)", 
-                    boxShadow: "0 18px 55px rgba(15, 23, 42, 0.06)",
-                    backdropFilter: "blur(10px)",
-                    WebkitBackdropFilter: "blur(10px)",
-                    borderRadius: 16, padding: "7px 10px", fontWeight: 850, fontSize: 12 }}>
-                        Stage: {event.workflow_stage || "workflow"}
-                      </span>
+                    {item.icon}
+                  </div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 950, color: "var(--color-dark)" }}>{item.title}</div>
+                    <div style={{ marginTop: 3, fontSize: 12, fontWeight: 700, color: "var(--color-muted)", lineHeight: 1.35 }}>
+                      {item.detail}
                     </div>
                   </div>
-                );
-              })}
+                  <span
+                    style={{
+                      border: "1px solid #e5eaf2",
+                      background: "#f8fafc",
+                      borderRadius: 999,
+                      padding: "6px 9px",
+                      color: item.tone,
+                      fontSize: 11.5,
+                      fontWeight: 900,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {item.status}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div style={{ ...cardStyle, height: 560, overflow: "hidden" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+          <div style={{ ...cardStyle, minHeight: 360 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start" }}>
               <div>
                 <StepHeader number="06" title="Execution output viewer" />
                 <h3 style={cardTitle}>Client deliverables</h3>
+                <p style={{ ...mutedText, margin: "5px 0 0" }}>
+                  Review the latest generated output and approve or request changes.
+                </p>
               </div>
               <div
                 style={{
@@ -1892,23 +1905,35 @@ useEffect(() => {
                   color: reviewStatus === "rejected" ? "var(--color-red)" : "var(--color-teal)",
                   padding: "8px 12px",
                   borderRadius: 16,
-                  fontWeight: 760,
+                  fontWeight: 900,
                   fontSize: 11.8,
                   height: "fit-content",
+                  whiteSpace: "nowrap",
                 }}
               >
-                {reviewStatus === "approved" ? "Approve ✓d" : reviewStatus === "rejected" ? "Revision requested" : "Completed"}
+                {reviewStatus === "approved" ? "Approved" : reviewStatus === "rejected" ? "Revision requested" : "Ready for review"}
               </div>
             </div>
 
-            <div style={deliverableCardGridStyle}>
+            <div
+              style={{
+                marginTop: 16,
+                border: "1px solid #e5eaf2",
+                borderRadius: 18,
+                background: "#fff",
+                padding: 14,
+                display: "grid",
+                gridTemplateColumns: "190px minmax(0,1fr)",
+                gap: 16,
+                alignItems: "stretch",
+              }}
+            >
               <div
                 style={{
-                  minHeight: 150,
                   borderRadius: 16,
-                  background: "var(--color-bg-light)",
+                  background: "linear-gradient(180deg,#f8fafc 0%,#ffffff 100%)",
                   border: "1px solid #e5eaf2",
-                  position: "relative",
+                  minHeight: 190,
                   overflow: "hidden",
                   display: "flex",
                   alignItems: "center",
@@ -1919,306 +1944,61 @@ useEffect(() => {
                   <img
                     src={primaryAssetUrl}
                     alt={liveDeliverable?.title || "Generated deliverable asset"}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      display: "block",
-                    }}
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
                   />
                 ) : (
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "space-between",
-                      height: "100%",
-                      width: "100%",
-                      padding: 16,
-                      background: "linear-gradient(180deg,#ffffff 0%,var(--color-bg-light) 100%)",
-                      color: "var(--color-muted)",
-                      boxSizing: "border-box",
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 12,
-                          marginBottom: 18,
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: 34,
-                              height: 34,
-                              borderRadius: 16,
-                              background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              color: "var(--color-brand)",
-                              fontSize: 18,
-                              fontWeight: 760,
-                              flex: "0 0 auto",
-                            }}
-                          >
-                            ✦
-                          </div>
-
-                          <div>
-                            <div
-                              style={{
-                                color: "var(--color-dark)",
-                                fontWeight: 760,
-                                fontSize: 13,
-                                marginBottom: 3,
-                              }}
-                            >
-                              Media preview unavailable
-                            </div>
-
-                            <div
-                              style={{
-                                fontSize: 11,
-                                color: "var(--color-muted)",
-                              }}
-                            >
-                              Waiting for uploaded or generated assets
-                            </div>
-                          </div>
-                        </div>
-
-                        <div
-                          style={{
-                            border: "1px solid rgba(15, 23, 42, 0.08)",
-                            
-                    boxShadow: "0 18px 55px rgba(15, 23, 42, 0.06)",
-                    backdropFilter: "blur(10px)",
-                    WebkitBackdropFilter: "blur(10px)",
-                    borderRadius: 16,
-                            padding: "3px 6px",
-                            fontSize: 11,
-                            fontWeight: 700,
-                            background: "#fff",
-                            color: "var(--color-mid)",
-                            
-                          }}
-                        >
-                          Pending media
-                        </div>
-                      </div>
-
-                      <div
-                        style={{
-                          borderRadius: 16,
-                          border: "1px dashed #dbe4ee",
-                          background: "linear-gradient(135deg,var(--color-bg-light) 0%,#f1f5f9 100%)",
-                          minHeight: 142,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <div
-                          style={{
-                            textAlign: "center",
-                            padding: 16,
-                            maxWidth: "100%",
-                          }}
-                        >
-                          <div
-                            style={{
-                              fontSize: 30,
-                              marginBottom: 12,
-                            }}
-                          >
-                            🖼️
-                          </div>
-
-                          <div
-                            style={{
-                              color: "var(--color-dark)",
-                              fontWeight: 700,
-                              fontSize: 13,
-                              marginBottom: 8,
-                            }}
-                          >
-                            No live asset attached
-                          </div>
-
-                          <div
-                            style={{
-                              fontSize: 10,
-                              lineHeight: 1.6,
-                              color: "var(--color-muted)",
-                            }}
-                          >
-                            Generated assets, uploaded brand files, previews, and deliverable media will appear here automatically.
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        gap: 12,
-                        marginTop: 18,
-                        fontSize: 11,
-                        color: "#94a3b8",
-                      }}
-                    >
-                      <div>Secure asset workspace</div>
-                      <div>Enterprise media pipeline</div>
+                  <div style={{ textAlign: "center", padding: 18 }}>
+                    <div style={{ fontSize: 28, marginBottom: 8 }}>🖼️</div>
+                    <div style={{ fontWeight: 950, color: "var(--color-dark)", fontSize: 13 }}>No live asset attached</div>
+                    <div style={{ marginTop: 6, fontSize: 11.5, color: "var(--color-muted)", fontWeight: 700, lineHeight: 1.35 }}>
+                      Generated assets and previews will appear here automatically.
                     </div>
                   </div>
                 )}
               </div>
 
-              {attachedAssets.length > 0 ? (
-                <div
-                  style={{
-                    position: "absolute",
-                    left: 12,
-                    bottom: 12,
-                    right: 12,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    pointerEvents: "none",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  <div
-                    style={{
-                      background: "rgba(15,23,42,.82)",
-                      color: "#fff",
-                      borderRadius: 16,
-                      padding: "7px 10px",
-                      fontSize: 11,
-                      fontWeight: 760,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {selectedAsset?.title || selectedAsset?.name || "Selected media"}
-                  </div>
-                  <div
-                    style={{
-                      background: "rgba(255,255,255,.92)",
-                      color: "#334155",
-                      borderRadius: 16,
-                      padding: "7px 10px",
-                      fontSize: 11,
-                      fontWeight: 760,
-                      whiteSpace: "nowrap",
-                    }}
-                  >
-                    {selectedAssetIndex + 1}/{attachedAssets.length}
-                  </div>
-                </div>
-              ) : null}
-
-              <div style={{ minWidth: 0 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                  <h4 style={{ margin: 0, fontSize: 20 }}>
-                    {liveDeliverable?.title || "Latest client deliverable"}
+              <div style={{ minWidth: 0, display: "flex", flexDirection: "column", justifyContent: "space-between", gap: 12 }}>
+                <div>
+                  <h4 style={{ margin: 0, fontSize: 20, letterSpacing: -0.3, color: "var(--color-dark)" }}>
+                    {liveDeliverable?.title || "Live premium ecommerce launch campaign"}
                   </h4>
-                  <div style={{ color: "var(--color-muted)", fontSize: 12 }}>
-                    {liveDeliverable?.created_at || "Ready for review"}
+                  <p style={{ ...mutedText, margin: "6px 0 0", fontSize: 13 }}>
+                    {liveDeliverable?.summary ||
+                      "A client-ready campaign deliverable has been generated for the selected ecommerce task, including positioning, offer framing, conversion messaging, and execution-ready campaign direction."}
+                  </p>
+
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
+                    {(liveDeliverable?.tags || ["Live output", getAgentDisplayName(selectedAgents[0] || "product_copywriting_agent"), "Approval required"]).slice(0, 4).map((tag) => (
+                      <span
+                        key={tag}
+                        style={{
+                          border: "1px solid #e5eaf2",
+                          background: "#fff",
+                          color: "var(--color-dark)",
+                          borderRadius: 999,
+                          padding: "7px 10px",
+                          fontSize: 11.5,
+                          fontWeight: 850,
+                        }}
+                      >
+                        {tag}
+                      </span>
+                    ))}
                   </div>
                 </div>
 
-                <p style={{ color: "var(--color-mid)", lineHeight: 1.6 }}>
-                  {liveDeliverable?.summary ||
-                    "Client-specific deliverable generated from the latest execution, business profile, selected agents, and review requirements."}
-                </p>
-
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
-                  {(liveDeliverable?.tags || ["Deliverable", "Assets", "Execution", "Workflow"]).map((tag: string) => (
-                    <span
-                      key={tag}
-                      style={{
-                        border: "1px solid #e5eaf2",
-                        borderRadius: 16,
-                        padding: "8px 11px",
-                        fontSize: 11.8,
-                        fontWeight: 700,
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                {attachedAssets.length > 1 ? (
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ color: "var(--color-muted)", fontSize: 11.8, fontWeight: 700, marginBottom: 8 }}>
-                      Attached media
-                    </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 8 }}>
-                      {attachedAssets.slice(0, 6).map((asset, index) => {
-                        const assetUrl = asset?.url || asset?.image_url || asset?.src || "";
-                        const selected = selectedAssetIndex === index;
-                        return (
-                          <button
-                            key={`${assetUrl || asset?.name || "asset"}-${index}`}
-                            onClick={() => setSelectedAssetIndex(index)}
-                            style={{
-                              border: selected ? "1px solid var(--color-brand)" : "1px solid #e5eaf2",
-                              borderRadius: 16,
-                              padding: 10,
-                              textAlign: "left",
-                              fontSize: 11,
-                              fontWeight: 700,
-                              color: selected ? "var(--color-brand)" : "var(--color-mid)",
-                              background: selected ? "#eff6ff" : "var(--color-bg-light)",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <div style={{ marginBottom: 4 }}>{asset?.title || asset?.name || `Asset ${index + 1}`}</div>
-                            <div style={{ color: "#94a3b8", fontSize: 10 }}>
-                              {asset?.type || asset?.source || "media"}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : null}
-
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 10,
-                    flexWrap: "wrap",
-                    marginBottom: 16,
-                  }}
-                >
+                <div style={{ display: "flex", gap: 9, flexWrap: "wrap", alignItems: "center" }}>
                   <button
+                    type="button"
                     onClick={() => setShowDeliverableModal(true)}
                     style={{
-                      border: "1px solid rgba(37, 99, 235, 0.14)",
-                      background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
+                      border: "1px solid #d8dcff",
+                      background: "#fff",
                       color: "var(--color-brand)",
-                      borderRadius: 16,
-                      padding: "8px 11px",
-                      fontWeight: 760,
-                      fontSize: 11.8,
+                      borderRadius: 14,
+                      padding: "9px 12px",
+                      fontSize: 12,
+                      fontWeight: 900,
                       cursor: "pointer",
                     }}
                   >
@@ -2226,527 +2006,83 @@ useEffect(() => {
                   </button>
 
                   <button
-                    disabled={!deliverableDownloadUrl}
-                    onClick={() => {
-                      if (!deliverableDownloadUrl) {
-                        setToastMessage("No downloadable asset is attached yet.");
-                        return;
-                      }
-                      window.open(deliverableDownloadUrl, "_blank", "noopener,noreferrer");
-                    }}
+                    type="button"
+                    disabled={!primaryAssetUrl}
+                    onClick={() => primaryAssetUrl ? window.open(primaryAssetUrl, "_blank", "noopener,noreferrer") : null}
                     style={{
                       border: "1px solid #e5eaf2",
-                      background: "#fff",
-                      color: deliverableDownloadUrl ? "#334155" : "#94a3b8",
-                      borderRadius: 16,
-                      padding: "8px 11px",
-                      fontWeight: 760,
-                      fontSize: 11.8,
-                      cursor: deliverableDownloadUrl ? "pointer" : "not-allowed",
+                      background: primaryAssetUrl ? "#fff" : "#f8fafc",
+                      color: primaryAssetUrl ? "var(--color-dark)" : "#94a3b8",
+                      borderRadius: 14,
+                      padding: "9px 12px",
+                      fontSize: 12,
+                      fontWeight: 900,
+                      cursor: primaryAssetUrl ? "pointer" : "not-allowed",
                     }}
                   >
                     Open asset
                   </button>
 
                   <button
-                    onClick={async () => {
-                      const shareText = `${liveDeliverable?.title || "Client deliverable"} — ${liveDeliverable?.summary || "Ready for review."}`;
-                      try {
-                        await navigator.clipboard.writeText(shareText);
-                        setToastMessage("Deliverable summary copied.");
-                      } catch {
-                        setToastMessage("Copy was not available in this browser.");
-                      }
-                    }}
+                    type="button"
+                    onClick={() => navigator.clipboard?.writeText(liveDeliverable?.summary || "Client deliverable summary copied.")}
                     style={{
                       border: "1px solid #e5eaf2",
                       background: "#fff",
-                      color: "#334155",
-                      borderRadius: 16,
-                      padding: "8px 11px",
-                      fontWeight: 760,
-                      fontSize: 11.8,
+                      color: "var(--color-dark)",
+                      borderRadius: 14,
+                      padding: "9px 12px",
+                      fontSize: 12,
+                      fontWeight: 900,
                       cursor: "pointer",
                     }}
                   >
                     Copy summary
                   </button>
-                </div>
-
-                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-                  <button
-                    onClick={() => setShowDeliverableModal(true)}
-                    style={{
-                      border: "1px solid rgba(37, 99, 235, 0.14)",
-                      background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
-                      color: "var(--color-brand)",
-                      borderRadius: 16,
-                      padding: "8px 12px",
-                      fontWeight: 760,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Open deliverable
-                  </button>
 
                   <button
-                    disabled={reviewActionLoading}
+                    type="button"
                     onClick={async () => {
                       const saved = await recordClientReviewAction("approved");
                       if (!saved) return;
-
                       setReviewStatus("approved");
-                      setExecutionState("completed");
-                      setToastMessage("Deliverable approved and saved to the client review log.");
+                      setToastMessage("Deliverable approved.");
                     }}
                     style={{
                       border: "none",
-                      background: reviewActionLoading ? "#86efac" : "var(--color-teal)",
+                      background: "var(--color-teal)",
                       color: "#fff",
-                      borderRadius: 16,
-                      padding: "8px 12px",
-                      fontWeight: 760,
-                      cursor: reviewActionLoading ? "not-allowed" : "pointer",
+                      borderRadius: 14,
+                      padding: "10px 14px",
+                      fontSize: 12,
+                      fontWeight: 950,
+                      cursor: "pointer",
                     }}
                   >
-                    {reviewActionLoading ? "Saving..." : "👍 Approve ✓"}
+                    👍 Approve
                   </button>
 
                   <button
-                    disabled={reviewActionLoading}
-                    onClick={() => {
-                      setToastMessage("");
-                      setShowRejectModal(true);
-                      setExecutionState("rejected");
-                    }}
+                    type="button"
+                    onClick={() => setShowRejectModal(true)}
                     style={{
                       border: "1px solid #fecaca",
                       background: "#fff",
                       color: "var(--color-red)",
-                      borderRadius: 16,
-                      padding: "8px 12px",
-                      fontWeight: 760,
-                      cursor: reviewActionLoading ? "not-allowed" : "pointer",
-                      transition: "transform 0.16s ease, border-color 0.16s ease",
+                      borderRadius: 14,
+                      padding: "10px 14px",
+                      fontSize: 12,
+                      fontWeight: 950,
+                      cursor: "pointer",
                     }}
                   >
                     👎 Request changes
                   </button>
                 </div>
-
-                <div
-                  style={{
-                    marginTop: 10,
-                    paddingTop: 14,
-                    borderTop: "1px solid #eef2f7",
-                    color: "#94a3b8",
-                    fontSize: 10,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  Review actions are saved to the workspace history and can be used to improve future deliverables.
-                </div>
               </div>
             </div>
           </div>
         </section>
-      </div>
-
-
-      {showDeliverableModal ? (
-        <div
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(15,23,42,.32)",
-            zIndex: 9997,
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "center",
-            padding: "clamp(14px,2vw,24px)",
-            overflow: "auto",
-          }}
-        >
-          <div
-            style={{
-              width: 1040,
-              maxWidth: "100%",
-              maxHeight: "calc(100vh - 32px)",
-              overflow: "auto",
-              background: "#fff",
-              borderRadius: 12,
-              boxShadow: "0 30px 90px rgba(15,23,42,.24)",
-              border: "1px solid #e5eaf2",
-            }}
-          >
-            <div
-              style={{
-                padding: "clamp(16px,2vw,22px)",
-                borderBottom: "1px solid #eef2f7",
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 14,
-                alignItems: "flex-start",
-                flexWrap: "wrap",
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    color: "var(--color-brand)",
-                    fontSize: 11.8,
-                    fontWeight: 760,
-                    letterSpacing: 1.2,
-                    textTransform: "uppercase",
-                    marginBottom: 8,
-                  }}
-                >
-                  Full deliverable review
-                </div>
-
-                <h2
-                  style={{
-                    margin: 0,
-                    fontSize: "clamp(20px,2vw,24px)",
-                    letterSpacing: -0.8,
-                    lineHeight: 1.15,
-                  }}
-                >
-                  {liveDeliverable?.title || "Client deliverable"}
-                </h2>
-
-                <div style={{ marginTop: 4, color: "var(--color-muted)", fontSize: 13 }}>
-                  {liveDeliverable?.created_at || "Ready for review"}
-                </div>
-
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 10 }}>
-                  <button
-                    disabled={!deliverableDownloadUrl}
-                    onClick={() => {
-                      if (!deliverableDownloadUrl) {
-                        setToastMessage("No downloadable asset is attached yet.");
-                        return;
-                      }
-                      window.open(deliverableDownloadUrl, "_blank", "noopener,noreferrer");
-                    }}
-                    style={{
-                      border: "1px solid #e5eaf2",
-                      background: "#fff",
-                      color: deliverableDownloadUrl ? "#334155" : "#94a3b8",
-                      borderRadius: 16,
-                      padding: "3px 6px",
-                      fontWeight: 760,
-                      fontSize: 11.8,
-                      cursor: deliverableDownloadUrl ? "pointer" : "not-allowed",
-                    }}
-                  >
-                    Open asset
-                  </button>
-
-                  <button
-                    onClick={async () => {
-                      const shareText = `${liveDeliverable?.title || "Client deliverable"} — ${liveDeliverable?.summary || "Ready for review."}`;
-                      try {
-                        await navigator.clipboard.writeText(shareText);
-                        setToastMessage("Deliverable summary copied.");
-                      } catch {
-                        setToastMessage("Copy was not available in this browser.");
-                      }
-                    }}
-                    style={{
-                      border: "1px solid #e5eaf2",
-                      background: "#fff",
-                      color: "#334155",
-                      borderRadius: 16,
-                      padding: "3px 6px",
-                      fontWeight: 760,
-                      fontSize: 11.8,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Copy summary
-                  </button>
-                </div>
-              </div>
-
-              <button
-                onClick={() => setShowDeliverableModal(false)}
-                aria-label="Close full deliverable review"
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 16,
-                  border: "1px solid #e5eaf2",
-                  background: "#fff",
-                  cursor: "pointer",
-                  fontWeight: 760,
-                  color: "var(--color-dark)",
-                }}
-              >
-                ×
-              </button>
-            </div>
-
-            <div style={modalContentGridStyle}>
-              <div
-                style={{
-                  borderRadius: 12,
-                  border: "1px solid #e5eaf2",
-                  background: "var(--color-bg-light)",
-                  overflow: "hidden",
-                  minHeight: "clamp(260px,38vw,360px)",
-                }}
-              >
-                {primaryAssetUrl ? (
-                  <img
-                    src={primaryAssetUrl}
-                    alt={liveDeliverable?.title || "Generated deliverable asset"}
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      minHeight: "clamp(260px,38vw,360px)",
-                      objectFit: "cover",
-                      display: "block",
-                    }}
-                  />
-                ) : (
-                  <div
-                    style={{
-                      minHeight: 320,
-                      padding: 28,
-                      display: "flex",
-                      flexDirection: "column",
-                      justifyContent: "center",
-                      alignItems: "center",
-                      textAlign: "center",
-                      background: "linear-gradient(135deg,#ffffff,var(--color-bg-light))",
-                    }}
-                  >
-                    <div style={{ fontSize: 38, marginBottom: 8 }}>🖼️</div>
-                    <div style={{ color: "var(--color-dark)", fontWeight: 760, fontSize: 16, marginBottom: 8 }}>
-                      No live asset attached
-                    </div>
-                    <div style={{ color: "var(--color-muted)", fontSize: 13, lineHeight: 1.65, maxWidth: 280 }}>
-                      Generated assets, uploaded brand files, previews, and deliverable media will appear here once attached.
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div style={{ minWidth: 0 }}>
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 18 }}>
-                  {(liveDeliverable?.tags || ["Deliverable", "Assets", "Execution", "Workflow"]).map((tag: string) => (
-                    <span
-                      key={tag}
-                      style={{
-                        border: "1px solid rgba(37, 99, 235, 0.14)",
-                        background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
-                        color: "var(--color-brand)",
-                        borderRadius: 16,
-                        padding: "8px 11px",
-                        fontSize: 11.8,
-                        fontWeight: 760,
-                      }}
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-
-                <section
-                  style={{
-                    border: "1px solid #eef2f7",
-                    borderRadius: 16,
-                    padding: 20,
-                    marginBottom: 16,
-                    background: "#fff",
-                  }}
-                >
-                  <h3 style={{ margin: "0 0 10px", fontSize: 17 }}>Executive summary</h3>
-                  <p style={{ margin: 0, color: "var(--color-mid)", lineHeight: 1.75, fontSize: 14.5 }}>
-                    {liveDeliverable?.summary ||
-                      "Client-specific deliverable generated from the latest execution, business profile, selected agents, and review requirements."}
-                  </p>
-                </section>
-
-                <section
-                  style={{
-                    border: "1px solid #eef2f7",
-                    borderRadius: 16,
-                    padding: 20,
-                    marginBottom: 16,
-                    background: "#fbfdff",
-                  }}
-                >
-                  <h3 style={{ margin: "0 0 12px", fontSize: 17 }}>Review checklist</h3>
-                  <div style={{ display: "grid", gap: 7 }}>
-                    {[
-                      "Confirm brand fit and tone",
-                      "Confirm offer and deliverable direction",
-                      "Check media or asset requirements",
-                      "Approve ✓ for execution or request revision",
-                    ].map((item) => (
-                      <div
-                        key={item}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          color: "var(--color-mid)",
-                          fontSize: 11.8,
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 22,
-                            height: 22,
-                            borderRadius: 16,
-                            background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
-                            color: "var(--color-brand)",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: 11.8,
-                            fontWeight: 760,
-                          }}
-                        >
-                          ✓
-                        </span>
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                {attachedAssets.length > 0 ? (
-                  <section
-                    style={{
-                      border: "1px solid #eef2f7",
-                      borderRadius: 16,
-                      padding: 20,
-                      marginBottom: 16,
-                      background: "#fff",
-                    }}
-                  >
-                    <h3 style={{ margin: "0 0 12px", fontSize: 17 }}>Attached media</h3>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 10 }}>
-                      {attachedAssets.slice(0, 8).map((asset, index) => {
-                        const assetUrl = asset?.url || asset?.image_url || asset?.src || "";
-                        const selected = selectedAssetIndex === index;
-                        return (
-                          <button
-                            key={`${assetUrl || asset?.name || "asset"}-${index}`}
-                            onClick={() => setSelectedAssetIndex(index)}
-                            style={{
-                              border: selected ? "1px solid var(--color-brand)" : "1px solid #e5eaf2",
-                              borderRadius: 16,
-                              padding: 20,
-                              textAlign: "left",
-                              fontSize: 11.8,
-                              fontWeight: 700,
-                              color: selected ? "var(--color-brand)" : "var(--color-mid)",
-                              background: selected ? "#eff6ff" : "var(--color-bg-light)",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <div style={{ marginBottom: 5 }}>{asset?.title || asset?.name || `Asset ${index + 1}`}</div>
-                            <div style={{ color: "#94a3b8", fontSize: 10.5 }}>
-                              {asset?.type || asset?.source || asset?.mime_type || "media"}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </section>
-                ) : null}
-
-                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", justifyContent: "flex-end", alignItems: "center" }}>
-                  <button
-                    onClick={() => setShowDeliverableModal(false)}
-                    style={{
-                      border: "1px solid #e5eaf2",
-                      background: "#fff",
-                      color: "#334155",
-                      borderRadius: 16,
-                      padding: "8px 10px",
-                      fontWeight: 760,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Close
-                  </button>
-
-                  <button
-                    disabled={reviewActionLoading}
-                    onClick={async () => {
-                      const saved = await recordClientReviewAction("approved");
-                      if (!saved) return;
-
-                      setReviewStatus("approved");
-                      setExecutionState("completed");
-                      setShowDeliverableModal(false);
-                      setToastMessage("Deliverable approved and saved to the client review log.");
-                    }}
-                    style={{
-                      border: "none",
-                      background: reviewActionLoading ? "#86efac" : "var(--color-teal)",
-                      color: "#fff",
-                      borderRadius: 16,
-                      padding: "8px 12px",
-                      fontWeight: 760,
-                      cursor: reviewActionLoading ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    {reviewActionLoading ? "Saving..." : "Approve ✓ deliverable"}
-                  </button>
-
-                  <button
-                    disabled={reviewActionLoading}
-                    onClick={() => {
-                      setToastMessage("");
-                      setShowDeliverableModal(false);
-                      setShowRejectModal(true);
-                      setExecutionState("rejected");
-                    }}
-                    style={{
-                      border: "1px solid #fecaca",
-                      background: "#fff",
-                      color: "var(--color-red)",
-                      borderRadius: 16,
-                      padding: "8px 12px",
-                      fontWeight: 760,
-                      cursor: reviewActionLoading ? "not-allowed" : "pointer",
-                    }}
-                  >
-                    Request revision
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {toastMessage && !showRejectModal ? (
-        <div
-          style={{
-            position: "fixed",
-            right: 24,
-            bottom: 24,
-            zIndex: 9998,
-            background: "var(--color-dark)",
-            color: "#ffffff",
-            borderRadius: 16,
-            padding: "14px 18px",
-            boxShadow: "0 18px 45px rgba(15,23,42,.22)",
-            fontWeight: 700,
-            maxWidth: 360,
-          }}
-        >
-          {toastMessage}
-        </div>
-      ) : null}
-
 
       {showEnterpriseCatalogueModal ? (
         <div
