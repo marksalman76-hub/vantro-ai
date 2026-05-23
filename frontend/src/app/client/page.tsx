@@ -246,6 +246,7 @@ export default function ClientPage() {
   const [executionTimeline, setExecutionTimeline] = useState<ExecutionTimelineEvent[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [integrationMessage, setIntegrationMessage] = useState("");
+  const [activeAccountPanel, setActiveAccountPanel] = useState("");
 
 
   const shellStyle = {
@@ -829,6 +830,7 @@ const modalContentGridStyle = {
 
                 <button
                   onClick={() => {
+                    setActiveAccountPanel("settings");
                     window.location.hash = "settings";
                     
                   }}
@@ -839,6 +841,7 @@ const modalContentGridStyle = {
 
                 <button
                   onClick={() => {
+                    setActiveAccountPanel("profile");
                     window.location.hash = "profile";
                     
                   }}
@@ -849,6 +852,7 @@ const modalContentGridStyle = {
 
                 <button
                   onClick={() => {
+                    setActiveAccountPanel("password-reset");
                     window.location.hash = "password-reset";
                     
                   }}
@@ -859,6 +863,7 @@ const modalContentGridStyle = {
 
                 <button
                   onClick={() => {
+                    setActiveAccountPanel("two-factor-authentication");
                     window.location.hash = "two-factor-authentication";
                     
                   }}
@@ -893,94 +898,49 @@ const modalContentGridStyle = {
 
         <section
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-            gap: 14,
-            alignItems: "stretch",
-            marginBottom: 22,
+            ...cardStyle,
+            padding: "13px 16px",
+            marginBottom: 18,
           }}
         >
-          {[
-            ["Workspace status", accountStatus === "active" ? "Ready for execution" : accountStatus, accountPackage],
-            ["Approvals", reviewStatus === "pending" && liveDeliverable ? "1 pending" : "0 pending", liveDeliverable ? "Client review" : "No pending review"],
-            ["Agents", String(activeAgentCount), activeAgentCount ? "Active in this workspace" : "No active agents"],
-            ["Credits", String(creditsRemaining), "Available balance"],
-          ].map(([label, value, note]) => (
-            <div
-              key={label}
-              style={{
-                background: "rgba(255,255,255,.72)",
-                border: "1px solid #edf1f6",
-                borderRadius: 16,
-                padding: "12px 14px",
-                boxShadow: "0 8px 22px rgba(15,23,42,.035)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 18,
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    color: "var(--color-muted)",
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: .4,
-                    textTransform: "uppercase",
-                    marginBottom: 5,
-                  }}
-                >
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+              gap: 0,
+              alignItems: "center",
+            }}
+          >
+            {[
+              ["Workspace status", accountStatus === "active" ? "Ready for execution" : accountStatus, accountPackage, accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444"],
+              ["Approvals", reviewStatus === "pending" && liveDeliverable ? "1 pending" : "0 pending", liveDeliverable ? "Client review" : "No pending review", "#f59e0b"],
+              ["Agents", String(activeAgentCount), activeAgentCount ? "Active in this workspace" : "No active agents", "var(--color-brand)"],
+              ["Credits", String(creditsRemaining), "Available balance", "var(--color-brand)"],
+            ].map(([label, value, note, dot], index) => (
+              <div
+                key={label}
+                style={{
+                  padding: "4px 22px",
+                  borderLeft: index === 0 ? "none" : "1px solid #e5eaf2",
+                  minHeight: 54,
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "center",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-muted)", fontSize: 12, fontWeight: 850 }}>
+                  <span style={{ width: 9, height: 9, borderRadius: 999, background: String(dot), boxShadow: "0 0 0 5px rgba(79,70,229,.08)" }} />
                   {label}
                 </div>
-
-                <strong
-                  style={{
-                    display: "block",
-                    fontSize: 17,
-                    letterSpacing: -.2,
-                    color: "var(--color-dark)",
-                  }}
-                >
+                <div style={{ marginTop: 5, color: "var(--color-dark)", fontSize: 18, lineHeight: 1.1, fontWeight: 900 }}>
                   {value}
-                </strong>
-
-                <div
-                  style={{
-                    color: "#94a3b8",
-                    fontSize: 11.8,
-                    marginTop: 3,
-                  }}
-                >
+                </div>
+                <div style={{ marginTop: 4, color: "var(--color-muted)", fontSize: 12 }}>
                   {note}
                 </div>
               </div>
-
-              <span
-                style={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: 16,
-                  background:
-                    label === "Approvals"
-                      ? "#f59e0b"
-                      : label === "Workspace status"
-                        ? accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing"
-                          ? "#22c55e"
-                          : "#ef4444"
-                        : "var(--color-brand)",
-                  boxShadow:
-                    label === "Approvals"
-                      ? "0 0 0 5px rgba(245,158,11,.10)"
-                      : label === "Workspace status"
-                        ? accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing"
-                          ? "0 0 0 5px rgba(34,197,94,.12)"
-                          : "0 0 0 5px rgba(239,68,68,.12)"
-                        : "0 0 0 5px rgba(37,99,235,.08)",
-                }}
-              />
-            </div>
-          ))}
+            ))}
+          </div>
         </section>
 
         <section style={{ ...cardStyle, padding: 18, marginBottom: 18 }}>
@@ -1009,6 +969,7 @@ const modalContentGridStyle = {
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 12 }}>
             {[
+              ["business_name", "◆", "Business name", "Your company, store, or brand name", "normal"],
               ["business_niche", "▦", "Business niche", "Describe your business niche, product category, and market position", "normal"],
               ["products_services", "◇", "Products & services", "Main products, bundles, offers", "normal"],
               ["target_audience", "♙", "Target audience", "Customer type, location, needs", "normal"],
