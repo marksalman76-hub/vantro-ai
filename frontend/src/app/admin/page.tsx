@@ -69,7 +69,7 @@ export default function AdminPage() {
   const [runResult, setRunResult] = useState<any>(null);
   const [deployTenant, setDeployTenant] = useState("client_manual_001");
   const [deployCompany, setDeployCompany] = useState("Acme Consulting Group");
-  const [deployEmail, setDeployEmail] = useState("admin@acmeconsulting.com");
+  const [deployEmail, setDeployEmail] = useState("");
   const [deploymentResult, setDeploymentResult] = useState<any>(null);
   const [clientRegistry, setClientRegistry] = useState<any[]>([]);
   const [clientRegistrySummary, setClientRegistrySummary] = useState<any>(null);
@@ -260,12 +260,19 @@ export default function AdminPage() {
   }
 
   function deployClient() {
+    const cleanEmail = deployEmail.trim().toLowerCase();
+
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      showToast("Enter a valid client email before deploying.");
+      return;
+    }
+
     callDeploymentControl(
       "/admin/deployment-control/manual-deploy",
       {
         account_reference: deployTenant,
         company_name: deployCompany,
-        contact_email: deployEmail,
+        contact_email: cleanEmail,
         package: "Manual Unlimited",
         active_agents: selectedDeploy,
         unlimited_credits: true,
@@ -429,7 +436,7 @@ export default function AdminPage() {
               <label>Workspace name</label>
               <input value={deployCompany} onChange={(e) => setDeployCompany(e.target.value)} />
               <label>Client email</label>
-              <input value={deployEmail} onChange={(e) => setDeployEmail(e.target.value)} />
+              <input value={deployEmail} onChange={(e) => setDeployEmail(e.target.value)} placeholder="client@example.com" />
 
               <div className="panelActions">
                 <button className="ghost" onClick={() => setSelectedDeploy(ADMIN_AGENT_OPTIONS.map(([id]) => id))}>Select all 27</button>
