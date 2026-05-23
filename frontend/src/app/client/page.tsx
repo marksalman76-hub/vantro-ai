@@ -340,6 +340,19 @@ const modalContentGridStyle = {
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    const syncAccountPanelFromHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (["settings", "profile", "password-reset", "two-factor-authentication"].includes(hash)) {
+        setActiveAccountPanel(hash);
+      }
+    };
+
+    syncAccountPanelFromHash();
+    window.addEventListener("hashchange", syncAccountPanelFromHash);
+    return () => window.removeEventListener("hashchange", syncAccountPanelFromHash);
+  }, []);
+
   const creditsRemaining = account?.credits_remaining ?? 0;
   const tenantId = account?.tenant_id || account?.client_id || "unknown_client";
   const accountPackage = account?.package_name || account?.package || "Active workspace";
@@ -943,6 +956,50 @@ const modalContentGridStyle = {
           </div>
         </section>
 
+        {activeAccountPanel ? (
+          <section style={{ ...cardStyle, padding: 18, marginBottom: 18 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
+              <div>
+                <div style={{ color: "var(--color-brand)", fontSize: 12, fontWeight: 900, letterSpacing: .6, textTransform: "uppercase", marginBottom: 6 }}>
+                  Account centre
+                </div>
+                <h2 style={{ margin: 0, color: "var(--color-dark)", fontSize: 22, letterSpacing: -.4 }}>
+                  {activeAccountPanel === "settings" ? "Settings" : activeAccountPanel === "profile" ? "Profile" : activeAccountPanel === "password-reset" ? "Password reset" : "Two-factor authentication"}
+                </h2>
+                <p style={{ margin: "7px 0 0", color: "var(--color-muted)", fontSize: 13, lineHeight: 1.45 }}>
+                  {activeAccountPanel === "settings" ? "Manage workspace preferences and display controls." : activeAccountPanel === "profile" ? "Review the business identity and account attached to this workspace." : activeAccountPanel === "password-reset" ? "Password reset controls will connect to the secure account flow." : "Two-factor authentication controls will connect to the secure login flow."}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveAccountPanel("");
+                  window.location.hash = "";
+                }}
+                style={{ border: "1px solid #e5eaf2", background: "#fff", borderRadius: 999, padding: "9px 13px", fontWeight: 850, cursor: "pointer", color: "var(--color-dark)" }}
+              >
+                Close
+              </button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10, marginTop: 14 }}>
+              <div style={{ border: "1px solid #edf1f6", borderRadius: 14, padding: 12, background: "#fff" }}>
+                <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 800, textTransform: "uppercase" }}>Client</div>
+                <div style={{ marginTop: 4, color: "var(--color-dark)", fontWeight: 900 }}>{clientDisplayName}</div>
+              </div>
+              <div style={{ border: "1px solid #edf1f6", borderRadius: 14, padding: 12, background: "#fff" }}>
+                <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 800, textTransform: "uppercase" }}>Package</div>
+                <div style={{ marginTop: 4, color: "var(--color-dark)", fontWeight: 900 }}>{accountPackage}</div>
+              </div>
+              <div style={{ border: "1px solid #edf1f6", borderRadius: 14, padding: 12, background: "#fff" }}>
+                <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 800, textTransform: "uppercase" }}>Status</div>
+                <div style={{ marginTop: 4, color: "var(--color-dark)", fontWeight: 900 }}>{accountStatus}</div>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         <section style={{ ...cardStyle, padding: 18, marginBottom: 18 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", marginBottom: 18, flexWrap: "wrap" }}>
             <div>
@@ -991,7 +1048,28 @@ const modalContentGridStyle = {
                     {label}{label === "Key differentiators" ? <span style={{ color: "#64748b", fontWeight: 700 }}> (optional)</span> : null}
                   </div>
                 </div>
-                <textarea placeholder={String(value)} value={businessProfile[String(key)] || ""} onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [String(key)]: e.target.value }))} rows={2} style={{ width: "100%", resize: "none", border: 0, background: "transparent", padding: 0, fontSize: 12.2, lineHeight: 1.38, color: "var(--color-dark)", outline: "none", boxSizing: "border-box", fontFamily: "inherit" }} />
+                <textarea
+                  placeholder={String(value)}
+                  value={businessProfile[String(key)] || ""}
+                  onChange={(e) => setBusinessProfile((prev) => ({ ...prev, [String(key)]: e.target.value }))}
+                  rows={String(key) === "business_name" ? 1 : 2}
+                  style={{
+                    width: "100%",
+                    resize: "vertical",
+                    minHeight: String(key) === "business_name" ? 38 : 52,
+                    border: "1px solid rgba(79,70,229,.14)",
+                    background: "#fff",
+                    padding: "9px 10px",
+                    borderRadius: 10,
+                    fontSize: 12.4,
+                    lineHeight: 1.38,
+                    color: "var(--color-dark)",
+                    outline: "none",
+                    boxSizing: "border-box",
+                    fontFamily: "inherit",
+                    marginTop: 8,
+                  }}
+                />
               </label>
             ))}
           </div>
