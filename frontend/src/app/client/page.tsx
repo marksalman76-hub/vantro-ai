@@ -170,13 +170,36 @@ type ExecutionTimelineEvent = {
 };
 
 
-const DEFAULT_AGENTS: string[] = [
+const STARTER_PACKAGE_AGENTS: string[] = [
+  "product_research_agent",
+  "product_copywriting_agent",
+  "ugc_creative_agent",
+];
+
+const GROWTH_PACKAGE_AGENTS: string[] = [
   "product_research_agent",
   "product_copywriting_agent",
   "ugc_creative_agent",
   "product_image_agent",
   "crm_ai_agent",
+  "email_reply_agent",
+  "analytics_optimisation_agent",
 ];
+
+const BUSINESS_PACKAGE_AGENTS: string[] = [
+  "product_research_agent",
+  "competitor_intelligence_agent",
+  "brand_strategy_agent",
+  "product_copywriting_agent",
+  "ugc_creative_agent",
+  "product_image_agent",
+  "paid_ads_agent",
+  "analytics_optimisation_agent",
+  "email_reply_agent",
+  "crm_ai_agent",
+];
+
+const DEFAULT_AGENTS: string[] = STARTER_PACKAGE_AGENTS;
 const BACKEND_API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.trance-formation.com.au";
 
 const AGENT_DISPLAY_NAMES: Record<string, string> = {
@@ -203,6 +226,34 @@ const AGENT_DISPLAY_NAMES: Record<string, string> = {
   customer_support_agent: "Customer Support Agent",
     business_growth_partnerships_agent: "Business Growth & Partnerships Agent",
 };
+
+const ENTERPRISE_PACKAGE_AGENTS: string[] = Object.keys(AGENT_DISPLAY_NAMES);
+
+function getPackageAgentCatalogue(packageName: string, activeAgents?: string[]) {
+  if (activeAgents && Array.isArray(activeAgents) && activeAgents.length > 0) {
+    return activeAgents;
+  }
+
+  const normalisedPackage = String(packageName || "").toLowerCase();
+
+  if (normalisedPackage.includes("enterprise")) return ENTERPRISE_PACKAGE_AGENTS;
+  if (normalisedPackage.includes("business")) return BUSINESS_PACKAGE_AGENTS;
+  if (normalisedPackage.includes("growth")) return GROWTH_PACKAGE_AGENTS;
+  if (normalisedPackage.includes("starter")) return STARTER_PACKAGE_AGENTS;
+
+  return STARTER_PACKAGE_AGENTS;
+}
+
+function getPackageAgentLimitLabel(packageName: string, visibleCount: number) {
+  const normalisedPackage = String(packageName || "").toLowerCase();
+
+  if (normalisedPackage.includes("enterprise")) return `${visibleCount} available`;
+  if (normalisedPackage.includes("business")) return `${visibleCount}/10 available`;
+  if (normalisedPackage.includes("growth")) return `${visibleCount}/7 available`;
+  if (normalisedPackage.includes("starter")) return `${visibleCount}/3 available`;
+
+  return `${visibleCount} available`;
+}
 
 function getAgentDisplayName(agentId: string) {
   return AGENT_DISPLAY_NAMES[agentId] ||
@@ -356,9 +407,12 @@ useEffect(() => {
 
   const creditsRemaining = account?.credits_remaining ?? 0;
   const tenantId = account?.tenant_id || account?.client_id || "unknown_client";
-  const accountPackage = account?.package_name || account?.package || "Active workspace";
+  const accountPackage = account?.package_name || account?.package || "Starter";
+  const visibleAgentCatalogue = getPackageAgentCatalogue(accountPackage, account?.active_agents);
+  const visibleAgentCount = visibleAgentCatalogue.length;
+  const packageAgentLimitLabel = getPackageAgentLimitLabel(accountPackage, visibleAgentCount);
   const accountStatus = account?.status || "active";
-  const activeAgentCount = account?.active_agents?.length || 0;
+  const activeAgentCount = visibleAgentCount;
   const accountAny = account as any;
   const businessProfileAny = businessProfile as any;
   const typedBusinessName = String(businessProfile.business_name || "").trim();
@@ -1414,9 +1468,12 @@ useEffect(() => {
 
             <div style={{ display: "grid", gridTemplateColumns: "260px minmax(0,1fr)", gap: 16, marginTop: 18 }}>
               <div>
-                <div style={labelStyle}>Active agents</div>
-                <div style={{ display: "grid", gap: 7, maxHeight: 268, overflowY: "auto", paddingRight: 4 }}>
-                  {(account?.active_agents || DEFAULT_AGENTS).map((agent) => {
+                <div style={{ ...labelStyle, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <span>Active agents</span>
+                  <span style={{ color: "var(--color-brand)", fontWeight: 900 }}>{packageAgentLimitLabel}</span>
+                </div>
+                <div style={{ display: "grid", gap: 7, maxHeight: visibleAgentCount <= 3 ? "none" : 268, overflowY: visibleAgentCount <= 3 ? "visible" : "auto", paddingRight: visibleAgentCount <= 3 ? 0 : 4 }}>
+                  {visibleAgentCatalogue.map((agent) => {
                     const active = selectedAgents.includes(agent);
                     const agentName = getAgentDisplayName(agent);
                     const agentIcon =
