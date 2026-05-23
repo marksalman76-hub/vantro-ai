@@ -1,4 +1,5 @@
 "use client";
+import { Bell, Settings, User, KeyRound, ShieldCheck, Moon, Sun, LogOut } from "lucide-react";
 
 import { useEffect, useState } from "react";
 
@@ -226,6 +227,41 @@ function getAgentDisplayName(agentId: string) {
 // client_portal_bottom_cards_aligned_locked
 // client_portal_activity_premium_polish_locked
 // client_portal_responsive_motion_locked
+
+function ClientHeaderAccountMenu() {
+  const [open, setOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(false);
+
+  const workspaceActive = true;
+  const accountState = workspaceActive ? "ACTIVE" : "INACTIVE";
+  const statusDotClass = workspaceActive ? "bg-emerald-500" : "bg-red-500";
+
+  useEffect(() => {
+    if (darkMode) document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
+  }, [darkMode]);
+
+  return (
+    <ClientHeaderAccountMenu />
+            <button
+              type="button"
+              onClick={() => setDarkMode(!darkMode)}
+              className={`relative h-7 w-12 rounded-full ${darkMode ? "bg-slate-950" : "bg-slate-300"}`}
+            >
+              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow ${darkMode ? "left-6" : "left-1"}`} />
+            </button>
+          </div>
+
+          <button className="mt-3 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-bold text-red-600 hover:bg-red-50">
+            <LogOut className="h-4 w-4" /> Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 export default function ClientPage() {
   const [account, setAccount] = useState<Account | null>(null);
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
