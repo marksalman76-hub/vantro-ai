@@ -796,7 +796,7 @@ const modalContentGridStyle = {
               />
             </button>
 
-            <details style={{ position: "relative" }}>
+            <details style={{ position: "relative", zIndex: 100 }}>
               <summary
                 style={{
                   width: 44,
@@ -856,7 +856,12 @@ const modalContentGridStyle = {
                   onClick={() => {
                     setActiveAccountPanel("profile");
                     window.location.hash = "profile";
-                    
+                    window.setTimeout(() => {
+                      document.getElementById("account-centre-profile-panel")?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      });
+                    }, 50);
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
@@ -957,7 +962,7 @@ const modalContentGridStyle = {
         </section>
 
         {activeAccountPanel ? (
-          <section style={{ ...cardStyle, padding: 18, marginBottom: 18, position: "relative", zIndex: 3 }}>
+          <section id="account-centre-profile-panel" style={{ ...cardStyle, padding: 18, marginBottom: 18, position: "relative", zIndex: 3 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "flex-start", flexWrap: "wrap" }}>
               <div>
                 <div style={{ color: "var(--color-brand)", fontSize: 12, fontWeight: 900, letterSpacing: .6, textTransform: "uppercase", marginBottom: 6 }}>
