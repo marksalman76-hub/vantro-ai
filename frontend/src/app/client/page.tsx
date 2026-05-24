@@ -2323,9 +2323,7 @@ useEffect(() => {
                 >
                   <button
                     type="button"
-                    onClick={() => {
-                      window.location.hash = "media-preview-popup";
-                    }}
+                    onClick={(event) => { event.preventDefault(); window.location.href = "#media-preview-popup"; }}
                     style={{
 
 
