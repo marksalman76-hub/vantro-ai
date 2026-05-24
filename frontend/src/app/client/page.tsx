@@ -2092,7 +2092,7 @@ useEffect(() => {
                                 marginBottom: 3,
                               }}
                             >
-                              Media preview unavailable
+                              Media preview
                             </div>
 
                             <div
@@ -2101,7 +2101,7 @@ useEffect(() => {
                                 color: "var(--color-muted)",
                               }}
                             >
-                              Waiting for uploaded or generated assets
+                              Waiting for real generated or uploaded assets
                             </div>
                           </div>
                         </div>
@@ -2162,7 +2162,7 @@ useEffect(() => {
                               marginBottom: 8,
                             }}
                           >
-                            No live asset attached
+                            No asset generated yet
                           </div>
 
                           <div
@@ -2624,7 +2624,7 @@ useEffect(() => {
                   <div
                     style={{
                       minHeight: 320,
-                      padding: 28,
+                      padding: 16,
                       display: "flex",
                       flexDirection: "column",
                       justifyContent: "center",
@@ -2635,7 +2635,7 @@ useEffect(() => {
                   >
                     <div style={{ fontSize: 38, marginBottom: 8 }}>🖼️</div>
                     <div style={{ color: "var(--color-dark)", fontWeight: 760, fontSize: 16, marginBottom: 8 }}>
-                      No live asset attached
+                      No asset generated yet
                     </div>
                     <div style={{ color: "var(--color-muted)", fontSize: 13, lineHeight: 1.455, maxWidth: 280 }}>
                       Generated assets, uploaded brand files, previews, and deliverable media will appear here once attached.
@@ -3091,7 +3091,172 @@ useEffect(() => {
           </div>
         </div>
       ) : null}
-    </main>
+    
+      {/* OUTPUT_VIEWER_POPUP_MODAL_LOCKED_V1 */}
+      {showDeliverableModal ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Deliverable media preview"
+          onClick={() => setShowDeliverableModal(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background: "rgba(15, 23, 42, 0.72)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 24,
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              width: "min(920px, 96vw)",
+              maxHeight: "86vh",
+              overflow: "hidden",
+              borderRadius: 28,
+              background: "#ffffff",
+              border: "1px solid rgba(226, 232, 240, 0.92)",
+              boxShadow: "0 30px 90px rgba(15, 23, 42, 0.32)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 16,
+                alignItems: "flex-start",
+                padding: "18px 20px",
+                borderBottom: "1px solid #e5eaf2",
+              }}
+            >
+              <div>
+                <div
+                  style={{
+                    color: "var(--color-brand)",
+                    fontSize: 11,
+                    fontWeight: 850,
+                    letterSpacing: ".13em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Media preview
+                </div>
+                <h3 style={{ margin: "6px 0 0", fontSize: 18, color: "#0f172a" }}>
+                  {selectedAsset?.title || selectedAsset?.name || liveDeliverable?.title || "Client deliverable"}
+                </h3>
+                <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 12.5 }}>
+                  Real generated/uploaded media and runtime deliverables only.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowDeliverableModal(false)}
+                style={{
+                  border: "1px solid #e5eaf2",
+                  background: "#fff",
+                  color: "#334155",
+                  borderRadius: 999,
+                  padding: "8px 12px",
+                  fontWeight: 800,
+                  fontSize: 12,
+                  cursor: "pointer",
+                }}
+              >
+                Close
+              </button>
+            </div>
+
+            <div
+              style={{
+                padding: 20,
+                maxHeight: "calc(86vh - 96px)",
+                overflow: "auto",
+                background: "#f8fafc",
+              }}
+            >
+              {selectedAsset?.url || selectedAsset?.image_url || selectedAsset?.src ? (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    minHeight: 320,
+                    borderRadius: 22,
+                    background: "#ffffff",
+                    border: "1px solid #e5eaf2",
+                    overflow: "hidden",
+                  }}
+                >
+                  <img
+                    src={selectedAsset?.url || selectedAsset?.image_url || selectedAsset?.src}
+                    alt={selectedAsset?.title || selectedAsset?.name || "Generated media asset"}
+                    style={{
+                      maxWidth: "100%",
+                      maxHeight: "64vh",
+                      objectFit: "contain",
+                      display: "block",
+                    }}
+                  />
+                </div>
+              ) : (
+                <div
+                  style={{
+                    minHeight: 260,
+                    borderRadius: 22,
+                    background: "#ffffff",
+                    border: "1px dashed #cbd5e1",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    textAlign: "center",
+                    padding: 28,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontSize: 34, marginBottom: 10 }}>🖼️</div>
+                    <h4 style={{ margin: 0, fontSize: 16, color: "#0f172a" }}>No asset generated yet</h4>
+                    <p style={{ margin: "8px auto 0", maxWidth: 420, color: "#64748b", fontSize: 13, lineHeight: 1.55 }}>
+                      Real generated media, uploaded brand files, previews, and deliverable assets will appear here once attached to the runtime result.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  disabled={!deliverableDownloadUrl}
+                  onClick={() => {
+                    if (!deliverableDownloadUrl) {
+                      setToastMessage("No asset generated yet.");
+                      return;
+                    }
+                    window.open(deliverableDownloadUrl, "_blank", "noopener,noreferrer");
+                  }}
+                  style={{
+                    border: "1px solid #e5eaf2",
+                    background: deliverableDownloadUrl ? "#ffffff" : "#f8fafc",
+                    color: deliverableDownloadUrl ? "#334155" : "#94a3b8",
+                    borderRadius: 999,
+                    padding: "9px 13px",
+                    fontWeight: 800,
+                    fontSize: 12,
+                    cursor: deliverableDownloadUrl ? "pointer" : "not-allowed",
+                  }}
+                >
+                  Open asset
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+</main>
   );
 }
 
