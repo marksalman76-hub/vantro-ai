@@ -1331,7 +1331,15 @@ useEffect(() => {
                   setActiveAccountPanel("");
                   window.location.hash = "";
                 }}
-                style={{ border: "1px solid #e5eaf2", background: "#fff", borderRadius: 999, padding: "9px 13px", fontWeight: 850, cursor: "pointer", color: "var(--color-dark)" }}
+                style={{
+                  border: darkModeEnabled ? "1px solid rgba(129,140,248,.28)" : "1px solid #e5eaf2",
+                  background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff",
+                  borderRadius: 999,
+                  padding: "9px 13px",
+                  fontWeight: 850,
+                  cursor: "pointer",
+                  color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)",
+                }}
               >
                 Close
               </button>
@@ -1341,7 +1349,13 @@ useEffect(() => {
             <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
               {activeAccountPanel === "settings" ? (
                 <>
-                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                  <div style={{
+                    border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
+                    borderRadius: 16,
+                    padding: 14,
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
+                  }}>
                     <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Theme</div>
                     <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Display mode</div>
                     <button
@@ -1356,7 +1370,13 @@ useEffect(() => {
                       Toggle dark / light mode
                     </button>
                   </div>
-                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                  <div style={{
+                    border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
+                    borderRadius: 16,
+                    padding: 14,
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
+                  }}>
                     <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Workspace</div>
                     <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>{accountPackage}</div>
                     <div style={{ marginTop: 5, color: "var(--color-muted)", fontSize: 12 }}>Status: {accountStatus}</div>
@@ -1366,8 +1386,14 @@ useEffect(() => {
 
               {activeAccountPanel === "profile" ? (
                 <>
-                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
-                    <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Client</div>
+                  <div style={{
+                    border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
+                    borderRadius: 16,
+                    padding: 14,
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
+                  }}>
+                    <div style={{ fontSize: 11, color: darkModeEnabled ? "#a5b4fc" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Client</div>
 
                     <input
                       type="text"
@@ -1388,15 +1414,15 @@ useEffect(() => {
                         borderRadius: 10,
                         padding: "9px 11px",
                         fontSize: 13,
-                        color: "#0f172a",
-                        background: "#fff",
+                        color: darkModeEnabled ? "#f8fafc" : "#0f172a",
+                        background: darkModeEnabled ? "rgba(3,10,24,.86)" : "#fff",
                         outline: "none",
                         boxSizing: "border-box",
                         fontFamily: "inherit",
                       }}
                     />
 
-                    <div style={{ marginTop: 8, color: "var(--color-muted)", fontSize: 12 }}>
+                    <div style={{ marginTop: 8, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12 }}>
                       {clientEmail || "No email shown"}
                     </div>
 
@@ -1419,16 +1445,22 @@ useEffect(() => {
                     </button>
                   </div>
 
-                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
-                    <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>
+                  <div style={{
+                    border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
+                    borderRadius: 16,
+                    padding: 14,
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
+                  }}>
+                    <div style={{ fontSize: 11, color: darkModeEnabled ? "#a5b4fc" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>
                       Business profile
                     </div>
 
-                    <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>
+                    <div style={{ marginTop: 6, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", fontWeight: 900 }}>
                       {businessProfile.business_name || "Not saved yet"}
                     </div>
 
-                    <div style={{ marginTop: 5, color: "var(--color-muted)", fontSize: 12 }}>
+                    <div style={{ marginTop: 5, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12 }}>
                       Edit the Business Profile Intelligence section below.
                     </div>
                   </div>
@@ -1436,7 +1468,13 @@ useEffect(() => {
               ) : null}
 
               {activeAccountPanel === "password-reset" ? (
-                <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                <div style={{
+                    border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
+                    borderRadius: 16,
+                    padding: 14,
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
+                  }}>
                   <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Password reset</div>
                   <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Secure reset request</div>
                   <p style={{ color: "var(--color-muted)", fontSize: 12, lineHeight: 1.45 }}>Use this panel to trigger the secure password reset flow once the backend route is connected.</p>
@@ -1447,7 +1485,13 @@ useEffect(() => {
               ) : null}
 
               {activeAccountPanel === "two-factor-authentication" ? (
-                <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                <div style={{
+                    border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
+                    borderRadius: 16,
+                    padding: 14,
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
+                  }}>
                   <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Two-factor authentication</div>
                   <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Extra account protection</div>
                   <p style={{ color: "var(--color-muted)", fontSize: 12, lineHeight: 1.45 }}>2FA setup panel is now functional in the workspace UI and ready for secure backend connection.</p>
