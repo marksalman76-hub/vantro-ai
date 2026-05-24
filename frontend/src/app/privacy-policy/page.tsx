@@ -1,107 +1,154 @@
-"use client";
+import Link from "next/link";
 
-import React, { useEffect, useState } from "react";
-
-type InfoPageProps = {
-  eyebrow: string;
-  title: string;
-  body: string;
-  bullets: string[];
-};
-
-function InfoPage({ eyebrow, title, body, bullets }: InfoPageProps) {
-  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
-
-  useEffect(() => {
-    try {
-      setDarkModeEnabled(window.localStorage.getItem("client_workspace_dark_mode") === "dark");
-    } catch {}
-  }, []);
-
+export default function PrivacyPolicyPage() {
   return (
     <main
       style={{
         minHeight: "100vh",
-        background: darkModeEnabled
-          ? "radial-gradient(circle at 18% 0%, rgba(79,70,229,.20), transparent 28%), radial-gradient(circle at 92% 6%, rgba(124,58,237,.16), transparent 30%), linear-gradient(180deg, #050b18 0%, #071120 48%, #050b18 100%)"
-          : "#f4f7fb",
-        color: darkModeEnabled ? "#f8fafc" : "#0f172a",
-        fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-        padding: "clamp(24px,4vw,54px)",
-        boxSizing: "border-box",
+        background:
+          "radial-gradient(circle at top, rgba(67,56,202,.24), transparent 34%), #020617",
+        padding: "64px 24px",
+        color: "#f8fafc",
       }}
     >
-      <section
+      <div
         style={{
-          maxWidth: 880,
+          maxWidth: 820,
           margin: "0 auto",
-          borderRadius: 26,
-          padding: "clamp(24px,4vw,38px)",
-          background: darkModeEnabled
-            ? "linear-gradient(180deg, rgba(10,22,46,.96), rgba(7,16,34,.98))"
-            : "#ffffff",
-          border: darkModeEnabled ? "1px solid rgba(129,140,248,.28)" : "1px solid #e5eaf2",
-          boxShadow: darkModeEnabled ? "0 24px 80px rgba(0,0,0,.34)" : "0 24px 70px rgba(15,23,42,.08)",
+          background: "rgba(7,16,40,.92)",
+          border: "1px solid rgba(99,102,241,.22)",
+          borderRadius: 28,
+          padding: "40px",
+          boxShadow: "0 30px 70px rgba(0,0,0,.35)",
         }}
       >
-        <div style={{ color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12, fontWeight: 900, letterSpacing: 1.3, textTransform: "uppercase", marginBottom: 10 }}>
-          {eyebrow}
-        </div>
-
-        <h1 style={{ margin: 0, fontSize: 34, letterSpacing: -1.1 }}>{title}</h1>
-
-        <p style={{ margin: "14px 0 0", color: darkModeEnabled ? "#94a3b8" : "#64748b", fontSize: 15, lineHeight: 1.6 }}>
-          {body}
-        </p>
-
-        <div style={{ marginTop: 22, display: "grid", gap: 12 }}>
-          {bullets.map((item) => (
-            <div
-              key={item}
-              style={{
-                borderRadius: 16,
-                padding: 14,
-                background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#f8fafc",
-                border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
-                color: darkModeEnabled ? "#cbd5e1" : "#334155",
-                fontWeight: 750,
-                lineHeight: 1.45,
-              }}
-            >
-              {item}
-            </div>
-          ))}
-        </div>
-
-        <a
-          href="/client"
+        <div
           style={{
-            display: "inline-flex",
-            marginTop: 24,
-            borderRadius: 14,
-            padding: "11px 14px",
-            background: "linear-gradient(135deg,#4f46e5,#7c3aed)",
-            color: "#ffffff",
-            textDecoration: "none",
+            fontSize: 12,
+            fontWeight: 900,
+            letterSpacing: ".14em",
+            color: "#a5b4fc",
+            marginBottom: 10,
+          }}
+        >
+          PRIVACY
+        </div>
+
+        <h1
+          style={{
+            fontSize: "clamp(38px,5vw,56px)",
+            lineHeight: 1,
+            marginBottom: 20,
             fontWeight: 900,
           }}
         >
-          Back to workspace
-        </a>
-      </section>
-    </main>
-  );
-}
+          Privacy Policy
+        </h1>
 
-export default function Page() {
-  return (
-    <InfoPage
-      eyebrow="Privacy"
-      title="Privacy Policy"
-      body="This page explains how client workspace information, business profile data, execution activity, and support details are handled within the E-commerce AI Agent Platform."
-      bullets={[
-        'We use client information to operate the workspace, provide AI execution services, manage subscriptions, and support account requests.', 'Business profile details are used to tailor AI outputs and improve client-specific deliverables.', 'Payment details are handled through secure payment providers and are not stored directly in the client workspace UI.', 'Clients can contact support to request help with account access, billing, privacy, or workspace data.'
-      ]}
-    />
+        <p
+          style={{
+            color: "#cbd5e1",
+            lineHeight: 1.7,
+            fontSize: 16,
+            marginBottom: 26,
+          }}
+        >
+          This Privacy Policy explains how the Ecommerce AI Agent Platform
+          collects, uses, protects, and processes workspace information,
+          business profile data, integrations, execution activity, and support
+          requests while operating the platform.
+        </p>
+
+        {[
+          {
+            title: "Workspace & business profile data",
+            body:
+              "Business profile information is used to personalise AI execution, improve deliverable relevance, and adapt outputs to the client’s market, audience, products, positioning, and operating region.",
+          },
+          {
+            title: "AI execution & platform activity",
+            body:
+              "Execution activity, approvals, delivery actions, workflow history, and governed automation events may be logged for security, audit visibility, reliability improvements, and platform quality control.",
+          },
+          {
+            title: "Payments & billing security",
+            body:
+              "Payment information is processed through secure third-party billing providers such as Stripe. Sensitive payment details are not stored directly inside the workspace interface.",
+          },
+          {
+            title: "Integrations & connected services",
+            body:
+              "Clients may connect approved third-party tools including ecommerce stores, CRMs, calendars, communication tools, analytics platforms, and marketing systems. Access permissions remain controlled by the connected account owner.",
+          },
+          {
+            title: "Data protection & governance",
+            body:
+              "The platform uses governed execution controls, access restrictions, authentication protections, approval layers, audit visibility, and monitored infrastructure to help protect workspace operations and client data.",
+          },
+          {
+            title: "Client ownership & responsibility",
+            body:
+              "Clients remain responsible for reviewing business information, uploaded assets, connected integrations, generated outputs, and approval decisions before live commercial use.",
+          },
+          {
+            title: "Support & privacy requests",
+            body:
+              "Clients may contact support to request help with account access, workspace issues, billing enquiries, privacy requests, or connected service management.",
+          },
+        ].map((item) => (
+          <div
+            key={item.title}
+            style={{
+              border: "1px solid rgba(99,102,241,.22)",
+              borderRadius: 18,
+              padding: "20px 22px",
+              marginBottom: 16,
+              background: "rgba(12,24,49,.72)",
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 900,
+                fontSize: 18,
+                marginBottom: 10,
+              }}
+            >
+              {item.title}
+            </div>
+
+            <div
+              style={{
+                color: "#cbd5e1",
+                lineHeight: 1.7,
+                fontSize: 15,
+              }}
+            >
+              {item.body}
+            </div>
+          </div>
+        ))}
+
+        <div style={{ marginTop: 28 }}>
+          <Link
+            href="/client"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: 190,
+              height: 54,
+              borderRadius: 16,
+              textDecoration: "none",
+              background: "linear-gradient(135deg,#7c3aed,#4f46e5)",
+              color: "#fff",
+              fontWeight: 900,
+              boxShadow: "0 18px 38px rgba(79,70,229,.32)",
+            }}
+          >
+            Back to workspace
+          </Link>
+        </div>
+      </div>
+    </main>
   );
 }
