@@ -1855,9 +1855,9 @@ useEffect(() => {
                 }
               }}
               style={{
-                border: "1px solid #e5eaf2",
+                border: darkModeEnabled ? "1px solid rgba(99,102,241,.28)" : "1px solid #e5eaf2",
                 borderRadius: 12,
-                background: "#fff",
+                background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
                 padding: "8px 10px",
                 display: "flex",
                 alignItems: "center",
@@ -1874,8 +1874,8 @@ useEffect(() => {
                   width: 28,
                   height: 28,
                   borderRadius: 9,
-                  background: "#eef2f7",
-                  color: "#64748b",
+                  background: darkModeEnabled ? "rgba(79,70,229,.24)" : "#eef2f7",
+                  color: darkModeEnabled ? "#c7d2fe" : "#64748b",
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -1890,7 +1890,7 @@ useEffect(() => {
                   style={{
                     display: "block",
                     fontWeight: 900,
-                    color: "var(--color-dark)",
+                    color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)",
                     fontSize: 13,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -1898,7 +1898,7 @@ useEffect(() => {
                 >
                   {label}
                 </span>
-                <span style={{ display: "block", color: "var(--color-muted)", fontSize: 12, fontWeight: 800, marginTop: 3 }}>
+                <span style={{ display: "block", color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12, fontWeight: 800, marginTop: 3 }}>
                   Connect
                 </span>
               </span>
@@ -1914,10 +1914,10 @@ useEffect(() => {
               setToastMessage(`${providerName.trim()} integration request noted.`);
             }}
             style={{
-              border: "1px solid #d8dcff",
+              border: darkModeEnabled ? "1px solid rgba(99,102,241,.28)" : "1px solid #d8dcff",
               borderRadius: 12,
-              background: "#fff",
-              color: "var(--color-primary)",
+              background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+              color: darkModeEnabled ? "#c7d2fe" : "var(--color-primary)",
               padding: "8px 12px",
               minHeight: 48,
               fontWeight: 900,
@@ -2276,15 +2276,15 @@ useEffect(() => {
 
                   <div
                     style={{
-                      border: "1px solid #e5eaf2",
+                      border: darkModeEnabled ? "1px solid rgba(99,102,241,.28)" : "1px solid #e5eaf2",
                       borderRadius: 12,
-                      background: "#fff",
+                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
                       padding: "8px 10px",
-                      boxShadow: "0 8px 20px rgba(15,23,42,.04)",
+                      boxShadow: darkModeEnabled ? "0 10px 28px rgba(0,0,0,.22)" : "0 8px 20px rgba(15,23,42,.04)",
                     }}
                   >
-                    <div style={{ fontWeight: 900, color: "var(--color-dark)", fontSize: 12 }}>{title}</div>
-                    <div style={{ color: "var(--color-muted)", fontSize: 11.5, fontWeight: 800, marginTop: 2 }}>{status}</div>
+                    <div style={{ fontWeight: 900, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", fontSize: 12 }}>{title}</div>
+                    <div style={{ color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 11.5, fontWeight: 800, marginTop: 2 }}>{status}</div>
                   </div>
 
                   <div style={{ color: "var(--color-muted)", fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap" }}>{time}</div>
@@ -2293,9 +2293,9 @@ useEffect(() => {
 
               <div
                 style={{
-                  border: "1px solid #dbeafe",
+                  border: darkModeEnabled ? "1px solid rgba(99,102,241,.28)" : "1px solid #dbeafe",
                   borderRadius: 14,
-                  background: "linear-gradient(135deg,#eff6ff,#ffffff)",
+                  background: darkModeEnabled ? "rgba(12,24,49,.92)" : "linear-gradient(135deg,#eff6ff,#ffffff)",
                   padding: "9px 10px",
                   display: "grid",
                   gridTemplateColumns: "26px 1fr",
@@ -2308,8 +2308,8 @@ useEffect(() => {
                     width: 26,
                     height: 26,
                     borderRadius: 9,
-                    background: "#ffffff",
-                    color: "var(--color-brand)",
+                    background: darkModeEnabled ? "rgba(79,70,229,.24)" : "#ffffff",
+                    color: darkModeEnabled ? "#c7d2fe" : "var(--color-brand)",
                     display: "inline-flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -2320,10 +2320,10 @@ useEffect(() => {
                   ✦
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 900, color: "var(--color-dark)" }}>
+                  <div style={{ fontSize: 12, fontWeight: 900, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}>
                     Governed execution, every time.
                   </div>
-                  <div style={{ marginTop: 2, fontSize: 11.5, fontWeight: 700, color: "var(--color-muted)", lineHeight: 1.35 }}>
+                  <div style={{ marginTop: 2, fontSize: 11.5, fontWeight: 700, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", lineHeight: 1.35 }}>
                     Tracked, logged, quality-checked, and approval-routed.
                   </div>
                 </div>
