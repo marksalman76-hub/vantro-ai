@@ -1,0 +1,196 @@
+     ["Run next optimisation", reviewStatus === "approved" ? "Available" : "After review", "↗"],
+                ].map(([title, status, icon]) => (
+                  <div
+                    key={title}
+                    style={{
+                      border: "1px solid #e5eaf2",
+                      background: "#fff",
+                      borderRadius: 14,
+                      padding: "9px 10px",
+                      minHeight: 58,
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <span style={{ color: "var(--color-brand)", fontWeight: 950 }}>{icon}</span>
+                      <span style={{ fontSize: 11.5, fontWeight: 950, color: "var(--color-dark)", lineHeight: 1.2 }}>
+                        {title}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: 5, fontSize: 11, fontWeight: 850, color: "var(--color-muted)" }}>
+                      {status}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ ...cardStyle, minHeight: 355, overflow: "hidden" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+              <div>
+                <StepHeader number="06" title="Execution output viewer" />
+                <h3 style={cardTitle}>Client deliverables</h3>
+              </div>
+              <div
+                style={{
+                  background: reviewStatus === "rejected" ? "#fee2e2" : "#dcfce7",
+                  color: reviewStatus === "rejected" ? "var(--color-red)" : "var(--color-teal)",
+                  padding: "8px 12px",
+                  borderRadius: 16,
+                  fontWeight: 760,
+                  fontSize: 11.8,
+                  height: "fit-content",
+                }}
+              >
+                {reviewStatus === "approved" ? "Approve ✓d" : reviewStatus === "rejected" ? "Revision requested" : "Completed"}
+              </div>
+            </div>
+
+            <div style={deliverableCardGridStyle}>
+              <div
+                style={{
+                  minHeight: 118,
+                  borderRadius: 16,
+                  background: "var(--color-bg-light)",
+                  border: "1px solid #e5eaf2",
+                  position: "relative",
+                  overflow: "hidden",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {primaryAssetUrl ? (
+                  <img
+                    src={primaryAssetUrl}
+                    alt={liveDeliverable?.title || "Generated deliverable asset"}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      height: "100%",
+                      width: "100%",
+                      padding: 12,
+                      background: "linear-gradient(180deg,#ffffff 0%,var(--color-bg-light) 100%)",
+                      color: "var(--color-muted)",
+                      boxSizing: "border-box",
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          marginBottom: 18,
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 34,
+                              height: 34,
+                              borderRadius: 16,
+                              background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "var(--color-brand)",
+                              fontSize: 18,
+                              fontWeight: 760,
+                              flex: "0 0 auto",
+                            }}
+                          >
+                            ✦
+                          </div>
+
+                          <div>
+                            <div
+                              style={{
+                                color: "var(--color-dark)",
+                                fontWeight: 760,
+                                fontSize: 13,
+                                marginBottom: 3,
+                              }}
+                            >
+                              Media preview unavailable
+                            </div>
+
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "var(--color-muted)",
+                              }}
+                            >
+                              Waiting for uploaded or generated assets
+                            </div>
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            border: "1px solid rgba(15, 23, 42, 0.08)",
+                            
+                    boxShadow: "0 18px 55px rgba(15, 23, 42, 0.06)",
+                    backdropFilter: "blur(10px)",
+                    WebkitBackdropFilter: "blur(10px)",
+                    borderRadius: 16,
+                            padding: "3px 6px",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            background: "#fff",
+                            color: "var(--color-mid)",
+                            
+                          }}
+                        >
+                          Pending media
+                        </div>
+                      </div>
+
+                      <div
+                        style={{
+                          borderRadius: 16,
+                          border: "1px dashed #dbe4ee",
+                          background: "linear-gradient(135deg,var(--color-bg-light) 0%,#f1f5f9 100%)",
+                          minHeight: 142,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <div
+                          style={{
+                            textAlign: "center",
+                            padding: 16,
+                            maxWidth: "100%",
+                          }}
+                        >
+                          <div
+                            style={{
+                              fontSize: 30,
+                              marginBottom: 12,
+                            }}
+                          >
+                            🖼️
+                          </div>
+
+                          <div
+                            style={{
+                              color: "var(--color-dar
