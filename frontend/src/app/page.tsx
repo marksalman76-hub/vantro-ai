@@ -980,7 +980,7 @@ function FinalCTA() {
 
 function Footer() {
   const cols = [
-    { title: "Company",    links: [["About","/about"],["Blog","#features"],["Contact","/support-request"]] },
+    { title: "Company",    links: [["About","/about"],["Blog","/blog"],["Contact","/support-request"]] },
     { title: "Legal",      links: [["Terms","/terms-of-service"],["Privacy","/privacy-policy"],["Cookies","/cookies"]] },
   ];
   return (
