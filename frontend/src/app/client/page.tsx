@@ -2321,9 +2321,13 @@ useEffect(() => {
                     marginBottom: 10,
                   }}
                 >
-                  <a
-                    href="#media-preview-popup"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.hash = "media-preview-popup";
+                    }}
                     style={{
+
 
                       border: "1px solid rgba(37, 99, 235, 0.14)",
                       background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
@@ -2334,13 +2338,14 @@ useEffect(() => {
                       fontSize: 11,
                       cursor: "pointer",
                     
-                      textDecoration: "none",
-                      display: "inline-flex",
+                      
+                      
                       alignItems: "center",
+                    
                     }}
                   >
                     Preview in popup
-                  </a>
+                  </button>
 
                   <button
                     disabled={!deliverableDownloadUrl}
