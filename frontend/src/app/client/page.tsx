@@ -357,8 +357,8 @@ export default function ClientPage() {
     gap: 14,
     padding: 16,
     borderRadius: 12,
-    border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
-    background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+    border: "1px solid #e5eaf2",
+    background: "#fff",
   };
 
   
@@ -792,15 +792,7 @@ useEffect(() => {
   };
 
   return (
-    
-      {/* CLIENT_WORKSPACE_DARK_PLACEHOLDER_STYLE_V1 */}
-      <style>{`
-        textarea::placeholder,
-        input::placeholder {
-          color: ${darkModeEnabled ? "rgba(203,213,225,.72)" : ""};
-        }
-      `}</style>
-<main
+    <main
       style={{
         minHeight: "100vh",
         background: darkModeEnabled ? "#0f172a" : "#f4f7fb",
@@ -850,7 +842,7 @@ useEffect(() => {
               style={{
                 margin: "12px 0 0",
                 maxWidth: 700,
-                color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)",
+                color: "var(--color-muted)",
                 lineHeight: 1.42,
                 fontSize: 12.5,
               }}
@@ -961,8 +953,8 @@ useEffect(() => {
                   right: 0,
                   top: 54,
                   width: 280,
-                  background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
-                  border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                  background: "#fff",
+                  border: "1px solid #e5eaf2",
                   borderRadius: 18,
                   boxShadow: "0 24px 60px rgba(15,23,42,.18)",
                   padding: 14,
@@ -972,9 +964,9 @@ useEffect(() => {
                 <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: "1px solid #edf1f6" }}>
                   <div style={{ width: 46, height: 46, borderRadius: 999, background: "var(--color-dark)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{clientInitials}</div>
                   <div>
-                    <div style={{ fontWeight: 800, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}>{clientDisplayName}</div>
-                    <div style={{ fontSize: 12, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>{clientEmail || accountPackage}</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>
+                    <div style={{ fontWeight: 800, color: "var(--color-dark)" }}>{clientDisplayName}</div>
+                    <div style={{ fontSize: 12, color: "var(--color-muted)" }}>{clientEmail || accountPackage}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4, color: "var(--color-muted)" }}>
                       <span style={{ color: accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444", marginRight: 6 }}>●</span>
                       {accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "ACTIVE" : "INACTIVE"} · Paid plan
                     </div>
@@ -987,7 +979,7 @@ useEffect(() => {
                     window.location.hash = "settings";
                     
                   }}
-                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
                   ⚙️ Settings
                 </button>
@@ -1003,7 +995,7 @@ useEffect(() => {
                       });
                     }, 50);
                   }}
-                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
                   👤 Profile
                 </button>
@@ -1014,7 +1006,7 @@ useEffect(() => {
                     window.location.hash = "password-reset";
                     
                   }}
-                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
                   🔐 Password reset
                 </button>
@@ -1025,7 +1017,7 @@ useEffect(() => {
                     window.location.hash = "two-factor-authentication";
                     
                   }}
-                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
                 >
                   🛡️ 2FA
                 </button>
@@ -1035,7 +1027,7 @@ useEffect(() => {
                     setDarkModeEnabled((previous) => !previous);
                     setToastMessage(darkModeEnabled ? "Light mode enabled." : "Dark mode enabled.");
                   }}
-                  style={{ width: "100%", border: "none", borderTop: "1px solid #edf1f6", background: "transparent", padding: "12px 8px", textAlign: "left", fontWeight: 800, cursor: "pointer", color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}
+                  style={{ width: "100%", border: "none", borderTop: "1px solid #edf1f6", background: "transparent", padding: "12px 8px", textAlign: "left", fontWeight: 800, cursor: "pointer", color: "var(--color-dark)" }}
                 >
                   {darkModeEnabled ? "☀️ Switch to light mode" : "🌙 Toggle dark / light mode"}
                 </button>
@@ -1089,14 +1081,14 @@ useEffect(() => {
                   justifyContent: "center",
                 }}
               >
-                <div style={{ display: "flex", alignItems: "center", gap: 8, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12, fontWeight: 850 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--color-muted)", fontSize: 12, fontWeight: 850 }}>
                   <span style={{ width: 9, height: 9, borderRadius: 999, background: String(dot), boxShadow: "0 0 0 5px rgba(79,70,229,.08)" }} />
                   {label}
                 </div>
-                <div style={{ marginTop: 5, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", fontSize: 18, lineHeight: 1.1, fontWeight: 900 }}>
+                <div style={{ marginTop: 5, color: "var(--color-dark)", fontSize: 18, lineHeight: 1.1, fontWeight: 900 }}>
                   {value}
                 </div>
-                <div style={{ marginTop: 4, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12 }}>
+                <div style={{ marginTop: 4, color: "var(--color-muted)", fontSize: 12 }}>
                   {note}
                 </div>
               </div>
@@ -1111,10 +1103,10 @@ useEffect(() => {
                 <div style={{ color: "var(--color-brand)", fontSize: 12, fontWeight: 900, letterSpacing: .6, textTransform: "uppercase", marginBottom: 6 }}>
                   Account centre
                 </div>
-                <h2 style={{ margin: 0, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", fontSize: 22, letterSpacing: -.4 }}>
+                <h2 style={{ margin: 0, color: "var(--color-dark)", fontSize: 22, letterSpacing: -.4 }}>
                   {activeAccountPanel === "settings" ? "Settings" : activeAccountPanel === "profile" ? "Profile" : activeAccountPanel === "password-reset" ? "Password reset" : "Two-factor authentication"}
                 </h2>
-                <p style={{ margin: "7px 0 0", color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 13, lineHeight: 1.45 }}>
+                <p style={{ margin: "7px 0 0", color: "var(--color-muted)", fontSize: 13, lineHeight: 1.45 }}>
                   Manage client account controls without leaving the workspace.
                 </p>
               </div>
@@ -1125,7 +1117,7 @@ useEffect(() => {
                   setActiveAccountPanel("");
                   window.location.hash = "";
                 }}
-                style={{ border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2", background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff", borderRadius: 999, padding: "9px 13px", fontWeight: 850, cursor: "pointer", color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}
+                style={{ border: "1px solid #e5eaf2", background: "#fff", borderRadius: 999, padding: "9px 13px", fontWeight: 850, cursor: "pointer", color: "var(--color-dark)" }}
               >
                 Close
               </button>
@@ -1135,29 +1127,29 @@ useEffect(() => {
             <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
               {activeAccountPanel === "settings" ? (
                 <>
-                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff" }}>
-                    <div style={{ fontSize: 11, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Theme</div>
-                    <div style={{ marginTop: 6, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", fontWeight: 900 }}>Display mode</div>
+                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                    <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Theme</div>
+                    <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Display mode</div>
                     <button
                       type="button"
                       onClick={() => document.documentElement.classList.toggle("dark")}
-                      style={{ marginTop: 10, border: "1px solid rgba(79,70,229,.18)", background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff", color: "#4f46e5", borderRadius: 12, padding: "9px 11px", fontWeight: 850, cursor: "pointer" }}
+                      style={{ marginTop: 10, border: "1px solid rgba(79,70,229,.18)", background: "#fff", color: "#4f46e5", borderRadius: 12, padding: "9px 11px", fontWeight: 850, cursor: "pointer" }}
                     >
                       Toggle dark / light mode
                     </button>
                   </div>
-                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff" }}>
-                    <div style={{ fontSize: 11, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Workspace</div>
-                    <div style={{ marginTop: 6, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", fontWeight: 900 }}>{accountPackage}</div>
-                    <div style={{ marginTop: 5, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12 }}>Status: {accountStatus}</div>
+                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                    <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Workspace</div>
+                    <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>{accountPackage}</div>
+                    <div style={{ marginTop: 5, color: "var(--color-muted)", fontSize: 12 }}>Status: {accountStatus}</div>
                   </div>
                 </>
               ) : null}
 
               {activeAccountPanel === "profile" ? (
                 <>
-                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff" }}>
-                    <div style={{ fontSize: 11, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Client</div>
+                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                    <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Client</div>
 
                     <input
                       type="text"
@@ -1179,14 +1171,14 @@ useEffect(() => {
                         padding: "9px 11px",
                         fontSize: 13,
                         color: "#0f172a",
-                        background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                        background: "#fff",
                         outline: "none",
                         boxSizing: "border-box",
                         fontFamily: "inherit",
                       }}
                     />
 
-                    <div style={{ marginTop: 8, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12 }}>
+                    <div style={{ marginTop: 8, color: "var(--color-muted)", fontSize: 12 }}>
                       {clientEmail || "No email shown"}
                     </div>
 
@@ -1209,16 +1201,16 @@ useEffect(() => {
                     </button>
                   </div>
 
-                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff" }}>
-                    <div style={{ fontSize: 11, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>
+                  <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                    <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>
                       Business profile
                     </div>
 
-                    <div style={{ marginTop: 6, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", fontWeight: 900 }}>
+                    <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>
                       {businessProfile.business_name || "Not saved yet"}
                     </div>
 
-                    <div style={{ marginTop: 5, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12 }}>
+                    <div style={{ marginTop: 5, color: "var(--color-muted)", fontSize: 12 }}>
                       Edit the Business Profile Intelligence section below.
                     </div>
                   </div>
@@ -1226,10 +1218,10 @@ useEffect(() => {
               ) : null}
 
               {activeAccountPanel === "password-reset" ? (
-                <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff" }}>
-                  <div style={{ fontSize: 11, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Password reset</div>
-                  <div style={{ marginTop: 6, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", fontWeight: 900 }}>Secure reset request</div>
-                  <p style={{ color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12, lineHeight: 1.45 }}>Use this panel to trigger the secure password reset flow once the backend route is connected.</p>
+                <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                  <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Password reset</div>
+                  <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Secure reset request</div>
+                  <p style={{ color: "var(--color-muted)", fontSize: 12, lineHeight: 1.45 }}>Use this panel to trigger the secure password reset flow once the backend route is connected.</p>
                   <button type="button" onClick={() => setToastMessage("Password reset request panel opened. Secure email flow is ready for backend connection.")} style={{ border: 0, background: "var(--color-dark)", color: "#fff", borderRadius: 12, padding: "8px 10px", fontWeight: 850, cursor: "pointer" }}>
                     Send reset link
                   </button>
@@ -1237,10 +1229,10 @@ useEffect(() => {
               ) : null}
 
               {activeAccountPanel === "two-factor-authentication" ? (
-                <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff" }}>
-                  <div style={{ fontSize: 11, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Two-factor authentication</div>
-                  <div style={{ marginTop: 6, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", fontWeight: 900 }}>Extra account protection</div>
-                  <p style={{ color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12, lineHeight: 1.45 }}>2FA setup panel is now functional in the workspace UI and ready for secure backend connection.</p>
+                <div style={{ border: "1px solid #edf1f6", borderRadius: 16, padding: 14, background: "#fff" }}>
+                  <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Two-factor authentication</div>
+                  <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Extra account protection</div>
+                  <p style={{ color: "var(--color-muted)", fontSize: 12, lineHeight: 1.45 }}>2FA setup panel is now functional in the workspace UI and ready for secure backend connection.</p>
                   <button type="button" onClick={() => setToastMessage("2FA setup panel opened. Secure setup flow is ready for backend connection.")} style={{ border: 0, background: "var(--color-dark)", color: "#fff", borderRadius: 12, padding: "8px 10px", fontWeight: 850, cursor: "pointer" }}>
                     Start 2FA setup
                   </button>
@@ -1259,7 +1251,7 @@ useEffect(() => {
               <h2 style={{ margin: 0, fontSize: 25, letterSpacing: -0.8 }}>
                 Business context for tailored AI execution
               </h2>
-              <p style={{ marginTop: 9, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", maxWidth: 760, lineHeight: 1.5 }}>
+              <p style={{ marginTop: 9, color: "var(--color-muted)", maxWidth: 760, lineHeight: 1.5 }}>
                 Add business context once so every active AI agent can produce more accurate deliverables, assets, copy, positioning, and execution recommendations.
               </p>
             </div>
@@ -1268,7 +1260,7 @@ useEffect(() => {
               <div style={{ background: "rgba(238,242,255,.95)", color: "var(--color-brand)", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12 }}>
                 ● {businessProfileSaved ? "Saved" : "Not saved yet"}
               </div>
-              <button type="button" onClick={() => setToastMessage("Add business details, save the profile, then future AI executions will use this context.")} style={{ border: "1px solid rgba(79,70,229,.18)", background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff", color: "#334155", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12, cursor: "pointer" }}>
+              <button type="button" onClick={() => setToastMessage("Add business details, save the profile, then future AI executions will use this context.")} style={{ border: "1px solid rgba(79,70,229,.18)", background: "#fff", color: "#334155", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12, cursor: "pointer" }}>
                 ? How it works
               </button>
             </div>
@@ -1297,7 +1289,7 @@ useEffect(() => {
                   gridColumn: "span 1",
                   borderRadius: 16,
                   border: "1px solid rgba(15,23,42,.08)",
-                  background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                  background: "#fff",
                   padding: 12,
                   minHeight: 98,
                   boxShadow: "0 14px 38px rgba(15,23,42,.04)",
@@ -1330,7 +1322,7 @@ useEffect(() => {
                       width: "100%",
                       height: 34,
                       border: "1.5px solid rgba(79,70,229,.35)",
-                      background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                      background: "#fff",
                       padding: "9px 11px",
                       borderRadius: 10,
                       fontSize: 13,
@@ -1362,7 +1354,7 @@ useEffect(() => {
                       resize: "vertical",
                       minHeight: 48,
                       border: "1px solid rgba(79,70,229,.18)",
-                      background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                      background: "#fff",
                       padding: "9px 10px",
                       borderRadius: 10,
                       fontSize: 12.4,
@@ -1384,11 +1376,11 @@ useEffect(() => {
             ))}
           </div>
 
-          <div style={{ marginTop: 14, borderRadius: 16, border: "1px solid rgba(79,70,229,.10)", background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff", padding: 10, boxShadow: "0 10px 28px rgba(15,23,42,.04)", position: "relative", zIndex: 25 }}>
+          <div style={{ marginTop: 14, borderRadius: 16, border: "1px solid rgba(79,70,229,.10)", background: "#fff", padding: 10, boxShadow: "0 10px 28px rgba(15,23,42,.04)", position: "relative", zIndex: 25 }}>
             <div style={{ display: "grid", gridTemplateColumns: "180px 180px 180px 1fr", gap: 10, alignItems: "center" }}>
               <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "8px 10px", height: 34, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "#fff", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>▣ Save business profile</button>
-              <button type="button" onClick={loadBusinessProfile} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>↻ Reset to last save</button>
-              <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>◉ Preview profile</button>
+              <button type="button" onClick={loadBusinessProfile} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>↻ Reset to last save</button>
+              <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>◉ Preview profile</button>
               <div style={{ borderLeft: "1px solid rgba(79,70,229,.12)", paddingLeft: 14, minHeight: 44, display: "flex", flexDirection: "column", justifyContent: "center" }}>
                 <div style={{ fontWeight: 900, color: "#0f172a", fontSize: 12.5, marginBottom: 2 }}>One workspace. One business.</div>
                 <div style={{ color: "#64748b", fontSize: 11.4, lineHeight: 1.3 }}>You can refine this profile, but changing business identity requires approval unless Enterprise multi-business access is enabled.</div>
@@ -1419,7 +1411,7 @@ useEffect(() => {
         >
           <div>
             <h2 style={{ margin: 0, fontSize: 16 }}>Integrations</h2>
-            <p style={{ margin: "4px 0 0", color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 13 }}>
+            <p style={{ margin: "4px 0 0", color: "var(--color-muted)", fontSize: 13 }}>
               Connected systems
             </p>
           </div>
@@ -1436,9 +1428,9 @@ useEffect(() => {
               key={label}
               type="button"
               style={{
-                border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                border: "1px solid #e5eaf2",
                 borderRadius: 12,
-                background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                background: "#fff",
                 padding: "8px 10px",
                 display: "flex",
                 alignItems: "center",
@@ -1471,7 +1463,7 @@ useEffect(() => {
                   style={{
                     display: "block",
                     fontWeight: 900,
-                    color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)",
+                    color: "var(--color-dark)",
                     fontSize: 13,
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -1479,7 +1471,7 @@ useEffect(() => {
                 >
                   {label}
                 </span>
-                <span style={{ display: "block", color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12, fontWeight: 800, marginTop: 3 }}>
+                <span style={{ display: "block", color: "var(--color-muted)", fontSize: 12, fontWeight: 800, marginTop: 3 }}>
                   Connect
                 </span>
               </span>
@@ -1491,7 +1483,7 @@ useEffect(() => {
             style={{
               border: "1px solid #d8dcff",
               borderRadius: 12,
-              background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+              background: "#fff",
               color: "var(--color-primary)",
               padding: "8px 12px",
               minHeight: 48,
@@ -1608,7 +1600,7 @@ useEffect(() => {
                       marginTop: 10,
                       width: "100%",
                       border: "1px solid #d8dcff",
-                      background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                      background: "#fff",
                       color: "var(--color-brand)",
                       borderRadius: 12,
                       padding: "9px 10px",
@@ -1633,7 +1625,7 @@ useEffect(() => {
                     resize: "none",
                     borderRadius: 16,
                     border: "1px solid #dbe3ee",
-                    background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                    background: "#fff",
                     padding: 14,
                     fontSize: 11,
                     lineHeight: 1.46,
@@ -1697,7 +1689,7 @@ useEffect(() => {
               </div>
             </div>
 
-            <div style={{ marginTop: 12, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12 }}>
+            <div style={{ marginTop: 12, color: "var(--color-muted)", fontSize: 12 }}>
               ⓘ Runs use your saved business profile.
             </div>
           </div>
@@ -1740,18 +1732,18 @@ useEffect(() => {
 
                   <div
                     style={{
-                      border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                      border: "1px solid #e5eaf2",
                       borderRadius: 12,
-                      background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                      background: "#fff",
                       padding: "8px 10px",
                       boxShadow: "0 8px 20px rgba(15,23,42,.04)",
                     }}
                   >
-                    <div style={{ fontWeight: 900, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", fontSize: 12 }}>{title}</div>
-                    <div style={{ color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 11.5, fontWeight: 800, marginTop: 2 }}>{status}</div>
+                    <div style={{ fontWeight: 900, color: "var(--color-dark)", fontSize: 12 }}>{title}</div>
+                    <div style={{ color: "var(--color-muted)", fontSize: 11.5, fontWeight: 800, marginTop: 2 }}>{status}</div>
                   </div>
 
-                  <div style={{ color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap" }}>{time}</div>
+                  <div style={{ color: "var(--color-muted)", fontSize: 11.5, fontWeight: 800, whiteSpace: "nowrap" }}>{time}</div>
                 </div>
               ))}
 
@@ -1784,10 +1776,10 @@ useEffect(() => {
                   ✦
                 </div>
                 <div>
-                  <div style={{ fontSize: 12, fontWeight: 900, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}>
+                  <div style={{ fontSize: 12, fontWeight: 900, color: "var(--color-dark)" }}>
                     Governed execution, every time.
                   </div>
-                  <div style={{ marginTop: 2, fontSize: 11.5, fontWeight: 700, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", lineHeight: 1.35 }}>
+                  <div style={{ marginTop: 2, fontSize: 11.5, fontWeight: 700, color: "var(--color-muted)", lineHeight: 1.35 }}>
                     Tracked, logged, quality-checked, and approval-routed.
                   </div>
                 </div>
@@ -1858,9 +1850,9 @@ useEffect(() => {
                 <div
                   key={item.title}
                   style={{
-                    border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                    border: "1px solid #e5eaf2",
                     borderRadius: 16,
-                    background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                    background: "#fff",
                     padding: "12px 14px",
                     display: "grid",
                     gridTemplateColumns: "34px minmax(0,1fr) auto",
@@ -1886,15 +1878,15 @@ useEffect(() => {
                   </div>
 
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 950, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}>{item.title}</div>
-                    <div style={{ marginTop: 3, fontSize: 12, fontWeight: 700, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", lineHeight: 1.35 }}>
+                    <div style={{ fontSize: 13, fontWeight: 950, color: "var(--color-dark)" }}>{item.title}</div>
+                    <div style={{ marginTop: 3, fontSize: 12, fontWeight: 700, color: "var(--color-muted)", lineHeight: 1.35 }}>
                       {item.detail}
                     </div>
                   </div>
 
                   <span
                     style={{
-                      border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                      border: "1px solid #e5eaf2",
                       background: "#f8fafc",
                       borderRadius: 999,
                       padding: "6px 9px",
@@ -1913,7 +1905,7 @@ useEffect(() => {
             <div
               style={{
                 marginTop: 16,
-                border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                border: "1px solid #e5eaf2",
                 borderRadius: 18,
                 background: "linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)",
                 padding: 14,
@@ -1921,8 +1913,8 @@ useEffect(() => {
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 950, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}>Execution snapshot</div>
-                  <div style={{ marginTop: 3, fontSize: 11.5, fontWeight: 700, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>
+                  <div style={{ fontSize: 13, fontWeight: 950, color: "var(--color-dark)" }}>Execution snapshot</div>
+                  <div style={{ marginTop: 3, fontSize: 11.5, fontWeight: 700, color: "var(--color-muted)" }}>
                     Live progress across the latest client workflow.
                   </div>
                 </div>
@@ -1949,7 +1941,7 @@ useEffect(() => {
                   ["Pending", reviewStatus === "pending" ? 65 : 20, "#f59e0b"],
                 ].map(([label, value, color]) => (
                   <div key={label} style={{ display: "grid", gridTemplateColumns: "86px 1fr 42px", gap: 10, alignItems: "center" }}>
-                    <div style={{ fontSize: 11.5, fontWeight: 900, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}>{label}</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 900, color: "var(--color-dark)" }}>{label}</div>
                     <div style={{ height: 9, borderRadius: 999, background: "#eef2f7", overflow: "hidden" }}>
                       <div
                         style={{
@@ -1960,7 +1952,7 @@ useEffect(() => {
                         }}
                       />
                     </div>
-                    <div style={{ textAlign: "right", fontSize: 11.5, fontWeight: 900, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>
+                    <div style={{ textAlign: "right", fontSize: 11.5, fontWeight: 900, color: "var(--color-muted)" }}>
                       {value}%
                     </div>
                   </div>
@@ -1985,8 +1977,8 @@ useEffect(() => {
                   <div
                     key={title}
                     style={{
-                      border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
-                      background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                      border: "1px solid #e5eaf2",
+                      background: "#fff",
                       borderRadius: 14,
                       padding: "9px 10px",
                       minHeight: 58,
@@ -1994,11 +1986,11 @@ useEffect(() => {
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                       <span style={{ color: "var(--color-brand)", fontWeight: 950 }}>{icon}</span>
-                      <span style={{ fontSize: 11.5, fontWeight: 950, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", lineHeight: 1.2 }}>
+                      <span style={{ fontSize: 11.5, fontWeight: 950, color: "var(--color-dark)", lineHeight: 1.2 }}>
                         {title}
                       </span>
                     </div>
-                    <div style={{ marginTop: 5, fontSize: 11, fontWeight: 850, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>
+                    <div style={{ marginTop: 5, fontSize: 11, fontWeight: 850, color: "var(--color-muted)" }}>
                       {status}
                     </div>
                   </div>
@@ -2033,8 +2025,8 @@ useEffect(() => {
                 style={{
                   minHeight: 118,
                   borderRadius: 16,
-                  background: darkModeEnabled ? "rgba(8, 25, 52, 0.92)" : "var(--color-bg-light)",
-                  border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                  background: "var(--color-bg-light)",
+                  border: "1px solid #e5eaf2",
                   position: "relative",
                   overflow: "hidden",
                   display: "flex",
@@ -2063,7 +2055,7 @@ useEffect(() => {
                       width: "100%",
                       padding: 12,
                       background: "linear-gradient(180deg,#ffffff 0%,var(--color-bg-light) 100%)",
-                      color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)",
+                      color: "var(--color-muted)",
                       boxSizing: "border-box",
                     }}
                   >
@@ -2105,7 +2097,7 @@ useEffect(() => {
                           <div>
                             <div
                               style={{
-                                color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)",
+                                color: "var(--color-dark)",
                                 fontWeight: 760,
                                 fontSize: 13,
                                 marginBottom: 3,
@@ -2117,7 +2109,7 @@ useEffect(() => {
                             <div
                               style={{
                                 fontSize: 11,
-                                color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)",
+                                color: "var(--color-muted)",
                               }}
                             >
                               Waiting for real generated or uploaded assets
@@ -2136,8 +2128,8 @@ useEffect(() => {
                             padding: "3px 6px",
                             fontSize: 11,
                             fontWeight: 700,
-                            background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
-                            color: darkModeEnabled ? "#cbd5e1" : "var(--color-mid)",
+                            background: "#fff",
+                            color: "var(--color-mid)",
                             
                           }}
                         >
@@ -2175,7 +2167,7 @@ useEffect(() => {
 
                           <div
                             style={{
-                              color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)",
+                              color: "var(--color-dark)",
                               fontWeight: 700,
                               fontSize: 13,
                               marginBottom: 8,
@@ -2188,7 +2180,7 @@ useEffect(() => {
                             style={{
                               fontSize: 10,
                               lineHeight: 1.45,
-                              color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)",
+                              color: "var(--color-muted)",
                             }}
                           >
                             Generated assets, uploaded brand files, previews, and deliverable media will appear here automatically.
@@ -2265,12 +2257,12 @@ useEffect(() => {
                   <h4 style={{ margin: 0, fontSize: 16 }}>
                     {liveDeliverable?.title || "Latest client deliverable"}
                   </h4>
-                  <div style={{ color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12 }}>
+                  <div style={{ color: "var(--color-muted)", fontSize: 12 }}>
                     {liveDeliverable?.created_at || "Ready for review"}
                   </div>
                 </div>
 
-                <p style={{ color: darkModeEnabled ? "#cbd5e1" : "var(--color-mid)", lineHeight: 1.45 }}>
+                <p style={{ color: "var(--color-mid)", lineHeight: 1.45 }}>
                   {liveDeliverable?.summary ||
                     "Client-specific deliverable generated from the latest execution, business profile, selected agents, and review requirements."}
                 </p>
@@ -2280,7 +2272,7 @@ useEffect(() => {
                     <span
                       key={tag}
                       style={{
-                        border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                        border: "1px solid #e5eaf2",
                         borderRadius: 16,
                         padding: "6px 9px",
                         fontSize: 11,
@@ -2294,7 +2286,7 @@ useEffect(() => {
 
                 {attachedAssets.length > 1 ? (
                   <div style={{ marginBottom: 10 }}>
-                    <div style={{ color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                    <div style={{ color: "var(--color-muted)", fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
                       Attached media
                     </div>
                     <div style={{ color: "#94a3b8", fontSize: 10.5, fontWeight: 650, marginBottom: 8 }}>
@@ -2373,8 +2365,8 @@ useEffect(() => {
                       window.open(deliverableDownloadUrl, "_blank", "noopener,noreferrer");
                     }}
                     style={{
-                      border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
-                      background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                      border: "1px solid #e5eaf2",
+                      background: "#fff",
                       color: deliverableDownloadUrl ? "#334155" : "#94a3b8",
                       borderRadius: 16,
                       padding: "6px 9px",
@@ -2397,8 +2389,8 @@ useEffect(() => {
                       }
                     }}
                     style={{
-                      border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
-                      background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                      border: "1px solid #e5eaf2",
+                      background: "#fff",
                       color: "#334155",
                       borderRadius: 16,
                       padding: "6px 9px",
@@ -2459,7 +2451,7 @@ useEffect(() => {
                     }}
                     style={{
                       border: "1px solid #fecaca",
-                      background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                      background: "#fff",
                       color: "var(--color-red)",
                       borderRadius: 16,
                       padding: "8px 12px",
@@ -2555,8 +2547,8 @@ useEffect(() => {
                 type="button"
                 onClick={() => setShowDeliverableModal(false)}
                 style={{
-                  border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
-                  background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+                  border: "1px solid #e5eaf2",
+                  background: "#fff",
                   color: "#334155",
                   borderRadius: 999,
                   padding: "8px 12px",
@@ -2586,7 +2578,7 @@ useEffect(() => {
                     minHeight: 320,
                     borderRadius: 22,
                     background: "#ffffff",
-                    border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                    border: "1px solid #e5eaf2",
                     overflow: "hidden",
                   }}
                 >
@@ -2637,7 +2629,7 @@ useEffect(() => {
                     window.open(deliverableDownloadUrl, "_blank", "noopener,noreferrer");
                   }}
                   style={{
-                    border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                    border: "1px solid #e5eaf2",
                     background: deliverableDownloadUrl ? "#ffffff" : "#f8fafc",
                     color: deliverableDownloadUrl ? "#334155" : "#94a3b8",
                     borderRadius: 999,
@@ -2682,7 +2674,7 @@ useEffect(() => {
               overflow: "hidden",
               borderRadius: 26,
               background: "#ffffff",
-              border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+              border: "1px solid #e5eaf2",
               boxShadow: "0 30px 90px rgba(15, 23, 42, 0.35)",
             }}
           >
@@ -2720,7 +2712,7 @@ useEffect(() => {
                 type="button"
                 onClick={() => setShowMediaPreviewOverlay(false)}
                 style={{
-                  border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                  border: "1px solid #e5eaf2",
                   background: "#ffffff",
                   color: "#334155",
                   borderRadius: 999,
@@ -2747,7 +2739,7 @@ useEffect(() => {
                   style={{
                     borderRadius: 22,
                     background: "#ffffff",
-                    border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                    border: "1px solid #e5eaf2",
                     minHeight: 320,
                     display: "flex",
                     alignItems: "center",
@@ -2839,7 +2831,7 @@ useEffect(() => {
             overflow: "hidden",
             borderRadius: 26,
             background: "#ffffff",
-            border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+            border: "1px solid #e5eaf2",
             boxShadow: "0 30px 90px rgba(15, 23, 42, 0.35)",
           }}
         >
@@ -2876,7 +2868,7 @@ useEffect(() => {
             <a
               href="#"
               style={{
-                border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                border: "1px solid #e5eaf2",
                 background: "#ffffff",
                 color: "#334155",
                 borderRadius: 999,
@@ -2904,7 +2896,7 @@ useEffect(() => {
                 style={{
                   borderRadius: 22,
                   background: "#ffffff",
-                  border: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #e5eaf2",
+                  border: "1px solid #e5eaf2",
                   minHeight: 320,
                   display: "flex",
                   alignItems: "center",
@@ -2955,7 +2947,7 @@ useEffect(() => {
 }
 
 const cardStyle = {
-  background: darkModeEnabled ? "rgba(3, 18, 42, 0.86)" : "#fff",
+  background: "#fff",
   borderRadius: 24,
   padding: "clamp(18px,2vw,24px)",
   boxShadow: "0 14px 34px rgba(15,23,42,.045)",
@@ -2963,14 +2955,14 @@ const cardStyle = {
 };
 
 const labelStyle = {
-  color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)",
+  color: "var(--color-muted)",
   fontSize: 11,
   fontWeight: 700,
   marginBottom: 8,
 };
 
 const mutedText = {
-  color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)",
+  color: "var(--color-muted)",
   lineHeight: 1.42,
   fontSize: 11,
 };
