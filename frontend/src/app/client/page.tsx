@@ -2843,6 +2843,57 @@ useEffect(() => {
             </div>
           </div>
         </section>
+
+        <footer
+          style={{
+            marginTop: 22,
+            padding: "18px 6px 4px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 14,
+            flexWrap: "wrap",
+            color: darkModeEnabled ? "#94a3b8" : "#64748b",
+            fontSize: 12,
+          }}
+        >
+          <div style={{ fontWeight: 800 }}>
+            © {new Date().getFullYear()} E-commerce AI Agent Platform
+          </div>
+
+          <nav
+            aria-label="Footer links"
+            style={{
+              display: "flex",
+              gap: 12,
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
+            {[
+              ["Privacy Policy", "/privacy-policy"],
+              ["Terms of Service", "/terms-of-service"],
+              ["Contact us", "/support-request"],
+            ].map(([label, href]) => (
+              <a
+                key={label}
+                href={href}
+                style={{
+                  color: darkModeEnabled ? "#cbd5e1" : "#334155",
+                  textDecoration: "none",
+                  fontWeight: 850,
+                  border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #e5eaf2",
+                  background: darkModeEnabled ? "rgba(12,24,49,.72)" : "#ffffff",
+                  borderRadius: 999,
+                  padding: "8px 11px",
+                }}
+              >
+                {label}
+              </a>
+            ))}
+          </nav>
+        </footer>
+
       </div>
 
 
