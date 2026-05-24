@@ -2464,7 +2464,7 @@ useEffect(() => {
       </div>
 
 
-/* OUTPUT_VIEWER_POPUP_MODAL_LOCKED_V1 */}
+{/* OUTPUT_VIEWER_POPUP_MODAL_LOCKED_V1 */}
       {showDeliverableModal ? (
         <div
           role="dialog"
