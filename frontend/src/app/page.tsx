@@ -993,11 +993,6 @@ function Footer() {
             <span className="nav__logo-tag">AI</span>
           </a>
           <p className="footer__tagline">The creative supercomputer<br />for the world&apos;s best teams.</p>
-          <div className="footer__social">
-            {["X","LinkedIn","YouTube","Discord"].map(s => (
-              <a key={s} href="#" className="footer__social-link">{s}</a>
-            ))}
-          </div>
         </div>
 
         {cols.map(col => (
