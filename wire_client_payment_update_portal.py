@@ -1,4 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+TARGET = ROOT / "frontend" / "src" / "app" / "api" / "billing-checkout" / "route.ts"
+BACKUP_DIR = ROOT / "backups"
+BACKUP_DIR.mkdir(exist_ok=True)
+
+backup = BACKUP_DIR / f"billing_checkout_route_before_payment_portal_{datetime.now().strftime('%Y%m%d_%H%M%S')}.ts"
+if TARGET.exists():
+    shutil.copy2(TARGET, backup)
+
+TARGET.parent.mkdir(parents=True, exist_ok=True)
+
+TARGET.write_text(r'''import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -109,3 +124,7 @@ export async function POST(request: NextRequest) {
     });
   }
 }
+''', encoding="utf-8")
+
+print("CLIENT_PAYMENT_UPDATE_PORTAL_ROUTE_WIRED")
+print(f"Backup: {backup}")
