@@ -1,4 +1,19 @@
-"use client";
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+TARGET = ROOT / "frontend" / "src" / "app" / "client" / "billing" / "page.tsx"
+BACKUP_DIR = ROOT / "backups"
+BACKUP_DIR.mkdir(exist_ok=True)
+
+backup = BACKUP_DIR / f"client_billing_page_before_payment_update_{datetime.now().strftime('%Y%m%d_%H%M%S')}.tsx"
+if TARGET.exists():
+    shutil.copy2(TARGET, backup)
+
+TARGET.parent.mkdir(parents=True, exist_ok=True)
+
+TARGET.write_text(r'''"use client";
 
 import React, { useEffect, useState } from "react";
 
@@ -170,3 +185,7 @@ export default function ClientBillingPage() {
     </main>
   );
 }
+''', encoding="utf-8")
+
+print("CLIENT_BILLING_PAYMENT_UPDATE_PAGE_FIXED")
+print(f"Backup: {backup}")
