@@ -1257,16 +1257,16 @@ useEffect(() => {
             </div>
 
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-              <div style={{ background: "rgba(238,242,255,.95)", color: "var(--color-brand)", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12 }}>
+              <div style={{ background: darkModeEnabled ? "rgba(79,70,229,.20)" : "rgba(238,242,255,.95)", color: "var(--color-brand)", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12 }}>
                 ● {businessProfileSaved ? "Saved" : "Not saved yet"}
               </div>
-              <button type="button" onClick={() => setToastMessage("Add business details, save the profile, then future AI executions will use this context.")} style={{ border: "1px solid rgba(79,70,229,.18)", background: "#fff", color: "#334155", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12, cursor: "pointer" }}>
+              <button type="button" onClick={() => setToastMessage("Add business details, save the profile, then future AI executions will use this context.")} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#cbd5e1" : "#334155", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12, cursor: "pointer" }}>
                 ? How it works
               </button>
             </div>
           </div>
 
-          <div style={{ marginBottom: 12, borderRadius: 12, border: "1px solid rgba(79,70,229,.12)", background: "rgba(238,242,255,.45)", padding: "8px 10px", color: "#334155", fontSize: 12.4, fontWeight: 750 }}>
+          <div style={{ marginBottom: 12, borderRadius: 12, border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid rgba(79,70,229,.12)", background: darkModeEnabled ? "rgba(30,41,59,.82)" : "rgba(238,242,255,.45)", padding: "8px 10px", color: darkModeEnabled ? "#cbd5e1" : "#334155", fontSize: 12.4, fontWeight: 750 }}>
             Start with <strong>Business name</strong>. This controls the client initials and account name shown in the top-right profile menu.
           </div>
 
@@ -1288,11 +1288,11 @@ useEffect(() => {
                 style={{
                   gridColumn: "span 1",
                   borderRadius: 16,
-                  border: "1px solid rgba(15,23,42,.08)",
-                  background: "#fff",
+                  border: darkModeEnabled ? "1px solid rgba(148,163,184,.16)" : "1px solid rgba(15,23,42,.08)",
+                  background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff",
                   padding: 12,
                   minHeight: 98,
-                  boxShadow: "0 14px 38px rgba(15,23,42,.04)",
+                  boxShadow: darkModeEnabled ? "0 18px 44px rgba(0,0,0,.32)" : "0 14px 38px rgba(15,23,42,.04)",
                   boxSizing: "border-box",
                   position: "relative",
                   zIndex: 21,
@@ -1300,9 +1300,9 @@ useEffect(() => {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 9, pointerEvents: "none" }}>
-                  <div style={{ width: 28, height: 28, borderRadius: 10, display: "grid", placeItems: "center", background: "rgba(238,242,255,.95)", color: "#4f46e5", fontWeight: 900, fontSize: 13, border: "1px solid rgba(79,70,229,.12)" }}>{icon}</div>
-                  <div style={{ color: "#0f172a", fontSize: 12.5, fontWeight: 900 }}>
-                    {label}{label === "Key differentiators" ? <span style={{ color: "#64748b", fontWeight: 700 }}> (optional)</span> : null}
+                  <div style={{ width: 28, height: 28, borderRadius: 10, display: "grid", placeItems: "center", background: darkModeEnabled ? "rgba(79,70,229,.20)" : "rgba(238,242,255,.95)", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontWeight: 900, fontSize: 13, border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid rgba(79,70,229,.12)" }}>{icon}</div>
+                  <div style={{ color: darkModeEnabled ? "#f8fafc" : "#0f172a", fontSize: 12.5, fontWeight: 900 }}>
+                    {label}{label === "Key differentiators" ? <span style={{ color: darkModeEnabled ? "#94a3b8" : "#64748b", fontWeight: 700 }}> (optional)</span> : null}
                   </div>
                 </div>
 
@@ -1322,11 +1322,11 @@ useEffect(() => {
                       width: "100%",
                       height: 34,
                       border: "1.5px solid rgba(79,70,229,.35)",
-                      background: "#fff",
+                      background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff",
                       padding: "9px 11px",
                       borderRadius: 10,
                       fontSize: 13,
-                      color: "#0f172a",
+                      color: darkModeEnabled ? "#f8fafc" : "#0f172a",
                       outline: "none",
                       boxSizing: "border-box",
                       fontFamily: "inherit",
@@ -1353,13 +1353,13 @@ useEffect(() => {
                       width: "100%",
                       resize: "vertical",
                       minHeight: 48,
-                      border: "1px solid rgba(79,70,229,.18)",
-                      background: "#fff",
+                      border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)",
+                      background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff",
                       padding: "9px 10px",
                       borderRadius: 10,
                       fontSize: 12.4,
                       lineHeight: 1.38,
-                      color: "#0f172a",
+                      color: darkModeEnabled ? "#f8fafc" : "#0f172a",
                       outline: "none",
                       boxSizing: "border-box",
                       fontFamily: "inherit",
@@ -1376,18 +1376,18 @@ useEffect(() => {
             ))}
           </div>
 
-          <div style={{ marginTop: 14, borderRadius: 16, border: "1px solid rgba(79,70,229,.10)", background: "#fff", padding: 10, boxShadow: "0 10px 28px rgba(15,23,42,.04)", position: "relative", zIndex: 25 }}>
+          <div style={{ marginTop: 14, borderRadius: 16, border: darkModeEnabled ? "1px solid rgba(129,140,248,.22)" : "1px solid rgba(79,70,229,.10)", background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", padding: 10, boxShadow: darkModeEnabled ? "0 14px 34px rgba(0,0,0,.28)" : "0 10px 28px rgba(15,23,42,.04)", position: "relative", zIndex: 25 }}>
             <div style={{ display: "grid", gridTemplateColumns: "180px 180px 180px 1fr", gap: 10, alignItems: "center" }}>
               <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "8px 10px", height: 34, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "#fff", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>▣ Save business profile</button>
-              <button type="button" onClick={loadBusinessProfile} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>↻ Reset to last save</button>
-              <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: "#fff", color: "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>◉ Preview profile</button>
+              <button type="button" onClick={loadBusinessProfile} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>↻ Reset to last save</button>
+              <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>◉ Preview profile</button>
               <div style={{ borderLeft: "1px solid rgba(79,70,229,.12)", paddingLeft: 14, minHeight: 44, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-                <div style={{ fontWeight: 900, color: "#0f172a", fontSize: 12.5, marginBottom: 2 }}>One workspace. One business.</div>
-                <div style={{ color: "#64748b", fontSize: 11.4, lineHeight: 1.3 }}>You can refine this profile, but changing business identity requires approval unless Enterprise multi-business access is enabled.</div>
+                <div style={{ fontWeight: 900, color: darkModeEnabled ? "#f8fafc" : "#0f172a", fontSize: 12.5, marginBottom: 2 }}>One workspace. One business.</div>
+                <div style={{ color: darkModeEnabled ? "#94a3b8" : "#64748b", fontSize: 11.4, lineHeight: 1.3 }}>You can refine this profile, but changing business identity requires approval unless Enterprise multi-business access is enabled.</div>
                 <div style={{ marginTop: 2, color: businessProfileSaved ? "#16a34a" : "#4f46e5", fontSize: 11.4, fontWeight: 900 }}>Status: {businessProfileSaved ? "Saved" : "Not saved yet"}</div>
               </div>
             </div>
-            <div style={{ marginTop: 8, borderRadius: 11, border: "1px solid rgba(79,70,229,.10)", background: "rgba(238,242,255,.50)", padding: "7px 11px", color: "#475569", fontSize: 11.7, lineHeight: 1.35, fontWeight: 700 }}>
+            <div style={{ marginTop: 8, borderRadius: 11, border: darkModeEnabled ? "1px solid rgba(129,140,248,.22)" : "1px solid rgba(79,70,229,.10)", background: darkModeEnabled ? "rgba(30,41,59,.88)" : "rgba(238,242,255,.50)", padding: "7px 11px", color: darkModeEnabled ? "#94a3b8" : "#475569", fontSize: 11.7, lineHeight: 1.35, fontWeight: 700 }}>
               ✨ Pro tip: The more specific you are, the better your AI agents can create content, copy, and strategies tailored to your business.
             </div>
           </div>
