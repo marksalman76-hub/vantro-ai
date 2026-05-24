@@ -855,14 +855,14 @@ useEffect(() => {
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "flex-end", position: "relative" }}>
             <button
               style={{
-                border: "none",
+                border: darkModeEnabled ? "1px solid rgba(124,58,237,.45)" : "none",
                 borderRadius: 12,
-                padding: "8px 10px",
-                background: "var(--color-dark)",
+                padding: "9px 13px",
+                background: darkModeEnabled ? "rgba(79,70,229,.16)" : "var(--color-dark)",
                 color: "#fff",
-                fontWeight: 700,
+                fontWeight: 850,
                 cursor: "pointer",
-                boxShadow: "0 10px 24px rgba(15,23,42,.12)",
+                boxShadow: darkModeEnabled ? "0 0 0 1px rgba(124,58,237,.12), 0 12px 32px rgba(0,0,0,.22)" : "0 10px 24px rgba(15,23,42,.12)",
               }}
             >
               + New execution
@@ -870,35 +870,43 @@ useEffect(() => {
 
             <div
               style={{
-                background: "#fff",
+                background: darkModeEnabled ? "rgba(3, 18, 42, 0.92)" : "#fff",
                 borderRadius: 16,
-                padding: "8px 10px",
-                border: "1px solid #e5eaf2",
-                fontWeight: 800,
-                boxShadow: "0 8px 22px rgba(15,23,42,.045)",
+                padding: "9px 14px",
+                border: darkModeEnabled ? "1px solid rgba(34,197,94,.42)" : "1px solid #e5eaf2",
+                fontWeight: 900,
+                boxShadow: darkModeEnabled ? "0 0 0 1px rgba(34,197,94,.12), 0 12px 34px rgba(0,0,0,.24)" : "0 8px 22px rgba(15,23,42,.045)",
                 textTransform: "uppercase",
+                color: darkModeEnabled ? "#ecfdf5" : "var(--color-dark)",
+                display: "inline-flex",
+                alignItems: "center",
+                minHeight: 34,
               }}
             >
               <span
                 style={{
                   color: accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444",
                   marginRight: 8,
+                  textShadow: darkModeEnabled ? "0 0 16px rgba(34,197,94,.65)" : "none",
                 }}
               >
                 ●
               </span>
-              {accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "ACTIVE" : "INACTIVE"}
+              <span style={{ color: accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444" }}>
+                {accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "ACTIVE" : "INACTIVE"}
+              </span>
             </div>
 
             <button
               aria-label="Notifications"
               style={{
-                width: 34,
-                height: 34,
-                borderRadius: 16,
-                border: "1px solid #e5eaf2",
-                background: "#fff",
-                boxShadow: "0 8px 22px rgba(15,23,42,.045)",
+                width: 38,
+                height: 38,
+                borderRadius: 999,
+                border: darkModeEnabled ? "1px solid rgba(255,255,255,.16)" : "1px solid #e5eaf2",
+                background: darkModeEnabled ? "rgba(255,255,255,.10)" : "#fff",
+                color: darkModeEnabled ? "#fff" : "var(--color-dark)",
+                boxShadow: darkModeEnabled ? "0 0 0 1px rgba(255,255,255,.06), 0 12px 34px rgba(0,0,0,.24)" : "0 8px 22px rgba(15,23,42,.045)",
                 cursor: "pointer",
                 position: "relative",
               }}
@@ -921,17 +929,19 @@ useEffect(() => {
             <details ref={profileMenuRef} style={{ position: "relative", zIndex: 100 }}>
               <summary
                 style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 16,
-                  background: "var(--color-dark)",
+                  width: 42,
+                  height: 42,
+                  borderRadius: 999,
+                  background: darkModeEnabled ? "linear-gradient(135deg, #4f46e5, #7c3aed)" : "var(--color-dark)",
+                  border: darkModeEnabled ? "1px solid rgba(255,255,255,.18)" : "none",
                   color: "#fff",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  fontWeight: 760,
+                  fontWeight: 900,
                   cursor: "pointer",
                   listStyle: "none",
+                  boxShadow: darkModeEnabled ? "0 0 0 5px rgba(99,102,241,.18), 0 0 26px rgba(99,102,241,.62)" : "0 8px 22px rgba(15,23,42,.14)",
                 }}
               >
                 {clientInitials}
