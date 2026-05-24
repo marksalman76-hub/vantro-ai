@@ -1,4 +1,16 @@
-"use client";
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+TARGET = ROOT / "frontend" / "src" / "app" / "page.tsx"
+BACKUP_DIR = ROOT / "backups"
+BACKUP_DIR.mkdir(exist_ok=True)
+
+backup = BACKUP_DIR / f"landing_page_before_full_rebuild_sintra_higgsfield_{datetime.now().strftime('%Y%m%d_%H%M%S')}.tsx"
+shutil.copy2(TARGET, backup)
+
+TARGET.write_text(r'''"use client";
 
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -235,3 +247,7 @@ export default function HomePage() {
     </main>
   );
 }
+''', encoding="utf-8")
+
+print("LANDING_PAGE_REBUILT_SINTRA_HIGGSFIELD_STYLE")
+print(f"Backup: {backup}")
