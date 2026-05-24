@@ -323,7 +323,10 @@ export default function ClientPage() {
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [integrationMessage, setIntegrationMessage] = useState("");
   const [activeAccountPanel, setActiveAccountPanel] = useState("");
-  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+  const [darkModeEnabled, setDarkModeEnabled] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("client_workspace_dark_mode") === "dark";
+  });
   const setAndPersistDarkMode = (nextValue: boolean) => {
     setDarkModeEnabled(nextValue);
     try {
@@ -342,6 +345,12 @@ export default function ClientPage() {
       document.documentElement.dataset.clientTheme = shouldUseDarkMode ? "dark" : "light";
     } catch {}
   }, []);
+
+  useEffect(() => {
+    try {
+      document.documentElement.dataset.clientTheme = darkModeEnabled ? "dark" : "light";
+    } catch {}
+  }, [darkModeEnabled]);
 
 
   const shellStyle = {
