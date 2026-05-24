@@ -802,6 +802,70 @@ useEffect(() => {
       }}
     >
 
+        {/* BOTTOM_DARK_INNER_CARD_POLISH_V1 */}
+        <style>{`
+          ${darkModeEnabled ? `
+            main section:nth-of-type(n+4) div[style*="background: #fff"],
+            main section:nth-of-type(n+4) div[style*='background: "#fff"'],
+            main section:nth-of-type(n+4) button[style*="background: #fff"],
+            main section:nth-of-type(n+4) button[style*='background: "#fff"'] {
+              background: rgba(12, 24, 49, .92) !important;
+              border-color: rgba(99,102,241,.24) !important;
+              color: #f8fafc !important;
+              box-shadow: 0 14px 40px rgba(0,0,0,.24) !important;
+            }
+
+            main section:nth-of-type(n+4) div[style*="Generated"],
+            main section:nth-of-type(n+4) div[style*="Reviewed"],
+            main section:nth-of-type(n+4) div[style*="Approved"],
+            main section:nth-of-type(n+4) div[style*="Pending"] {
+              color: #f8fafc !important;
+            }
+
+            main section:nth-of-type(n+4) [style*="No asset generated yet"],
+            main section:nth-of-type(n+4) [style*="Media preview"] {
+              color: #f8fafc !important;
+            }
+
+            main section:nth-of-type(n+4) [style*="border: 1px solid #e5eaf2"],
+            main section:nth-of-type(n+4) [style*='border: "1px solid #e5eaf2"'] {
+              border-color: rgba(99,102,241,.24) !important;
+            }
+
+            main section:nth-of-type(n+4) input,
+            main section:nth-of-type(n+4) textarea {
+              background: rgba(3, 10, 24, .86) !important;
+              color: #f8fafc !important;
+              border-color: rgba(129,140,248,.34) !important;
+            }
+
+            main section:nth-of-type(n+4) p,
+            main section:nth-of-type(n+4) span,
+            main section:nth-of-type(n+4) div {
+              color: inherit;
+            }
+
+            main section:nth-of-type(n+4) [style*="color: #0f172a"],
+            main section:nth-of-type(n+4) [style*="color: var(--color-dark)"] {
+              color: #f8fafc !important;
+            }
+
+            main section:nth-of-type(n+4) [style*="color: #334155"],
+            main section:nth-of-type(n+4) [style*="color: #475569"],
+            main section:nth-of-type(n+4) [style*="color: #64748b"],
+            main section:nth-of-type(n+4) [style*="color: var(--color-muted)"] {
+              color: #94a3b8 !important;
+            }
+
+            main section:nth-of-type(n+4) [style*="background: rgba(248,250,252"],
+            main section:nth-of-type(n+4) [style*="background: #f8fafc"],
+            main section:nth-of-type(n+4) [style*='background: "#f8fafc"'] {
+              background: rgba(15,23,42,.86) !important;
+            }
+          ` : ``}
+        `}</style>
+
+
         {/* FULL_PAGE_DARK_MODE_CSS_LAYER_V1 */}
         <style>{`
           ${darkModeEnabled ? `
