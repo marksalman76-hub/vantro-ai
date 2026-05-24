@@ -1755,6 +1755,64 @@ useEffect(() => {
           </div>
         </section>
 
+
+        {/* TARGETED_DARK_MODE_WORKFLOW_INTEGRATION_POLISH_V1 */}
+        <style>{`
+          ${darkModeEnabled ? `
+            main section:nth-of-type(5),
+            main section:nth-of-type(6) {
+              background: linear-gradient(180deg, rgba(10,22,46,.96), rgba(7,16,34,.98)) !important;
+              border-color: rgba(99,102,241,.24) !important;
+              color: #f8fafc !important;
+              box-shadow: 0 24px 80px rgba(0,0,0,.34) !important;
+            }
+
+            main section:nth-of-type(5) div,
+            main section:nth-of-type(6) div,
+            main section:nth-of-type(5) p,
+            main section:nth-of-type(6) p,
+            main section:nth-of-type(5) h3,
+            main section:nth-of-type(6) h3 {
+              color: inherit;
+            }
+
+            main section:nth-of-type(5) [style*="background: #fff"],
+            main section:nth-of-type(5) [style*="background: rgb(255, 255, 255)"],
+            main section:nth-of-type(6) [style*="background: #fff"],
+            main section:nth-of-type(6) [style*="background: rgb(255, 255, 255)"] {
+              background: rgba(12,24,49,.92) !important;
+              border-color: rgba(99,102,241,.24) !important;
+              color: #f8fafc !important;
+            }
+
+            main section:nth-of-type(5) [style*="color: var(--color-dark)"],
+            main section:nth-of-type(5) [style*="color: #0f172a"],
+            main section:nth-of-type(6) [style*="color: var(--color-dark)"],
+            main section:nth-of-type(6) [style*="color: #0f172a"] {
+              color: #f8fafc !important;
+            }
+
+            main section:nth-of-type(5) [style*="color: var(--color-muted)"],
+            main section:nth-of-type(5) [style*="color: #64748b"],
+            main section:nth-of-type(6) [style*="color: var(--color-muted)"],
+            main section:nth-of-type(6) [style*="color: #64748b"] {
+              color: #94a3b8 !important;
+            }
+
+            main section:nth-of-type(4) button {
+              background: rgba(12,24,49,.92) !important;
+              border-color: rgba(99,102,241,.24) !important;
+              color: #f8fafc !important;
+              pointer-events: auto !important;
+            }
+
+            main section:nth-of-type(4) button span,
+            main section:nth-of-type(4) button div {
+              color: inherit !important;
+            }
+          ` : ``}
+        `}</style>
+
         <section
         style={{
           ...cardStyle,
@@ -1765,7 +1823,7 @@ useEffect(() => {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "150px repeat(6, minmax(130px, 1fr)) 155px",
+            gridTemplateColumns: "140px repeat(7, minmax(118px, 1fr)) 145px",
             gap: 10,
             alignItems: "center",
             width: "100%",
@@ -1785,6 +1843,7 @@ useEffect(() => {
             ["website", "W", "Website / CMS"],
             ["calendar", "C", "Calendar"],
             ["sms", "S", "SMS / Phone"],
+            ["social", "S", "Social Media"],
           ].map(([integrationKey, letter, label]) => (
             <button
               key={label}
