@@ -1,4 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+TARGET = ROOT / "frontend" / "src" / "app" / "api" / "billing-checkout" / "route.ts"
+BACKUP_DIR = ROOT / "backups"
+BACKUP_DIR.mkdir(exist_ok=True)
+
+backup = BACKUP_DIR / f"billing_checkout_route_before_customer_fallback_{datetime.now().strftime('%Y%m%d_%H%M%S')}.ts"
+shutil.copy2(TARGET, backup)
+
+TARGET.write_text(r'''import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -148,3 +160,7 @@ export async function POST(request: NextRequest) {
     });
   }
 }
+''', encoding="utf-8")
+
+print("PAYMENT_UPDATE_CUSTOMER_FALLBACK_FIXED")
+print(f"Backup: {backup}")
