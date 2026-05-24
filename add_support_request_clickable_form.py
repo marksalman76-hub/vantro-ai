@@ -1,4 +1,16 @@
-"use client";
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+TARGET = ROOT / "frontend" / "src" / "app" / "support-request" / "page.tsx"
+BACKUP_DIR = ROOT / "backups"
+BACKUP_DIR.mkdir(exist_ok=True)
+
+backup = BACKUP_DIR / f"support_request_page_before_clickable_form_{datetime.now().strftime('%Y%m%d_%H%M%S')}.tsx"
+shutil.copy2(TARGET, backup)
+
+TARGET.write_text(r'''"use client";
 
 import React, { useEffect, useState } from "react";
 
@@ -203,3 +215,7 @@ export default function SupportRequestPage() {
     </main>
   );
 }
+''', encoding="utf-8")
+
+print("SUPPORT_REQUEST_CLICKABLE_FORM_ADDED")
+print(f"Backup: {backup}")
