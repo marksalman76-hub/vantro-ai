@@ -986,7 +986,8 @@ function Footer() {
     { title: "Legal",      links: ["Terms","Privacy","Cookies","Licenses"] },
   ];
   return (
-    <footer className="footer">
+    <div id="workflow" style={ scrollMarginTop: 120 } />
+      <footer className="footer">
       <div className="footer__inner">
         <div className="footer__brand">
           <a href="#" className="nav__logo">
@@ -1071,7 +1072,11 @@ export default function Page() {
 
   return (
     <>
-      <style>{CSS}</style>
+      <style>{CSS}
+        html { scroll-behavior: smooth; }
+        section[id], div[id] { scroll-margin-top: 120px; }
+
+      </style>
       <CursorGlow />
       <NoiseTexture />
       <Nav muted={muted} onToggleAudio={handleToggleAudio} />
