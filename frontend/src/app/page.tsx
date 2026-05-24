@@ -444,7 +444,7 @@ function Hero() {
       {/* Scroll indicator */}
       <motion.div
         animate={{ y: [0, 8, 0] }}
-        transition={{ repeat: Infinity, duration: 2 }}
+        transition={{ repeat: Number.POSITIVE_INFINITY, duration: 2 }}
         className="hero__scroll-hint"
       >
         <ChevronDown size={20} />
@@ -692,7 +692,7 @@ function FeatureBento() {
                 key={i}
                 className="bento-card__dot"
                 animate={{ opacity: [0.2, 1, 0.2], scale: [1, 1.3, 1] }}
-                transition={{ delay: i * 0.12, duration: 2.5, repeat: Infinity }}
+                transition={{ delay: i * 0.12, duration: 2.5, repeat: Number.POSITIVE_INFINITY }}
               />
             ))}
           </div>
