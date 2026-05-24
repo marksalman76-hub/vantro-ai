@@ -2321,9 +2321,10 @@ useEffect(() => {
                     marginBottom: 10,
                   }}
                 >
-                  <button
-                    onClick={() => setShowMediaPreviewOverlay(true)}
+                  <a
+                    href="#media-preview-popup"
                     style={{
+
                       border: "1px solid rgba(37, 99, 235, 0.14)",
                       background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
                       color: "var(--color-brand)",
@@ -2332,10 +2333,14 @@ useEffect(() => {
                       fontWeight: 760,
                       fontSize: 11,
                       cursor: "pointer",
+                    
+                      textDecoration: "none",
+                      display: "inline-flex",
+                      alignItems: "center",
                     }}
                   >
                     Preview in popup
-                  </button>
+                  </a>
 
                   <button
                     disabled={!deliverableDownloadUrl}
@@ -2767,6 +2772,162 @@ useEffect(() => {
           </div>
         </div>
       ) : null}
+
+
+      {/* HASH_MEDIA_PREVIEW_POPUP_V1 */}
+      <style>{`
+        #media-preview-popup {
+          display: none;
+        }
+        #media-preview-popup:target {
+          display: flex;
+        }
+      `}</style>
+
+      <div
+        id="media-preview-popup"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Media preview popup"
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 2147483647,
+          alignItems: "center",
+          justifyContent: "center",
+          padding: 24,
+          background: "rgba(15, 23, 42, 0.76)",
+        }}
+      >
+        <a
+          href="#"
+          aria-label="Close media preview"
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "block",
+            cursor: "default",
+          }}
+        />
+
+        <div
+          style={{
+            position: "relative",
+            width: "min(860px, 94vw)",
+            maxHeight: "84vh",
+            overflow: "hidden",
+            borderRadius: 26,
+            background: "#ffffff",
+            border: "1px solid #e5eaf2",
+            boxShadow: "0 30px 90px rgba(15, 23, 42, 0.35)",
+          }}
+        >
+          <div
+            style={{
+              padding: "18px 20px",
+              borderBottom: "1px solid #e5eaf2",
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 16,
+              alignItems: "flex-start",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  color: "var(--color-brand)",
+                  fontSize: 11,
+                  fontWeight: 900,
+                  letterSpacing: ".13em",
+                  textTransform: "uppercase",
+                }}
+              >
+                Media preview
+              </div>
+              <h3 style={{ margin: "6px 0 0", fontSize: 18, color: "#0f172a" }}>
+                {selectedAsset?.title || selectedAsset?.name || liveDeliverable?.title || "Client deliverable"}
+              </h3>
+              <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 12.5 }}>
+                Real generated/uploaded assets only.
+              </p>
+            </div>
+
+            <a
+              href="#"
+              style={{
+                border: "1px solid #e5eaf2",
+                background: "#ffffff",
+                color: "#334155",
+                borderRadius: 999,
+                padding: "8px 12px",
+                fontWeight: 850,
+                fontSize: 12,
+                cursor: "pointer",
+                textDecoration: "none",
+              }}
+            >
+              Close
+            </a>
+          </div>
+
+          <div
+            style={{
+              padding: 20,
+              background: "#f8fafc",
+              maxHeight: "calc(84vh - 92px)",
+              overflow: "auto",
+            }}
+          >
+            {primaryAssetUrl ? (
+              <div
+                style={{
+                  borderRadius: 22,
+                  background: "#ffffff",
+                  border: "1px solid #e5eaf2",
+                  minHeight: 320,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                }}
+              >
+                <img
+                  src={primaryAssetUrl}
+                  alt={selectedAsset?.title || selectedAsset?.name || "Generated media asset"}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "62vh",
+                    objectFit: "contain",
+                    display: "block",
+                  }}
+                />
+              </div>
+            ) : (
+              <div
+                style={{
+                  minHeight: 260,
+                  borderRadius: 22,
+                  background: "#ffffff",
+                  border: "1px dashed #cbd5e1",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                  padding: 28,
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>🖼️</div>
+                  <h4 style={{ margin: 0, fontSize: 17, color: "#0f172a" }}>No asset generated yet</h4>
+                  <p style={{ margin: "8px auto 0", maxWidth: 430, color: "#64748b", fontSize: 13, lineHeight: 1.55 }}>
+                    Real generated media, uploaded brand files, previews, and deliverable assets will appear here once attached to the runtime result.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
 </main>
   );
