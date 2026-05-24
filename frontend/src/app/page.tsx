@@ -961,7 +961,7 @@ function FinalCTA() {
         <p className="final-cta__sub">
           Free 14-day trial · No credit card · Cancel anytime
         </p>
-        <div className="final-cta__buttons">
+        <div id="about" className="final-cta__buttons">
           <a href="#" className="hero__cta-primary">
             <Sparkles size={16} />
             Start for free
@@ -980,7 +980,7 @@ function FinalCTA() {
 
 function Footer() {
   const cols = [
-    { title: "Company",    links: [["About","#platform"],["Blog","#features"],["Contact","/support-request"]] },
+    { title: "Company",    links: [["About","#about"],["Blog","#features"],["Contact","/support-request"]] },
     { title: "Legal",      links: [["Terms","/terms-of-service"],["Privacy","/privacy-policy"],["Cookies","/cookies"]] },
   ];
   return (
