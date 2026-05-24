@@ -1054,6 +1054,25 @@ function useAmbientAudio(muted: boolean) {
 // ─── ROOT ────────────────────────────────────────────────────────────────────
 
 export default function Page() {
+  const [cookieConsentVisible, setCookieConsentVisible] = useState(false);
+
+  useEffect(() => {
+    try {
+      const savedConsent = window.localStorage.getItem("nexus_cookie_consent");
+      setCookieConsentVisible(savedConsent !== "accepted");
+    } catch {
+      setCookieConsentVisible(true);
+    }
+  }, []);
+
+  function acceptCookieConsent() {
+    try {
+      window.localStorage.setItem("nexus_cookie_consent", "accepted");
+    } catch {}
+    setCookieConsentVisible(false);
+  }
+
+
   const [muted, setMuted] = useState(true);
   const startAudio = useAmbientAudio(muted);
 
@@ -1064,7 +1083,82 @@ export default function Page() {
 
   return (
     <>
-      <style>{CSS}</style>
+      <style>{CSS}
+  .cookieConsent {
+    position: fixed;
+    left: 24px;
+    right: 24px;
+    bottom: 24px;
+    z-index: 9999;
+    max-width: 980px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 18px 20px;
+    border-radius: 22px;
+    border: 1px solid rgba(165, 180, 252, 0.28);
+    background: linear-gradient(180deg, rgba(8, 13, 28, 0.96), rgba(3, 7, 18, 0.98));
+    box-shadow: 0 28px 90px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255,255,255,0.08);
+    backdrop-filter: blur(22px) saturate(150%);
+    -webkit-backdrop-filter: blur(22px) saturate(150%);
+    color: #f8fafc;
+  }
+
+  .cookieConsent strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 950;
+    margin-bottom: 5px;
+  }
+
+  .cookieConsent p {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 13px;
+    line-height: 1.45;
+    max-width: 680px;
+  }
+
+  .cookieConsent__actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .cookieConsent__actions a {
+    color: #c7d2fe;
+    font-size: 13px;
+    font-weight: 850;
+    text-decoration: none;
+  }
+
+  .cookieConsent__actions button {
+    border: 0;
+    border-radius: 14px;
+    padding: 11px 14px;
+    background: linear-gradient(135deg, #7c3aed, #4f46e5);
+    color: #ffffff;
+    font-weight: 950;
+    cursor: pointer;
+    box-shadow: 0 16px 34px rgba(79, 70, 229, 0.32);
+  }
+
+  @media (max-width: 720px) {
+    .cookieConsent {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .cookieConsent__actions {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+
+</style>
       <CursorGlow />
       <NoiseTexture />
       <Nav muted={muted} onToggleAudio={handleToggleAudio} />
@@ -1078,7 +1172,24 @@ export default function Page() {
         <Testimonials />
         <Pricing />
         <FinalCTA />
-      </main>
+      
+      {cookieConsentVisible ? (
+        <div className="cookieConsent" role="dialog" aria-label="Cookie notice">
+          <div>
+            <strong>Cookies help us run Nexus AI properly.</strong>
+            <p>
+              We use essential cookies for login, workspace security, billing flow continuity,
+              preferences, and performance. You can read more in our Cookie Policy.
+            </p>
+          </div>
+          <div className="cookieConsent__actions">
+            <a href="/cookies">Cookie Policy</a>
+            <button type="button" onClick={acceptCookieConsent}>Accept cookies</button>
+          </div>
+        </div>
+      ) : null}
+
+    </main>
       <Footer />
     </>
   );
