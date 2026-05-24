@@ -802,124 +802,7 @@ useEffect(() => {
       }}
     >
 
-        {/* BOTTOM_SECTION_DARK_CONSISTENCY_V1 */}
-        <style>{`
-          ${darkModeEnabled ? `
-            .client-bottom-workspace,
-            .client-bottom-workspace > div {
-              color: #f8fafc !important;
-            }
 
-            .client-bottom-workspace > div {
-              background:
-                linear-gradient(180deg, rgba(10,22,46,.96), rgba(7,16,34,.98)) !important;
-              border: 1px solid rgba(99,102,241,.24) !important;
-              box-shadow: 0 24px 80px rgba(0,0,0,.34) !important;
-            }
-
-            .client-bottom-workspace div[style*="background: #fff"],
-            .client-bottom-workspace div[style*="background: \\"#fff\\""],
-            .client-bottom-workspace button[style*="background: #fff"],
-            .client-bottom-workspace button[style*="background: \\"#fff\\""],
-            .client-bottom-workspace span[style*="background: #fff"],
-            .client-bottom-workspace span[style*="background: \\"#fff\\""] {
-              background: rgba(12,24,49,.92) !important;
-              border-color: rgba(99,102,241,.24) !important;
-              color: #f8fafc !important;
-              box-shadow: 0 12px 36px rgba(0,0,0,.22) !important;
-            }
-
-            .client-bottom-workspace div[style*="linear-gradient(180deg,#ffffff"],
-            .client-bottom-workspace div[style*="linear-gradient(180deg, #ffffff"],
-            .client-bottom-workspace div[style*="linear-gradient(180deg,#fff"],
-            .client-bottom-workspace div[style*="linear-gradient(135deg,var(--color-bg-light)"] {
-              background:
-                linear-gradient(180deg, rgba(15,23,42,.94), rgba(8,18,40,.96)) !important;
-              border-color: rgba(99,102,241,.24) !important;
-              color: #f8fafc !important;
-            }
-
-            .client-bottom-workspace div[style*="background: var(--color-bg-light)"],
-            .client-bottom-workspace div[style*="background: \\"var(--color-bg-light)\\""],
-            .client-bottom-workspace button[style*="background: var(--color-bg-light)"],
-            .client-bottom-workspace button[style*="background: \\"var(--color-bg-light)\\""] {
-              background: rgba(15,23,42,.88) !important;
-              border-color: rgba(99,102,241,.22) !important;
-              color: #f8fafc !important;
-            }
-
-            .client-bottom-workspace div[style*="background: #f8fafc"],
-            .client-bottom-workspace span[style*="background: #f8fafc"],
-            .client-bottom-workspace button[style*="background: #f8fafc"] {
-              background: rgba(15,23,42,.86) !important;
-              color: #cbd5e1 !important;
-              border-color: rgba(99,102,241,.22) !important;
-            }
-
-            .client-bottom-workspace div[style*="background: #eef2f7"],
-            .client-bottom-workspace div[style*="background: #eef2ff"],
-            .client-bottom-workspace span[style*="background: #eef2ff"] {
-              background: rgba(79,70,229,.16) !important;
-              color: #c7d2fe !important;
-            }
-
-            .client-bottom-workspace span[style*="background: #ecfdf5"],
-            .client-bottom-workspace div[style*="background: #dcfce7"],
-            .client-bottom-workspace div[style*="background: #fee2e2"] {
-              background: rgba(34,197,94,.14) !important;
-              border-color: rgba(34,197,94,.28) !important;
-            }
-
-            .client-bottom-workspace [style*="border: 1px solid #e5eaf2"],
-            .client-bottom-workspace [style*="border: \\"1px solid #e5eaf2\\""],
-            .client-bottom-workspace [style*="borderTop: \\"1px solid #edf1f6\\""],
-            .client-bottom-workspace [style*="border-top: 1px solid #edf1f6"] {
-              border-color: rgba(99,102,241,.24) !important;
-            }
-
-            .client-bottom-workspace [style*="border: 1px dashed #dbe4ee"],
-            .client-bottom-workspace [style*="border: 1px dashed #cbd5e1"] {
-              border-color: rgba(148,163,184,.32) !important;
-            }
-
-            .client-bottom-workspace h3,
-            .client-bottom-workspace h4,
-            .client-bottom-workspace [style*="color: var(--color-dark)"],
-            .client-bottom-workspace [style*="color: #0f172a"] {
-              color: #f8fafc !important;
-            }
-
-            .client-bottom-workspace [style*="color: var(--color-muted)"],
-            .client-bottom-workspace [style*="color: var(--color-mid)"],
-            .client-bottom-workspace [style*="color: #334155"],
-            .client-bottom-workspace [style*="color: #475569"],
-            .client-bottom-workspace [style*="color: #64748b"],
-            .client-bottom-workspace [style*="color: #94a3b8"] {
-              color: #94a3b8 !important;
-            }
-
-            .client-bottom-workspace [style*="color: var(--color-brand)"],
-            .client-bottom-workspace [style*="color: #4f46e5"] {
-              color: #a5b4fc !important;
-            }
-
-            .client-bottom-workspace button {
-              border-color: rgba(129,140,248,.30) !important;
-            }
-
-            .client-bottom-workspace button:hover {
-              filter: brightness(1.08);
-            }
-
-            .client-bottom-workspace img {
-              background: rgba(15,23,42,.86) !important;
-            }
-
-            .client-bottom-workspace div[style*="height: 9"] {
-              background: rgba(30,41,59,.92) !important;
-            }
-          ` : ``}
-        `}</style>
 
 
         {/* BOTTOM_DARK_INNER_CARD_POLISH_V1 */}
@@ -2154,15 +2037,15 @@ useEffect(() => {
                 <div
                   key={item.title}
                   style={{
-                    border: "1px solid #e5eaf2",
+                    border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
                     borderRadius: 16,
-                    background: "#fff",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
                     padding: "12px 14px",
                     display: "grid",
                     gridTemplateColumns: "34px minmax(0,1fr) auto",
                     gap: 12,
                     alignItems: "center",
-                    boxShadow: "0 8px 22px rgba(15,23,42,.035)",
+                    boxShadow: darkModeEnabled ? "0 12px 32px rgba(0,0,0,.22)" : "0 8px 22px rgba(15,23,42,.035)",
                   }}
                 >
                   <div
@@ -2182,16 +2065,16 @@ useEffect(() => {
                   </div>
 
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 950, color: "var(--color-dark)" }}>{item.title}</div>
-                    <div style={{ marginTop: 3, fontSize: 12, fontWeight: 700, color: "var(--color-muted)", lineHeight: 1.35 }}>
+                    <div style={{ fontSize: 13, fontWeight: 950, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}>{item.title}</div>
+                    <div style={{ marginTop: 3, fontSize: 12, fontWeight: 700, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", lineHeight: 1.35 }}>
                       {item.detail}
                     </div>
                   </div>
 
                   <span
                     style={{
-                      border: "1px solid #e5eaf2",
-                      background: "#f8fafc",
+                      border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
+                      background: darkModeEnabled ? "rgba(15,23,42,.86)" : "#f8fafc",
                       borderRadius: 999,
                       padding: "6px 9px",
                       color: item.tone,
@@ -2209,16 +2092,16 @@ useEffect(() => {
             <div
               style={{
                 marginTop: 16,
-                border: "1px solid #e5eaf2",
+                border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
                 borderRadius: 18,
-                background: "linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)",
+                background: darkModeEnabled ? "linear-gradient(180deg, rgba(15,23,42,.96), rgba(8,18,40,.98))" : "linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)",
                 padding: 14,
               }}
             >
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 950, color: "var(--color-dark)" }}>Execution snapshot</div>
-                  <div style={{ marginTop: 3, fontSize: 11.5, fontWeight: 700, color: "var(--color-muted)" }}>
+                  <div style={{ fontSize: 13, fontWeight: 950, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}>Execution snapshot</div>
+                  <div style={{ marginTop: 3, fontSize: 11.5, fontWeight: 700, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>
                     Live progress across the latest client workflow.
                   </div>
                 </div>
@@ -2245,7 +2128,7 @@ useEffect(() => {
                   ["Pending", reviewStatus === "pending" ? 65 : 20, "#f59e0b"],
                 ].map(([label, value, color]) => (
                   <div key={label} style={{ display: "grid", gridTemplateColumns: "86px 1fr 42px", gap: 10, alignItems: "center" }}>
-                    <div style={{ fontSize: 11.5, fontWeight: 900, color: "var(--color-dark)" }}>{label}</div>
+                    <div style={{ fontSize: 11.5, fontWeight: 900, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}>{label}</div>
                     <div style={{ height: 9, borderRadius: 999, background: "#eef2f7", overflow: "hidden" }}>
                       <div
                         style={{
@@ -2256,7 +2139,7 @@ useEffect(() => {
                         }}
                       />
                     </div>
-                    <div style={{ textAlign: "right", fontSize: 11.5, fontWeight: 900, color: "var(--color-muted)" }}>
+                    <div style={{ textAlign: "right", fontSize: 11.5, fontWeight: 900, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>
                       {value}%
                     </div>
                   </div>
@@ -2266,7 +2149,7 @@ useEffect(() => {
               <div
                 style={{
                   marginTop: 13,
-                  borderTop: "1px solid #edf1f6",
+                  borderTop: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #edf1f6",
                   paddingTop: 12,
                   display: "grid",
                   gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
@@ -2281,8 +2164,8 @@ useEffect(() => {
                   <div
                     key={title}
                     style={{
-                      border: "1px solid #e5eaf2",
-                      background: "#fff",
+                      border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
+                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
                       borderRadius: 14,
                       padding: "9px 10px",
                       minHeight: 58,
@@ -2290,11 +2173,11 @@ useEffect(() => {
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                       <span style={{ color: "var(--color-brand)", fontWeight: 950 }}>{icon}</span>
-                      <span style={{ fontSize: 11.5, fontWeight: 950, color: "var(--color-dark)", lineHeight: 1.2 }}>
+                      <span style={{ fontSize: 11.5, fontWeight: 950, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", lineHeight: 1.2 }}>
                         {title}
                       </span>
                     </div>
-                    <div style={{ marginTop: 5, fontSize: 11, fontWeight: 850, color: "var(--color-muted)" }}>
+                    <div style={{ marginTop: 5, fontSize: 11, fontWeight: 850, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>
                       {status}
                     </div>
                   </div>
@@ -2329,8 +2212,8 @@ useEffect(() => {
                 style={{
                   minHeight: 118,
                   borderRadius: 16,
-                  background: "var(--color-bg-light)",
-                  border: "1px solid #e5eaf2",
+                  background: darkModeEnabled ? "rgba(15,23,42,.86)" : "var(--color-bg-light)",
+                  border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
                   position: "relative",
                   overflow: "hidden",
                   display: "flex",
@@ -2358,8 +2241,8 @@ useEffect(() => {
                       height: "100%",
                       width: "100%",
                       padding: 12,
-                      background: "linear-gradient(180deg,#ffffff 0%,var(--color-bg-light) 100%)",
-                      color: "var(--color-muted)",
+                      background: darkModeEnabled ? "linear-gradient(180deg, rgba(15,23,42,.96), rgba(8,18,40,.98))" : "linear-gradient(180deg,#ffffff 0%,var(--color-bg-light) 100%)",
+                      color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)",
                       boxSizing: "border-box",
                     }}
                   >
@@ -2385,7 +2268,7 @@ useEffect(() => {
                               width: 34,
                               height: 34,
                               borderRadius: 16,
-                              background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
+                              background: darkModeEnabled ? "linear-gradient(135deg, rgba(79,70,229,.28), rgba(15,23,42,.94))" : "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
@@ -2401,7 +2284,7 @@ useEffect(() => {
                           <div>
                             <div
                               style={{
-                                color: "var(--color-dark)",
+                                color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)",
                                 fontWeight: 760,
                                 fontSize: 13,
                                 marginBottom: 3,
@@ -2413,7 +2296,7 @@ useEffect(() => {
                             <div
                               style={{
                                 fontSize: 11,
-                                color: "var(--color-muted)",
+                                color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)",
                               }}
                             >
                               Waiting for real generated or uploaded assets
@@ -2432,8 +2315,8 @@ useEffect(() => {
                             padding: "3px 6px",
                             fontSize: 11,
                             fontWeight: 700,
-                            background: "#fff",
-                            color: "var(--color-mid)",
+                            background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                            color: darkModeEnabled ? "#cbd5e1" : "var(--color-mid)",
                             
                           }}
                         >
@@ -2444,8 +2327,8 @@ useEffect(() => {
                       <div
                         style={{
                           borderRadius: 16,
-                          border: "1px dashed #dbe4ee",
-                          background: "linear-gradient(135deg,var(--color-bg-light) 0%,#f1f5f9 100%)",
+                          border: darkModeEnabled ? "1px dashed rgba(148,163,184,.34)" : "1px dashed #dbe4ee",
+                          background: darkModeEnabled ? "linear-gradient(135deg, rgba(3,10,24,.92), rgba(15,23,42,.94))" : "linear-gradient(135deg,var(--color-bg-light) 0%,#f1f5f9 100%)",
                           minHeight: 142,
                           display: "flex",
                           alignItems: "center",
@@ -2471,7 +2354,7 @@ useEffect(() => {
 
                           <div
                             style={{
-                              color: "var(--color-dark)",
+                              color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)",
                               fontWeight: 700,
                               fontSize: 13,
                               marginBottom: 8,
@@ -2484,7 +2367,7 @@ useEffect(() => {
                             style={{
                               fontSize: 10,
                               lineHeight: 1.45,
-                              color: "var(--color-muted)",
+                              color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)",
                             }}
                           >
                             Generated assets, uploaded brand files, previews, and deliverable media will appear here automatically.
@@ -2501,7 +2384,7 @@ useEffect(() => {
                         gap: 12,
                         marginTop: 18,
                         fontSize: 11,
-                        color: "#94a3b8",
+                        color: darkModeEnabled ? "#94a3b8" : "#94a3b8",
                       }}
                     >
                       <div>Secure asset workspace</div>
@@ -2543,7 +2426,7 @@ useEffect(() => {
                   <div
                     style={{
                       background: "rgba(255,255,255,.92)",
-                      color: "#334155",
+                      color: darkModeEnabled ? "#cbd5e1" : "#334155",
                       borderRadius: 16,
                       padding: "7px 10px",
                       fontSize: 11,
@@ -2561,12 +2444,12 @@ useEffect(() => {
                   <h4 style={{ margin: 0, fontSize: 16 }}>
                     {liveDeliverable?.title || "Latest client deliverable"}
                   </h4>
-                  <div style={{ color: "var(--color-muted)", fontSize: 12 }}>
+                  <div style={{ color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12 }}>
                     {liveDeliverable?.created_at || "Ready for review"}
                   </div>
                 </div>
 
-                <p style={{ color: "var(--color-mid)", lineHeight: 1.45 }}>
+                <p style={{ color: darkModeEnabled ? "#cbd5e1" : "var(--color-mid)", lineHeight: 1.45 }}>
                   {liveDeliverable?.summary ||
                     "Client-specific deliverable generated from the latest execution, business profile, selected agents, and review requirements."}
                 </p>
@@ -2576,7 +2459,7 @@ useEffect(() => {
                     <span
                       key={tag}
                       style={{
-                        border: "1px solid #e5eaf2",
+                        border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
                         borderRadius: 16,
                         padding: "6px 9px",
                         fontSize: 11,
@@ -2590,10 +2473,10 @@ useEffect(() => {
 
                 {attachedAssets.length > 1 ? (
                   <div style={{ marginBottom: 10 }}>
-                    <div style={{ color: "var(--color-muted)", fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                    <div style={{ color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
                       Attached media
                     </div>
-                    <div style={{ color: "#94a3b8", fontSize: 10.5, fontWeight: 650, marginBottom: 8 }}>
+                    <div style={{ color: darkModeEnabled ? "#94a3b8" : "#94a3b8", fontSize: 10.5, fontWeight: 650, marginBottom: 8 }}>
                       Real generated/uploaded assets only. Use popup preview to inspect media.
                     </div>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(92px,1fr))", gap: 8 }}>
@@ -2617,7 +2500,7 @@ useEffect(() => {
                             }}
                           >
                             <div style={{ marginBottom: 4 }}>{asset?.title || asset?.name || `Asset ${index + 1}`}</div>
-                            <div style={{ color: "#94a3b8", fontSize: 10 }}>
+                            <div style={{ color: darkModeEnabled ? "#94a3b8" : "#94a3b8", fontSize: 10 }}>
                               {asset?.type || asset?.source || "media"}
                             </div>
                           </button>
@@ -2642,7 +2525,7 @@ useEffect(() => {
 
 
                       border: "1px solid rgba(37, 99, 235, 0.14)",
-                      background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
+                      background: darkModeEnabled ? "linear-gradient(135deg, rgba(79,70,229,.28), rgba(15,23,42,.94))" : "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
                       color: "var(--color-brand)",
                       borderRadius: 16,
                       padding: "6px 9px",
@@ -2669,8 +2552,8 @@ useEffect(() => {
                       window.open(deliverableDownloadUrl, "_blank", "noopener,noreferrer");
                     }}
                     style={{
-                      border: "1px solid #e5eaf2",
-                      background: "#fff",
+                      border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
+                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
                       color: deliverableDownloadUrl ? "#334155" : "#94a3b8",
                       borderRadius: 16,
                       padding: "6px 9px",
@@ -2693,9 +2576,9 @@ useEffect(() => {
                       }
                     }}
                     style={{
-                      border: "1px solid #e5eaf2",
-                      background: "#fff",
-                      color: "#334155",
+                      border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
+                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                      color: darkModeEnabled ? "#cbd5e1" : "#334155",
                       borderRadius: 16,
                       padding: "6px 9px",
                       fontWeight: 760,
@@ -2712,7 +2595,7 @@ useEffect(() => {
                     onClick={() => setShowDeliverableModal(true)}
                     style={{
                       border: "1px solid rgba(37, 99, 235, 0.14)",
-                      background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
+                      background: darkModeEnabled ? "linear-gradient(135deg, rgba(79,70,229,.28), rgba(15,23,42,.94))" : "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
                       color: "var(--color-brand)",
                       borderRadius: 16,
                       padding: "8px 12px",
@@ -2755,7 +2638,7 @@ useEffect(() => {
                     }}
                     style={{
                       border: "1px solid #fecaca",
-                      background: "#fff",
+                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
                       color: "var(--color-red)",
                       borderRadius: 16,
                       padding: "8px 12px",
@@ -2772,8 +2655,8 @@ useEffect(() => {
                   style={{
                     marginTop: 10,
                     paddingTop: 14,
-                    borderTop: "1px solid #eef2f7",
-                    color: "#94a3b8",
+                    borderTop: darkModeEnabled ? "1px solid rgba(99,102,241,.22)" : "1px solid #eef2f7",
+                    color: darkModeEnabled ? "#94a3b8" : "#94a3b8",
                     fontSize: 10,
                     lineHeight: 1.5,
                   }}
