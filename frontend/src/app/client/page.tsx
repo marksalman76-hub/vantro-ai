@@ -324,8 +324,24 @@ export default function ClientPage() {
   const [integrationMessage, setIntegrationMessage] = useState("");
   const [activeAccountPanel, setActiveAccountPanel] = useState("");
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+  const setAndPersistDarkMode = (nextValue: boolean) => {
+    setDarkModeEnabled(nextValue);
+    try {
+      window.localStorage.setItem("client_workspace_dark_mode", nextValue ? "dark" : "light");
+      document.documentElement.dataset.clientTheme = nextValue ? "dark" : "light";
+    } catch {}
+  };
   const [showEnterpriseCatalogueModal, setShowEnterpriseCatalogueModal] = useState(false);
   const profileMenuRef = useRef<HTMLDetailsElement | null>(null);
+
+  useEffect(() => {
+    try {
+      const savedTheme = window.localStorage.getItem("client_workspace_dark_mode");
+      const shouldUseDarkMode = savedTheme === "dark";
+      setDarkModeEnabled(shouldUseDarkMode);
+      document.documentElement.dataset.clientTheme = shouldUseDarkMode ? "dark" : "light";
+    } catch {}
+  }, []);
 
 
   const shellStyle = {
@@ -1140,20 +1156,21 @@ useEffect(() => {
                   right: 0,
                   top: 54,
                   width: 280,
-                  background: "#fff",
-                  border: "1px solid #e5eaf2",
+                  background: darkModeEnabled ? "linear-gradient(180deg, rgba(10,22,46,.98), rgba(7,16,34,.99))" : "#fff",
+                  border: darkModeEnabled ? "1px solid rgba(129,140,248,.28)" : "1px solid #e5eaf2",
                   borderRadius: 18,
-                  boxShadow: "0 24px 60px rgba(15,23,42,.18)",
+                  boxShadow: darkModeEnabled ? "0 24px 70px rgba(0,0,0,.42)" : "0 24px 60px rgba(15,23,42,.18)",
                   padding: 14,
                   zIndex: 50,
+                  color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)",
                 }}
               >
-                <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: "1px solid #edf1f6" }}>
-                  <div style={{ width: 46, height: 46, borderRadius: 999, background: "var(--color-dark)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{clientInitials}</div>
+                <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6" }}>
+                  <div style={{ width: 46, height: 46, borderRadius: 999, background: darkModeEnabled ? "linear-gradient(135deg,#4f46e5,#7c3aed)" : "var(--color-dark)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{clientInitials}</div>
                   <div>
-                    <div style={{ fontWeight: 800, color: "var(--color-dark)" }}>{clientDisplayName}</div>
-                    <div style={{ fontSize: 12, color: "var(--color-muted)" }}>{clientEmail || accountPackage}</div>
-                    <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4, color: "var(--color-muted)" }}>
+                    <div style={{ fontWeight: 800, color: darkModeEnabled ? "#ffffff" : "var(--color-dark)" }}>{clientDisplayName}</div>
+                    <div style={{ fontSize: 12, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>{clientEmail || accountPackage}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>
                       <span style={{ color: accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444", marginRight: 6 }}>●</span>
                       {accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "ACTIVE" : "INACTIVE"} · Paid plan
                     </div>
@@ -1166,7 +1183,7 @@ useEffect(() => {
                     window.location.hash = "settings";
                     
                   }}
-                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
                   ⚙️ Settings
                 </button>
@@ -1182,7 +1199,7 @@ useEffect(() => {
                       });
                     }, 50);
                   }}
-                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
                   👤 Profile
                 </button>
@@ -1193,7 +1210,7 @@ useEffect(() => {
                     window.location.hash = "password-reset";
                     
                   }}
-                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
                   🔐 Password reset
                 </button>
@@ -1204,17 +1221,18 @@ useEffect(() => {
                     window.location.hash = "two-factor-authentication";
                     
                   }}
-                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
                   🛡️ 2FA
                 </button>
 
                 <button
                   onClick={() => {
-                    setDarkModeEnabled((previous) => !previous);
-                    setToastMessage(darkModeEnabled ? "Light mode enabled." : "Dark mode enabled.");
+                    const nextMode = !darkModeEnabled;
+                    setAndPersistDarkMode(nextMode);
+                    setToastMessage(nextMode ? "Dark mode enabled." : "Light mode enabled.");
                   }}
-                  style={{ width: "100%", border: "none", borderTop: "1px solid #edf1f6", background: "transparent", padding: "12px 8px", textAlign: "left", fontWeight: 800, cursor: "pointer", color: "var(--color-dark)" }}
+                  style={{ width: "100%", border: "none", borderTop: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6", background: "transparent", padding: "12px 8px", textAlign: "left", fontWeight: 800, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
                   {darkModeEnabled ? "☀️ Switch to light mode" : "🌙 Toggle dark / light mode"}
                 </button>
@@ -1319,7 +1337,11 @@ useEffect(() => {
                     <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Display mode</div>
                     <button
                       type="button"
-                      onClick={() => document.documentElement.classList.toggle("dark")}
+                      onClick={() => {
+                        const nextMode = !darkModeEnabled;
+                        setAndPersistDarkMode(nextMode);
+                        setToastMessage(nextMode ? "Dark mode enabled." : "Light mode enabled.");
+                      }}
                       style={{ marginTop: 10, border: "1px solid rgba(79,70,229,.18)", background: "#fff", color: "#4f46e5", borderRadius: 12, padding: "9px 11px", fontWeight: 850, cursor: "pointer" }}
                     >
                       Toggle dark / light mode
