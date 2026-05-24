@@ -693,7 +693,7 @@ useEffect(() => {
     } catch {}
 
     setBusinessProfile(cleanedProfile);
-    setBusinessProfileSaved(Boolean(cleanedProfile.business_name));
+    setBusinessProfileSaved(true);
     setToastMessage("Business profile saved successfully.");
 
     try {
@@ -720,7 +720,7 @@ useEffect(() => {
           : cleanedProfile;
 
       setBusinessProfile(savedProfile);
-      setBusinessProfileSaved(Boolean(savedProfile.business_name));
+      setBusinessProfileSaved(true);
       window.localStorage.setItem("client_business_profile", JSON.stringify(savedProfile));
     } catch (error) {
       console.warn("Business profile backend sync failed; local profile remains saved.", error);
