@@ -1,4 +1,16 @@
-"use client";
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+BLOG_PAGE = ROOT / "frontend" / "src" / "app" / "blog" / "page.tsx"
+BACKUP_DIR = ROOT / "backups"
+BACKUP_DIR.mkdir(exist_ok=True)
+
+backup = BACKUP_DIR / f"blog_page_before_premium_rebuild_{datetime.now().strftime('%Y%m%d_%H%M%S')}.tsx"
+shutil.copy2(BLOG_PAGE, backup)
+
+BLOG_PAGE.write_text(r'''"use client";
 
 import Link from "next/link";
 
@@ -418,3 +430,7 @@ export default function BlogPage() {
     </main>
   );
 }
+''', encoding="utf-8")
+
+print("BLOG_PAGE_PREMIUM_LAYOUT_REBUILT")
+print(f"Backup: {backup}")
