@@ -1063,69 +1063,7 @@ useEffect(() => {
             }
           ` : ``}
         `}</style>
-
-
-        {/* DARK_MODE_HALF_HALF_CARD_FIX_V1 */}
-        <style>{`
-          ${darkModeEnabled ? `
-            main section,
-            main article,
-            main aside,
-            main div[style*="background: rgb(255, 255, 255)"],
-            main div[style*="background-color: rgb(255, 255, 255)"],
-            main div[style*="background: white"],
-            main div[style*="background-color: white"],
-            main button[style*="background: rgb(255, 255, 255)"],
-            main button[style*="background-color: rgb(255, 255, 255)"] {
-              background: linear-gradient(180deg, rgba(10,22,46,.96), rgba(7,16,34,.98)) !important;
-              border-color: rgba(99,102,241,.24) !important;
-              color: #f8fafc !important;
-              box-shadow: 0 18px 52px rgba(0,0,0,.26) !important;
-            }
-
-            main textarea,
-            main input,
-            main select {
-              background: rgba(3,10,24,.88) !important;
-              color: #f8fafc !important;
-              border-color: rgba(129,140,248,.34) !important;
-            }
-
-            main textarea::placeholder,
-            main input::placeholder {
-              color: rgba(203,213,225,.72) !important;
-            }
-
-            main [style*="color: rgb(15, 23, 42)"],
-            main [style*="color: #0f172a"],
-            main [style*="color: var(--color-dark)"] {
-              color: #f8fafc !important;
-            }
-
-            main [style*="color: rgb(100, 116, 139)"],
-            main [style*="color: rgb(71, 85, 105)"],
-            main [style*="color: #64748b"],
-            main [style*="color: #475569"],
-            main [style*="color: var(--color-muted)"] {
-              color: #94a3b8 !important;
-            }
-
-            main [style*="background: rgb(248, 250, 252)"],
-            main [style*="background-color: rgb(248, 250, 252)"],
-            main [style*="background: #f8fafc"] {
-              background: rgba(15,23,42,.86) !important;
-            }
-
-            #media-preview-popup,
-            #media-preview-popup *,
-            [role="dialog"],
-            [role="dialog"] * {
-              color: initial;
-            }
-          ` : ``}
-        `}</style>
-
-      <div style={shellStyle}>
+<div style={shellStyle}>
         <header
           style={{
             display: "flex",
@@ -1841,16 +1779,22 @@ useEffect(() => {
           </div>
 
           {[
-            ["E", "Email"],
-            ["C", "CRM"],
-            ["E", "Ecommerce Store"],
-            ["W", "Website / CMS"],
-            ["C", "Calendar"],
-            ["S", "SMS / Phone"],
-          ].map(([letter, label]) => (
+            ["email", "E", "Email"],
+            ["crm", "C", "CRM"],
+            ["store", "E", "Ecommerce Store"],
+            ["website", "W", "Website / CMS"],
+            ["calendar", "C", "Calendar"],
+            ["sms", "S", "SMS / Phone"],
+          ].map(([integrationKey, letter, label]) => (
             <button
               key={label}
               type="button"
+              onClick={() => {
+                const integration = DEFAULT_CLIENT_INTEGRATIONS.find((item) => item.integration_key === integrationKey);
+                if (integration) {
+                  connectIntegration(integration);
+                }
+              }}
               style={{
                 border: "1px solid #e5eaf2",
                 borderRadius: 12,
@@ -1904,6 +1848,10 @@ useEffect(() => {
 
           <button
             type="button"
+            onClick={() => {
+              loadIntegrations();
+              setIntegrationMessage("Choose an integration pill to connect a provider.");
+            }}
             style={{
               border: "1px solid #d8dcff",
               borderRadius: 12,
@@ -2212,6 +2160,76 @@ useEffect(() => {
           </div>
         </section>
 
+
+
+        <section style={{ ...responsiveSecondaryGridStyle, alignItems: "stretch", marginBottom: 20 }}>
+          <div style={{ ...cardStyle, minHeight: 230 }}>
+            <StepHeader number="03" title="Review & approvals" />
+            <h3 style={cardTitle}>Approval control</h3>
+            <p style={mutedText}>
+              Review generated deliverables before commercial use. Approve outputs or request changes while keeping execution governed.
+            </p>
+
+            <div style={{ display: "grid", gap: 9, marginTop: 14 }}>
+              {[
+                ["Client review", reviewStatus === "approved" ? "Approved" : reviewStatus === "rejected" ? "Revision requested" : "Pending"],
+                ["Owner-safe controls", "Active"],
+                ["High-risk actions", "Approval gated"],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  style={{
+                    border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    borderRadius: 14,
+                    padding: "10px 12px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 12,
+                    color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)",
+                  }}
+                >
+                  <span style={{ fontWeight: 850 }}>{label}</span>
+                  <span style={{ color: darkModeEnabled ? "#a5b4fc" : "var(--color-brand)", fontWeight: 900 }}>{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ ...cardStyle, minHeight: 230 }}>
+            <StepHeader number="04" title="Optimisation & delivery" />
+            <h3 style={cardTitle}>Delivery readiness</h3>
+            <p style={mutedText}>
+              Prepare approved outputs for next-step optimisation, asset review, and client-ready delivery.
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10, marginTop: 14 }}>
+              {[
+                ["Quality", "Checked"],
+                ["Assets", attachedAssets.length ? `${attachedAssets.length}` : "Pending"],
+                ["Next step", reviewStatus === "approved" ? "Optimise" : "Review"],
+              ].map(([label, value]) => (
+                <div
+                  key={label}
+                  style={{
+                    border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    borderRadius: 16,
+                    padding: 12,
+                    minHeight: 74,
+                  }}
+                >
+                  <div style={{ fontSize: 11, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontWeight: 850 }}>{label}</div>
+                  <div style={{ marginTop: 8, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", fontWeight: 950 }}>{value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: 12, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 11.5, fontWeight: 750 }}>
+              Delivery remains governed and client-safe.
+            </div>
+          </div>
+        </section>
 
         <section className="client-bottom-workspace" style={{ ...responsiveSecondaryGridStyle, alignItems: "stretch" }}>
           <div style={{ ...cardStyle, minHeight: 355, overflow: "hidden" }}>
