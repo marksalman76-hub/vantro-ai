@@ -1530,7 +1530,7 @@ useEffect(() => {
                           borderRadius: 13,
                           cursor: "pointer",
                           textAlign: "left",
-                          fontSize: 11.8,
+                          fontSize: 11,
                           fontWeight: 760,
                           transition: "all 0.18s ease",
                           boxShadow: active ? "0 10px 30px rgba(37,99,235,0.10)" : "0 1px 2px rgba(15,23,42,0.03)",
@@ -1593,7 +1593,7 @@ useEffect(() => {
                       color: "var(--color-brand)",
                       borderRadius: 12,
                       padding: "9px 10px",
-                      fontSize: 11.8,
+                      fontSize: 11,
                       fontWeight: 900,
                       cursor: "pointer",
                       boxShadow: "0 8px 20px rgba(15,23,42,.04)",
@@ -1616,7 +1616,7 @@ useEffect(() => {
                     border: "1px solid #dbe3ee",
                     background: "#fff",
                     padding: 14,
-                    fontSize: 11.8,
+                    fontSize: 11,
                     lineHeight: 1.46,
                     boxSizing: "border-box",
                     fontFamily: "inherit",
@@ -2001,7 +2001,7 @@ useEffect(() => {
                   padding: "8px 12px",
                   borderRadius: 16,
                   fontWeight: 760,
-                  fontSize: 11.8,
+                  fontSize: 11,
                   height: "fit-content",
                 }}
               >
@@ -2168,7 +2168,7 @@ useEffect(() => {
                           <div
                             style={{
                               fontSize: 10,
-                              lineHeight: 1.6,
+                              lineHeight: 1.45,
                               color: "var(--color-muted)",
                             }}
                           >
@@ -2243,7 +2243,7 @@ useEffect(() => {
 
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                  <h4 style={{ margin: 0, fontSize: 20 }}>
+                  <h4 style={{ margin: 0, fontSize: 16 }}>
                     {liveDeliverable?.title || "Latest client deliverable"}
                   </h4>
                   <div style={{ color: "var(--color-muted)", fontSize: 12 }}>
@@ -2251,20 +2251,20 @@ useEffect(() => {
                   </div>
                 </div>
 
-                <p style={{ color: "var(--color-mid)", lineHeight: 1.6 }}>
+                <p style={{ color: "var(--color-mid)", lineHeight: 1.45 }}>
                   {liveDeliverable?.summary ||
                     "Client-specific deliverable generated from the latest execution, business profile, selected agents, and review requirements."}
                 </p>
 
-                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 16 }}>
+                <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
                   {(liveDeliverable?.tags || ["Deliverable", "Assets", "Execution", "Workflow"]).map((tag: string) => (
                     <span
                       key={tag}
                       style={{
                         border: "1px solid #e5eaf2",
                         borderRadius: 16,
-                        padding: "8px 11px",
-                        fontSize: 11.8,
+                        padding: "6px 9px",
+                        fontSize: 11,
                         fontWeight: 700,
                       }}
                     >
@@ -2274,11 +2274,14 @@ useEffect(() => {
                 </div>
 
                 {attachedAssets.length > 1 ? (
-                  <div style={{ marginBottom: 16 }}>
-                    <div style={{ color: "var(--color-muted)", fontSize: 11.8, fontWeight: 700, marginBottom: 8 }}>
+                  <div style={{ marginBottom: 10 }}>
+                    <div style={{ color: "var(--color-muted)", fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
                       Attached media
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 8 }}>
+                    <div style={{ color: "#94a3b8", fontSize: 10.5, fontWeight: 650, marginBottom: 8 }}>
+                      Real generated/uploaded assets only. Use popup preview to inspect media.
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(92px,1fr))", gap: 8 }}>
                       {attachedAssets.slice(0, 6).map((asset, index) => {
                         const assetUrl = asset?.url || asset?.image_url || asset?.src || "";
                         const selected = selectedAssetIndex === index;
@@ -2288,8 +2291,8 @@ useEffect(() => {
                             onClick={() => setSelectedAssetIndex(index)}
                             style={{
                               border: selected ? "1px solid var(--color-brand)" : "1px solid #e5eaf2",
-                              borderRadius: 16,
-                              padding: 10,
+                              borderRadius: 14,
+                              padding: 8,
                               textAlign: "left",
                               fontSize: 11,
                               fontWeight: 700,
@@ -2314,7 +2317,7 @@ useEffect(() => {
                     display: "flex",
                     gap: 10,
                     flexWrap: "wrap",
-                    marginBottom: 16,
+                    marginBottom: 10,
                   }}
                 >
                   <button
@@ -2324,20 +2327,20 @@ useEffect(() => {
                       background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
                       color: "var(--color-brand)",
                       borderRadius: 16,
-                      padding: "8px 11px",
+                      padding: "6px 9px",
                       fontWeight: 760,
-                      fontSize: 11.8,
+                      fontSize: 11,
                       cursor: "pointer",
                     }}
                   >
-                    Preview
+                    Preview in popup
                   </button>
 
                   <button
                     disabled={!deliverableDownloadUrl}
                     onClick={() => {
                       if (!deliverableDownloadUrl) {
-                        setToastMessage("No downloadable asset is attached yet.");
+                        setToastMessage("No asset generated yet.");
                         return;
                       }
                       window.open(deliverableDownloadUrl, "_blank", "noopener,noreferrer");
@@ -2347,9 +2350,9 @@ useEffect(() => {
                       background: "#fff",
                       color: deliverableDownloadUrl ? "#334155" : "#94a3b8",
                       borderRadius: 16,
-                      padding: "8px 11px",
+                      padding: "6px 9px",
                       fontWeight: 760,
-                      fontSize: 11.8,
+                      fontSize: 11,
                       cursor: deliverableDownloadUrl ? "pointer" : "not-allowed",
                     }}
                   >
@@ -2371,9 +2374,9 @@ useEffect(() => {
                       background: "#fff",
                       color: "#334155",
                       borderRadius: 16,
-                      padding: "8px 11px",
+                      padding: "6px 9px",
                       fontWeight: 760,
-                      fontSize: 11.8,
+                      fontSize: 11,
                       cursor: "pointer",
                     }}
                   >
@@ -2502,7 +2505,7 @@ useEffect(() => {
                 <div
                   style={{
                     color: "var(--color-brand)",
-                    fontSize: 11.8,
+                    fontSize: 11,
                     fontWeight: 760,
                     letterSpacing: 1.2,
                     textTransform: "uppercase",
@@ -2532,7 +2535,7 @@ useEffect(() => {
                     disabled={!deliverableDownloadUrl}
                     onClick={() => {
                       if (!deliverableDownloadUrl) {
-                        setToastMessage("No downloadable asset is attached yet.");
+                        setToastMessage("No asset generated yet.");
                         return;
                       }
                       window.open(deliverableDownloadUrl, "_blank", "noopener,noreferrer");
@@ -2544,7 +2547,7 @@ useEffect(() => {
                       borderRadius: 16,
                       padding: "3px 6px",
                       fontWeight: 760,
-                      fontSize: 11.8,
+                      fontSize: 11,
                       cursor: deliverableDownloadUrl ? "pointer" : "not-allowed",
                     }}
                   >
@@ -2568,7 +2571,7 @@ useEffect(() => {
                       borderRadius: 16,
                       padding: "3px 6px",
                       fontWeight: 760,
-                      fontSize: 11.8,
+                      fontSize: 11,
                       cursor: "pointer",
                     }}
                   >
@@ -2634,7 +2637,7 @@ useEffect(() => {
                     <div style={{ color: "var(--color-dark)", fontWeight: 760, fontSize: 16, marginBottom: 8 }}>
                       No live asset attached
                     </div>
-                    <div style={{ color: "var(--color-muted)", fontSize: 13, lineHeight: 1.65, maxWidth: 280 }}>
+                    <div style={{ color: "var(--color-muted)", fontSize: 13, lineHeight: 1.455, maxWidth: 280 }}>
                       Generated assets, uploaded brand files, previews, and deliverable media will appear here once attached.
                     </div>
                   </div>
@@ -2651,8 +2654,8 @@ useEffect(() => {
                         background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
                         color: "var(--color-brand)",
                         borderRadius: 16,
-                        padding: "8px 11px",
-                        fontSize: 11.8,
+                        padding: "6px 9px",
+                        fontSize: 11,
                         fontWeight: 760,
                       }}
                     >
@@ -2666,7 +2669,7 @@ useEffect(() => {
                     border: "1px solid #eef2f7",
                     borderRadius: 16,
                     padding: 20,
-                    marginBottom: 16,
+                    marginBottom: 10,
                     background: "#fff",
                   }}
                 >
@@ -2682,7 +2685,7 @@ useEffect(() => {
                     border: "1px solid #eef2f7",
                     borderRadius: 16,
                     padding: 20,
-                    marginBottom: 16,
+                    marginBottom: 10,
                     background: "#fbfdff",
                   }}
                 >
@@ -2701,7 +2704,7 @@ useEffect(() => {
                           alignItems: "center",
                           gap: 10,
                           color: "var(--color-mid)",
-                          fontSize: 11.8,
+                          fontSize: 11,
                         }}
                       >
                         <span
@@ -2714,7 +2717,7 @@ useEffect(() => {
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            fontSize: 11.8,
+                            fontSize: 11,
                             fontWeight: 760,
                           }}
                         >
@@ -2732,7 +2735,7 @@ useEffect(() => {
                       border: "1px solid #eef2f7",
                       borderRadius: 16,
                       padding: 20,
-                      marginBottom: 16,
+                      marginBottom: 10,
                       background: "#fff",
                     }}
                   >
@@ -2750,7 +2753,7 @@ useEffect(() => {
                               borderRadius: 16,
                               padding: 20,
                               textAlign: "left",
-                              fontSize: 11.8,
+                              fontSize: 11,
                               fontWeight: 700,
                               color: selected ? "var(--color-brand)" : "var(--color-mid)",
                               background: selected ? "#eff6ff" : "var(--color-bg-light)",
@@ -2896,7 +2899,7 @@ useEffect(() => {
               }}
             >
               <div>
-                <div style={{ color: "var(--color-brand)", fontSize: 11.8, fontWeight: 900, letterSpacing: 0.9, textTransform: "uppercase" }}>
+                <div style={{ color: "var(--color-brand)", fontSize: 11, fontWeight: 900, letterSpacing: 0.9, textTransform: "uppercase" }}>
                   Enterprise catalogue
                 </div>
                 <h3 style={{ ...cardTitle, marginTop: 6 }}>Full governed workforce</h3>
@@ -2911,7 +2914,7 @@ useEffect(() => {
                   border: "1px solid #e5eaf2",
                   background: "#fff",
                   borderRadius: 12,
-                  padding: "8px 11px",
+                  padding: "6px 9px",
                   fontWeight: 900,
                   cursor: "pointer",
                 }}
@@ -3001,11 +3004,11 @@ useEffect(() => {
             }}
           >
             <h2 style={{ margin: 0, fontSize: 26 }}>Provide rejection feedback</h2>
-            <p style={{ color: "var(--color-muted)", lineHeight: 1.6 }}>
+            <p style={{ color: "var(--color-muted)", lineHeight: 1.45 }}>
               Explain what needs to change so the agent can improve the next output.
             </p>
 
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16 }}>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
               {["Not relevant", "Wrong tone", "Needs more detail", "Off brand", "Incorrect information"].map((reason) => (
                 <button
                   key={reason}
@@ -3015,9 +3018,9 @@ useEffect(() => {
                     background: feedbackReason === reason ? "#fef2f2" : "#fff",
                     color: feedbackReason === reason ? "var(--color-red)" : "#334155",
                     borderRadius: 16,
-                    padding: "8px 11px",
+                    padding: "6px 9px",
                     fontWeight: 700,
-                    fontSize: 11.8,
+                    fontSize: 11,
                     cursor: "pointer",
                   }}
                 >
@@ -3102,7 +3105,7 @@ const cardStyle = {
 
 const labelStyle = {
   color: "var(--color-muted)",
-  fontSize: 11.8,
+  fontSize: 11,
   fontWeight: 700,
   marginBottom: 8,
 };
@@ -3110,7 +3113,7 @@ const labelStyle = {
 const mutedText = {
   color: "var(--color-muted)",
   lineHeight: 1.42,
-  fontSize: 11.8,
+  fontSize: 11,
 };
 
 const cardTitle = {
@@ -3127,7 +3130,7 @@ function StepHeader({ number, title }: { number: string; title: string }) {
         alignItems: "center",
         gap: 10,
         color: "var(--color-brand)",
-        fontSize: 11.8,
+        fontSize: 11,
         fontWeight: 760,
         letterSpacing: 0.9,
         textTransform: "uppercase",
