@@ -1908,8 +1908,10 @@ useEffect(() => {
           <button
             type="button"
             onClick={() => {
-              loadIntegrations();
-              setIntegrationMessage("Choose an integration pill to connect a provider.");
+              const providerName = window.prompt("Which integration would you like to add? Example: Ads, Analytics, Social Media, Shopify, HubSpot");
+              if (!providerName || !providerName.trim()) return;
+              setIntegrationMessage(`${providerName.trim()} integration request noted. Connection setup will open once this provider is enabled.`);
+              setToastMessage(`${providerName.trim()} integration request noted.`);
             }}
             style={{
               border: "1px solid #d8dcff",
@@ -1930,6 +1932,67 @@ useEffect(() => {
 
 
         
+
+
+        {/* TARGETED_DARK_MODE_BLOCKS_1_2_POLISH_V1 */}
+        <style>{`
+          ${darkModeEnabled ? `
+            main section:nth-of-type(5),
+            main section:nth-of-type(6) {
+              background: linear-gradient(180deg, rgba(10,22,46,.96), rgba(7,16,34,.98)) !important;
+              border-color: rgba(99,102,241,.24) !important;
+              color: #f8fafc !important;
+              box-shadow: 0 24px 80px rgba(0,0,0,.34) !important;
+            }
+
+            main section:nth-of-type(5) [style*="background: #fff"],
+            main section:nth-of-type(5) [style*="background: rgb(255, 255, 255)"],
+            main section:nth-of-type(5) [style*="background: #ffffff"],
+            main section:nth-of-type(6) [style*="background: #fff"],
+            main section:nth-of-type(6) [style*="background: rgb(255, 255, 255)"],
+            main section:nth-of-type(6) [style*="background: #ffffff"] {
+              background: rgba(12,24,49,.92) !important;
+              border-color: rgba(99,102,241,.24) !important;
+              color: #f8fafc !important;
+              box-shadow: 0 12px 32px rgba(0,0,0,.22) !important;
+            }
+
+            main section:nth-of-type(5) textarea,
+            main section:nth-of-type(5) input,
+            main section:nth-of-type(6) textarea,
+            main section:nth-of-type(6) input {
+              background: rgba(3,10,24,.88) !important;
+              border-color: rgba(129,140,248,.34) !important;
+              color: #f8fafc !important;
+            }
+
+            main section:nth-of-type(5) [style*="linear-gradient(135deg,#eff6ff,#ffffff)"],
+            main section:nth-of-type(6) [style*="linear-gradient(135deg,#eff6ff,#ffffff)"],
+            main section:nth-of-type(5) [style*="linear-gradient(135deg,#eff6ff,#ffffff)"] * {
+              background: rgba(12,24,49,.92) !important;
+              color: #f8fafc !important;
+            }
+
+            main section:nth-of-type(5) [style*="color: var(--color-dark)"],
+            main section:nth-of-type(5) [style*="color: #0f172a"],
+            main section:nth-of-type(6) [style*="color: var(--color-dark)"],
+            main section:nth-of-type(6) [style*="color: #0f172a"] {
+              color: #f8fafc !important;
+            }
+
+            main section:nth-of-type(5) [style*="color: var(--color-muted)"],
+            main section:nth-of-type(5) [style*="color: #64748b"],
+            main section:nth-of-type(6) [style*="color: var(--color-muted)"],
+            main section:nth-of-type(6) [style*="color: #64748b"] {
+              color: #94a3b8 !important;
+            }
+
+            main section:nth-of-type(4) button {
+              pointer-events: auto !important;
+              cursor: pointer !important;
+            }
+          ` : ``}
+        `}</style>
 
         <section style={responsiveWorkspaceGridStyle}>
           <div style={{ ...cardStyle, minHeight: 430 }}>
