@@ -983,7 +983,7 @@ function Footer() {
     { title: "Product",    links: [["Platform","#platform"],["Agents","#agents"],["Studio","#studio"],["API & MCP","#features"],["Changelog","#features"]] },
     { title: "Company",    links: [["About","#platform"],["Blog","#features"],["Careers","/support-request"],["Press","/support-request"],["Contact","/support-request"]] },
     { title: "Resources",  links: [["Docs","#workflow"],["Templates","#studio"],["Status","#features"],["Security","#features"],["Privacy","/privacy-policy"]] },
-    { title: "Legal",      links: [["Terms","/terms-of-service"],["Privacy","/privacy-policy"],["Cookies","/privacy-policy"],["Licenses","/terms-of-service"]] },
+    { title: "Legal",      links: [["Terms","/terms-of-service"],["Privacy","/privacy-policy"],["Cookies","/cookies"]] },
   ];
   return (
     <footer className="footer">
