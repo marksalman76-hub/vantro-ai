@@ -986,7 +986,7 @@ function Footer() {
     { title: "Legal",      links: ["Terms","Privacy","Cookies","Licenses"] },
   ];
   return (
-    <div id="workflow" style={ scrollMarginTop: 120 } />
+    <div id="workflow" style={{ scrollMarginTop: 120 }} />
       <footer className="footer">
       <div className="footer__inner">
         <div className="footer__brand">
