@@ -446,7 +446,7 @@ useEffect(() => {
   useEffect(() => {
     const syncAccountPanelFromHash = () => {
       const hash = window.location.hash.replace("#", "");
-      if (["settings", "profile", "password-reset", "two-factor-authentication"].includes(hash)) {
+      if (["settings", "profile", "payment-update", "password-reset", "two-factor-authentication"].includes(hash)) {
         setActiveAccountPanel(hash);
       }
     };
@@ -1215,6 +1215,16 @@ useEffect(() => {
 
                 <button
                   onClick={() => {
+                    setActiveAccountPanel("payment-update");
+                    window.location.hash = "payment-update";
+                  }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
+                >
+                  💳 Update payment
+                </button>
+
+                <button
+                  onClick={() => {
                     setActiveAccountPanel("password-reset");
                     window.location.hash = "password-reset";
                     
@@ -1318,7 +1328,7 @@ useEffect(() => {
                   Account centre
                 </div>
                 <h2 style={{ margin: 0, color: "var(--color-dark)", fontSize: 22, letterSpacing: -.4 }}>
-                  {activeAccountPanel === "settings" ? "Settings" : activeAccountPanel === "profile" ? "Profile" : activeAccountPanel === "password-reset" ? "Password reset" : "Two-factor authentication"}
+                  {activeAccountPanel === "settings" ? "Settings" : activeAccountPanel === "profile" ? "Profile" : activeAccountPanel === "payment-update" ? "Payment update" : activeAccountPanel === "password-reset" ? "Password reset" : "Two-factor authentication"}
                 </h2>
                 <p style={{ margin: "7px 0 0", color: "var(--color-muted)", fontSize: 13, lineHeight: 1.45 }}>
                   Manage client account controls without leaving the workspace.
@@ -1463,6 +1473,46 @@ useEffect(() => {
                     <div style={{ marginTop: 5, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12 }}>
                       Edit the Business Profile Intelligence section below.
                     </div>
+                  </div>
+                </>
+              ) : null}
+
+              {activeAccountPanel === "payment-update" ? (
+                <>
+                  <div style={{
+                    border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
+                    borderRadius: 16,
+                    padding: 14,
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
+                  }}>
+                    <div style={{ fontSize: 11, color: darkModeEnabled ? "#a5b4fc" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Billing</div>
+                    <div style={{ marginTop: 6, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", fontWeight: 900 }}>Payment method</div>
+                    <p style={{ color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12, lineHeight: 1.45 }}>
+                      Update card, billing details, invoices, and subscription payment settings.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        window.location.href = "/client/billing";
+                      }}
+                      style={{ border: 0, background: "linear-gradient(135deg,#4f46e5,#7c3aed)", color: "#fff", borderRadius: 12, padding: "8px 10px", fontWeight: 850, cursor: "pointer" }}
+                    >
+                      Open billing centre
+                    </button>
+                  </div>
+
+                  <div style={{
+                    border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
+                    borderRadius: 16,
+                    padding: 14,
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
+                  }}>
+                    <div style={{ fontSize: 11, color: darkModeEnabled ? "#a5b4fc" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Subscription</div>
+                    <div style={{ marginTop: 6, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)", fontWeight: 900 }}>{accountPackage}</div>
+                    <div style={{ marginTop: 5, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12 }}>Status: {accountStatus}</div>
+                    <div style={{ marginTop: 5, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)", fontSize: 12 }}>Credits: {creditsRemaining} available</div>
                   </div>
                 </>
               ) : null}
