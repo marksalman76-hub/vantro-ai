@@ -311,8 +311,25 @@ export default function ClientPage() {
   const [reviewActionLoading, setReviewActionLoading] = useState(false);
   const [liveDeliverable, setLiveDeliverable] = useState<LiveDeliverable | null>(null);
   const [executionState, setExecutionState] = useState<"idle" | "running" | "completed" | "rejected">("idle");
-  const [businessProfile, setBusinessProfile] = useState<Record<string, string>>({});
-  const [businessProfileSaved, setBusinessProfileSaved] = useState(false);
+  const [businessProfile, setBusinessProfile] = useState<Record<string, string>>(() => {
+    if (typeof window === "undefined") return {};
+    try {
+      const saved = window.localStorage.getItem("client_business_profile");
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  const [businessProfileSaved, setBusinessProfileSaved] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      const saved = window.localStorage.getItem("client_business_profile");
+      const parsed = saved ? JSON.parse(saved) : null;
+      return Boolean(parsed?.business_name);
+    } catch {
+      return false;
+    }
+  });
   const [toastMessage, setToastMessage] = useState("");
   const [showDeliverableModal, setShowDeliverableModal] = useState(false);
   const [showMediaPreviewOverlay, setShowMediaPreviewOverlay] = useState(false);
@@ -666,12 +683,20 @@ useEffect(() => {
   }
 
   async function saveBusinessProfile() {
-    try {
-      const cleanedProfile = {
-        ...businessProfile,
-        business_name: (businessProfile.business_name || "").trim(),
-      };
+    const cleanedProfile = {
+      ...businessProfile,
+      business_name: (businessProfile.business_name || "").trim(),
+    };
 
+    try {
+      window.localStorage.setItem("client_business_profile", JSON.stringify(cleanedProfile));
+    } catch {}
+
+    setBusinessProfile(cleanedProfile);
+    setBusinessProfileSaved(Boolean(cleanedProfile.business_name));
+    setToastMessage("Business profile saved successfully.");
+
+    try {
       const response = await fetch("/api/client-business-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -685,27 +710,20 @@ useEffect(() => {
       }));
 
       if (!response.ok || !result?.success) {
-        console.error("Business profile save failed", result);
-        setToastMessage(
-          result?.error
-            ? `Business profile save failed: ${result.error}`
-            : "Business profile could not be saved."
-        );
+        console.warn("Business profile backend sync failed; local profile remains saved.", result);
         return;
       }
 
       const savedProfile =
         result?.profile && typeof result.profile === "object"
-          ? result.profile
+          ? { ...cleanedProfile, ...result.profile }
           : cleanedProfile;
 
       setBusinessProfile(savedProfile);
-      setBusinessProfileSaved(true);
+      setBusinessProfileSaved(Boolean(savedProfile.business_name));
       window.localStorage.setItem("client_business_profile", JSON.stringify(savedProfile));
-      setToastMessage("Business profile saved successfully.");
     } catch (error) {
-      console.error("Business profile save runtime failure", error);
-      setToastMessage("Business profile could not be saved.");
+      console.warn("Business profile backend sync failed; local profile remains saved.", error);
     }
   }
 
