@@ -620,14 +620,47 @@ useEffect(() => {
 
   async function loadBusinessProfile() {
     try {
-      const response = await fetch("/api/client-business-profile", { cache: "no-store" });
+      const localProfileRaw = window.localStorage.getItem("client_business_profile");
+      const localProfile = localProfileRaw ? JSON.parse(localProfileRaw) : null;
+
+      const response = await fetch("/api/client-business-profile", {
+        cache: "no-store",
+        credentials: "include",
+      });
+
       const data = await response.json();
 
-      if (data?.success && data.profile) {
-        setBusinessProfile(data.profile);
-        setBusinessProfileSaved(Boolean(data.profile_saved));
+      if (data?.success && data.profile && Object.keys(data.profile).length > 0) {
+        const mergedProfile = {
+          ...(localProfile || {}),
+          ...data.profile,
+        };
+
+        setBusinessProfile(mergedProfile);
+        setBusinessProfileSaved(Boolean(data.profile_saved || mergedProfile.business_name));
+        window.localStorage.setItem("client_business_profile", JSON.stringify(mergedProfile));
+        return;
       }
+
+      if (localProfile && Object.keys(localProfile).length > 0) {
+        setBusinessProfile(localProfile);
+        setBusinessProfileSaved(Boolean(localProfile.business_name));
+        return;
+      }
+
+      setBusinessProfileSaved(false);
     } catch {
+      try {
+        const localProfileRaw = window.localStorage.getItem("client_business_profile");
+        const localProfile = localProfileRaw ? JSON.parse(localProfileRaw) : null;
+
+        if (localProfile && Object.keys(localProfile).length > 0) {
+          setBusinessProfile(localProfile);
+          setBusinessProfileSaved(Boolean(localProfile.business_name));
+          return;
+        }
+      } catch {}
+
       setBusinessProfileSaved(false);
     }
   }
@@ -668,7 +701,7 @@ useEffect(() => {
 
       setBusinessProfile(savedProfile);
       setBusinessProfileSaved(true);
-      localStorage.setItem("client_business_profile", JSON.stringify(savedProfile));
+      window.localStorage.setItem("client_business_profile", JSON.stringify(savedProfile));
       setToastMessage("Business profile saved successfully.");
     } catch (error) {
       console.error("Business profile save runtime failure", error);
@@ -1047,7 +1080,7 @@ useEffect(() => {
                 fontWeight: 850,
               }}
             >
-              {account?.company_name || account?.contact_email || "Client Workspace"}
+              {clientDisplayName || account?.company_name || account?.contact_email || "Client Workspace"}
             </h1>
 
             <p
