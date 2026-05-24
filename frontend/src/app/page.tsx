@@ -43,6 +43,22 @@ const plans = [
 
 
 
+
+function LandingSpotlightLayer() {
+  return (
+    <div className="landingSpotlightLayer" aria-hidden="true">
+      <div className="spotlightBeam beamOne" />
+      <div className="spotlightBeam beamTwo" />
+      <div className="spotlightBeam beamThree" />
+      <div className="ambientParticleField">
+        {Array.from({ length: 34 }).map((_, index) => (
+          <span key={index} style={{ ["--i" as any]: index }} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function HeroVisualSystem() {
   return (
     <div className="heroVisualSystem" aria-hidden="true">
@@ -282,6 +298,7 @@ function AnimatedWorkflowSection() {
 export default function HomePage() {
   return (
     <main>
+      <LandingSpotlightLayer />
       <nav className="nav">
         <Link className="logo" href="/">
           <span className="logomk">AI</span>
@@ -1252,6 +1269,74 @@ export default function HomePage() {
         @keyframes taskProgress{
           0%,100%{width:18%;opacity:.55}
           50%{width:92%;opacity:1}
+        }
+
+
+        /* LANDING_PARALLAX_SPOTLIGHT_V1 */
+        .landingSpotlightLayer{
+          position:fixed;
+          inset:0;
+          pointer-events:none;
+          z-index:0;
+          overflow:hidden;
+        }
+        .spotlightBeam{
+          position:absolute;
+          width:42vw;
+          height:42vw;
+          border-radius:999px;
+          filter:blur(42px);
+          opacity:.24;
+          mix-blend-mode:screen;
+          animation:spotlightDrift 16s ease-in-out infinite;
+        }
+        .beamOne{
+          left:-12vw;
+          top:18vh;
+          background:radial-gradient(circle, rgba(124,116,255,.48), transparent 64%);
+        }
+        .beamTwo{
+          right:-10vw;
+          top:8vh;
+          background:radial-gradient(circle, rgba(14,207,188,.32), transparent 66%);
+          animation-delay:-5s;
+        }
+        .beamThree{
+          left:32vw;
+          bottom:-20vw;
+          background:radial-gradient(circle, rgba(78,172,255,.22), transparent 70%);
+          animation-delay:-9s;
+        }
+        .ambientParticleField{
+          position:absolute;
+          inset:0;
+          opacity:.55;
+        }
+        .ambientParticleField span{
+          position:absolute;
+          width:3px;
+          height:3px;
+          border-radius:999px;
+          background:rgba(255,255,255,.72);
+          left:calc((var(--i) * 29px) % 100vw);
+          top:calc((var(--i) * 53px) % 100vh);
+          animation:particleRise calc(7s + (var(--i) * .17s)) linear infinite;
+          animation-delay:calc(var(--i) * -.31s);
+          box-shadow:0 0 14px rgba(124,116,255,.42);
+        }
+        .heroGlassCard.cardA{transform:translateY(var(--scroll-shift-a,0px))}
+        .heroGlassCard.cardB{transform:translateY(var(--scroll-shift-b,0px))}
+        .heroDashboardPreview{transform:translateY(var(--scroll-shift-c,0px))}
+        .heroAgentRail{transform:translateX(-50%) translateY(var(--scroll-shift-d,0px))}
+        @keyframes spotlightDrift{
+          0%,100%{transform:translate3d(0,0,0) scale(1)}
+          50%{transform:translate3d(4vw,-4vh,0) scale(1.12)}
+        }
+        @keyframes particleRise{
+          from{transform:translateY(18vh);opacity:0}
+          16%{opacity:.7}
+          82%{opacity:.45}
+          to{transform:translateY(-110vh);opacity:0}
         }
 
         @media(max-width:900px){.nav{height:auto;padding:14px 20px}.navLinks{gap:14px}.navLinks a:not(.navBtn){display:none}.hero{padding-top:110px}.numbers{grid-template-columns:repeat(2,1fr)}.platform{grid-template-columns:1fr;padding:80px 6%}.context{grid-template-columns:1fr}.section{padding:80px 6%}}
