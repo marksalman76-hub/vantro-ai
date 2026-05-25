@@ -9,8 +9,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
   Zap, Brain, Video, Wand2, Users, BarChart3, Globe, Play,
-  Sparkles, ChevronRight, Star, Shield, Clock, ArrowRight,
-  Volume2, VolumeX, Menu, X, CheckCircle2, Layers, Cpu,
+  Sparkles, ChevronRight, Star, Shield, Clock, ArrowRight, Menu, X, CheckCircle2, Layers, Cpu,
   Mic, FileText, Mail, Share2, TrendingUp, Bot, Infinity,
   ChevronDown, Eye, Lock, Rocket, Award, Target
 } from "lucide-react";
@@ -245,9 +244,6 @@ function Nav({ muted, onToggleAudio }: { muted: boolean; onToggleAudio: () => vo
 
         {/* Actions */}
         <div className="nav__actions">
-          <button className="nav__audio" onClick={onToggleAudio} aria-label="Toggle audio">
-            {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-          </button>
           <a href="#" className="nav__btn-ghost">Sign in</a>
           <a href="#" className="nav__btn-primary">
             Start free <ArrowRight size={14} />
