@@ -1239,7 +1239,7 @@ const CSS = `
   }
   .hero__headline {
     font-family: var(--font-display);
-    font-size: clamp(42px, 7vw, 88px);
+    font-size: clamp(30px, 4.6vw, 58px);
     font-weight: 800;
     line-height: 1.04;
     letter-spacing: -0.03em;
@@ -1247,7 +1247,7 @@ const CSS = `
     margin-bottom: 24px;
   }
   .hero__subline {
-    font-size: clamp(17px, 2.2vw, 22px);
+    font-size: clamp(14px, 1.5vw, 17px);
     color: var(--text-2);
     line-height: 1.55;
     max-width: 600px;
@@ -1437,7 +1437,7 @@ const CSS = `
   }
   .section-title {
     font-family: var(--font-display);
-    font-size: clamp(34px, 5vw, 58px);
+    font-size: clamp(28px, 3.8vw, 44px);
     font-weight: 800;
     line-height: 1.08;
     letter-spacing: -0.025em;
@@ -2165,7 +2165,7 @@ const CSS = `
   }
   .final-cta__title {
     font-family: var(--font-display);
-    font-size: clamp(38px, 6vw, 72px);
+    font-size: clamp(30px, 4.4vw, 52px);
     font-weight: 800;
     line-height: 1.06;
     letter-spacing: -0.03em;
