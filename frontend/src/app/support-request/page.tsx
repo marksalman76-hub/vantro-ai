@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 
 export default function SupportRequestPage() {
-  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
+  const [darkModeEnabled, setDarkModeEnabled] = useState(true);
   const [form, setForm] = useState({
     businessName: "",
     email: "",
@@ -14,7 +14,8 @@ export default function SupportRequestPage() {
 
   useEffect(() => {
     try {
-      setDarkModeEnabled(window.localStorage.getItem("client_workspace_dark_mode") === "dark");
+      const savedMode = window.localStorage.getItem("support_request_theme");
+      setDarkModeEnabled(savedMode ? savedMode === "dark" : true);
     } catch {}
   }, []);
 
