@@ -32,21 +32,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const backendPayload = {
-      ...body,
-      agent_id: primaryAgent || selectedAgents[0],
-      selected_agents: selectedAgents.length > 0 ? selectedAgents : [primaryAgent],
-      task,
-      prompt: body?.prompt || task,
-      source: "client_workspace",
-      execution_surface: "client_page",
-    };
-
     const tenantId =
       request.headers.get("x-tenant-id") ||
       request.cookies.get("tenant_id")?.value ||
       body?.tenant_id ||
       "client_demo_001";
+
+    const backendPayload = {
+      ...body,
+      tenant_id: body?.tenant_id || tenantId,
+      agent_id: primaryAgent || selectedAgents[0],
+      requested_agent: body?.requested_agent || primaryAgent || selectedAgents[0],
+      selected_agents: selectedAgents.length > 0 ? selectedAgents : [primaryAgent],
+      workflow_stage: body?.workflow_stage || "client_workspace_execution",
+      action_type: body?.action_type || "agent_execution_request",
+      task,
+      prompt: body?.prompt || task,
+      source: "client_workspace",
+      execution_surface: "client_page",
+    };
 
     const actorRole =
       request.headers.get("x-actor-role") ||
