@@ -59,7 +59,7 @@ const PRICING = [
     price: 29,
     desc: "Perfect for solo creators and freelancers.",
     features: ["3 AI Agents", "500 generations/mo", "HD Video export", "Basic presets", "Email support"],
-    cta: "Start free trial",
+    cta: "Demo trial",
     highlight: false,
   },
   {
@@ -67,7 +67,7 @@ const PRICING = [
     price: 79,
     desc: "For growing teams and power users.",
     features: ["All 8 AI Agents", "Unlimited generations", "4K Video export", "All viral presets", "Priority support", "Custom voice cloning", "API access"],
-    cta: "Start free trial",
+    cta: "Demo trial",
     highlight: true,
   },
   {
@@ -246,7 +246,7 @@ function Nav({ muted, onToggleAudio }: { muted: boolean; onToggleAudio: () => vo
         <div className="nav__actions">
           <a href="#" className="nav__btn-ghost">Sign in</a>
           <a href="#" className="nav__btn-primary">
-            Start free <ArrowRight size={14} />
+            Demo <ArrowRight size={14} />
           </a>
           <button className="nav__hamburger" onClick={() => setOpen(!open)}>
             {open ? <X size={20} /> : <Menu size={20} />}
@@ -265,7 +265,7 @@ function Nav({ muted, onToggleAudio }: { muted: boolean; onToggleAudio: () => vo
             {["Agents", "Pricing", "Enterprise"].map((l) => (
               <a key={l} href={`#${l.toLowerCase()}`} className="nav__mobile-link" onClick={() => setOpen(false)}>{l}</a>
             ))}
-            <a href="#" className="nav__btn-primary nav__btn-primary--mobile">Start free →</a>
+            <a href="#" className="nav__btn-primary nav__btn-primary--mobile">Demo →</a>
           </motion.div>
         )}
       </AnimatePresence>
@@ -406,7 +406,7 @@ function Hero() {
         >
           <a href="#" className="hero__cta-primary">
             <Rocket size={16} />
-            Start creating free
+            Demo
             <span className="hero__cta-glow" />
           </a>
           <a href="#" className="hero__cta-secondary">
