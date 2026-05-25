@@ -14,8 +14,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       display: "grid",
       placeItems: "center",
       padding: 24,
-      background: "radial-gradient(circle at top right, #dbeafe 0, transparent 34%), linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #eff6ff 100%)",
-      color: "#0f172a",
+      background: "radial-gradient(circle at top right, rgba(99,91,255,.22) 0, transparent 34%), radial-gradient(circle at bottom left, rgba(20,184,166,.16) 0, transparent 30%), linear-gradient(135deg, #050816 0%, #0b1020 55%, #050816 100%)",
+      color: "#f8fafc",
       fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
     }}>
       <form action="/api/client-login" method="POST" style={{
@@ -23,24 +23,24 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         maxWidth: 480,
         padding: 36,
         borderRadius: 28,
-        background: "rgba(255,255,255,.94)",
-        border: "1px solid rgba(148,163,184,.28)",
+        background: "linear-gradient(180deg, rgba(15,23,42,.92), rgba(7,16,34,.96))",
+        border: "1px solid rgba(148,163,184,.22)",
         boxShadow: "0 30px 90px rgba(15,23,42,.16)",
       }}>
-        <p style={{ color: "#2563eb", fontWeight: 900, letterSpacing: 1, fontSize: 12 }}>CLIENT PORTAL</p>
-        <h1 style={{ margin: "12px 0", fontSize: 38, lineHeight: 1.05, letterSpacing: "-.04em" }}>Access your workspace</h1>
-        <p style={{ color: "#64748b", lineHeight: 1.7, marginTop: 0 }}>
+        <p style={{ color: "#a78bfa", fontWeight: 900, letterSpacing: 1, fontSize: 12 }}>CLIENT PORTAL</p>
+        <h1 style={{ margin: "12px 0", fontSize: 34, lineHeight: 1.05, letterSpacing: "-.04em" }}>Access your workspace</h1>
+        <p style={{ color: "#cbd5e1", lineHeight: 1.7, marginTop: 0 }}>
           Sign in to manage your AI agents, approvals, outputs, and workspace activity.
         </p>
 
         {activated && (
-          <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: "#ecfdf5", border: "1px solid #bbf7d0", color: "#166534" }}>
+          <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: "rgba(34,197,94,.12)", border: "1px solid rgba(34,197,94,.32)", color: "#86efac" }}>
             Your account is activated. Sign in with the password you created.
           </div>
         )}
 
         {error && (
-          <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b" }}>
+          <div style={{ marginTop: 18, padding: 14, borderRadius: 16, background: "rgba(239,68,68,.12)", border: "1px solid rgba(239,68,68,.32)", color: "#fca5a5" }}>
             Login failed. Check the email and password, then try again.
           </div>
         )}
@@ -59,6 +59,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   );
 }
 
-const labelStyle: React.CSSProperties = { display: "block", marginTop: 18, marginBottom: 8, color: "#334155", fontWeight: 800 };
-const inputStyle: React.CSSProperties = { width: "100%", padding: 14, borderRadius: 14, border: "1px solid #cbd5e1", fontSize: 15, boxSizing: "border-box" };
-const buttonStyle: React.CSSProperties = { width: "100%", marginTop: 22, padding: 15, borderRadius: 14, border: 0, background: "#2563eb", color: "white", fontWeight: 900, cursor: "pointer", boxShadow: "0 14px 30px rgba(37,99,235,.24)" };
+const labelStyle: React.CSSProperties = { display: "block", marginTop: 18, marginBottom: 8, color: "#e2e8f0", fontWeight: 800 };
+const inputStyle: React.CSSProperties = { width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(148,163,184,.26)", background: "rgba(3,10,24,.72)", color: "#f8fafc", fontSize: 14, boxSizing: "border-box", outline: "none" };
+const buttonStyle: React.CSSProperties = { width: "100%", marginTop: 22, padding: 15, borderRadius: 14, border: 0, background: "linear-gradient(135deg,#635BFF,#8b5cf6)", color: "white", fontWeight: 900, cursor: "pointer", boxShadow: "0 16px 42px rgba(99,91,255,.30)" };
