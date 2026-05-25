@@ -244,6 +244,173 @@ function Nav({ muted, onToggleAudio }: { muted: boolean; onToggleAudio: () => vo
 
         {/* Actions */}
         <div className="nav__actions">
+          <a href="#" className="nav__btn-ghost">Sign in</a>
+          <a href="/demo" className="nav__btn-primary">
+            Demo <ArrowRight size={14} />
+          </a>
+          <button className="nav__hamburger" onClick={() => setOpen(!open)}>
+            {open ? <X size={20} /> : <Menu size={20} />}
+          </button>
+        </div>
+      </div>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="nav__mobile"
+          >
+            {["Agents", "Pricing", "Enterprise"].map((l) => (
+              <a key={l} href={`#${l.toLowerCase()}`} className="nav__mobile-link" onClick={() => setOpen(false)}>{l}</a>
+            ))}
+            <a href="/demo" className="nav__btn-primary nav__btn-primary--mobile">Demo →</a>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.nav>
+  );
+}
+
+// ─── ANIMATED COUNTER ───────────────────────────────────────────────────────
+
+function Counter({ value, duration = 2 }: { value: string; duration?: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-100px" });
+  const [displayed, setDisplayed] = useState("0");
+
+  useEffect(() => {
+    if (!inView) return;
+    const numeric = parseFloat(value.replace(/[^0-9.]/g, ""));
+    const suffix = value.replace(/[0-9.]/g, "");
+    const start = Date.now();
+    const tick = () => {
+      const elapsed = (Date.now() - start) / 1000;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = numeric * eased;
+      setDisplayed(
+        value.includes(".")
+          ? current.toFixed(2) + suffix
+          : Math.floor(current) + suffix
+      );
+      if (progress < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }, [inView, value, duration]);
+
+  return <span ref={ref}>{displayed}</span>;
+}
+
+// ─── TYPEWRITER ─────────────────────────────────────────────────────────────
+
+const TYPEWRITER_PHRASES = [
+  "cinematic videos",
+  "viral social content",
+  "AI-powered campaigns",
+  "voice clones",
+  "brand identities",
+  "autonomous agents",
+];
+
+function Typewriter() {
+  const [phrase, setPhrase] = useState(0);
+  const [text, setText] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    const target = TYPEWRITER_PHRASES[phrase];
+    let timeout: ReturnType<typeof setTimeout>;
+
+    if (!deleting && text.length < target.length) {
+      timeout = setTimeout(() => setText(target.slice(0, text.length + 1)), 55);
+    } else if (!deleting && text.length === target.length) {
+      timeout = setTimeout(() => setDeleting(true), 2200);
+    } else if (deleting && text.length > 0) {
+      timeout = setTimeout(() => setText(text.slice(0, -1)), 28);
+    } else if (deleting && text.length === 0) {
+      setDeleting(false);
+      setPhrase((p) => (p + 1) % TYPEWRITER_PHRASES.length);
+    }
+
+    return () => clearTimeout(timeout);
+  }, [text, deleting, phrase]);
+
+  return (
+    <span className="typewriter">
+      <span className="typewriter__text">{text}</span>
+      <span className="typewriter__cursor">|</span>
+    </span>
+  );
+}
+
+// ─── HERO ───────────────────────────────────────────────────────────────────
+
+function Hero() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { scrollYProgress } = useScroll({ target: containerRef, offset: ["start start", "end start"] });
+  const y = useTransform(scrollYProgress, [0, 1], ["0%", "40%"]);
+  const opacity = useTransform(scrollYProgress, [0, 0.7], [1, 0]);
+
+  return (
+    <section ref={containerRef} className="hero" id="platform">
+      {/* 3D Canvas */}
+      <div className="hero__canvas">
+        <Scene3D />
+      </div>
+
+      <motion.div style={{ y, opacity }} className="hero__content">
+        {/* Badge */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.7 }}
+          className="hero__badge"
+        >
+          <Sparkles size={12} />
+          <span>The world&apos;s first unified AI creation supercomputer</span>
+          <span className="hero__badge-new">NEW</span>
+        </motion.div>
+
+        {/* Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+          className="hero__headline"
+        >
+          Your entire creative
+          <br />
+          team, powered by AI.
+        </motion.h1>
+
+        {/* Subline */}
+        <motion.p
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5, duration: 0.8 }}
+          className="hero__subline"
+        >
+          Generate&nbsp;<Typewriter />
+          <br className="hero__br" />
+          with a fleet of specialized AI agents that never sleep.
+        </motion.p>
+
+        {/* CTA row */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7, duration: 0.7 }}
+          className="hero__cta-row"
+        >
+          <a href="#" className="hero__cta-primary">
+            <Rocket size={16} />
+            <span className="hero__cta-glow" />
+          </a>
+          <a href="#" className="hero__cta-secondary">
+            <Play size={14} />
+          </a>
         </motion.div>
 
         {/* Trust */}
