@@ -678,25 +678,6 @@ function FeatureBento() {
           </div>
         </motion.div>
 
-        {/* API */}
-        <motion.div
-          className="bento-card bento-card--wide"
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.3, duration: 0.8 }}
-        >
-          <div className="bento-card__eyebrow"><Cpu size={14} /> API & MCP</div>
-          <h3 className="bento-card__title">Build anything on top of Nexus.</h3>
-          <div className="bento-card__code">
-            <pre>{`const nexus = new NexusAI({ apiKey: process.env.NEXUS_KEY });
-const video = await nexus.generate({
-  agent: "aria",
-  prompt: "Cinematic product reveal, neon noir",
-  quality: "4k", duration: 8
-});`}</pre>
-          </div>
-        </motion.div>
       </div>
     </section>
   );
