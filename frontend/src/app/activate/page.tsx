@@ -36,7 +36,7 @@ export default async function ActivatePage({ searchParams }: ActivatePageProps) 
       display: "grid",
       placeItems: "center",
       padding: 24,
-      background: "radial-gradient(circle at top left, #dbeafe 0, transparent 34%), linear-gradient(135deg, #f8fafc 0%, #eef2ff 50%, #eff6ff 100%)",
+      background: "radial-gradient(circle at top left, #dbeafe 0, transparent 34%), linear-gradient(135deg, #e2e8f0 0%, #eef2ff 50%, #eff6ff 100%)",
       color: "#0f172a",
       fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
     }}>
@@ -49,7 +49,7 @@ export default async function ActivatePage({ searchParams }: ActivatePageProps) 
         border: "1px solid rgba(148,163,184,.28)",
         boxShadow: "0 30px 90px rgba(15,23,42,.16)",
       }}>
-        <p style={{ color: "#2563eb", fontWeight: 900, letterSpacing: 1, fontSize: 12 }}>
+        <p style={{ color: "#8b5cf6", fontWeight: 900, letterSpacing: 1, fontSize: 12 }}>
           SECURE CLIENT ONBOARDING
         </p>
 
@@ -79,7 +79,7 @@ export default async function ActivatePage({ searchParams }: ActivatePageProps) 
               marginTop: 22,
               padding: 18,
               borderRadius: 18,
-              background: "#f8fafc",
+              background: "#e2e8f0",
               border: "1px solid #e2e8f0",
             }}>
               <strong>{invite.company_name || "Client Account"}</strong>
@@ -111,4 +111,4 @@ function noticeStyle(background: string, border: string, color: string): React.C
 
 const labelStyle: React.CSSProperties = { display: "block", marginBottom: 8, marginTop: 16, color: "#334155", fontWeight: 800 };
 const inputStyle: React.CSSProperties = { width: "100%", padding: 14, borderRadius: 14, border: "1px solid #cbd5e1", marginBottom: 4, fontSize: 15, boxSizing: "border-box" };
-const buttonStyle: React.CSSProperties = { width: "100%", padding: 15, borderRadius: 14, border: 0, background: "#2563eb", color: "white", fontWeight: 900, cursor: "pointer", marginTop: 20, boxShadow: "0 14px 30px rgba(37,99,235,.24)" };
+const buttonStyle: React.CSSProperties = { width: "100%", padding: 15, borderRadius: 14, border: 0, background: "#8b5cf6", color: "white", fontWeight: 900, cursor: "pointer", marginTop: 20, boxShadow: "0 14px 30px rgba(37,99,235,.24)" };
