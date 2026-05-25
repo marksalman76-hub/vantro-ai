@@ -253,7 +253,7 @@ function Nav({ muted, onToggleAudio }: { muted: boolean; onToggleAudio: () => vo
         {/* Actions */}
         <div className="nav__actions">
           <a href="#" className="nav__btn-ghost">Sign in</a>
-          <a href="/demo" className="nav__btn-primary">
+          <a href="/support-request" className="nav__btn-primary">
             Demo <ArrowRight size={14} />
           </a>
           <button className="nav__hamburger" onClick={() => setOpen(!open)}>
