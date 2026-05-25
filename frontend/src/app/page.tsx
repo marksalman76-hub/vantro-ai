@@ -558,98 +558,6 @@ function AgentsGrid() {
   );
 }
 
-// ─── STUDIO / PRESETS ───────────────────────────────────────────────────────
-
-function Studio() {
-  const [activePreset, setActivePreset] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<"Video"|"Image"|"Audio">("Video");
-
-  const filtered = PRESETS.filter(p => activeTab === "Video" ? p.tag === "Video" : activeTab === "Image" ? p.tag === "Image" : p.tag === "Audio");
-
-  return (
-    <section className="studio" id="studio">
-      <div className="section-header">
-        <motion.span className="section-eyebrow" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-          <Video size={13} /> CREATION STUDIO
-        </motion.span>
-        <motion.h2 className="section-title" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-          24/7 AI workforce for any industry.<br />Any operation. Any scale
-        </motion.h2>
-        <motion.p className="section-subtitle" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>
-          Start from a proven template or prompt from scratch. Every output is 4K-ready.
-        </motion.p>
-      </div>
-
-      {/* Tab bar */}
-      <div className="studio__tabs">
-        {(["Video","Image","Audio"] as const).map(tab => (
-          <button
-            key={tab}
-            className={`studio__tab ${activeTab === tab ? "studio__tab--active" : ""}`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab === "Video" && <Video size={13} />}
-            {tab === "Image" && <Eye size={13} />}
-            {tab === "Audio" && <Mic size={13} />}
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {/* Preset grid */}
-      <motion.div className="studio__grid" layout>
-        <AnimatePresence mode="popLayout">
-          {filtered.map((preset, i) => (
-            <motion.button
-              key={preset.label}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ delay: i * 0.04, duration: 0.35 }}
-              className={`preset-chip ${activePreset === i ? "preset-chip--active" : ""}`}
-              onClick={() => setActivePreset(activePreset === i ? null : i)}
-            >
-              {preset.hot && <span className="preset-chip__hot">🔥</span>}
-              {preset.label}
-              <span className="preset-chip__tag">{preset.tag}</span>
-            </motion.button>
-          ))}
-        </AnimatePresence>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.8 }}
-        className="studio__prompt-box"
-      >
-        <div className="studio__prompt-label">
-          <Wand2 size={14} />
-          <span>Try the studio — no signup needed</span>
-        </div>
-        <div className="studio__prompt-input-row">
-          <input
-            className="studio__prompt-input"
-            placeholder="A cinematic drone shot over a neon-lit Tokyo skyline at dusk…"
-            readOnly
-          />
-          <button className="studio__prompt-btn">
-            <Sparkles size={14} />
-            Generate
-          </button>
-        </div>
-        <div className="studio__prompt-modes">
-          {["4K Video", "Cinematic", "6 seconds", "Seedance v2.0"].map(m => (
-            <span key={m} className="studio__mode-tag">{m}</span>
-          ))}
-        </div>
-      </motion.div>
-    </section>
-  );
-}
-
 // ─── FEATURE BENTO ──────────────────────────────────────────────────────────
 
 function FeatureBento() {
@@ -1082,7 +990,6 @@ export default function Page() {
         <Marquee />
         <StatsStrip />
         <AgentsGrid />
-        <Studio />
         <FeatureBento />
         <Testimonials />
         <Pricing />
