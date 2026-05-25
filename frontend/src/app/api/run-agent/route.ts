@@ -1,25 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { mkdir, readFile, writeFile } from "fs/promises";
-import path from "path";
 
-const DATA_DIR = path.join(process.cwd(), ".runtime-data");
-const DATA_FILE = path.join(DATA_DIR, "client-executions.json");
-
-async function readExecutions(): Promise<any[]> {
-  try {
-    const raw = await readFile(DATA_FILE, "utf-8");
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function titleCaseAgent(agent: string) {
-  return String(agent || "AI Agent")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
+const BACKEND_URL =
+  process.env.BACKEND_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  "https://api.trance-formation.com.au";
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,53 +13,80 @@ export async function POST(request: NextRequest) {
       ? body.selected_agents
       : [];
 
-    const task = String(body?.task || "Premium ecommerce execution");
+    const primaryAgent =
+      String(body?.agent_id || body?.agentId || selectedAgents[0] || "").trim();
 
-    await mkdir(DATA_DIR, { recursive: true });
+    const task = String(body?.task || body?.prompt || "Run live agent execution").trim();
 
-    const executions = await readExecutions();
+    if (!primaryAgent && selectedAgents.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "missing_agent_selection" },
+        { status: 400 }
+      );
+    }
 
-    const primaryAgent = selectedAgents[0] || "Product Copywriting Agent";
-
-    const event = {
-      id: `execution_${Date.now()}`,
-      status: "approval_required",
-      selected_agents: selectedAgents,
+    const backendPayload = {
+      ...body,
+      agent_id: primaryAgent || selectedAgents[0],
+      selected_agents: selectedAgents.length > 0 ? selectedAgents : [primaryAgent],
       task,
-      created_at_iso: new Date().toISOString(),
-      created_at: new Date().toLocaleString("en-AU", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-      }),
-      deliverable: {
-        title: "Live premium ecommerce launch campaign",
-        summary:
-          "A client-ready campaign deliverable has been generated for the selected ecommerce task, including positioning, offer framing, conversion messaging, audience targeting, and execution-ready campaign direction.",
-        image_url: "",
-        tags: [
-          "Live output",
-          titleCaseAgent(primaryAgent),
-          "Approval required",
-          "Client-ready",
-        ],
-      },
+      prompt: body?.prompt || task,
+      source: "client_workspace",
+      execution_surface: "client_page",
     };
 
-    executions.unshift(event);
+    const tenantId =
+      request.headers.get("x-tenant-id") ||
+      request.cookies.get("tenant_id")?.value ||
+      body?.tenant_id ||
+      "client_demo_001";
 
-    await writeFile(DATA_FILE, JSON.stringify(executions.slice(0, 250), null, 2), "utf-8");
+    const actorRole =
+      request.headers.get("x-actor-role") ||
+      body?.actor_role ||
+      "customer";
 
-    return NextResponse.json({
-      success: true,
-      execution: event,
-      deliverable: event.deliverable,
+    const response = await fetch(`${BACKEND_URL.replace(/\/$/, "")}/run-agent`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-tenant-id": String(tenantId),
+        "x-actor-role": String(actorRole),
+      },
+      body: JSON.stringify(backendPayload),
+      cache: "no-store",
     });
-  } catch {
+
+    const text = await response.text();
+
+    let data: any;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { raw_response: text };
+    }
+
     return NextResponse.json(
-      { success: false, error: "execution_failed" },
+      {
+        success: response.ok,
+        proxied_to_backend: true,
+        backend_status: response.status,
+        backend_url: "/run-agent",
+        agent_id: backendPayload.agent_id,
+        selected_agents: backendPayload.selected_agents,
+        result: data,
+        execution: data?.execution || data,
+        deliverable: data?.deliverable || data?.execution?.deliverable || data?.result?.deliverable || null,
+      },
+      { status: response.ok ? 200 : response.status }
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "backend_execution_proxy_failed",
+        detail: error instanceof Error ? error.message : "Unknown error",
+      },
       { status: 500 }
     );
   }
