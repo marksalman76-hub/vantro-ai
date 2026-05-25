@@ -273,7 +273,7 @@ function Nav({ muted, onToggleAudio }: { muted: boolean; onToggleAudio: () => vo
             {["Agents", "Pricing", "Enterprise"].map((l) => (
               <a key={l} href={`#${l.toLowerCase()}`} className="nav__mobile-link" onClick={() => setOpen(false)}>{l}</a>
             ))}
-            <a href="/demo" className="nav__btn-primary nav__btn-primary--mobile">Demo →</a>
+            <a href="/support-request" className="nav__btn-primary nav__btn-primary--mobile">Demo →</a>
           </motion.div>
         )}
       </AnimatePresence>
@@ -843,7 +843,7 @@ function FinalCTA() {
             Launch your workforce
             <span className="hero__cta-glow" />
           </a>
-          <a href="/demo" className="hero__cta-secondary">
+          <a href="/support-request" className="hero__cta-secondary">
             Schedule strategy call <ChevronRight size={14} />
           </a>
         </div>
