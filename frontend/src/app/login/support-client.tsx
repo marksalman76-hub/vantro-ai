@@ -9,7 +9,7 @@ export default function LoginSupportClient() {
 
   useEffect(() => {
     try {
-      setCookieVisible(window.localStorage.getItem("nexus_cookie_consent") !== "accepted");
+      setCookieVisible(window.localStorage.getItem("nexus_login_cookie_consent") !== "accepted");
     } catch {
       setCookieVisible(true);
     }
@@ -17,14 +17,14 @@ export default function LoginSupportClient() {
 
   function acceptCookies() {
     try {
-      window.localStorage.setItem("nexus_cookie_consent", "accepted");
+      window.localStorage.setItem("nexus_login_cookie_consent", "accepted");
     } catch {}
     setCookieVisible(false);
   }
 
   function rejectCookies() {
     try {
-      window.localStorage.setItem("nexus_cookie_consent", "rejected");
+      window.localStorage.setItem("nexus_login_cookie_consent", "rejected");
     } catch {}
     setCookieVisible(false);
   }
