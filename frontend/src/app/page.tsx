@@ -245,7 +245,7 @@ function Nav({ muted, onToggleAudio }: { muted: boolean; onToggleAudio: () => vo
         {/* Actions */}
         <div className="nav__actions">
           <a href="#" className="nav__btn-ghost">Sign in</a>
-          <a href="#" className="nav__btn-primary">
+          <a href="/demo" className="nav__btn-primary">
             Demo <ArrowRight size={14} />
           </a>
           <button className="nav__hamburger" onClick={() => setOpen(!open)}>
@@ -265,7 +265,7 @@ function Nav({ muted, onToggleAudio }: { muted: boolean; onToggleAudio: () => vo
             {["Agents", "Pricing", "Enterprise"].map((l) => (
               <a key={l} href={`#${l.toLowerCase()}`} className="nav__mobile-link" onClick={() => setOpen(false)}>{l}</a>
             ))}
-            <a href="#" className="nav__btn-primary nav__btn-primary--mobile">Demo →</a>
+            <a href="/demo" className="nav__btn-primary nav__btn-primary--mobile">Demo →</a>
           </motion.div>
         )}
       </AnimatePresence>
