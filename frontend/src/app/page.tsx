@@ -246,13 +246,13 @@ function Nav({ muted, onToggleAudio }: { muted: boolean; onToggleAudio: () => vo
         {/* Links */}
         <div className="nav__links">
           {["Agents", "Pricing", "Enterprise"].map((l) => (
-            <a key={l} href={`#${l.toLowerCase()}`} className="nav__link">{l}</a>
+            <a key={l} href={l === "Enterprise" ? "/support-request" : `#${l.toLowerCase()}`} className="nav__link">{l}</a>
           ))}
         </div>
 
         {/* Actions */}
         <div className="nav__actions">
-          <a href="#" className="nav__btn-ghost">Sign in</a>
+          <a href="/login" className="nav__btn-ghost">Sign in</a>
           <a href="/support-request" className="nav__btn-primary">
             Demo <ArrowRight size={14} />
           </a>
