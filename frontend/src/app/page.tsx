@@ -361,7 +361,7 @@ function Hero() {
           className="hero__badge"
         >
           <Sparkles size={12} />
-          <span>Premium AI workforce platform for ecommerce operators</span>
+          <span>Premium AI workforce platform</span>
           <span className="hero__badge-new">NEW</span>
         </motion.div>
 
@@ -372,9 +372,9 @@ function Hero() {
           transition={{ delay: 0.35, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
           className="hero__headline"
         >
-          Run your ecommerce business with a governed AI workforce.
+          AI agents that plan, create and execute.
           <br />
-          Create, execute, support and optimise at scale
+          With governance built in.
         </motion.h1>
 
         {/* Subline */}
@@ -386,7 +386,7 @@ function Hero() {
         >
           Generate&nbsp;<Typewriter />
           <br className="hero__br" />
-          with specialised AI agents for ecommerce growth, content, support, analytics and governed execution.
+          with modular AI agents for operations, growth, support, content, analytics and live business execution.
         </motion.p>
 
         {/* CTA row */}
@@ -418,7 +418,7 @@ function Hero() {
             ))}
           </div>
           <span className="hero__trust-text">
-            Built for <strong>serious ecommerce teams</strong> that need premium execution, not generic AI output
+            Built for <strong>serious teams</strong> that need premium execution, not generic AI output
           </span>
           <div className="hero__stars">
             {Array.from({length: 5}).map((_,i) => <Star key={i} size={11} fill="currentColor" />)}
@@ -495,7 +495,7 @@ function AgentsGrid() {
           transition={{ duration: 0.8, ease: [0.16,1,0.3,1] }}
           className="section-title"
         >
-          Your ecommerce<br />AI workforce.
+          Your modular<br />AI workforce.
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 16 }}
@@ -504,7 +504,7 @@ function AgentsGrid() {
           transition={{ delay: 0.1, duration: 0.7 }}
           className="section-subtitle"
         >
-          Specialised agents for content, support, analytics, product growth and governed live execution.
+          Specialised agents for operations, content, growth, support, analytics and governed execution.
         </motion.p>
       </div>
 
@@ -618,8 +618,8 @@ function FeatureBento() {
           transition={{ delay: 0.15, duration: 0.8 }}
         >
           <div className="bento-card__eyebrow"><Video size={14} /> CONTENT ENGINE</div>
-          <h3 className="bento-card__title">Premium ecommerce content generation.</h3>
-          <p className="bento-card__body">UGC, product creatives, ads, landing pages and campaign assets generated through governed AI workflows.</p>
+          <h3 className="bento-card__title">Premium business output generation.</h3>
+          <p className="bento-card__body">Creative assets, workflows, support responses, analysis and execution plans generated through governed AI workflows.</p>
           <div className="bento-card__meter">
             <motion.div
               className="bento-card__meter-fill"
@@ -778,7 +778,7 @@ function Testimonials() {
           <Star size={13} /> TESTIMONIALS
         </motion.span>
         <motion.h2 className="section-title" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-          Built for serious ecommerce operators.
+          Built for serious operators.
         </motion.h2>
       </div>
       <div className="testimonials__track-wrap">
@@ -819,10 +819,10 @@ function FinalCTA() {
       >
         <span className="final-cta__eyebrow"><Rocket size={14} /> AI WORKFORCE PLATFORM</span>
         <h2 className="final-cta__title">
-          Launch a premium AI workforce<br />for your ecommerce business.
+          Launch a premium AI workforce<br />for your business.
         </h2>
         <p className="final-cta__sub">
-          Premium ecommerce outputs · Governed live execution · Owner-controlled growth
+          Premium outputs · Governed live execution · Owner-controlled growth
         </p>
         <div id="about" className="final-cta__buttons">
           <a href="/signup" className="hero__cta-primary">
@@ -2402,6 +2402,273 @@ const CSS = `
     padding: 10px 14px;
     border-radius: 999px;
     backdrop-filter: blur(18px);
+  }
+
+
+  /* ── GLOBAL HOMEPAGE UX REBALANCE ── */
+  .nav {
+    height: 66px;
+  }
+
+  .nav__inner {
+    padding: 0 28px;
+  }
+
+  .nav__logo {
+    transform: scale(0.92);
+    transform-origin: left center;
+  }
+
+  .nav__links {
+    gap: 18px;
+  }
+
+  .nav__link,
+  .nav__btn-secondary,
+  .nav__btn-primary {
+    font-size: 12.5px;
+  }
+
+  .hero {
+    min-height: 82vh;
+    padding-top: 28px;
+  }
+
+  .hero__content {
+    max-width: 1040px;
+    padding-top: 0;
+  }
+
+  .hero__badge {
+    transform: scale(0.9);
+    margin-bottom: 18px;
+  }
+
+  .hero__headline {
+    max-width: 900px;
+    font-size: clamp(42px, 6.2vw, 82px);
+    line-height: 0.96;
+    letter-spacing: -0.062em;
+  }
+
+  .hero__subline {
+    max-width: 720px;
+    margin-top: 20px;
+    font-size: clamp(16px, 1.45vw, 20px);
+    line-height: 1.55;
+  }
+
+  .hero__cta-row {
+    margin-top: 28px;
+  }
+
+  .hero__cta-primary,
+  .hero__cta-secondary {
+    min-height: 44px;
+    padding: 0 18px;
+    font-size: 13.5px;
+    border-radius: 14px;
+  }
+
+  .hero__trust {
+    margin-top: 26px;
+    transform: scale(0.92);
+  }
+
+  .section-header {
+    margin-bottom: 42px;
+  }
+
+  .section-eyebrow {
+    font-size: 11px;
+    padding: 7px 10px;
+  }
+
+  .section-title {
+    font-size: clamp(34px, 4.6vw, 58px);
+    line-height: 1.02;
+    letter-spacing: -0.055em;
+  }
+
+  .section-subtitle {
+    max-width: 680px;
+    font-size: 15.5px;
+    line-height: 1.62;
+  }
+
+  .stats-strip {
+    padding: 30px 24px;
+    gap: 18px;
+  }
+
+  .stats-strip__item {
+    padding: 18px 14px;
+  }
+
+  .stats-strip__value {
+    font-size: clamp(26px, 3vw, 38px);
+  }
+
+  .stats-strip__label {
+    font-size: 12px;
+  }
+
+  .agents,
+  .bento,
+  .pricing,
+  .testimonials,
+  .final-cta {
+    padding-top: 86px;
+    padding-bottom: 86px;
+  }
+
+  .agents__grid {
+    gap: 16px;
+  }
+
+  .agent-card {
+    min-height: 176px;
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .agent-card__icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+  }
+
+  .agent-card__name {
+    font-size: 15px;
+  }
+
+  .agent-card__role,
+  .agent-card__specialty {
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .agent-card__stat,
+  .agent-card__status {
+    font-size: 10.5px;
+  }
+
+  .bento__grid {
+    gap: 18px;
+  }
+
+  .bento-card {
+    padding: 24px;
+    border-radius: 24px;
+  }
+
+  .bento-card--xl {
+    min-height: 360px;
+  }
+
+  .bento-card--md {
+    min-height: 260px;
+  }
+
+  .bento-card--sm {
+    min-height: 190px;
+  }
+
+  .bento-card__eyebrow {
+    font-size: 11px;
+  }
+
+  .bento-card__title {
+    font-size: clamp(23px, 2.4vw, 34px);
+    line-height: 1.08;
+  }
+
+  .bento-card__body {
+    font-size: 13.5px;
+    line-height: 1.62;
+  }
+
+  .pricing__grid {
+    gap: 18px;
+  }
+
+  .pricing-card {
+    padding: 24px;
+    border-radius: 24px;
+  }
+
+  .pricing-card__name {
+    font-size: 17px;
+  }
+
+  .pricing-card__price {
+    font-size: 42px;
+  }
+
+  .pricing-card__desc,
+  .pricing-card__features li {
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .pricing-card__cta {
+    min-height: 42px;
+    font-size: 13px;
+    border-radius: 13px;
+  }
+
+  .testimonial-card {
+    width: 340px;
+    padding: 22px;
+    border-radius: 22px;
+  }
+
+  .testimonial-card__text {
+    font-size: 13.5px;
+    line-height: 1.62;
+  }
+
+  .final-cta__inner {
+    padding: 62px 34px;
+    border-radius: 30px;
+  }
+
+  .final-cta__title {
+    font-size: clamp(36px, 5vw, 66px);
+    line-height: 1;
+    letter-spacing: -0.055em;
+  }
+
+  .final-cta__sub {
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .footer {
+    padding-top: 56px;
+  }
+
+  @media (max-width: 820px) {
+    .hero {
+      min-height: 78vh;
+    }
+
+    .hero__headline {
+      font-size: clamp(40px, 13vw, 64px);
+    }
+
+    .agents,
+    .bento,
+    .pricing,
+    .testimonials,
+    .final-cta {
+      padding-top: 64px;
+      padding-bottom: 64px;
+    }
+
+    .section-title {
+      font-size: clamp(32px, 10vw, 48px);
+    }
   }
 
 `;
