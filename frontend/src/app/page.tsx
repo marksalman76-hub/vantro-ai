@@ -380,9 +380,9 @@ function Hero() {
           transition={{ delay: 0.35, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
           className="hero__headline"
         >
-          Your entire creative
+          24/7 AI workforce for any industry.
           <br />
-          team, powered by AI.
+          Any operation. Any scale
         </motion.h1>
 
         {/* Subline */}
