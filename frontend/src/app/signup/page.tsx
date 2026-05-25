@@ -192,13 +192,13 @@ function SignupContent() {
               {visibleAgents.map(([id, name, cat, desc]) => {
                 const isSelected = selected.includes(id);
                 return (
-                  <button key={id} onClick={() => toggleAgent(id)} style={{ textAlign: "left", minHeight: 150, border: isSelected ? "2px solid #8b5cf6" : "1px solid rgba(148,163,184,.18)", background: isSelected ? "rgba(99,91,255,.18)" : "rgba(15,23,42,.82)", borderRadius: 18, padding: 16, cursor: "pointer" }}>
+                  <button key={id} onClick={() => toggleAgent(id)} style={{ textAlign: "left", minHeight: 190, border: isSelected ? "2px solid #8b5cf6" : "1px solid rgba(148,163,184,.18)", background: isSelected ? "rgba(99,91,255,.18)" : "rgba(15,23,42,.82)", borderRadius: 18, padding: 16, cursor: "pointer" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                      <strong>{name}</strong>
-                      <span style={{ color: isSelected ? "#4f46e5" : "#9ca3af", fontWeight: 900 }}>{isSelected ? "Selected" : "Select"}</span>
+                      <strong style={{ color: "#f8fafc", fontSize: 15, lineHeight: 1.25 }}>{name}</strong>
+                      <span style={{ color: isSelected ? "#a78bfa" : "#cbd5e1", fontWeight: 900 }}>{isSelected ? "Selected" : "Select"}</span>
                     </div>
                     <div style={{ color: "#c4b5fd", fontSize: 12, fontWeight: 900, marginTop: 8 }}>{cat}</div>
-                    <p style={{ color: "#667085", lineHeight: 1.45, fontSize: 13 }}>{desc}</p>
+                    <p style={{ color: "#cbd5e1", lineHeight: 1.55, fontSize: 13, marginTop: 8 }}>{desc}</p>
                   </button>
                 );
               })}
