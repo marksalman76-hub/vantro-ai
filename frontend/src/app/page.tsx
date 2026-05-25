@@ -1,5 +1,7 @@
 "use client";
 
+import HomepageSupportClient from "./homepage-support-client";
+
 import { useEffect, useRef, useState, useCallback, Suspense } from "react";
 import { motion, useScroll, useTransform, useSpring, AnimatePresence, useMotionValue, useInView } from "framer-motion";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
@@ -973,6 +975,7 @@ export default function Page() {
 
     </main>
       <Footer />
+      <HomepageSupportClient />
     </>
   );
 }
