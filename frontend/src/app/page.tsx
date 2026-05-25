@@ -361,7 +361,7 @@ function Hero() {
           className="hero__badge"
         >
           <Sparkles size={12} />
-          <span>The world&apos;s first unified AI creation supercomputer</span>
+          <span>Premium AI workforce platform for ecommerce operators</span>
           <span className="hero__badge-new">NEW</span>
         </motion.div>
 
@@ -372,9 +372,9 @@ function Hero() {
           transition={{ delay: 0.35, duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
           className="hero__headline"
         >
-          24/7 AI workforce for any industry.
+          Run your ecommerce business with a governed AI workforce.
           <br />
-          Any operation. Any scale
+          Create, execute, support and optimise at scale
         </motion.h1>
 
         {/* Subline */}
@@ -386,7 +386,7 @@ function Hero() {
         >
           Generate&nbsp;<Typewriter />
           <br className="hero__br" />
-          with a fleet of specialized AI agents that never sleep.
+          with specialised AI agents for ecommerce growth, content, support, analytics and governed execution.
         </motion.p>
 
         {/* CTA row */}
@@ -396,9 +396,12 @@ function Hero() {
           transition={{ delay: 0.7, duration: 0.7 }}
           className="hero__cta-row"
         >
-          <a href="#pricing" className="hero__cta-primary">
-            Sign up
+          <a href="/signup" className="hero__cta-primary">
+            Start building
             <span className="hero__cta-glow" />
+          </a>
+          <a href="/demo" className="hero__cta-secondary">
+            View demo
           </a>
         </motion.div>
 
@@ -415,7 +418,7 @@ function Hero() {
             ))}
           </div>
           <span className="hero__trust-text">
-            Trusted by <strong>2.1M+ creators</strong> in 120 countries
+            Built for <strong>serious ecommerce teams</strong> that need premium execution, not generic AI output
           </span>
           <div className="hero__stars">
             {Array.from({length: 5}).map((_,i) => <Star key={i} size={11} fill="currentColor" />)}
@@ -2331,6 +2334,74 @@ const CSS = `
       width: 100%;
       justify-content: space-between;
     }
+  }
+
+
+  /* ── HOMEPAGE HERO PREMIUM POLISH ── */
+  .hero {
+    min-height: 92vh;
+    background:
+      radial-gradient(circle at 50% 8%, rgba(124, 58, 237, 0.32), transparent 32%),
+      radial-gradient(circle at 12% 30%, rgba(79, 70, 229, 0.24), transparent 30%),
+      linear-gradient(180deg, #030712 0%, #07111f 46%, #08111f 100%);
+  }
+
+  .hero__content {
+    max-width: 1180px;
+    padding-top: 18px;
+  }
+
+  .hero__badge {
+    border-color: rgba(168, 85, 247, 0.34);
+    background: rgba(15, 23, 42, 0.72);
+    box-shadow: 0 18px 70px rgba(79, 70, 229, 0.2);
+    backdrop-filter: blur(18px);
+  }
+
+  .hero__headline {
+    max-width: 1040px;
+    margin-left: auto;
+    margin-right: auto;
+    letter-spacing: -0.075em;
+    line-height: 0.91;
+    text-wrap: balance;
+  }
+
+  .hero__subline {
+    max-width: 820px;
+    margin-left: auto;
+    margin-right: auto;
+    color: rgba(226, 232, 240, 0.82);
+    text-wrap: balance;
+  }
+
+  .hero__cta-row {
+    gap: 14px;
+  }
+
+  .hero__cta-primary {
+    min-width: 158px;
+    justify-content: center;
+    box-shadow:
+      0 20px 70px rgba(124, 58, 237, 0.42),
+      inset 0 1px 0 rgba(255,255,255,0.18);
+  }
+
+  .hero__cta-secondary {
+    min-width: 142px;
+    justify-content: center;
+    background: rgba(15, 23, 42, 0.74);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    color: rgba(248, 250, 252, 0.92);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+  }
+
+  .hero__trust {
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    background: rgba(2, 6, 23, 0.34);
+    padding: 10px 14px;
+    border-radius: 999px;
+    backdrop-filter: blur(18px);
   }
 
 `;
