@@ -49,10 +49,10 @@ const PRESETS = [
 ];
 
 const STATS = [
-  { value: "2.1M+",  label: "Creators worldwide",    icon: Globe  },
-  { value: "180M+",  label: "Assets generated",       icon: Layers },
-  { value: "99.97%", label: "Uptime SLA",             icon: Shield },
-  { value: "< 8s",   label: "Avg. generation time",   icon: Clock  },
+  { value: "24/7",   label: "AI workforce coverage", icon: Globe  },
+  { value: "22+",    label: "Specialist agent roles", icon: Layers },
+  { value: "100%",   label: "Governed execution flow", icon: Shield },
+  { value: "Global", label: "Market-aware outputs",   icon: Clock  },
 ];
 
 const PRICING = [
@@ -495,7 +495,7 @@ function AgentsGrid() {
           transition={{ duration: 0.8, ease: [0.16,1,0.3,1] }}
           className="section-title"
         >
-          Meet your new<br />dream team.
+          Your ecommerce<br />AI workforce.
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 16 }}
@@ -504,7 +504,7 @@ function AgentsGrid() {
           transition={{ delay: 0.1, duration: 0.7 }}
           className="section-subtitle"
         >
-          Specialized agents. One shared brain. Infinite output.
+          Specialised agents for content, support, analytics, product growth and governed live execution.
         </motion.p>
       </div>
 
@@ -545,8 +545,8 @@ function AgentsGrid() {
       </div>
 
       <div className="agents__cta">
-        <a href="#" className="btn-outline">
-          Explore all agents <ChevronRight size={14} />
+        <a href="#pricing" className="btn-outline">
+          View workforce catalogue <ChevronRight size={14} />
         </a>
       </div>
     </section>
