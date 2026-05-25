@@ -406,12 +406,10 @@ function Hero() {
         >
           <a href="#" className="hero__cta-primary">
             <Rocket size={16} />
-            Demo
             <span className="hero__cta-glow" />
           </a>
           <a href="#" className="hero__cta-secondary">
             <Play size={14} />
-            Watch 90s demo
           </a>
         </motion.div>
 
@@ -623,7 +621,6 @@ function Studio() {
         </AnimatePresence>
       </motion.div>
 
-      {/* Demo prompt box */}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
