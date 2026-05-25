@@ -838,12 +838,12 @@ function FinalCTA() {
           Enterprise-grade governance · Scalable AI operations · Owner-controlled execution
         </p>
         <div id="about" className="final-cta__buttons">
-          <a href="#" className="hero__cta-primary">
+          <a href="/signup" className="hero__cta-primary">
             <Sparkles size={16} />
             Launch your workforce
             <span className="hero__cta-glow" />
           </a>
-          <a href="#" className="hero__cta-secondary">
+          <a href="/demo" className="hero__cta-secondary">
             Schedule strategy call <ChevronRight size={14} />
           </a>
         </div>
