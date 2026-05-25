@@ -1,4 +1,18 @@
-import LoginSupportClient from "./support-client";
+from pathlib import Path
+from datetime import datetime
+
+root = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+page = root / "frontend" / "src" / "app" / "login" / "page.tsx"
+backup_dir = root / "backups"
+backup_dir.mkdir(exist_ok=True)
+
+stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+backup = backup_dir / f"login_before_support_cookie_ui_{stamp}.tsx"
+
+existing = page.read_text(encoding="utf-8")
+backup.write_text(existing, encoding="utf-8")
+
+page.write_text(r'''import LoginSupportClient from "./support-client";
 
 type LoginPageProps = {
   searchParams?: Promise<{ next?: string; error?: string; activated?: string }>;
@@ -82,3 +96,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 const labelStyle: React.CSSProperties = { display: "block", marginTop: 18, marginBottom: 8, color: "#e2e8f0", fontWeight: 800 };
 const inputStyle: React.CSSProperties = { width: "100%", padding: 14, borderRadius: 14, border: "1px solid rgba(148,163,184,.26)", background: "rgba(3,10,24,.72)", color: "#f8fafc", fontSize: 14, boxSizing: "border-box", outline: "none" };
 const buttonStyle: React.CSSProperties = { width: "100%", marginTop: 22, padding: 15, borderRadius: 14, border: 0, background: "linear-gradient(135deg,#635BFF,#8b5cf6)", color: "white", fontWeight: 900, cursor: "pointer", boxShadow: "0 16px 42px rgba(99,91,255,.30)" };
+''', encoding="utf-8")
+
+print("LOGIN_PAGE_REBUILT_WITH_SUPPORT_CLIENT")
+print("Backup:", backup)
