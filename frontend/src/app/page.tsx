@@ -55,26 +55,34 @@ const STATS = [
 
 const PRICING = [
   {
-    name: "Creator",
-    price: 29,
-    desc: "Perfect for solo creators and freelancers.",
-    features: ["3 AI Agents", "500 generations/mo", "HD Video export", "Basic presets", "Email support"],
-    cta: "Demo trial",
+    name: "Starter",
+    price: 99,
+    desc: "For small teams starting with a governed AI workforce.",
+    features: ["1-3 active AI agents", "Business profile intelligence", "Governed task execution", "Client workspace access", "Email support"],
+    cta: "Get Starter",
     highlight: false,
   },
   {
-    name: "Studio",
-    price: 79,
-    desc: "For growing teams and power users.",
-    features: ["All 8 AI Agents", "Unlimited generations", "4K Video export", "All viral presets", "Priority support", "Custom voice cloning", "API access"],
-    cta: "Demo trial",
+    name: "Growth",
+    price: 279,
+    desc: "For growing businesses ready to automate daily operations.",
+    features: ["4-7 active AI agents", "Multi-agent workflows", "Approval-gated execution", "Business memory layer", "Priority support"],
+    cta: "Get Growth",
     highlight: true,
+  },
+  {
+    name: "Business",
+    price: 429,
+    desc: "For established teams scaling AI across core departments.",
+    features: ["7-10 active AI agents", "Advanced workflow orchestration", "Governance and audit controls", "Premium output intelligence", "Priority onboarding"],
+    cta: "Get Business",
+    highlight: false,
   },
   {
     name: "Enterprise",
     price: null,
-    desc: "Custom infrastructure for large teams.",
-    features: ["Unlimited agents", "Dedicated GPU cluster", "SLA guarantee", "Custom model training", "SSO & compliance", "Dedicated CSM"],
+    desc: "For larger organisations needing custom deployment and control.",
+    features: ["Full AI workforce catalogue", "Custom agent deployment", "White-label options", "Advanced security controls", "Dedicated implementation support"],
     cta: "Contact sales",
     highlight: false,
   },
@@ -686,8 +694,6 @@ function FeatureBento() {
 // ─── PRICING ────────────────────────────────────────────────────────────────
 
 function Pricing() {
-  const [annual, setAnnual] = useState(true);
-
   return (
     <section className="pricing" id="pricing">
       <div className="section-header">
@@ -695,20 +701,11 @@ function Pricing() {
           <Infinity size={13} /> PRICING
         </motion.span>
         <motion.h2 className="section-title" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-          Simple, honest pricing.
+          Simple monthly pricing for every stage.
         </motion.h2>
-
-        {/* Toggle */}
-        <div className="pricing__toggle">
-          <span className={!annual ? "pricing__toggle-label--active" : ""}>Monthly</span>
-          <button
-            className={`pricing__switch ${annual ? "pricing__switch--on" : ""}`}
-            onClick={() => setAnnual(!annual)}
-          >
-            <motion.div className="pricing__switch-thumb" layout />
-          </button>
-          <span className={annual ? "pricing__toggle-label--active" : ""}>Annual <span className="pricing__save">Save 30%</span></span>
-        </div>
+        <motion.p className="section-subtitle" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>
+          Start with the workforce size you need today, then scale as your operations grow.
+        </motion.p>
       </div>
 
       <div className="pricing__grid">
@@ -725,12 +722,12 @@ function Pricing() {
             <div className="pricing-card__name">{plan.name}</div>
             <div className="pricing-card__price">
               {plan.price
-                ? <><span className="pricing-card__currency">$</span>{annual ? Math.round(plan.price * 0.7) : plan.price}<span className="pricing-card__period">/mo</span></>
+                ? <><span className="pricing-card__currency">$</span>{plan.price}<span className="pricing-card__period"> USD/mo</span></>
                 : <span className="pricing-card__custom">Custom</span>
               }
             </div>
             <p className="pricing-card__desc">{plan.desc}</p>
-            <a href="#" className={`pricing-card__cta ${plan.highlight ? "pricing-card__cta--highlight" : ""}`}>
+            <a href="/signup" className={`pricing-card__cta ${plan.highlight ? "pricing-card__cta--highlight" : ""}`}>
               {plan.cta} <ArrowRight size={14} />
             </a>
             <ul className="pricing-card__features">
