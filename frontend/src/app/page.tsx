@@ -238,7 +238,7 @@ function Nav({ muted, onToggleAudio }: { muted: boolean; onToggleAudio: () => vo
 
         {/* Links */}
         <div className="nav__links">
-          {["Platform", "Agents", "Studio", "Pricing", "Enterprise"].map((l) => (
+          {["Agents", "Pricing", "Enterprise"].map((l) => (
             <a key={l} href={`#${l.toLowerCase()}`} className="nav__link">{l}</a>
           ))}
         </div>
@@ -266,7 +266,7 @@ function Nav({ muted, onToggleAudio }: { muted: boolean; onToggleAudio: () => vo
             exit={{ height: 0, opacity: 0 }}
             className="nav__mobile"
           >
-            {["Platform", "Agents", "Studio", "Pricing", "Enterprise"].map((l) => (
+            {["Agents", "Pricing", "Enterprise"].map((l) => (
               <a key={l} href={`#${l.toLowerCase()}`} className="nav__mobile-link" onClick={() => setOpen(false)}>{l}</a>
             ))}
             <a href="#" className="nav__btn-primary nav__btn-primary--mobile">Start free →</a>
