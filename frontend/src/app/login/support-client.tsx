@@ -40,12 +40,12 @@ function SupportChatWidget({ cookieKey, sourceLabel }: SupportChatProps) {
     setReply("Support Agent is thinking...");
 
     try {
-      const response = await fetch("/api/run-agent", {
+      const response = await fetch("/api/support-agent-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          selected_agents: ["support_agent"],
-          task: `${sourceLabel} live support chat request: ${text}`,
+          source: sourceLabel,
+          message: text,
         }),
       });
 
@@ -56,14 +56,13 @@ function SupportChatWidget({ cookieKey, sourceLabel }: SupportChatProps) {
       }
 
       const answer =
-        data?.execution?.deliverable?.summary ||
-        data?.deliverable?.summary ||
-        "Thanks — I have received your message. A support workflow has been created for this request.";
+        data?.reply ||
+        "Thanks — I have received your message. The Support Agent is active.";
 
       setReply(answer);
       setMessage("");
     } catch {
-      setReply("I could not reach the live Support Agent right now. Please try again, or use the contact form for urgent support.");
+      setReply("I could not reach the live Support Agent right now. Please try again in a moment.");
     } finally {
       setBusy(false);
     }
