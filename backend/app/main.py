@@ -443,10 +443,10 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
         add_execution_event(
             tenant_id=request.tenant_id,
             project_id=request.project_id,
-            event_type="quality_gate_failed",
-            title=f"{requested_agent} output rejected by premium quality gate",
+            event_type="approval_gate_blocked",
+            title=f"{requested_agent} action blocked before quality review",
             agent_id=requested_agent,
-            payload=quality_failure_payload,
+            payload=blocked_payload,
         )
 
         execution_event_ledger.record(
