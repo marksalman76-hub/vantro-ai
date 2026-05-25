@@ -404,8 +404,8 @@ function Hero() {
           transition={{ delay: 0.7, duration: 0.7 }}
           className="hero__cta-row"
         >
-          <a href="#" className="hero__cta-primary">
-            <Rocket size={16} />
+          <a href="#pricing" className="hero__cta-primary">
+            Sign up
             <span className="hero__cta-glow" />
           </a>
         </motion.div>
