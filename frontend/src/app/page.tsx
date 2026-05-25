@@ -1012,7 +1012,7 @@ const CSS = `
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-body);
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1.6;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
@@ -1071,13 +1071,13 @@ const CSS = `
     flex-shrink: 0;
   }
   .nav__logo-mark {
-    font-size: 22px;
+    font-size: 19px;
     color: var(--accent);
     line-height: 1;
   }
   .nav__logo-text {
     font-family: var(--font-display);
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 800;
     color: var(--text);
     letter-spacing: 0.08em;
@@ -1103,7 +1103,7 @@ const CSS = `
     border-radius: 8px;
     color: var(--text-2);
     text-decoration: none;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     transition: color 0.2s, background 0.2s;
   }
@@ -1125,7 +1125,7 @@ const CSS = `
     border-radius: 8px;
     color: var(--text-2);
     text-decoration: none;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     transition: color 0.2s;
   }
@@ -1137,7 +1137,7 @@ const CSS = `
     color: #fff;
     border-radius: 9px;
     text-decoration: none;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     transition: opacity 0.2s, transform 0.2s;
     box-shadow: 0 0 24px rgba(124,106,247,0.3);
@@ -1164,7 +1164,7 @@ const CSS = `
     padding: 12px 4px;
     color: var(--text-2);
     text-decoration: none;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 500;
     border-bottom: 1px solid var(--border);
     transition: color 0.2s;
@@ -1283,7 +1283,7 @@ const CSS = `
     color: #fff;
     border-radius: 12px;
     text-decoration: none;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     overflow: hidden;
     box-shadow: 0 0 40px rgba(124,106,247,0.4), 0 4px 24px rgba(0,0,0,0.4);
@@ -1308,7 +1308,7 @@ const CSS = `
     color: var(--text);
     border-radius: 12px;
     text-decoration: none;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     transition: border-color 0.2s, background 0.2s;
   }
@@ -1330,7 +1330,7 @@ const CSS = `
     first-child { margin-left: 0; }
   }
   .hero__trust-text {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-2);
   }
   .hero__trust-text strong { color: var(--text); }
@@ -1368,7 +1368,7 @@ const CSS = `
   .marquee-item {
     padding: 0 36px;
     font-family: var(--font-display);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.12em;
     color: var(--text-3);
@@ -1400,13 +1400,13 @@ const CSS = `
   .stats-strip__icon { color: var(--accent); }
   .stats-strip__value {
     font-family: var(--font-display);
-    font-size: 36px;
+    font-size: 28px;
     font-weight: 800;
     color: var(--text);
     line-height: 1;
   }
   .stats-strip__label {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-2);
     font-weight: 500;
   }
@@ -1445,7 +1445,7 @@ const CSS = `
     margin-bottom: 18px;
   }
   .section-subtitle {
-    font-size: 18px;
+    font-size: 16px;
     color: var(--text-2);
     line-height: 1.6;
   }
@@ -1496,7 +1496,7 @@ const CSS = `
   }
   .agent-card__name {
     font-family: var(--font-display);
-    font-size: 18px;
+    font-size: 16px;
     font-weight: 700;
     color: var(--text);
     margin-bottom: 2px;
@@ -1510,7 +1510,7 @@ const CSS = `
     margin-bottom: 8px;
   }
   .agent-card__specialty {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-2);
     margin-bottom: 16px;
   }
@@ -1561,7 +1561,7 @@ const CSS = `
     border-radius: 10px;
     color: var(--text-2);
     text-decoration: none;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     transition: color 0.2s, border-color 0.2s, background 0.2s;
   }
@@ -1594,7 +1594,7 @@ const CSS = `
     background: var(--surface);
     border: 1px solid var(--border);
     color: var(--text-2);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -1622,7 +1622,7 @@ const CSS = `
     border: 1px solid var(--border);
     border-radius: 10px;
     color: var(--text-2);
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.05em;
     cursor: pointer;
@@ -1639,7 +1639,7 @@ const CSS = `
     border-color: var(--accent);
     box-shadow: 0 0 16px rgba(124,106,247,0.2);
   }
-  .preset-chip__hot { font-size: 14px; }
+  .preset-chip__hot { font-size: 13px; }
   .preset-chip__tag {
     font-size: 10px;
     padding: 2px 6px;
@@ -1682,7 +1682,7 @@ const CSS = `
     border-radius: 10px;
     padding: 12px 16px;
     color: var(--text-2);
-    font-size: 14px;
+    font-size: 13px;
     font-family: var(--font-body);
     outline: none;
     transition: border-color 0.2s;
@@ -1697,7 +1697,7 @@ const CSS = `
     color: #fff;
     border-radius: 10px;
     border: none;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     cursor: pointer;
     white-space: nowrap;
@@ -1776,14 +1776,14 @@ const CSS = `
   }
   .bento-card__title {
     font-family: var(--font-display);
-    font-size: 24px;
+    font-size: 21px;
     font-weight: 700;
     line-height: 1.2;
     color: var(--text);
     margin-bottom: 12px;
   }
   .bento-card__body {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-2);
     line-height: 1.6;
   }
@@ -1937,7 +1937,7 @@ const CSS = `
     margin-bottom: 14px;
   }
   .testimonial-card__text {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-2);
     line-height: 1.65;
     margin-bottom: 20px;
@@ -1954,7 +1954,7 @@ const CSS = `
   }
   .testimonial-card__name {
     font-weight: 700;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text);
   }
   .testimonial-card__role {
@@ -1974,7 +1974,7 @@ const CSS = `
     gap: 14px;
     justify-content: center;
     margin-top: 24px;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-2);
     font-weight: 600;
   }
@@ -2051,7 +2051,7 @@ const CSS = `
   }
   .pricing-card__name {
     font-family: var(--font-display);
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 700;
     color: var(--text);
     margin-bottom: 12px;
@@ -2060,7 +2060,7 @@ const CSS = `
   }
   .pricing-card__price {
     font-family: var(--font-display);
-    font-size: 52px;
+    font-size: 41px;
     font-weight: 800;
     color: var(--text);
     line-height: 1;
@@ -2070,23 +2070,23 @@ const CSS = `
     gap: 4px;
   }
   .pricing-card__currency {
-    font-size: 22px;
+    font-size: 19px;
     margin-top: 8px;
     color: var(--text-2);
   }
   .pricing-card__period {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     color: var(--text-3);
     align-self: flex-end;
     margin-bottom: 6px;
   }
   .pricing-card__custom {
-    font-size: 36px;
+    font-size: 28px;
     color: var(--text);
   }
   .pricing-card__desc {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-2);
     margin-bottom: 24px;
     line-height: 1.6;
@@ -2099,7 +2099,7 @@ const CSS = `
     padding: 12px 20px;
     border-radius: 10px;
     text-decoration: none;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     margin-bottom: 28px;
     background: var(--surface-2);
@@ -2125,7 +2125,7 @@ const CSS = `
     display: flex;
     align-items: center;
     gap: 10px;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-2);
   }
   .pricing-card__features li svg { color: var(--accent-2); flex-shrink: 0; }
@@ -2173,7 +2173,7 @@ const CSS = `
     margin-bottom: 20px;
   }
   .final-cta__sub {
-    font-size: 16px;
+    font-size: 15px;
     color: var(--text-3);
     margin-bottom: 44px;
   }
@@ -2200,7 +2200,7 @@ const CSS = `
   }
   .footer__brand {}
   .footer__tagline {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-3);
     line-height: 1.6;
     margin: 16px 0 24px;
@@ -2211,7 +2211,7 @@ const CSS = `
     flex-wrap: wrap;
   }
   .footer__social-link {
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: var(--text-3);
     text-decoration: none;
@@ -2229,7 +2229,7 @@ const CSS = `
   }
   .footer__link {
     display: block;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--text-3);
     text-decoration: none;
     margin-bottom: 12px;
@@ -2243,7 +2243,7 @@ const CSS = `
     border-top: 1px solid var(--border);
     display: flex;
     justify-content: space-between;
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-3);
     flex-wrap: wrap;
     gap: 12px;
@@ -2280,7 +2280,7 @@ const CSS = `
 
   .cookieConsent strong {
     display: block;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 950;
     margin-bottom: 5px;
   }
@@ -2288,7 +2288,7 @@ const CSS = `
   .cookieConsent p {
     margin: 0;
     color: #94a3b8;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.45;
     max-width: 680px;
   }
@@ -2302,7 +2302,7 @@ const CSS = `
 
   .cookieConsent__actions a {
     color: #c7d2fe;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 850;
     text-decoration: none;
   }

@@ -127,15 +127,15 @@ function SignupContent() {
 
           <div style={{ marginTop: 28, padding: 18, borderRadius: 22, background: "rgba(99,91,255,.12)", border: "1px solid rgba(129,140,248,.28)" }}>
             <div style={{ color: "#c4b5fd", fontWeight: 950 }}>Step 2 of 3</div>
-            <h1 style={{ fontSize: 30, lineHeight: 1.08, margin: "12px 0 8px" }}>Start your <span style={{ color: "#c4b5fd" }}>{plan.name}</span> plan</h1>
+            <h1 style={{ fontSize: 23, lineHeight: 1.08, margin: "12px 0 8px" }}>Start your <span style={{ color: "#c4b5fd" }}>{plan.name}</span> plan</h1>
             <p style={{ color: "#667085", lineHeight: 1.55, margin: 0 }}>{plan.summary}</p>
           </div>
 
           <div style={{ marginTop: 20, padding: 18, borderRadius: 20, border: "1px solid rgba(148,163,184,.18)" }}>
             <div style={{ color: "#667085", fontWeight: 850 }}>Plan summary</div>
-            <div style={{ fontSize: 36, fontWeight: 950, marginTop: 8 }}>
+            <div style={{ fontSize: 28, fontWeight: 950, marginTop: 8 }}>
               {plan.price}
-              {plan.price !== "Custom" && <span style={{ fontSize: 14, color: "#667085" }}> USD / mo</span>}
+              {plan.price !== "Custom" && <span style={{ fontSize: 13, color: "#667085" }}> USD / mo</span>}
             </div>
             <div style={{ marginTop: 12, color: "#16a34a", fontWeight: 800 }}>✓ Up to {plan.limit} agents</div>
             <div style={{ marginTop: 8, color: "#16a34a", fontWeight: 800 }}>✓ Cancel anytime</div>
@@ -143,7 +143,7 @@ function SignupContent() {
           </div>
 
           <label style={{ display: "block", marginTop: 22, fontWeight: 900 }}>Work email</label>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@company.com" style={{ width: "100%", boxSizing: "border-box", marginTop: 10, padding: "14px 15px", borderRadius: 14, border: "1px solid rgba(148,163,184,.24)", background: "rgba(15,23,42,.88)", color: "#f8fafc", fontSize: 15 }} />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@company.com" style={{ width: "100%", boxSizing: "border-box", marginTop: 10, padding: "14px 15px", borderRadius: 14, border: "1px solid rgba(148,163,184,.24)", background: "rgba(15,23,42,.88)", color: "#f8fafc", fontSize: 14 }} />
 
           <button onClick={startCheckout} disabled={busy || !email.includes("@") || selected.length === 0} style={{ width: "100%", marginTop: 18, border: "1px solid rgba(139,92,246,.75)", borderRadius: 15, padding: "15px 18px", fontWeight: 950, color: "#fff", background: busy || !email.includes("@") || selected.length === 0 ? "rgba(148,163,184,.28)" : "linear-gradient(135deg,#635BFF,#8b5cf6)", boxShadow: busy || !email.includes("@") || selected.length === 0 ? "none" : "0 16px 42px rgba(99,91,255,.30)", cursor: busy || !email.includes("@") || selected.length === 0 ? "not-allowed" : "pointer" }}>
             {busy ? "Starting checkout..." : "Continue to secure checkout"}
@@ -160,9 +160,9 @@ function SignupContent() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 14, marginBottom: 20 }}>
             {Object.entries(plans).map(([key, item]) => (
               <a key={key} href={`/signup?plan=${key}`} style={{ textDecoration: "none", color: "#f8fafc", background: "rgba(15,23,42,.82)", border: key === planKey ? "2px solid #8b5cf6" : "1px solid rgba(148,163,184,.18)", borderRadius: 20, padding: 18, boxShadow: "0 16px 42px rgba(0,0,0,.28)" }}>
-                <div style={{ fontWeight: 950, fontSize: 20 }}>{item.name}</div>
-                <div style={{ color: "#4f46e5", fontSize: 24, fontWeight: 950, marginTop: 5 }}>{item.price}</div>
-                <div style={{ color: "#667085", fontSize: 13, marginTop: 5 }}>{`Up to ${item.limit} agents`}</div>
+                <div style={{ fontWeight: 950, fontSize: 18 }}>{item.name}</div>
+                <div style={{ color: "#4f46e5", fontSize: 21, fontWeight: 950, marginTop: 5 }}>{item.price}</div>
+                <div style={{ color: "#667085", fontSize: 12, marginTop: 5 }}>{`Up to ${item.limit} agents`}</div>
               </a>
             ))}
           </div>
@@ -170,7 +170,7 @@ function SignupContent() {
           <div style={{ background: "rgba(15,23,42,.78)", border: "1px solid rgba(148,163,184,.18)", borderRadius: 28, padding: 22, boxShadow: "0 28px 80px rgba(0,0,0,.34)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
               <div>
-                <h2 style={{ margin: 0, fontSize: 30 }}>Select your agents</h2>
+                <h2 style={{ margin: 0, fontSize: 23 }}>Select your agents</h2>
                 <p style={{ color: "#667085", margin: "6px 0 0" }}>{selected.length}/{plan.limit} selected</p>
               </div>
 
@@ -194,11 +194,11 @@ function SignupContent() {
                 return (
                   <button key={id} onClick={() => toggleAgent(id)} style={{ textAlign: "left", minHeight: 190, border: isSelected ? "2px solid #8b5cf6" : "1px solid rgba(148,163,184,.18)", background: isSelected ? "rgba(99,91,255,.18)" : "rgba(15,23,42,.82)", borderRadius: 18, padding: 16, cursor: "pointer" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
-                      <strong style={{ color: "#f8fafc", fontSize: 15, lineHeight: 1.25 }}>{name}</strong>
+                      <strong style={{ color: "#f8fafc", fontSize: 14, lineHeight: 1.25 }}>{name}</strong>
                       <span style={{ color: isSelected ? "#a78bfa" : "#cbd5e1", fontWeight: 900 }}>{isSelected ? "Selected" : "Select"}</span>
                     </div>
                     <div style={{ color: "#c4b5fd", fontSize: 12, fontWeight: 900, marginTop: 8 }}>{cat}</div>
-                    <p style={{ color: "#cbd5e1", lineHeight: 1.55, fontSize: 13, marginTop: 8 }}>{desc}</p>
+                    <p style={{ color: "#cbd5e1", lineHeight: 1.55, fontSize: 12, marginTop: 8 }}>{desc}</p>
                   </button>
                 );
               })}

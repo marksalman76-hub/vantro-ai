@@ -32,7 +32,7 @@ export default function AboutPage() {
           A governed AI workforce for modern ecommerce businesses.
         </h1>
 
-        <p style={{ color: "#cbd5e1", lineHeight: 1.75, fontSize: 17, marginBottom: 24 }}>
+        <p style={{ color: "#cbd5e1", lineHeight: 1.75, fontSize: 15, marginBottom: 24 }}>
           Nexus AI was built to replace fragmented AI tools with a single governed AI workforce designed for real business execution.
           The platform combines specialist agents for strategy, ecommerce operations, content, UGC, SEO, ads, analytics, CRM, support,
           automation and business growth inside one intelligent workspace.
@@ -54,8 +54,8 @@ export default function AboutPage() {
                 background: "rgba(12,24,49,.72)",
               }}
             >
-              <div style={{ fontWeight: 950, fontSize: 19, marginBottom: 8 }}>{title}</div>
-              <div style={{ color: "#cbd5e1", lineHeight: 1.7, fontSize: 15 }}>{body}</div>
+              <div style={{ fontWeight: 950, fontSize: 17, marginBottom: 8 }}>{title}</div>
+              <div style={{ color: "#cbd5e1", lineHeight: 1.7, fontSize: 14 }}>{body}</div>
             </div>
           ))}
         </div>

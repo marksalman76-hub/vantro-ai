@@ -70,9 +70,9 @@ export default function SupportRequestPage() {
           Support
         </div>
 
-        <h1 style={{ margin: 0, fontSize: 34, letterSpacing: -1.1 }}>Contact us / Support request</h1>
+        <h1 style={{ margin: 0, fontSize: 27, letterSpacing: -1.1 }}>Contact us / Support request</h1>
 
-        <p style={{ margin: "14px 0 0", color: mutedColor, fontSize: 15, lineHeight: 1.6 }}>
+        <p style={{ margin: "14px 0 0", color: mutedColor, fontSize: 14, lineHeight: 1.6 }}>
           Send a support request for billing, account access, workspace setup, integrations, AI outputs, or subscription support.
         </p>
 
@@ -195,7 +195,7 @@ export default function SupportRequestPage() {
           </div>
 
           {sent ? (
-            <div style={{ color: "#22c55e", fontWeight: 900, fontSize: 13 }}>
+            <div style={{ color: "#22c55e", fontWeight: 900, fontSize: 12 }}>
               Opening your email app with the support request.
             </div>
           ) : null}

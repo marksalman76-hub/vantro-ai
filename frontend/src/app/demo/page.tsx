@@ -33,7 +33,7 @@ export default function DemoPage() {
           See the Nexus AI workforce in action.
         </h1>
 
-        <p style={{ color: "#aab3c5", fontSize: 18, lineHeight: 1.7, maxWidth: 760, marginBottom: 30 }}>
+        <p style={{ color: "#aab3c5", fontSize: 16, lineHeight: 1.7, maxWidth: 760, marginBottom: 30 }}>
           Explore how specialist ecommerce agents can support product research, UGC, ads, SEO, store pages,
           CRM workflows, customer support, analytics, and governed execution from one premium workspace.
         </p>
@@ -45,8 +45,8 @@ export default function DemoPage() {
             ["Client workspace flow", "Review the business profile, agent selection, deliverables, integrations and support experience."]
           ].map(([title, body]) => (
             <div key={title} style={{ border: "1px solid rgba(165,180,252,.16)", borderRadius: 22, padding: 20, background: "rgba(12,24,49,.62)" }}>
-              <strong style={{ display: "block", fontSize: 18, marginBottom: 9 }}>{title}</strong>
-              <span style={{ color: "#cbd5e1", lineHeight: 1.6, fontSize: 14 }}>{body}</span>
+              <strong style={{ display: "block", fontSize: 16, marginBottom: 9 }}>{title}</strong>
+              <span style={{ color: "#cbd5e1", lineHeight: 1.6, fontSize: 13 }}>{body}</span>
             </div>
           ))}
         </div>

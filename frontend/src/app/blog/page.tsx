@@ -155,7 +155,7 @@ export default function BlogPage() {
 
         .blogNav div a {
           color: #aab3c5;
-          font-size: 14px;
+          font-size: 13px;
         }
 
         .blogHero {
@@ -189,7 +189,7 @@ export default function BlogPage() {
         .blogHero p {
           max-width: 740px;
           color: #aab3c5;
-          font-size: 19px;
+          font-size: 17px;
           line-height: 1.7;
         }
 
@@ -291,7 +291,7 @@ export default function BlogPage() {
 
         .editorCard h3 {
           position: relative;
-          font-size: 30px;
+          font-size: 23px;
           line-height: 1.05;
           letter-spacing: -.04em;
         }
@@ -342,7 +342,7 @@ export default function BlogPage() {
 
         .postCard h2 {
           margin: 18px 0 10px;
-          font-size: 25px;
+          font-size: 22px;
           line-height: 1.08;
           letter-spacing: -.04em;
         }
@@ -354,7 +354,7 @@ export default function BlogPage() {
           gap: 12px;
           margin-top: 22px;
           color: #94a3b8;
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 800;
         }
 
