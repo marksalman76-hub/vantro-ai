@@ -1,4 +1,17 @@
-"use client";
+from pathlib import Path
+from datetime import datetime
+
+root = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+backup_dir = root / "backups" / f"support_chat_live_agent_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+backup_dir.mkdir(parents=True, exist_ok=True)
+
+targets = [
+    root / "frontend/src/app/homepage-support-client.tsx",
+    root / "frontend/src/app/login/support-client.tsx",
+    root / "frontend/src/app/admin-login/support-client.tsx",
+]
+
+template = '''"use client";
 
 import React, { useEffect, useState } from "react";
 
@@ -123,6 +136,33 @@ const cookieButton: React.CSSProperties = {
   cursor: "pointer",
 };
 
-export default function AdminLoginSupportClient() {
-  return <SupportChatWidget cookieKey="nexus_admin_cookie_consent" sourceLabel="Admin login" />;
+export default function __COMPONENT_NAME__() {
+  return <SupportChatWidget cookieKey="__COOKIE_KEY__" sourceLabel="__SOURCE_LABEL__" />;
 }
+'''
+
+replacements = {
+    "homepage-support-client.tsx": ("HomepageSupportClient", "nexus_home_cookie_consent", "Homepage"),
+    "support-client.tsx": None,
+}
+
+for target in targets:
+    backup = backup_dir / target.relative_to(root)
+    backup.parent.mkdir(parents=True, exist_ok=True)
+    backup.write_text(target.read_text(encoding="utf-8"), encoding="utf-8")
+
+    if "admin-login" in str(target):
+        component, cookie_key, source = "AdminLoginSupportClient", "nexus_admin_cookie_consent", "Admin login"
+    elif "frontend\\src\\app\\login" in str(target) or "frontend/src/app/login" in str(target):
+        component, cookie_key, source = "LoginSupportClient", "nexus_login_cookie_consent", "Client login"
+    else:
+        component, cookie_key, source = "HomepageSupportClient", "nexus_home_cookie_consent", "Homepage"
+
+    content = template.replace("__COMPONENT_NAME__", component).replace("__COOKIE_KEY__", cookie_key).replace("__SOURCE_LABEL__", source)
+    target.write_text(content, encoding="utf-8")
+
+print("SUPPORT_CHAT_NOW_CALLS_RUN_AGENT")
+print("Updated:")
+for target in targets:
+    print("-", target.relative_to(root))
+print("Backup:", backup_dir)

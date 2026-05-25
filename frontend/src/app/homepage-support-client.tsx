@@ -2,35 +2,71 @@
 
 import React, { useEffect, useState } from "react";
 
-export default function HomepageSupportClient() {
+type SupportChatProps = {
+  cookieKey: string;
+  sourceLabel: string;
+};
+
+function SupportChatWidget({ cookieKey, sourceLabel }: SupportChatProps) {
   const [cookieVisible, setCookieVisible] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [message, setMessage] = useState("");
+  const [reply, setReply] = useState("Hi, I’m your Support Agent. Ask me anything and I’ll help you here.");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     try {
-      setCookieVisible(window.localStorage.getItem("nexus_home_cookie_consent") !== "accepted");
+      setCookieVisible(window.localStorage.getItem(cookieKey) !== "accepted");
     } catch {
       setCookieVisible(true);
     }
-  }, []);
+  }, [cookieKey]);
 
   function acceptCookies() {
-    try { window.localStorage.setItem("nexus_home_cookie_consent", "accepted"); } catch {}
+    try { window.localStorage.setItem(cookieKey, "accepted"); } catch {}
     setCookieVisible(false);
   }
 
   function rejectCookies() {
-    try { window.localStorage.setItem("nexus_home_cookie_consent", "rejected"); } catch {}
+    try { window.localStorage.setItem(cookieKey, "rejected"); } catch {}
     setCookieVisible(false);
   }
 
-  function sendMessage() {
+  async function sendMessage() {
     const text = message.trim();
-    if (!text) return;
-    const subject = encodeURIComponent("Homepage Support Agent request");
-    const body = encodeURIComponent(`Support Agent message from homepage:\n\n${text}`);
-    window.location.href = `/support-request?subject=${subject}&message=${body}`;
+    if (!text || busy) return;
+
+    setBusy(true);
+    setReply("Support Agent is thinking...");
+
+    try {
+      const response = await fetch("/api/run-agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          selected_agents: ["support_agent"],
+          task: `${sourceLabel} live support chat request: ${text}`,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || "support_agent_failed");
+      }
+
+      const answer =
+        data?.execution?.deliverable?.summary ||
+        data?.deliverable?.summary ||
+        "Thanks — I have received your message. A support workflow has been created for this request.";
+
+      setReply(answer);
+      setMessage("");
+    } catch {
+      setReply("I could not reach the live Support Agent right now. Please try again, or use the contact form for urgent support.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -55,17 +91,19 @@ export default function HomepageSupportClient() {
       )}
 
       {chatOpen && (
-        <div style={{ position: "fixed", right: 22, bottom: 22, width: "min(360px, calc(100vw - 44px))", borderRadius: 22, overflow: "hidden", background: "linear-gradient(180deg, rgba(15,23,42,.97), rgba(7,16,34,.99))", border: "1px solid rgba(148,163,184,.22)", boxShadow: "0 24px 80px rgba(0,0,0,.48)", color: "#f8fafc", zIndex: 56 }}>
+        <div style={{ position: "fixed", right: 22, bottom: 22, width: "min(380px, calc(100vw - 44px))", borderRadius: 22, overflow: "hidden", background: "linear-gradient(180deg, rgba(15,23,42,.97), rgba(7,16,34,.99))", border: "1px solid rgba(148,163,184,.22)", boxShadow: "0 24px 80px rgba(0,0,0,.48)", color: "#f8fafc", zIndex: 56 }}>
           <div style={{ padding: 16, background: "linear-gradient(135deg,#635BFF,#8b5cf6)", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
-            <div><strong>Support Agent</strong><div style={{ fontSize: 12, opacity: .9 }}>Online</div></div>
+            <div><strong>Support Agent</strong><div style={{ fontSize: 12, opacity: .9 }}>{busy ? "Working..." : "Live"}</div></div>
             <button onClick={() => setChatOpen(false)} style={{ background: "transparent", border: 0, color: "#fff", fontSize: 22, cursor: "pointer" }}>×</button>
           </div>
           <div style={{ padding: 16 }}>
-            <div style={{ background: "rgba(148,163,184,.12)", border: "1px solid rgba(148,163,184,.16)", borderRadius: 14, padding: 12, color: "#e2e8f0", fontSize: 13, lineHeight: 1.45 }}>
-              Hi, I’m your Support Agent. Send a message and I’ll route it to the support form.
+            <div style={{ background: "rgba(148,163,184,.12)", border: "1px solid rgba(148,163,184,.16)", borderRadius: 14, padding: 12, color: "#e2e8f0", fontSize: 13, lineHeight: 1.45, minHeight: 70 }}>
+              {reply}
             </div>
             <textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Type your message..." style={{ marginTop: 14, width: "100%", minHeight: 88, boxSizing: "border-box", resize: "vertical", borderRadius: 14, border: "1px solid rgba(148,163,184,.26)", background: "rgba(3,10,24,.72)", color: "#f8fafc", padding: 12, outline: "none", fontFamily: "inherit" }} />
-            <button onClick={sendMessage} style={{ width: "100%", marginTop: 12, border: 0, borderRadius: 14, padding: 12, color: "#fff", fontWeight: 900, cursor: "pointer", background: "linear-gradient(135deg,#635BFF,#8b5cf6)" }}>Send to support</button>
+            <button onClick={sendMessage} disabled={busy || !message.trim()} style={{ width: "100%", marginTop: 12, border: 0, borderRadius: 14, padding: 12, color: "#fff", fontWeight: 900, cursor: busy || !message.trim() ? "not-allowed" : "pointer", opacity: busy || !message.trim() ? .7 : 1, background: "linear-gradient(135deg,#635BFF,#8b5cf6)" }}>
+              {busy ? "Sending..." : "Send to Support Agent"}
+            </button>
           </div>
         </div>
       )}
@@ -84,3 +122,7 @@ const cookieButton: React.CSSProperties = {
   fontWeight: 850,
   cursor: "pointer",
 };
+
+export default function HomepageSupportClient() {
+  return <SupportChatWidget cookieKey="nexus_home_cookie_consent" sourceLabel="Homepage" />;
+}
