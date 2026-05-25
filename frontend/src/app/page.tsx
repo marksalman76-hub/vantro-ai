@@ -408,9 +408,6 @@ function Hero() {
             <Rocket size={16} />
             <span className="hero__cta-glow" />
           </a>
-          <a href="#" className="hero__cta-secondary">
-            <Play size={14} />
-          </a>
         </motion.div>
 
         {/* Trust */}
