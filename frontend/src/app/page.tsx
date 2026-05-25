@@ -509,7 +509,7 @@ function AgentsGrid() {
           transition={{ delay: 0.1, duration: 0.7 }}
           className="section-subtitle"
         >
-          8 specialized agents. One shared brain. Infinite output.
+          Specialized agents. One shared brain. Infinite output.
         </motion.p>
       </div>
 
