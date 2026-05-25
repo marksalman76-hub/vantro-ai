@@ -1,3 +1,5 @@
+import AdminLoginSupportClient from "./support-client";
+
 export default async function AdminLoginPage({
   searchParams,
 }: {
@@ -18,6 +20,8 @@ export default async function AdminLoginPage({
         <button type="submit" style={{ width: "100%", marginTop: 22, padding: 15, borderRadius: 14, border: 0, background: "linear-gradient(135deg,#635BFF,#8b5cf6)", color: "white", fontWeight: 900, cursor: "pointer", boxShadow: "0 16px 42px rgba(99,91,255,.30)" }}>Login as Owner/Admin</button>
         <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid rgba(148,163,184,.16)", color: "#94a3b8", textAlign: "center", fontSize: 13 }}>Secure access · All actions are logged</div>
       </form>
+
+      <AdminLoginSupportClient />
     </main>
   );
 }
