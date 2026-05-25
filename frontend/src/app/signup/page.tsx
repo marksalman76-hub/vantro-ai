@@ -120,18 +120,18 @@ function SignupContent() {
   }
 
   return (
-    <main style={{ minHeight: "100vh", background: "radial-gradient(circle at 12% 10%, rgba(99,91,255,.14), transparent 28%), linear-gradient(180deg,#fff 0%,#f8f9ff 100%)", fontFamily: "Inter,Arial,sans-serif", color: "#111827", padding: 20 }}>
+    <main style={{ minHeight: "100vh", background: "radial-gradient(circle at 12% 10%, rgba(99,91,255,.24), transparent 30%), radial-gradient(circle at 88% 18%, rgba(168,85,247,.16), transparent 28%), linear-gradient(180deg,#050816 0%,#0b1020 52%,#050816 100%)", fontFamily: "Inter,Arial,sans-serif", color: "#f8fafc", padding: 20 }}>
       <section style={{ maxWidth: 1560, margin: "0 auto", display: "grid", gridTemplateColumns: "360px 1fr", gap: 24 }}>
-        <aside style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: 28, padding: 28, boxShadow: "0 24px 60px rgba(15,23,42,.06)", position: "sticky", top: 20, height: "calc(100vh - 40px)" }}>
+        <aside style={{ background: "rgba(15,23,42,.88)", border: "1px solid rgba(148,163,184,.18)", borderRadius: 28, padding: 28, boxShadow: "0 28px 80px rgba(0,0,0,.38)", position: "sticky", top: 20, height: "calc(100vh - 40px)" }}>
           <a href="/" style={{ color: "#4f46e5", textDecoration: "none", fontWeight: 900 }}>← Back to home</a>
 
-          <div style={{ marginTop: 28, padding: 18, borderRadius: 22, background: "#f8f7ff", border: "1px solid #ddd6fe" }}>
-            <div style={{ color: "#635BFF", fontWeight: 950 }}>Step 2 of 3</div>
-            <h1 style={{ fontSize: 30, lineHeight: 1.08, margin: "12px 0 8px" }}>Start your <span style={{ color: "#635BFF" }}>{plan.name}</span> plan</h1>
+          <div style={{ marginTop: 28, padding: 18, borderRadius: 22, background: "rgba(99,91,255,.12)", border: "1px solid rgba(129,140,248,.28)" }}>
+            <div style={{ color: "#c4b5fd", fontWeight: 950 }}>Step 2 of 3</div>
+            <h1 style={{ fontSize: 30, lineHeight: 1.08, margin: "12px 0 8px" }}>Start your <span style={{ color: "#c4b5fd" }}>{plan.name}</span> plan</h1>
             <p style={{ color: "#667085", lineHeight: 1.55, margin: 0 }}>{plan.summary}</p>
           </div>
 
-          <div style={{ marginTop: 20, padding: 18, borderRadius: 20, border: "1px solid #e5e7eb" }}>
+          <div style={{ marginTop: 20, padding: 18, borderRadius: 20, border: "1px solid rgba(148,163,184,.18)" }}>
             <div style={{ color: "#667085", fontWeight: 850 }}>Plan summary</div>
             <div style={{ fontSize: 36, fontWeight: 950, marginTop: 8 }}>
               {plan.price}
@@ -151,7 +151,7 @@ function SignupContent() {
 
           {message && <p style={{ color: "#b45309", lineHeight: 1.5 }}>{message}</p>}
 
-          <div style={{ marginTop: 22, padding: 18, borderRadius: 18, background: "#f8f7ff", color: "#635BFF", fontWeight: 850, textAlign: "center" }}>
+          <div style={{ marginTop: 22, padding: 18, borderRadius: 18, background: "rgba(99,91,255,.12)", color: "#c4b5fd", fontWeight: 850, textAlign: "center" }}>
             Head Agent and Orchestration Agent are Enterprise-only.
           </div>
         </aside>
@@ -159,7 +159,7 @@ function SignupContent() {
         <section>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, minmax(0,1fr))", gap: 14, marginBottom: 20 }}>
             {Object.entries(plans).map(([key, item]) => (
-              <a key={key} href={`/signup?plan=${key}`} style={{ textDecoration: "none", color: "#111827", background: "#fff", border: key === planKey ? "2px solid #635BFF" : "1px solid #e5e7eb", borderRadius: 20, padding: 18, boxShadow: "0 12px 32px rgba(15,23,42,.045)" }}>
+              <a key={key} href={`/signup?plan=${key}`} style={{ textDecoration: "none", color: "#f8fafc", background: "rgba(15,23,42,.82)", border: key === planKey ? "2px solid #8b5cf6" : "1px solid rgba(148,163,184,.18)", borderRadius: 20, padding: 18, boxShadow: "0 16px 42px rgba(0,0,0,.28)" }}>
                 <div style={{ fontWeight: 950, fontSize: 20 }}>{item.name}</div>
                 <div style={{ color: "#4f46e5", fontSize: 24, fontWeight: 950, marginTop: 5 }}>{item.price}</div>
                 <div style={{ color: "#667085", fontSize: 13, marginTop: 5 }}>{`Up to ${item.limit} agents`}</div>
@@ -167,7 +167,7 @@ function SignupContent() {
             ))}
           </div>
 
-          <div style={{ background: "rgba(255,255,255,.86)", border: "1px solid #e5e7eb", borderRadius: 28, padding: 22, boxShadow: "0 24px 60px rgba(15,23,42,.05)" }}>
+          <div style={{ background: "rgba(15,23,42,.78)", border: "1px solid rgba(148,163,184,.18)", borderRadius: 28, padding: 22, boxShadow: "0 28px 80px rgba(0,0,0,.34)" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
               <div>
                 <h2 style={{ margin: 0, fontSize: 30 }}>Select your agents</h2>
@@ -184,7 +184,7 @@ function SignupContent() {
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 18 }}>
               {categories.map((c) => (
-                <button key={c} onClick={() => setCategory(c)} style={{ border: "none", borderRadius: 999, padding: "9px 12px", fontWeight: 850, color: category === c ? "#fff" : "#4f46e5", background: category === c ? "#635BFF" : "#eef2ff", cursor: "pointer" }}>{c}</button>
+                <button key={c} onClick={() => setCategory(c)} style={{ border: "none", borderRadius: 999, padding: "9px 12px", fontWeight: 850, color: category === c ? "#fff" : "#c4b5fd", background: category === c ? "linear-gradient(135deg,#635BFF,#8b5cf6)" : "rgba(99,91,255,.12)", cursor: "pointer" }}>{c}</button>
               ))}
             </div>
 
@@ -192,12 +192,12 @@ function SignupContent() {
               {visibleAgents.map(([id, name, cat, desc]) => {
                 const isSelected = selected.includes(id);
                 return (
-                  <button key={id} onClick={() => toggleAgent(id)} style={{ textAlign: "left", minHeight: 150, border: isSelected ? "2px solid #635BFF" : "1px solid #e5e7eb", background: isSelected ? "#f5f3ff" : "#fff", borderRadius: 18, padding: 16, cursor: "pointer" }}>
+                  <button key={id} onClick={() => toggleAgent(id)} style={{ textAlign: "left", minHeight: 150, border: isSelected ? "2px solid #8b5cf6" : "1px solid rgba(148,163,184,.18)", background: isSelected ? "rgba(99,91,255,.18)" : "rgba(15,23,42,.82)", borderRadius: 18, padding: 16, cursor: "pointer" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                       <strong>{name}</strong>
                       <span style={{ color: isSelected ? "#4f46e5" : "#9ca3af", fontWeight: 900 }}>{isSelected ? "Selected" : "Select"}</span>
                     </div>
-                    <div style={{ color: "#635BFF", fontSize: 12, fontWeight: 900, marginTop: 8 }}>{cat}</div>
+                    <div style={{ color: "#c4b5fd", fontSize: 12, fontWeight: 900, marginTop: 8 }}>{cat}</div>
                     <p style={{ color: "#667085", lineHeight: 1.45, fontSize: 13 }}>{desc}</p>
                   </button>
                 );
