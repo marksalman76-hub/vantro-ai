@@ -4,10 +4,10 @@ import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 const plans = {
-  starter: { name: "Starter", price: "$99", limit: 2, summary: "For small teams testing AI execution." },
-  growth: { name: "Growth", price: "$279", limit: 5, summary: "For growing businesses using multiple agents." },
-  business: { name: "Business", price: "$449", limit: 10, summary: "For advanced automation and scale." },
-  enterprise: { name: "Enterprise", price: "Custom", limit: 27, summary: "Full orchestration, white-label, and enterprise controls." },
+  starter: { name: "Starter", price: "$99", limit: 3, summary: "For small teams testing AI execution." },
+  growth: { name: "Growth", price: "$279", limit: 7, summary: "For growing businesses using multiple agents." },
+  business: { name: "Business", price: "$429", limit: 10, summary: "For advanced automation and scale." },
+  enterprise: { name: "Enterprise", price: "Custom", limit: 37, summary: "Full orchestration, white-label, and enterprise controls." },
 };
 
 const agents = [
@@ -17,8 +17,8 @@ const agents = [
   ["email_reply_agent", "Email Reply Agent", "Sales & CRM", "Email replies, inbox handling, customer responses, and follow-up drafting."],
   ["crm_ai_agent", "CRM AI Agent", "Sales & CRM", "CRM workflows, lead notes, customer records, pipeline updates, and follow-up support."],
   ["analytics_optimisation_agent", "Analytics Optimisation Agent", "Analytics", "Analytics reviews, conversion insights, optimisation recommendations, and performance reporting."],
-  ["ugc_creative_agent", "UGC Creative Agent", "Content & Creative", "UGC hooks, creator briefs, scripts, shot lists, content angles, and short-form video ideas."],
-  ["product_image_agent", "Product Image Agent", "Ecommerce", "Product image concepts, visual direction, asset planning, and ecommerce creative support."],
+  ["ugc_creative_agent", "Content Strategy Agent", "Content & Creative", "Content strategy, campaign ideas, messaging angles, planning support, and execution-ready content direction."],
+  ["product_image_agent", "Visual Brand Asset Agent", "Ecommerce", "Brand visual concepts, asset planning, image direction, and campaign-ready creative support."],
   ["influencer_collaboration_agent", "Influencer Collaboration Agent", "Growth & Marketing", "Influencer shortlist, outreach angles, collaboration planning, and creator partnership support."],
   ["product_copywriting_agent", "Product Copywriting Agent", "Ecommerce", "Product descriptions, product page copy, conversion messaging, and offer copy."],
   ["customer_service_agent", "Customer Service Agent", "Operations", "Customer support replies, FAQs, issue handling, service tone, and resolution workflows."],
