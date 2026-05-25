@@ -400,7 +400,7 @@ export default function ClientPage() {
     padding: 16,
     borderRadius: 12,
     border: "1px solid #e5eaf2",
-    background: "#fff",
+    background: "rgba(12,24,49,.92)",
   };
 
   
@@ -885,9 +885,9 @@ useEffect(() => {
         <style>{`
           ${darkModeEnabled ? `
             main section:nth-of-type(n+4) div[style*="background: #fff"],
-            main section:nth-of-type(n+4) div[style*='background: "#fff"'],
+            main section:nth-of-type(n+4) div[style*='background: "rgba(12,24,49,.92)"'],
             main section:nth-of-type(n+4) button[style*="background: #fff"],
-            main section:nth-of-type(n+4) button[style*='background: "#fff"'] {
+            main section:nth-of-type(n+4) button[style*='background: "rgba(12,24,49,.92)"'] {
               background: rgba(12, 24, 49, .92) !important;
               border-color: rgba(99,102,241,.24) !important;
               color: #f8fafc !important;
@@ -938,7 +938,7 @@ useEffect(() => {
 
             main section:nth-of-type(n+4) [style*="background: rgba(248,250,252"],
             main section:nth-of-type(n+4) [style*="background: #f8fafc"],
-            main section:nth-of-type(n+4) [style*='background: "#f8fafc"'] {
+            main section:nth-of-type(n+4) [style*='background: "rgba(15,23,42,.92)"'] {
               background: rgba(15,23,42,.86) !important;
             }
           ` : ``}
@@ -971,10 +971,10 @@ useEffect(() => {
             }
 
             main div[style*="background: #fff"],
-            main div[style*='background: "#fff"'],
+            main div[style*='background: "rgba(12,24,49,.92)"'],
             main div[style*="background:#fff"],
             main button[style*="background: #fff"],
-            main button[style*='background: "#fff"'],
+            main button[style*='background: "rgba(12,24,49,.92)"'],
             main button[style*="background:#fff"] {
               background: rgba(12, 24, 49, .92) !important;
               border-color: rgba(99,102,241,.24) !important;
@@ -1121,7 +1121,7 @@ useEffect(() => {
                 borderRadius: 12,
                 padding: "9px 13px",
                 background: darkModeEnabled ? "rgba(79,70,229,.16)" : "var(--color-dark)",
-                color: "#fff",
+                color: "rgba(12,24,49,.92)",
                 fontWeight: 850,
                 cursor: "pointer",
                 boxShadow: darkModeEnabled ? "0 0 0 1px rgba(124,58,237,.12), 0 12px 32px rgba(0,0,0,.22)" : "0 10px 24px rgba(15,23,42,.12)",
@@ -1132,7 +1132,7 @@ useEffect(() => {
 
             <div
               style={{
-                background: darkModeEnabled ? "rgba(3, 18, 42, 0.92)" : "#fff",
+                background: darkModeEnabled ? "rgba(3, 18, 42, 0.92)" : "rgba(12,24,49,.92)",
                 borderRadius: 16,
                 padding: "9px 14px",
                 border: darkModeEnabled ? "1px solid rgba(34,197,94,.42)" : "1px solid #e5eaf2",
@@ -1166,7 +1166,7 @@ useEffect(() => {
                 height: 38,
                 borderRadius: 999,
                 border: darkModeEnabled ? "1px solid rgba(255,255,255,.16)" : "1px solid #e5eaf2",
-                background: darkModeEnabled ? "rgba(255,255,255,.10)" : "#fff",
+                background: darkModeEnabled ? "rgba(255,255,255,.10)" : "rgba(12,24,49,.92)",
                 color: darkModeEnabled ? "#fff" : "var(--color-dark)",
                 boxShadow: darkModeEnabled ? "0 0 0 1px rgba(255,255,255,.06), 0 12px 34px rgba(0,0,0,.24)" : "0 8px 22px rgba(15,23,42,.045)",
                 cursor: "pointer",
@@ -1196,7 +1196,7 @@ useEffect(() => {
                   borderRadius: 999,
                   background: darkModeEnabled ? "linear-gradient(135deg, #4f46e5, #7c3aed)" : "var(--color-dark)",
                   border: darkModeEnabled ? "1px solid rgba(255,255,255,.18)" : "none",
-                  color: "#fff",
+                  color: "rgba(12,24,49,.92)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -1215,7 +1215,7 @@ useEffect(() => {
                   right: 0,
                   top: 54,
                   width: 280,
-                  background: darkModeEnabled ? "linear-gradient(180deg, rgba(10,22,46,.98), rgba(7,16,34,.99))" : "#fff",
+                  background: darkModeEnabled ? "linear-gradient(180deg, rgba(10,22,46,.98), rgba(7,16,34,.99))" : "rgba(12,24,49,.92)",
                   border: darkModeEnabled ? "1px solid rgba(129,140,248,.28)" : "1px solid #e5eaf2",
                   borderRadius: 18,
                   boxShadow: darkModeEnabled ? "0 24px 70px rgba(0,0,0,.42)" : "0 24px 60px rgba(15,23,42,.18)",
@@ -1225,7 +1225,7 @@ useEffect(() => {
                 }}
               >
                 <div style={{ display: "flex", gap: 12, alignItems: "center", paddingBottom: 12, borderBottom: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6" }}>
-                  <div style={{ width: 46, height: 46, borderRadius: 999, background: darkModeEnabled ? "linear-gradient(135deg,#4f46e5,#7c3aed)" : "var(--color-dark)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{clientInitials}</div>
+                  <div style={{ width: 46, height: 46, borderRadius: 999, background: darkModeEnabled ? "linear-gradient(135deg,#4f46e5,#7c3aed)" : "var(--color-dark)", color: "rgba(12,24,49,.92)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{clientInitials}</div>
                   <div>
                     <div style={{ fontWeight: 800, color: darkModeEnabled ? "#ffffff" : "var(--color-dark)" }}>{clientDisplayName}</div>
                     <div style={{ fontSize: 12, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>{clientEmail || accountPackage}</div>
@@ -1393,7 +1393,7 @@ useEffect(() => {
                 }}
                 style={{
                   border: darkModeEnabled ? "1px solid rgba(129,140,248,.28)" : "1px solid #e5eaf2",
-                  background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff",
+                  background: darkModeEnabled ? "rgba(15,23,42,.92)" : "rgba(12,24,49,.92)",
                   borderRadius: 999,
                   padding: "9px 13px",
                   fontWeight: 850,
@@ -1413,7 +1413,7 @@ useEffect(() => {
                     border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
                     borderRadius: 16,
                     padding: 14,
-                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                     boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
                   }}>
                     <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Theme</div>
@@ -1425,7 +1425,7 @@ useEffect(() => {
                         setAndPersistDarkMode(nextMode);
                         setToastMessage(nextMode ? "Dark mode enabled." : "Light mode enabled.");
                       }}
-                      style={{ marginTop: 10, border: "1px solid rgba(79,70,229,.18)", background: "#fff", color: "#4f46e5", borderRadius: 12, padding: "9px 11px", fontWeight: 850, cursor: "pointer" }}
+                      style={{ marginTop: 10, border: "1px solid rgba(79,70,229,.18)", background: "rgba(12,24,49,.92)", color: "#4f46e5", borderRadius: 12, padding: "9px 11px", fontWeight: 850, cursor: "pointer" }}
                     >
                       Toggle dark / light mode
                     </button>
@@ -1434,7 +1434,7 @@ useEffect(() => {
                     border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
                     borderRadius: 16,
                     padding: 14,
-                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                     boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
                   }}>
                     <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Workspace</div>
@@ -1450,7 +1450,7 @@ useEffect(() => {
                     border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
                     borderRadius: 16,
                     padding: 14,
-                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                     boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
                   }}>
                     <div style={{ fontSize: 11, color: darkModeEnabled ? "#a5b4fc" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Client</div>
@@ -1475,7 +1475,7 @@ useEffect(() => {
                         padding: "9px 11px",
                         fontSize: 13,
                         color: darkModeEnabled ? "#f8fafc" : "#0f172a",
-                        background: darkModeEnabled ? "rgba(3,10,24,.86)" : "#fff",
+                        background: darkModeEnabled ? "rgba(3,10,24,.86)" : "rgba(12,24,49,.92)",
                         outline: "none",
                         boxSizing: "border-box",
                         fontFamily: "inherit",
@@ -1495,7 +1495,7 @@ useEffect(() => {
                         borderRadius: 12,
                         padding: "8px 10px",
                         background: "linear-gradient(135deg,#4f46e5,#4338ca)",
-                        color: "#fff",
+                        color: "rgba(12,24,49,.92)",
                         fontSize: 12.4,
                         fontWeight: 900,
                         cursor: "pointer",
@@ -1509,7 +1509,7 @@ useEffect(() => {
                     border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
                     borderRadius: 16,
                     padding: 14,
-                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                     boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
                   }}>
                     <div style={{ fontSize: 11, color: darkModeEnabled ? "#a5b4fc" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>
@@ -1533,7 +1533,7 @@ useEffect(() => {
                     border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
                     borderRadius: 16,
                     padding: 14,
-                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                     boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
                   }}>
                     <div style={{ fontSize: 11, color: darkModeEnabled ? "#a5b4fc" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Billing</div>
@@ -1546,7 +1546,7 @@ useEffect(() => {
                       onClick={() => {
                         window.location.href = "/client/billing";
                       }}
-                      style={{ border: 0, background: "linear-gradient(135deg,#4f46e5,#7c3aed)", color: "#fff", borderRadius: 12, padding: "8px 10px", fontWeight: 850, cursor: "pointer" }}
+                      style={{ border: 0, background: "linear-gradient(135deg,#4f46e5,#7c3aed)", color: "rgba(12,24,49,.92)", borderRadius: 12, padding: "8px 10px", fontWeight: 850, cursor: "pointer" }}
                     >
                       Open billing centre
                     </button>
@@ -1556,7 +1556,7 @@ useEffect(() => {
                     border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
                     borderRadius: 16,
                     padding: 14,
-                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                     boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
                   }}>
                     <div style={{ fontSize: 11, color: darkModeEnabled ? "#a5b4fc" : "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Subscription</div>
@@ -1572,13 +1572,13 @@ useEffect(() => {
                     border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
                     borderRadius: 16,
                     padding: 14,
-                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                     boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
                   }}>
                   <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Password reset</div>
                   <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Secure reset request</div>
                   <p style={{ color: "var(--color-muted)", fontSize: 12, lineHeight: 1.45 }}>Use this panel to trigger the secure password reset flow once the backend route is connected.</p>
-                  <button type="button" onClick={() => setToastMessage("Password reset request panel opened. Secure email flow is ready for backend connection.")} style={{ border: 0, background: "var(--color-dark)", color: "#fff", borderRadius: 12, padding: "8px 10px", fontWeight: 850, cursor: "pointer" }}>
+                  <button type="button" onClick={() => setToastMessage("Password reset request panel opened. Secure email flow is ready for backend connection.")} style={{ border: 0, background: "var(--color-dark)", color: "rgba(12,24,49,.92)", borderRadius: 12, padding: "8px 10px", fontWeight: 850, cursor: "pointer" }}>
                     Send reset link
                   </button>
                 </div>
@@ -1589,13 +1589,13 @@ useEffect(() => {
                     border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6",
                     borderRadius: 16,
                     padding: 14,
-                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                     boxShadow: darkModeEnabled ? "0 16px 42px rgba(0,0,0,.24)" : "none",
                   }}>
                   <div style={{ fontSize: 11, color: "var(--color-muted)", fontWeight: 900, textTransform: "uppercase" }}>Two-factor authentication</div>
                   <div style={{ marginTop: 6, color: "var(--color-dark)", fontWeight: 900 }}>Extra account protection</div>
                   <p style={{ color: "var(--color-muted)", fontSize: 12, lineHeight: 1.45 }}>2FA setup panel is now functional in the workspace UI and ready for secure backend connection.</p>
-                  <button type="button" onClick={() => setToastMessage("2FA setup panel opened. Secure setup flow is ready for backend connection.")} style={{ border: 0, background: "var(--color-dark)", color: "#fff", borderRadius: 12, padding: "8px 10px", fontWeight: 850, cursor: "pointer" }}>
+                  <button type="button" onClick={() => setToastMessage("2FA setup panel opened. Secure setup flow is ready for backend connection.")} style={{ border: 0, background: "var(--color-dark)", color: "rgba(12,24,49,.92)", borderRadius: 12, padding: "8px 10px", fontWeight: 850, cursor: "pointer" }}>
                     Start 2FA setup
                   </button>
                 </div>
@@ -1622,7 +1622,7 @@ useEffect(() => {
               <div style={{ background: darkModeEnabled ? "rgba(79,70,229,.20)" : "rgba(238,242,255,.95)", color: "var(--color-brand)", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12 }}>
                 ● {businessProfileSaved ? "Saved" : "Not saved yet"}
               </div>
-              <button type="button" onClick={() => setToastMessage("Add business details, save the profile, then future AI executions will use this context.")} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#cbd5e1" : "#334155", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12, cursor: "pointer" }}>
+              <button type="button" onClick={() => setToastMessage("Add business details, save the profile, then future AI executions will use this context.")} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", background: darkModeEnabled ? "rgba(15,23,42,.92)" : "rgba(12,24,49,.92)", color: darkModeEnabled ? "#cbd5e1" : "#334155", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12, cursor: "pointer" }}>
                 ? How it works
               </button>
             </div>
@@ -1651,7 +1651,7 @@ useEffect(() => {
                   gridColumn: "span 1",
                   borderRadius: 16,
                   border: darkModeEnabled ? "1px solid rgba(148,163,184,.16)" : "1px solid rgba(15,23,42,.08)",
-                  background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff",
+                  background: darkModeEnabled ? "rgba(15,23,42,.92)" : "rgba(12,24,49,.92)",
                   padding: 12,
                   minHeight: 98,
                   boxShadow: darkModeEnabled ? "0 18px 44px rgba(0,0,0,.32)" : "0 14px 38px rgba(15,23,42,.04)",
@@ -1684,7 +1684,7 @@ useEffect(() => {
                       width: "100%",
                       height: 34,
                       border: "1.5px solid rgba(79,70,229,.35)",
-                      background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff",
+                      background: darkModeEnabled ? "rgba(15,23,42,.92)" : "rgba(12,24,49,.92)",
                       padding: "9px 11px",
                       borderRadius: 10,
                       fontSize: 13,
@@ -1716,7 +1716,7 @@ useEffect(() => {
                       resize: "vertical",
                       minHeight: 48,
                       border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)",
-                      background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff",
+                      background: darkModeEnabled ? "rgba(15,23,42,.92)" : "rgba(12,24,49,.92)",
                       padding: "9px 10px",
                       borderRadius: 10,
                       fontSize: 12.4,
@@ -1738,11 +1738,11 @@ useEffect(() => {
             ))}
           </div>
 
-          <div style={{ marginTop: 14, borderRadius: 16, border: darkModeEnabled ? "1px solid rgba(129,140,248,.22)" : "1px solid rgba(79,70,229,.10)", background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", padding: 10, boxShadow: darkModeEnabled ? "0 14px 34px rgba(0,0,0,.28)" : "0 10px 28px rgba(15,23,42,.04)", position: "relative", zIndex: 25 }}>
+          <div style={{ marginTop: 14, borderRadius: 16, border: darkModeEnabled ? "1px solid rgba(129,140,248,.22)" : "1px solid rgba(79,70,229,.10)", background: darkModeEnabled ? "rgba(15,23,42,.92)" : "rgba(12,24,49,.92)", padding: 10, boxShadow: darkModeEnabled ? "0 14px 34px rgba(0,0,0,.28)" : "0 10px 28px rgba(15,23,42,.04)", position: "relative", zIndex: 25 }}>
             <div style={{ display: "grid", gridTemplateColumns: "180px 180px 180px 1fr", gap: 10, alignItems: "center" }}>
-              <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "8px 10px", height: 34, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "#fff", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>▣ Save business profile</button>
-              <button type="button" onClick={loadBusinessProfile} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>↻ Reset to last save</button>
-              <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>◉ Preview profile</button>
+              <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "8px 10px", height: 34, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "rgba(12,24,49,.92)", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>▣ Save business profile</button>
+              <button type="button" onClick={loadBusinessProfile} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(15,23,42,.92)" : "rgba(12,24,49,.92)", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>↻ Reset to last save</button>
+              <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(15,23,42,.92)" : "rgba(12,24,49,.92)", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>◉ Preview profile</button>
               <div style={{ borderLeft: "1px solid rgba(79,70,229,.12)", paddingLeft: 14, minHeight: 44, display: "flex", flexDirection: "column", justifyContent: "center" }}>
                 <div style={{ fontWeight: 900, color: darkModeEnabled ? "#f8fafc" : "#0f172a", fontSize: 12.5, marginBottom: 2 }}>One workspace. One business.</div>
                 <div style={{ color: darkModeEnabled ? "#94a3b8" : "#64748b", fontSize: 11.4, lineHeight: 1.3 }}>You can refine this profile, but changing business identity requires approval unless Enterprise multi-business access is enabled.</div>
@@ -1857,7 +1857,7 @@ useEffect(() => {
               style={{
                 border: darkModeEnabled ? "1px solid rgba(99,102,241,.28)" : "1px solid #e5eaf2",
                 borderRadius: 12,
-                background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                 padding: "8px 10px",
                 display: "flex",
                 alignItems: "center",
@@ -1916,7 +1916,7 @@ useEffect(() => {
             style={{
               border: darkModeEnabled ? "1px solid rgba(99,102,241,.28)" : "1px solid #d8dcff",
               borderRadius: 12,
-              background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+              background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
               color: darkModeEnabled ? "#c7d2fe" : "var(--color-primary)",
               padding: "8px 12px",
               minHeight: 48,
@@ -2079,7 +2079,7 @@ useEffect(() => {
                         onClick={() => toggleAgent(agent)}
                         style={{
                           border: active ? "1px solid rgba(37, 99, 235, 0.34)" : "1px solid rgba(15, 23, 42, 0.10)",
-                          background: active ? "linear-gradient(135deg,#eff6ff,#ffffff)" : "#ffffff",
+                          background: active ? "linear-gradient(135deg,#eff6ff,#ffffff)" : "rgba(12,24,49,.92)",
                           color: active ? "var(--color-brand)" : "var(--color-dark)",
                           padding: "8px 10px",
                           borderRadius: 13,
@@ -2101,8 +2101,8 @@ useEffect(() => {
                             height: 14,
                             borderRadius: 999,
                             border: active ? "none" : "1.5px solid rgba(79,70,229,.45)",
-                            background: active ? "var(--color-brand)" : "#ffffff",
-                            color: "#fff",
+                            background: active ? "var(--color-brand)" : "rgba(12,24,49,.92)",
+                            color: "rgba(12,24,49,.92)",
                             display: "inline-flex",
                             alignItems: "center",
                             justifyContent: "center",
@@ -2117,7 +2117,7 @@ useEffect(() => {
                             width: 26,
                             height: 26,
                             borderRadius: 9,
-                            background: active ? "#eef2ff" : "#f8fafc",
+                            background: active ? "#eef2ff" : "rgba(15,23,42,.92)",
                             color: "var(--color-brand)",
                             display: "inline-flex",
                             alignItems: "center",
@@ -2144,7 +2144,7 @@ useEffect(() => {
                       marginTop: 10,
                       width: "100%",
                       border: "1px solid #d8dcff",
-                      background: "#fff",
+                      background: "rgba(12,24,49,.92)",
                       color: "var(--color-brand)",
                       borderRadius: 12,
                       padding: "9px 10px",
@@ -2169,7 +2169,7 @@ useEffect(() => {
                     resize: "none",
                     borderRadius: 16,
                     border: "1px solid #dbe3ee",
-                    background: "#fff",
+                    background: "rgba(12,24,49,.92)",
                     padding: 14,
                     fontSize: 11,
                     lineHeight: 1.46,
@@ -2221,7 +2221,7 @@ useEffect(() => {
                     border: "none",
                     borderRadius: 16,
                     background: executionState === "running" ? "linear-gradient(135deg,var(--color-muted),var(--color-mid))" : "linear-gradient(135deg,var(--color-brand),#06b6d4)",
-                    color: "#fff",
+                    color: "rgba(12,24,49,.92)",
                     padding: "13px 16px",
                     fontWeight: 760,
                     cursor: "pointer",
@@ -2263,7 +2263,7 @@ useEffect(() => {
                       minHeight: 26,
                       borderRadius: "999px",
                       background: index === 4 ? "#06b6d4" : "var(--color-brand)",
-                      color: "#fff",
+                      color: "rgba(12,24,49,.92)",
                       display: "inline-flex",
                       alignItems: "center",
                       justifyContent: "center",
@@ -2278,7 +2278,7 @@ useEffect(() => {
                     style={{
                       border: darkModeEnabled ? "1px solid rgba(99,102,241,.28)" : "1px solid #e5eaf2",
                       borderRadius: 12,
-                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                       padding: "8px 10px",
                       boxShadow: darkModeEnabled ? "0 10px 28px rgba(0,0,0,.22)" : "0 8px 20px rgba(15,23,42,.04)",
                     }}
@@ -2308,7 +2308,7 @@ useEffect(() => {
                     width: 26,
                     height: 26,
                     borderRadius: 9,
-                    background: darkModeEnabled ? "rgba(79,70,229,.24)" : "#ffffff",
+                    background: darkModeEnabled ? "rgba(79,70,229,.24)" : "rgba(12,24,49,.92)",
                     color: darkModeEnabled ? "#c7d2fe" : "var(--color-brand)",
                     display: "inline-flex",
                     alignItems: "center",
@@ -2352,7 +2352,7 @@ useEffect(() => {
                   key={label}
                   style={{
                     border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
-                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                     borderRadius: 14,
                     padding: "10px 12px",
                     display: "flex",
@@ -2385,7 +2385,7 @@ useEffect(() => {
                   key={label}
                   style={{
                     border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
-                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                     borderRadius: 16,
                     padding: 12,
                     minHeight: 74,
@@ -2466,7 +2466,7 @@ useEffect(() => {
                   style={{
                     border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
                     borderRadius: 16,
-                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                    background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                     padding: "12px 14px",
                     display: "grid",
                     gridTemplateColumns: "34px minmax(0,1fr) auto",
@@ -2501,7 +2501,7 @@ useEffect(() => {
                   <span
                     style={{
                       border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
-                      background: darkModeEnabled ? "rgba(15,23,42,.86)" : "#f8fafc",
+                      background: darkModeEnabled ? "rgba(15,23,42,.86)" : "rgba(15,23,42,.92)",
                       borderRadius: 999,
                       padding: "6px 9px",
                       color: item.tone,
@@ -2521,7 +2521,7 @@ useEffect(() => {
                 marginTop: 16,
                 border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
                 borderRadius: 18,
-                background: darkModeEnabled ? "linear-gradient(180deg, rgba(15,23,42,.96), rgba(8,18,40,.98))" : "linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)",
+                background: darkModeEnabled ? "linear-gradient(180deg, rgba(15,23,42,.96), rgba(8,18,40,.98))" : "linear-gradient(180deg, rgba(15,23,42,.96), rgba(8,18,40,.98))",
                 padding: 14,
               }}
             >
@@ -2592,7 +2592,7 @@ useEffect(() => {
                     key={title}
                     style={{
                       border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
-                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                       borderRadius: 14,
                       padding: "9px 10px",
                       minHeight: 58,
@@ -2668,7 +2668,7 @@ useEffect(() => {
                       height: "100%",
                       width: "100%",
                       padding: 12,
-                      background: darkModeEnabled ? "linear-gradient(180deg, rgba(15,23,42,.96), rgba(8,18,40,.98))" : "linear-gradient(180deg,#ffffff 0%,var(--color-bg-light) 100%)",
+                      background: darkModeEnabled ? "linear-gradient(180deg, rgba(15,23,42,.96), rgba(8,18,40,.98))" : "linear-gradient(180deg, rgba(15,23,42,.96), rgba(8,18,40,.98))",
                       color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)",
                       boxSizing: "border-box",
                     }}
@@ -2695,7 +2695,7 @@ useEffect(() => {
                               width: 34,
                               height: 34,
                               borderRadius: 16,
-                              background: darkModeEnabled ? "linear-gradient(135deg, rgba(79,70,229,.28), rgba(15,23,42,.94))" : "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
+                              background: darkModeEnabled ? "linear-gradient(135deg, rgba(79,70,229,.28), rgba(15,23,42,.94))" : "linear-gradient(135deg, rgba(79,70,229,.24), rgba(15,23,42,.96))",
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
@@ -2742,7 +2742,7 @@ useEffect(() => {
                             padding: "3px 6px",
                             fontSize: 11,
                             fontWeight: 700,
-                            background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                            background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                             color: darkModeEnabled ? "#cbd5e1" : "var(--color-mid)",
                             
                           }}
@@ -2838,7 +2838,7 @@ useEffect(() => {
                   <div
                     style={{
                       background: "rgba(15,23,42,.82)",
-                      color: "#fff",
+                      color: "rgba(12,24,49,.92)",
                       borderRadius: 16,
                       padding: "7px 10px",
                       fontSize: 11,
@@ -2952,7 +2952,7 @@ useEffect(() => {
 
 
                       border: "1px solid rgba(37, 99, 235, 0.14)",
-                      background: darkModeEnabled ? "linear-gradient(135deg, rgba(79,70,229,.28), rgba(15,23,42,.94))" : "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
+                      background: darkModeEnabled ? "linear-gradient(135deg, rgba(79,70,229,.28), rgba(15,23,42,.94))" : "linear-gradient(135deg, rgba(79,70,229,.24), rgba(15,23,42,.96))",
                       color: "var(--color-brand)",
                       borderRadius: 16,
                       padding: "6px 9px",
@@ -2980,7 +2980,7 @@ useEffect(() => {
                     }}
                     style={{
                       border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
-                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                       color: deliverableDownloadUrl ? "#334155" : "#94a3b8",
                       borderRadius: 16,
                       padding: "6px 9px",
@@ -3004,7 +3004,7 @@ useEffect(() => {
                     }}
                     style={{
                       border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
-                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                       color: darkModeEnabled ? "#cbd5e1" : "#334155",
                       borderRadius: 16,
                       padding: "6px 9px",
@@ -3022,7 +3022,7 @@ useEffect(() => {
                     onClick={() => setShowDeliverableModal(true)}
                     style={{
                       border: "1px solid rgba(37, 99, 235, 0.14)",
-                      background: darkModeEnabled ? "linear-gradient(135deg, rgba(79,70,229,.28), rgba(15,23,42,.94))" : "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
+                      background: darkModeEnabled ? "linear-gradient(135deg, rgba(79,70,229,.28), rgba(15,23,42,.94))" : "linear-gradient(135deg, rgba(79,70,229,.24), rgba(15,23,42,.96))",
                       color: "var(--color-brand)",
                       borderRadius: 16,
                       padding: "8px 12px",
@@ -3046,7 +3046,7 @@ useEffect(() => {
                     style={{
                       border: "none",
                       background: reviewActionLoading ? "#86efac" : "var(--color-teal)",
-                      color: "#fff",
+                      color: "rgba(12,24,49,.92)",
                       borderRadius: 16,
                       padding: "8px 12px",
                       fontWeight: 760,
@@ -3065,7 +3065,7 @@ useEffect(() => {
                     }}
                     style={{
                       border: "1px solid #fecaca",
-                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
+                      background: darkModeEnabled ? "rgba(12,24,49,.92)" : "rgba(12,24,49,.92)",
                       color: "var(--color-red)",
                       borderRadius: 16,
                       padding: "8px 12px",
@@ -3134,7 +3134,7 @@ useEffect(() => {
                   textDecoration: "none",
                   fontWeight: 850,
                   border: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #e5eaf2",
-                  background: darkModeEnabled ? "rgba(12,24,49,.72)" : "#ffffff",
+                  background: darkModeEnabled ? "rgba(12,24,49,.72)" : "rgba(12,24,49,.92)",
                   borderRadius: 999,
                   padding: "8px 11px",
                 }}
@@ -3173,7 +3173,7 @@ useEffect(() => {
               maxHeight: "86vh",
               overflow: "hidden",
               borderRadius: 28,
-              background: "#ffffff",
+              background: "rgba(12,24,49,.92)",
               border: "1px solid rgba(226, 232, 240, 0.92)",
               boxShadow: "0 30px 90px rgba(15, 23, 42, 0.32)",
             }}
@@ -3213,7 +3213,7 @@ useEffect(() => {
                 onClick={() => setShowDeliverableModal(false)}
                 style={{
                   border: "1px solid #e5eaf2",
-                  background: "#fff",
+                  background: "rgba(12,24,49,.92)",
                   color: "#334155",
                   borderRadius: 999,
                   padding: "8px 12px",
@@ -3231,7 +3231,7 @@ useEffect(() => {
                 padding: 20,
                 maxHeight: "calc(86vh - 96px)",
                 overflow: "auto",
-                background: "#f8fafc",
+                background: "rgba(15,23,42,.92)",
               }}
             >
               {selectedAsset?.url || selectedAsset?.image_url || selectedAsset?.src ? (
@@ -3242,7 +3242,7 @@ useEffect(() => {
                     alignItems: "center",
                     minHeight: 320,
                     borderRadius: 22,
-                    background: "#ffffff",
+                    background: "rgba(12,24,49,.92)",
                     border: "1px solid #e5eaf2",
                     overflow: "hidden",
                   }}
@@ -3263,7 +3263,7 @@ useEffect(() => {
                   style={{
                     minHeight: 260,
                     borderRadius: 22,
-                    background: "#ffffff",
+                    background: "rgba(12,24,49,.92)",
                     border: "1px dashed #cbd5e1",
                     display: "flex",
                     alignItems: "center",
@@ -3295,7 +3295,7 @@ useEffect(() => {
                   }}
                   style={{
                     border: "1px solid #e5eaf2",
-                    background: deliverableDownloadUrl ? "#ffffff" : "#f8fafc",
+                    background: deliverableDownloadUrl ? "#ffffff" : "rgba(15,23,42,.92)",
                     color: deliverableDownloadUrl ? "#334155" : "#94a3b8",
                     borderRadius: 999,
                     padding: "9px 13px",
@@ -3338,7 +3338,7 @@ useEffect(() => {
               maxHeight: "84vh",
               overflow: "hidden",
               borderRadius: 26,
-              background: "#ffffff",
+              background: "rgba(12,24,49,.92)",
               border: "1px solid #e5eaf2",
               boxShadow: "0 30px 90px rgba(15, 23, 42, 0.35)",
             }}
@@ -3378,7 +3378,7 @@ useEffect(() => {
                 onClick={() => setShowMediaPreviewOverlay(false)}
                 style={{
                   border: "1px solid #e5eaf2",
-                  background: "#ffffff",
+                  background: "rgba(12,24,49,.92)",
                   color: "#334155",
                   borderRadius: 999,
                   padding: "8px 12px",
@@ -3394,7 +3394,7 @@ useEffect(() => {
             <div
               style={{
                 padding: 20,
-                background: "#f8fafc",
+                background: "rgba(15,23,42,.92)",
                 maxHeight: "calc(84vh - 92px)",
                 overflow: "auto",
               }}
@@ -3403,7 +3403,7 @@ useEffect(() => {
                 <div
                   style={{
                     borderRadius: 22,
-                    background: "#ffffff",
+                    background: "rgba(12,24,49,.92)",
                     border: "1px solid #e5eaf2",
                     minHeight: 320,
                     display: "flex",
@@ -3428,7 +3428,7 @@ useEffect(() => {
                   style={{
                     minHeight: 260,
                     borderRadius: 22,
-                    background: "#ffffff",
+                    background: "rgba(12,24,49,.92)",
                     border: "1px dashed #cbd5e1",
                     display: "flex",
                     alignItems: "center",
@@ -3495,7 +3495,7 @@ useEffect(() => {
             maxHeight: "84vh",
             overflow: "hidden",
             borderRadius: 26,
-            background: "#ffffff",
+            background: "rgba(12,24,49,.92)",
             border: "1px solid #e5eaf2",
             boxShadow: "0 30px 90px rgba(15, 23, 42, 0.35)",
           }}
@@ -3534,7 +3534,7 @@ useEffect(() => {
               href="#"
               style={{
                 border: "1px solid #e5eaf2",
-                background: "#ffffff",
+                background: "rgba(12,24,49,.92)",
                 color: "#334155",
                 borderRadius: 999,
                 padding: "8px 12px",
@@ -3551,7 +3551,7 @@ useEffect(() => {
           <div
             style={{
               padding: 20,
-              background: "#f8fafc",
+              background: "rgba(15,23,42,.92)",
               maxHeight: "calc(84vh - 92px)",
               overflow: "auto",
             }}
@@ -3560,7 +3560,7 @@ useEffect(() => {
               <div
                 style={{
                   borderRadius: 22,
-                  background: "#ffffff",
+                  background: "rgba(12,24,49,.92)",
                   border: "1px solid #e5eaf2",
                   minHeight: 320,
                   display: "flex",
@@ -3585,7 +3585,7 @@ useEffect(() => {
                 style={{
                   minHeight: 260,
                   borderRadius: 22,
-                  background: "#ffffff",
+                  background: "rgba(12,24,49,.92)",
                   border: "1px dashed #cbd5e1",
                   display: "flex",
                   alignItems: "center",
@@ -3612,7 +3612,7 @@ useEffect(() => {
 }
 
 const cardStyle = {
-  background: "#fff",
+  background: "rgba(12,24,49,.92)",
   borderRadius: 24,
   padding: "clamp(18px,2vw,24px)",
   boxShadow: "0 14px 34px rgba(15,23,42,.045)",
@@ -3658,7 +3658,7 @@ function StepHeader({ number, title }: { number: string; title: string }) {
           width: 28,
           height: 28,
           borderRadius: 16,
-          background: "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
+          background: "linear-gradient(135deg, rgba(79,70,229,.24), rgba(15,23,42,.96))",
           color: "var(--color-brand)",
           display: "flex",
           alignItems: "center",
