@@ -5,6 +5,13 @@ const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   "https://api.trance-formation.com.au";
 
+const BACKEND_AUTH_TOKEN =
+  process.env.ADMIN_PLATFORM_TOKEN ||
+  process.env.ADMIN_AUTH_SECRET ||
+  process.env.ADMIN_AUTH_TOKEN ||
+  process.env.BACKEND_AUTH_TOKEN ||
+  "";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -52,6 +59,9 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/json",
         "x-tenant-id": String(tenantId),
         "x-actor-role": String(actorRole),
+        ...(BACKEND_AUTH_TOKEN
+          ? { Authorization: `Bearer ${BACKEND_AUTH_TOKEN}` }
+          : {}),
       },
       body: JSON.stringify(backendPayload),
       cache: "no-store",
