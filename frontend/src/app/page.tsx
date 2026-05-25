@@ -256,27 +256,9 @@ function Nav({ muted, onToggleAudio }: { muted: boolean; onToggleAudio: () => vo
           <a href="/support-request" className="nav__btn-primary">
             Demo <ArrowRight size={14} />
           </a>
-          <button className="nav__hamburger" onClick={() => setOpen(!open)}>
-            {open ? <X size={20} /> : <Menu size={20} />}
-          </button>
         </div>
       </div>
 
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="nav__mobile"
-          >
-            {["Agents", "Pricing", "Enterprise"].map((l) => (
-              <a key={l} href={`#${l.toLowerCase()}`} className="nav__mobile-link" onClick={() => setOpen(false)}>{l}</a>
-            ))}
-            <a href="/support-request" className="nav__btn-primary nav__btn-primary--mobile">Demo →</a>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.nav>
   );
 }
