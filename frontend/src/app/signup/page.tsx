@@ -143,7 +143,7 @@ function SignupContent() {
           </div>
 
           <label style={{ display: "block", marginTop: 22, fontWeight: 900 }}>Work email</label>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@company.com" style={{ width: "100%", boxSizing: "border-box", marginTop: 10, padding: "14px 15px", borderRadius: 14, border: "1px solid #d1d5db", fontSize: 15 }} />
+          <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@company.com" style={{ width: "100%", boxSizing: "border-box", marginTop: 10, padding: "14px 15px", borderRadius: 14, border: "1px solid rgba(148,163,184,.24)", background: "rgba(15,23,42,.88)", color: "#f8fafc", fontSize: 15 }} />
 
           <button onClick={startCheckout} disabled={busy || !email.includes("@") || selected.length === 0} style={{ width: "100%", marginTop: 18, border: "none", borderRadius: 15, padding: "15px 18px", fontWeight: 950, color: "#fff", background: busy || !email.includes("@") || selected.length === 0 ? "#9ca3af" : "linear-gradient(135deg,#635BFF,#4F46E5)", cursor: busy || !email.includes("@") || selected.length === 0 ? "not-allowed" : "pointer" }}>
             {busy ? "Starting checkout..." : "Continue to secure checkout"}
@@ -175,8 +175,8 @@ function SignupContent() {
               </div>
 
               <div style={{ display: "flex", gap: 10 }}>
-                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search agents..." style={{ padding: "12px 14px", borderRadius: 13, border: "1px solid #d1d5db", minWidth: 260 }} />
-                <select value={category} onChange={(e) => setCategory(e.target.value)} style={{ padding: "12px 14px", borderRadius: 13, border: "1px solid #d1d5db" }}>
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search agents..." style={{ padding: "12px 14px", borderRadius: 13, border: "1px solid rgba(148,163,184,.24)", background: "rgba(15,23,42,.88)", color: "#f8fafc", minWidth: 260 }} />
+                <select value={category} onChange={(e) => setCategory(e.target.value)} style={{ padding: "12px 14px", borderRadius: 13, border: "1px solid rgba(148,163,184,.24)", background: "rgba(15,23,42,.88)", color: "#f8fafc" }}>
                   {categories.map((c) => <option key={c}>{c}</option>)}
                 </select>
               </div>
