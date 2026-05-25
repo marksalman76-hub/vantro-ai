@@ -563,7 +563,7 @@ function FeatureBento() {
           <Layers size={13} /> PLATFORM
         </motion.span>
         <motion.h2 className="section-title" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-          Everything in one orbit.
+          One governed AI operating system.
         </motion.h2>
       </div>
 
@@ -576,9 +576,9 @@ function FeatureBento() {
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
         >
-          <div className="bento-card__eyebrow"><Cpu size={14} /> SUPERCOMPUTER</div>
-          <h3 className="bento-card__title">Your agents work 24/7,<br />even while you sleep.</h3>
-          <p className="bento-card__body">Autonomous scheduling, memory, connectors, and real-time automations — all orchestrated by a shared intelligence layer.</p>
+          <div className="bento-card__eyebrow"><Cpu size={14} /> WORKFORCE ENGINE</div>
+          <h3 className="bento-card__title">Your AI workforce operates<br />around the clock.</h3>
+          <p className="bento-card__body">Governed execution, persistent business memory, live integrations and coordinated multi-agent workflows in one platform.</p>
           <div className="bento-card__visual bento-card__visual--grid">
             {Array.from({length: 24}).map((_,i) => (
               <motion.div
@@ -599,9 +599,9 @@ function FeatureBento() {
           viewport={{ once: true }}
           transition={{ delay: 0.1, duration: 0.8 }}
         >
-          <div className="bento-card__eyebrow"><Brain size={14} /> BRAIN AI</div>
-          <h3 className="bento-card__title">Learns your brand.<br />Thinks like you.</h3>
-          <p className="bento-card__body">Upload docs, style guides, past work — your agents internalize everything.</p>
+          <div className="bento-card__eyebrow"><Brain size={14} /> BUSINESS MEMORY</div>
+          <h3 className="bento-card__title">Learns your business.<br />Adapts to your market.</h3>
+          <p className="bento-card__body">Agents adapt to your products, positioning, competitors, audience, region and operational workflows.</p>
           <div className="bento-card__pulse">
             <div className="bento-card__pulse-ring" />
             <div className="bento-card__pulse-ring bento-card__pulse-ring--2" />
@@ -617,9 +617,9 @@ function FeatureBento() {
           viewport={{ once: true }}
           transition={{ delay: 0.15, duration: 0.8 }}
         >
-          <div className="bento-card__eyebrow"><Video size={14} /> CINEMA ENGINE</div>
-          <h3 className="bento-card__title">4K video in under 8 seconds.</h3>
-          <p className="bento-card__body">Powered by Seedance 2.0 — the fastest diffusion model on the planet.</p>
+          <div className="bento-card__eyebrow"><Video size={14} /> CONTENT ENGINE</div>
+          <h3 className="bento-card__title">Premium ecommerce content generation.</h3>
+          <p className="bento-card__body">UGC, product creatives, ads, landing pages and campaign assets generated through governed AI workflows.</p>
           <div className="bento-card__meter">
             <motion.div
               className="bento-card__meter-fill"
@@ -628,7 +628,7 @@ function FeatureBento() {
               viewport={{ once: true }}
               transition={{ duration: 1.5, ease: "easeOut", delay: 0.3 }}
             />
-            <span className="bento-card__meter-label">87% faster than competitors</span>
+            <span className="bento-card__meter-label">Premium-quality output generation</span>
           </div>
         </motion.div>
 
@@ -640,8 +640,8 @@ function FeatureBento() {
           viewport={{ once: true }}
           transition={{ delay: 0.2, duration: 0.8 }}
         >
-          <div className="bento-card__eyebrow"><Globe size={14} /> INTEGRATIONS</div>
-          <h3 className="bento-card__title">200+ connectors.</h3>
+          <div className="bento-card__eyebrow"><Globe size={14} /> LIVE INTEGRATIONS</div>
+          <h3 className="bento-card__title">Connect your business stack.</h3>
           <div className="bento-card__integrations">
             {["Slack","Notion","HubSpot","Zapier","Shopify","YouTube","TikTok","X"].map(s => (
               <span key={s} className="bento-card__badge">{s}</span>
@@ -657,8 +657,8 @@ function FeatureBento() {
           viewport={{ once: true }}
           transition={{ delay: 0.25, duration: 0.8 }}
         >
-          <div className="bento-card__eyebrow"><Award size={14} /> MILESTONES</div>
-          <h3 className="bento-card__title">Level up your workflow.</h3>
+          <div className="bento-card__eyebrow"><Award size={14} /> GOVERNANCE</div>
+          <h3 className="bento-card__title">Owner-controlled execution.</h3>
           <div className="bento-card__xp">
             <div className="bento-card__xp-bar">
               <motion.div
@@ -669,7 +669,7 @@ function FeatureBento() {
                 transition={{ duration: 1.2, ease: "easeOut", delay: 0.4 }}
               />
             </div>
-            <span className="bento-card__xp-label">Level 12 · 7,200 XP</span>
+            <span className="bento-card__xp-label">Approval-gated scaling and protected automation</span>
           </div>
         </motion.div>
 
