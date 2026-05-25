@@ -830,21 +830,21 @@ function FinalCTA() {
         transition={{ duration: 0.9, ease: [0.16,1,0.3,1] }}
         className="final-cta__inner"
       >
-        <span className="final-cta__eyebrow"><Rocket size={14} /> GET STARTED TODAY</span>
+        <span className="final-cta__eyebrow"><Rocket size={14} /> AI WORKFORCE PLATFORM</span>
         <h2 className="final-cta__title">
-          The future of creative<br />work starts now.
+          Deploy your AI workforce<br />in days, not months.
         </h2>
         <p className="final-cta__sub">
-          Free 14-day trial · No credit card · Cancel anytime
+          Enterprise-grade governance · Scalable AI operations · Owner-controlled execution
         </p>
         <div id="about" className="final-cta__buttons">
           <a href="#" className="hero__cta-primary">
             <Sparkles size={16} />
-            Start for free
+            Launch your workforce
             <span className="hero__cta-glow" />
           </a>
           <a href="#" className="hero__cta-secondary">
-            Book a demo <ChevronRight size={14} />
+            Schedule strategy call <ChevronRight size={14} />
           </a>
         </div>
       </motion.div>
