@@ -573,7 +573,7 @@ function Studio() {
           <Video size={13} /> CREATION STUDIO
         </motion.span>
         <motion.h2 className="section-title" initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }}>
-          One-click presets.<br />Hollywood output.
+          24/7 AI workforce for any industry.<br />Any operation. Any scale
         </motion.h2>
         <motion.p className="section-subtitle" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>
           Start from a proven template or prompt from scratch. Every output is 4K-ready.
