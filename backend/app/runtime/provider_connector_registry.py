@@ -485,3 +485,54 @@ def _with_provider_quality_loop(result, task_type=None, minimum_score=72):
         )
         return safe_result
 
+
+def extract_ai_media_provider_ready_packet(payload):
+    if not isinstance(payload, dict):
+        return None
+
+    if isinstance(payload.get("provider_ready_execution_packet"), dict):
+        return payload.get("provider_ready_execution_packet")
+
+    orchestration_packet = payload.get("orchestration_packet")
+    if isinstance(orchestration_packet, dict):
+        packet = orchestration_packet.get("provider_ready_execution_packet")
+        if isinstance(packet, dict):
+            return packet
+
+    creative_direction = payload.get("creative_direction")
+    if isinstance(creative_direction, dict):
+        nested_orchestration = creative_direction.get("orchestration_packet")
+        if isinstance(nested_orchestration, dict):
+            packet = nested_orchestration.get("provider_ready_execution_packet")
+            if isinstance(packet, dict):
+                return packet
+
+    return None
+
+
+def enrich_provider_payload_with_ai_media_packet(payload):
+    if not isinstance(payload, dict):
+        return payload
+
+    provider_ready_packet = extract_ai_media_provider_ready_packet(payload)
+
+    if not provider_ready_packet:
+        return payload
+
+    enriched = dict(payload)
+    enriched["ai_media_provider_ready_packet"] = provider_ready_packet
+    enriched["provider_payload_enriched"] = True
+    enriched["provider_packet_type"] = provider_ready_packet.get("packet_type")
+    enriched["provider_execution_allowed"] = provider_ready_packet.get("execution_allowed", True)
+    enriched["provider_manual_review_required"] = provider_ready_packet.get("manual_review_required", False)
+    enriched["provider_primary_slot"] = provider_ready_packet.get("primary_provider_slot")
+    enriched["provider_fallback_slots"] = provider_ready_packet.get("fallback_provider_slots", [])
+    enriched["provider_parameters"] = provider_ready_packet.get("provider_parameters", {})
+    enriched["provider_continuity_controls"] = provider_ready_packet.get("continuity_controls", {})
+    enriched["provider_multilingual_controls"] = provider_ready_packet.get("multilingual_controls", {})
+    enriched["provider_fallback_controls"] = provider_ready_packet.get("fallback_controls", {})
+    enriched["provider_governance_controls"] = provider_ready_packet.get("governance_controls", {})
+    enriched["provider_quality_controls"] = provider_ready_packet.get("quality_controls", {})
+
+    return enriched
+
