@@ -1,3 +1,5 @@
+import os
+import hashlib
 from backend.app.runtime.ai_media_creative_director import readiness as ai_media_creative_director_readiness, run_shared_ai_media_creative_director
 from backend.app.core.integration_live_adapter_registry import (
     adapter_registry_summary,
@@ -2782,3 +2784,23 @@ def admin_ai_media_creative_director_readiness():
 @app.post("/admin/ai-media-creative-director/run")
 def admin_ai_media_creative_director_run(payload: dict):
     return run_shared_ai_media_creative_director(payload)
+@app.get("/debug/live-auth-fingerprint")
+def debug_live_auth_fingerprint():
+    def fp(name: str):
+        value = os.getenv(name, "").strip()
+        return {
+            "present": bool(value),
+            "length": len(value),
+            "sha_prefix": hashlib.sha256(value.encode()).hexdigest()[:10] if value else None,
+        }
+
+    return {
+        "success": True,
+        "safe_debug": True,
+        "secrets_not_returned": True,
+        "admin_platform_token": fp("ADMIN_PLATFORM_TOKEN"),
+        "admin_auth_secret": fp("ADMIN_AUTH_SECRET"),
+        "admin_auth_token": fp("ADMIN_AUTH_TOKEN"),
+        "app_env": os.getenv("APP_ENV", ""),
+        "service": "control-api",
+    }
