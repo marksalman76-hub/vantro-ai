@@ -152,6 +152,7 @@ from backend.app.runtime.ai_media_execution_router import ai_media_execution_rou
 from backend.app.runtime.ai_media_provider_adapters import ai_media_provider_adapters_readiness, execute_ai_media_provider_adapter, get_provider_adapter_status, list_ai_media_provider_adapter_results, prepare_provider_payload
 from backend.app.runtime.ai_media_quality_gate import ai_media_quality_gate_readiness, gate_ai_media_execution_packet, list_ai_media_quality_scores, score_ai_media_quality
 from backend.app.runtime.ai_media_brand_character_memory import ai_media_brand_character_memory_readiness, enrich_ai_media_payload_with_memory, get_ai_media_memory_context, list_ai_media_memory, save_brand_memory, save_campaign_style_memory, save_character_memory
+from backend.app.runtime.ai_media_prompt_template_pack import ai_media_prompt_template_pack_readiness, list_ai_media_prompt_templates, list_rendered_ai_media_prompts, recommend_ai_media_prompt_template, render_ai_media_prompt_template
 
 app = FastAPI(
     title="Ecommerce AI Agent Platform",
@@ -2673,4 +2674,36 @@ def admin_enrich_ai_media_payload_with_memory(payload: dict):
 @app.get("/admin/ai-media-memory/list")
 def admin_list_ai_media_memory(tenant_id: str | None = None, memory_type: str = "all", limit: int = 50):
     return list_ai_media_memory(tenant_id=tenant_id, memory_type=memory_type, limit=limit)
+
+@app.get("/admin/ai-media-templates/readiness")
+def admin_ai_media_prompt_template_pack_readiness():
+    return ai_media_prompt_template_pack_readiness()
+
+
+@app.get("/admin/ai-media-templates/list")
+def admin_list_ai_media_prompt_templates(category: str | None = None):
+    return list_ai_media_prompt_templates(category=category)
+
+
+@app.post("/admin/ai-media-templates/recommend")
+def admin_recommend_ai_media_prompt_template(payload: dict):
+    return recommend_ai_media_prompt_template(
+        media_type=str(payload.get("media_type", "")),
+        target_platform=str(payload.get("target_platform", "")),
+        objective=str(payload.get("objective", "")),
+    )
+
+
+@app.post("/admin/ai-media-templates/render")
+def admin_render_ai_media_prompt_template(payload: dict):
+    return render_ai_media_prompt_template(
+        tenant_id=str(payload.get("tenant_id", "tenant_unknown")),
+        template_id=str(payload.get("template_id", "")),
+        context=dict(payload.get("context", {})),
+    )
+
+
+@app.get("/admin/ai-media-templates/rendered")
+def admin_list_rendered_ai_media_prompts(tenant_id: str | None = None, template_id: str | None = None, limit: int = 50):
+    return list_rendered_ai_media_prompts(tenant_id=tenant_id, template_id=template_id, limit=limit)
 
