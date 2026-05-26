@@ -56,17 +56,17 @@ async function proxy(req: NextRequest, path: string) {
 }
 
 export async function GET(req: NextRequest) {
-  return proxy(req, "/api/client-business-profile");
+  return proxy(req, "/client/business-profile");
 }
 
 export async function POST(req: NextRequest) {
-  return proxy(req, "/api/client-business-profile");
+  return proxy(req, "/client/business-profile");
 }
 
 export async function PUT(req: NextRequest) {
-  return proxy(req, "/api/client-business-profile");
+  return proxy(req, "/client/business-profile");
 }
 
 export async function PATCH(req: NextRequest) {
-  return proxy(req, "/api/client-business-profile");
+  return proxy(req, "/client/business-profile");
 }
