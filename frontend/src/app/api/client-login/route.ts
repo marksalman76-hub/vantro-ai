@@ -1,94 +1,90 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const BACKEND_URL =
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
   "https://api.trance-formation.com.au";
 
-const ADMIN_TOKEN =
-  process.env.ADMIN_PLATFORM_TOKEN ||
-  process.env.ADMIN_AUTH_SECRET ||
-  process.env.ADMIN_AUTH_TOKEN ||
-  process.env.ADMIN_BEARER_TOKEN ||
-  process.env.OWNER_ADMIN_TOKEN ||
-  "";
-
-function backendHeaders(request: NextRequest) {
-  const origin =
-    process.env.NEXT_PUBLIC_FRONTEND_URL ||
-    process.env.FRONTEND_URL ||
-    request.nextUrl.origin ||
-    "https://app.trance-formation.com.au";
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-tenant-id": "public_login",
-    "x-actor-role": "customer",
-    Origin: origin,
-    Referer: `${origin}/login`,
-  };
-
-  if (ADMIN_TOKEN) {
-    headers.Authorization = `Bearer ${ADMIN_TOKEN}`;
-    headers["x-admin-token"] = ADMIN_TOKEN;
-  }
-
-  return headers;
+function extractToken(payload: any): string {
+  return (
+    payload?.token ||
+    payload?.access_token ||
+    payload?.client_token ||
+    payload?.auth_token ||
+    payload?.session?.token ||
+    payload?.data?.token ||
+    payload?.data?.access_token ||
+    ""
+  );
 }
 
-function setClientCookie(response: NextResponse, name: string, value: string, maxAge: number) {
-  if (!value) return;
-
-  response.cookies.set(name, value, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: true,
-    path: "/",
-    maxAge,
-  });
+function extractTenant(payload: any): string {
+  return (
+    payload?.tenant_id ||
+    payload?.tenantId ||
+    payload?.client?.tenant_id ||
+    payload?.data?.tenant_id ||
+    "tenant_unknown"
+  );
 }
 
-export async function POST(request: NextRequest) {
-  const form = await request.formData();
+export async function POST(req: NextRequest) {
+  const body = await req.text();
 
-  const email = String(form.get("email") || "").trim().toLowerCase();
-  const password = String(form.get("password") || "");
-  const nextPath = String(form.get("next") || "/client");
+  const candidates = ["/api/client-login", "/client-login", "/api/login", "/login"];
+  let finalResponse: Response | null = null;
+  let finalText = "";
 
-  const response = await fetch(`${BACKEND_URL}/client/login`, {
-    method: "POST",
-    headers: backendHeaders(request),
-    body: JSON.stringify({ email, password }),
-    cache: "no-store",
-  });
+  for (const path of candidates) {
+    const res = await fetch(`${BACKEND_URL}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-actor-role": "client" },
+      body,
+      cache: "no-store",
+    });
 
-  const result = await response.json().catch(() => ({
-    success: false,
-    error: "client_login_backend_response_not_json",
-  }));
+    finalResponse = res;
+    finalText = await res.text();
 
-  if (!response.ok || !result.success || !result.session_token) {
-    return NextResponse.redirect(
-      new URL(`/login?next=${encodeURIComponent(nextPath)}&error=invalid_login`, request.url),
-      { status: 303 }
-    );
+    if (res.status !== 404) break;
   }
 
-  const account = result.account || {};
-  const tenantId =
-    String(result.tenant_id || account.tenant_id || account.client_id || "").trim();
+  let payload: any = {};
+  try {
+    payload = finalText ? JSON.parse(finalText) : {};
+  } catch {
+    payload = {};
+  }
 
-  const redirect = NextResponse.redirect(new URL(nextPath || "/client", request.url), {
-    status: 303,
+  const response = NextResponse.json(payload, {
+    status: finalResponse?.status || 500,
+    headers: { "Cache-Control": "no-store" },
   });
 
-  const maxAge = 60 * 60 * 8;
+  const token = extractToken(payload);
+  const tenantId = extractTenant(payload);
 
-  setClientCookie(redirect, "client_session", result.session_token, maxAge);
-  setClientCookie(redirect, "tenant_id", tenantId, maxAge);
-  setClientCookie(redirect, "client_tenant_id", tenantId, maxAge);
-  setClientCookie(redirect, "client_id", tenantId, maxAge);
+  if (token) {
+    response.cookies.set("client_token", token, {
+      httpOnly: false,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+  }
 
-  return redirect;
+  if (tenantId) {
+    response.cookies.set("tenant_id", tenantId, {
+      httpOnly: false,
+      secure: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 7,
+    });
+  }
+
+  return response;
 }

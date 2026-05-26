@@ -1,81 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const BACKEND_URL =
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "https://ecommerce-ai-agent-platform-1.onrender.com";
+  "https://api.trance-formation.com.au";
 
-const ADMIN_TOKEN =
-  process.env.ADMIN_AUTH_SECRET ||
-  process.env.ADMIN_AUTH_TOKEN ||
-  process.env.ADMIN_BEARER_TOKEN ||
-  process.env.OWNER_ADMIN_TOKEN ||
-  "";
+function getBearer(req: NextRequest): string {
+  const auth = req.headers.get("authorization") || "";
+  if (auth.toLowerCase().startsWith("bearer ")) return auth;
 
-function backendHeaders() {
-  const headers: Record<string, string> = {
-    "x-tenant-id": "owner",
-    "x-actor-role": "owner",
-  };
+  const cookieToken =
+    req.cookies.get("client_token")?.value ||
+    req.cookies.get("token")?.value ||
+    req.cookies.get("auth_token")?.value ||
+    "";
 
-  if (ADMIN_TOKEN) {
-    headers.Authorization = `Bearer ${ADMIN_TOKEN}`;
-  }
-
-  return headers;
+  return cookieToken ? `Bearer ${cookieToken}` : "";
 }
 
-export async function GET(request: NextRequest) {
-  const sessionToken = request.cookies.get("client_session")?.value || "";
+async function proxy(req: NextRequest, path: string) {
+  const bearer = getBearer(req);
 
-  if (!sessionToken) {
-    return NextResponse.json(
-      { success: false, error: "not_authenticated" },
-      { status: 401 }
-    );
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-actor-role": req.headers.get("x-actor-role") || "client",
+    "x-tenant-id": req.headers.get("x-tenant-id") || req.cookies.get("tenant_id")?.value || "tenant_unknown",
+  };
+
+  if (bearer) headers.Authorization = bearer;
+
+  const init: RequestInit = {
+    method: req.method,
+    headers,
+    cache: "no-store",
+  };
+
+  if (!["GET", "HEAD"].includes(req.method)) {
+    const text = await req.text();
+    if (text) init.body = text;
   }
 
-  const response = await fetch(
-    `${BACKEND_URL}/client/me?session_token=${encodeURIComponent(sessionToken)}`,
-    {
-      cache: "no-store",
-      headers: backendHeaders(),
-    }
-  );
+  const res = await fetch(`${BACKEND_URL}${path}`, init);
+  const contentType = res.headers.get("content-type") || "application/json";
+  const body = await res.text();
 
-  const result = await response.json().catch(() => ({
-    success: false,
-    error: "client_me_backend_response_not_json",
-  }));
-
-  if (!response.ok || !result.success) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: result.error || "client_account_lookup_failed",
-      },
-      { status: 401 }
-    );
-  }
-
-  const account = result.account || {};
-
-  return NextResponse.json({
-    success: true,
-    account: {
-      tenant_id: account.tenant_id || account.client_id || account.id || "",
-      client_id: account.client_id || account.tenant_id || account.id || "",
-      company_name: account.company_name || "Client Workspace",
-      contact_email: account.email || "",
-      package_name: account.package || account.package_name || "Active package",
-      package_status: account.status || "active",
-      billing_status: "active",
-      credits_remaining: account.credits_remaining ?? 0,
-      credits_monthly: account.monthly_credits ?? 0,
-      credits_used: account.credits_used ?? 0,
-      active_agents: account.active_agents || [],
-      paid_agents: account.active_agents || [],
+  return new NextResponse(body, {
+    status: res.status,
+    headers: {
+      "Content-Type": contentType,
+      "Cache-Control": "no-store",
     },
   });
+}
+
+export async function GET(req: NextRequest) {
+  return proxy(req, "/api/client-me");
+}
+
+export async function POST(req: NextRequest) {
+  return proxy(req, "/api/client-me");
+}
+
+export async function PUT(req: NextRequest) {
+  return proxy(req, "/api/client-me");
+}
+
+export async function PATCH(req: NextRequest) {
+  return proxy(req, "/api/client-me");
 }

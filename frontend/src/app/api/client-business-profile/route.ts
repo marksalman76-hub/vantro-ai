@@ -1,100 +1,72 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const BACKEND_URL =
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_BACKEND_URL ||
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
   "https://api.trance-formation.com.au";
 
-function getFrontendOrigin(request: NextRequest) {
-  return (
-    process.env.NEXT_PUBLIC_FRONTEND_URL ||
-    process.env.FRONTEND_URL ||
-    request.nextUrl.origin ||
-    "https://app.trance-formation.com.au"
-  );
+function getBearer(req: NextRequest): string {
+  const auth = req.headers.get("authorization") || "";
+  if (auth.toLowerCase().startsWith("bearer ")) return auth;
+
+  const cookieToken =
+    req.cookies.get("client_token")?.value ||
+    req.cookies.get("token")?.value ||
+    req.cookies.get("auth_token")?.value ||
+    "";
+
+  return cookieToken ? `Bearer ${cookieToken}` : "";
 }
 
-function getTenantId(request: NextRequest, fallbackProfile?: Record<string, unknown>) {
-  return (
-    request.cookies.get("tenant_id")?.value ||
-    request.cookies.get("client_tenant_id")?.value ||
-    request.cookies.get("client_id")?.value ||
-    String(fallbackProfile?.tenant_id || fallbackProfile?.client_id || "") ||
-    "client_workspace"
-  );
-}
+async function proxy(req: NextRequest, path: string) {
+  const bearer = getBearer(req);
 
-function backendHeaders(request: NextRequest, tenantId: string) {
-  const origin = getFrontendOrigin(request);
-
-  return {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "x-tenant-id": tenantId,
-    "x-actor-role": "customer",
-    Origin: origin,
-    Referer: `${origin}/client`,
+    "x-actor-role": req.headers.get("x-actor-role") || "client",
+    "x-tenant-id": req.headers.get("x-tenant-id") || req.cookies.get("tenant_id")?.value || "tenant_unknown",
   };
-}
 
-export async function GET(request: NextRequest) {
-  const sessionToken = request.cookies.get("client_session")?.value || "";
+  if (bearer) headers.Authorization = bearer;
 
-  if (!sessionToken) {
-    return NextResponse.json(
-      { success: false, error: "client_session_required" },
-      { status: 401 }
-    );
-  }
-
-  const tenantId = getTenantId(request);
-
-  const response = await fetch(
-    `${BACKEND_URL}/client/business-profile?session_token=${encodeURIComponent(sessionToken)}`,
-    {
-      method: "GET",
-      headers: backendHeaders(request, tenantId),
-      cache: "no-store",
-    }
-  );
-
-  const result = await response.json().catch(() => ({
-    success: false,
-    error: "business_profile_backend_response_not_json",
-  }));
-
-  return NextResponse.json(result, { status: response.ok ? 200 : response.status });
-}
-
-export async function POST(request: NextRequest) {
-  const sessionToken = request.cookies.get("client_session")?.value || "";
-
-  if (!sessionToken) {
-    return NextResponse.json(
-      { success: false, error: "client_session_required" },
-      { status: 401 }
-    );
-  }
-
-  const body = await request.json().catch(() => ({}));
-  const profile = body?.profile && typeof body.profile === "object" ? body.profile : {};
-  const tenantId = getTenantId(request, profile);
-
-  const response = await fetch(`${BACKEND_URL}/client/business-profile`, {
-    method: "POST",
-    headers: backendHeaders(request, tenantId),
-    body: JSON.stringify({
-      session_token: sessionToken,
-      tenant_id: tenantId,
-      profile,
-    }),
+  const init: RequestInit = {
+    method: req.method,
+    headers,
     cache: "no-store",
+  };
+
+  if (!["GET", "HEAD"].includes(req.method)) {
+    const text = await req.text();
+    if (text) init.body = text;
+  }
+
+  const res = await fetch(`${BACKEND_URL}${path}`, init);
+  const contentType = res.headers.get("content-type") || "application/json";
+  const body = await res.text();
+
+  return new NextResponse(body, {
+    status: res.status,
+    headers: {
+      "Content-Type": contentType,
+      "Cache-Control": "no-store",
+    },
   });
+}
 
-  const result = await response.json().catch(() => ({
-    success: false,
-    error: "business_profile_backend_response_not_json",
-  }));
+export async function GET(req: NextRequest) {
+  return proxy(req, "/api/client-business-profile");
+}
 
-  return NextResponse.json(result, { status: response.ok ? 200 : response.status });
+export async function POST(req: NextRequest) {
+  return proxy(req, "/api/client-business-profile");
+}
+
+export async function PUT(req: NextRequest) {
+  return proxy(req, "/api/client-business-profile");
+}
+
+export async function PATCH(req: NextRequest) {
+  return proxy(req, "/api/client-business-profile");
 }
