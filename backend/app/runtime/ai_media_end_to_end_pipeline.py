@@ -76,6 +76,7 @@ def ai_media_end_to_end_pipeline_readiness() -> Dict[str, Any]:
 def run_ai_media_end_to_end_pipeline(
     *,
     tenant_id: str,
+    creative_director_result = None
     brand_name: str,
     media_type: str,
     objective: str,
