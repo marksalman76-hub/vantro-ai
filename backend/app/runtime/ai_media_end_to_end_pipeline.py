@@ -95,6 +95,8 @@ def run_ai_media_end_to_end_pipeline(
     run_id = f"media_pipeline_{uuid.uuid4().hex[:16]}"
     context = context or {}
 
+    creative_director_result = None
+
     if not entitlement_active:
         result = {
             "run_id": run_id,
@@ -106,12 +108,7 @@ def run_ai_media_end_to_end_pipeline(
             "created_at": _now(),
         }
         _append_jsonl(PIPELINE_RUNS, result)
-        
-    if creative_director_result:
-        result["creative_direction"] = creative_director_result
-
-
-    return result
+        return result
 
     base_payload = {
         "brand_name": brand_name,
@@ -239,7 +236,6 @@ def run_ai_media_end_to_end_pipeline(
 
     status = "ready_for_provider_execution" if execution_allowed and live_keys_available else "prepared"
     if not quality.get("provider_execution_allowed"):
-    creative_director_result = None
         status = "blocked_by_quality_gate"
     if packet.get("status") == "pending_owner_approval":
         status = "pending_owner_approval"
