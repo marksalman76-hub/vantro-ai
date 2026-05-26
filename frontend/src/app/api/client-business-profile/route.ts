@@ -39,6 +39,8 @@ async function proxy(req: NextRequest, path: string) {
     "Content-Type": "application/json",
     "x-actor-role": req.headers.get("x-actor-role") || "client",
     "x-tenant-id": req.headers.get("x-tenant-id") || req.cookies.get("tenant_id")?.value || "tenant_unknown",
+    "origin": req.headers.get("origin") || "",
+    "referer": req.headers.get("referer") || "",
   };
 
   if (bearer) headers.Authorization = bearer;
