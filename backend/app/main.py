@@ -149,6 +149,7 @@ from backend.app.runtime.workflow_provider_auto_routing import list_workflow_pro
 from backend.app.runtime.live_provider_execution_outputs import execute_live_provider_packet, list_live_provider_executions, live_provider_execution_readiness
 from backend.app.runtime.ai_media_creative_model_registry import ai_media_registry_readiness, create_ai_media_execution_packet, create_creative_director_plan, list_ai_media_execution_packets, list_ai_media_models, list_creative_director_plans
 from backend.app.runtime.ai_media_execution_router import ai_media_execution_router_readiness, list_ai_media_router_results, route_ai_media_request
+from backend.app.runtime.ai_media_provider_adapters import ai_media_provider_adapters_readiness, execute_ai_media_provider_adapter, get_provider_adapter_status, list_ai_media_provider_adapter_results, prepare_provider_payload
 
 app = FastAPI(
     title="Ecommerce AI Agent Platform",
@@ -2536,4 +2537,40 @@ def admin_route_ai_media_request(payload: dict):
 @app.get("/admin/ai-media-router/routes")
 def admin_list_ai_media_router_results(tenant_id: str | None = None, status: str | None = None, limit: int = 50):
     return list_ai_media_router_results(tenant_id=tenant_id, status=status, limit=limit)
+
+@app.get("/admin/ai-media-adapters/readiness")
+def admin_ai_media_provider_adapters_readiness():
+    return ai_media_provider_adapters_readiness()
+
+
+@app.get("/admin/ai-media-adapters/status")
+def admin_ai_media_provider_adapter_status(provider: str):
+    return get_provider_adapter_status(provider=provider)
+
+
+@app.post("/admin/ai-media-adapters/prepare")
+def admin_prepare_ai_media_provider_payload(payload: dict):
+    return prepare_provider_payload(
+        provider=str(payload.get("provider", "")),
+        media_type=str(payload.get("media_type", "image")),
+        prompt=str(payload.get("prompt", "")),
+        payload=dict(payload.get("payload", {})),
+    )
+
+
+@app.post("/admin/ai-media-adapters/execute")
+def admin_execute_ai_media_provider_adapter(payload: dict):
+    return execute_ai_media_provider_adapter(
+        provider=str(payload.get("provider", "")),
+        media_type=str(payload.get("media_type", "image")),
+        prompt=str(payload.get("prompt", "")),
+        payload=dict(payload.get("payload", {})),
+        owner_approved=bool(payload.get("owner_approved", False)),
+        allow_external_execution=bool(payload.get("allow_external_execution", False)),
+    )
+
+
+@app.get("/admin/ai-media-adapters/results")
+def admin_list_ai_media_provider_adapter_results(provider: str | None = None, status: str | None = None, limit: int = 50):
+    return list_ai_media_provider_adapter_results(provider=provider, status=status, limit=limit)
 
