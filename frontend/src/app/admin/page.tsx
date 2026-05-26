@@ -76,6 +76,15 @@ export default function AdminPage() {
   const [toast, setToast] = useState("");
   const [cancelOpen, setCancelOpen] = useState(false);
   const [busyAction, setBusyAction] = useState("");
+  const [orchestration, setOrchestration] = useState<any>({
+    readiness: null,
+    routes: null,
+    liveExecutions: null,
+    deadLetters: null,
+    manualReview: null,
+  });
+  const [orchestrationBusy, setOrchestrationBusy] = useState(false);
+  const [orchestrationResult, setOrchestrationResult] = useState<any>(null);
 
   const [clock, setClock] = useState("--:--:--");
 
@@ -100,6 +109,7 @@ export default function AdminPage() {
       "Client Registry": "admin-registry",
       "Runtime Health": "admin-health",
       "Provider Governance": "admin-governance",
+      "Orchestration": "admin-orchestration",
       "Recovery": "admin-recovery",
       "Billing": "admin-billing",
     };
@@ -164,7 +174,114 @@ export default function AdminPage() {
   useEffect(() => {
     loadRuntime();
     loadClientRegistry();
+    loadOrchestrationDashboard();
   }, []);
+
+
+  async function callAdminProxy(path: string, method: "GET" | "POST" = "GET", payload: any = null) {
+    const response = await fetch("/api/admin-deployment-control", {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+        "x-actor-role": "owner",
+        "x-tenant-id": "owner",
+      },
+      body: JSON.stringify({ path, method, payload }),
+    });
+    return response.json();
+  }
+
+  async function loadOrchestrationDashboard() {
+    setOrchestrationBusy(true);
+    try {
+      const [routingReady, routingList, liveReady, liveList, deadLetters, manualReview] = await Promise.all([
+        callAdminProxy("/admin/workflow-provider-routing/readiness", "GET"),
+        callAdminProxy("/admin/workflow-provider-routing/list?limit=10", "GET"),
+        callAdminProxy("/admin/live-provider-execution/readiness", "GET"),
+        callAdminProxy("/admin/live-provider-execution/list?limit=10", "GET"),
+        callAdminProxy("/admin/dead-letter/list?limit=10", "GET"),
+        callAdminProxy("/admin/manual-review/list?limit=10", "GET"),
+      ]);
+
+      setOrchestration({
+        readiness: {
+          routing: routingReady,
+          live_execution: liveReady,
+        },
+        routes: routingList,
+        liveExecutions: liveList,
+        deadLetters,
+        manualReview,
+      });
+      showToast("Orchestration dashboard refreshed.");
+    } catch {
+      setOrchestration({
+        readiness: null,
+        routes: null,
+        liveExecutions: null,
+        deadLetters: null,
+        manualReview: null,
+      });
+      showToast("Orchestration dashboard refresh failed.");
+    } finally {
+      setOrchestrationBusy(false);
+    }
+  }
+
+  async function runOrchestrationSmokeTest() {
+    setOrchestrationBusy(true);
+    setOrchestrationResult(null);
+
+    try {
+      const routeResult = await callAdminProxy("/admin/workflow-provider-routing/route", "POST", {
+        tenant_id: "owner",
+        workflow_id: "admin_orchestration_dashboard_test",
+        agent_id: "marketing_specialist_agent",
+        action_type: "generate_campaign_copy",
+        workflow_payload: {
+          provider: "openai",
+          brand: "Owner Admin",
+          region: "global",
+          task: "campaign copy",
+        },
+        available_providers: ["openai"],
+        entitlement_active: true,
+      });
+
+      const packet = routeResult?.provider_execution_packet || {};
+
+      const executionResult = await callAdminProxy("/admin/live-provider-execution/execute", "POST", {
+        tenant_id: packet.tenant_id || "owner",
+        workflow_id: packet.workflow_id || "admin_orchestration_dashboard_test",
+        agent_id: packet.agent_id || "marketing_specialist_agent",
+        provider: packet.provider || "openai",
+        action_type: packet.action_type || "generate_campaign_copy",
+        payload: packet.payload || {},
+        execution_allowed: packet.execution_allowed === true,
+        owner_approved: true,
+        live_keys_available: false,
+        entitlement_active: true,
+      });
+
+      setOrchestrationResult({
+        status: "orchestration_smoke_test_completed",
+        routeResult,
+        executionResult,
+      });
+
+      await loadOrchestrationDashboard();
+      showToast("Orchestration smoke test completed.");
+    } catch {
+      setOrchestrationResult({
+        status: "orchestration_smoke_test_failed",
+        message: "Unable to run orchestration smoke test.",
+      });
+      showToast("Orchestration smoke test failed.");
+    } finally {
+      setOrchestrationBusy(false);
+    }
+  }
 
   async function runAdminAgent() {
     if (selectedRun.length === 0 || !task.trim()) {
@@ -315,7 +432,7 @@ export default function AdminPage() {
     );
   }
 
-  const navItems = ["Overview", "Run Agent", "Deploy Clients", "Client Registry", "Runtime Health", "Provider Governance", "Recovery", "Billing"];
+  const navItems = ["Overview", "Run Agent", "Deploy Clients", "Client Registry", "Runtime Health", "Provider Governance", "Orchestration", "Recovery", "Billing"];
   const runtimeStatus = runtime?.runtime?.platform_status || "online";
   const registryTotal = clientRegistrySummary?.total || clientRegistrySummary?.tenant_count || clientRegistry.length || 0;
 
@@ -392,6 +509,21 @@ export default function AdminPage() {
               <div className={`metric ${tone}`} key={label}>
                 <small>{label}</small>
                 <strong>{value}</strong>
+              </div>
+            ))}
+          </section>
+
+          <section className="orchestrationStrip">
+            {[
+              ["Routes", orchestration?.routes?.count || 0, "Workflow → provider routing"],
+              ["Live outputs", orchestration?.liveExecutions?.count || 0, "Prepared / executed provider packets"],
+              ["Dead letters", orchestration?.deadLetters?.count || 0, "Failed workflows needing review"],
+              ["Manual review", orchestration?.manualReview?.count || 0, "Owner/admin review queue"],
+            ].map(([label, value, hint]) => (
+              <div className="orchestrationMini" key={label}>
+                <small>{label}</small>
+                <strong>{value}</strong>
+                <span>{hint}</span>
               </div>
             ))}
           </section>
@@ -514,6 +646,93 @@ export default function AdminPage() {
             </div>
           </section>
 
+          <section className="grid two" id="admin-orchestration">
+            <Panel title="Orchestration Dashboard" subtitle="Workflow routing, provider execution, dead-letter handling and owner review visibility.">
+              <div className="orchestrationGrid">
+                <div>
+                  <small>Routing runtime</small>
+                  <strong>{orchestration?.readiness?.routing?.status || "review"}</strong>
+                </div>
+                <div>
+                  <small>Live execution</small>
+                  <strong>{orchestration?.readiness?.live_execution?.status || "review"}</strong>
+                </div>
+                <div>
+                  <small>Owner gates</small>
+                  <strong>Active</strong>
+                </div>
+                <div>
+                  <small>Client safety</small>
+                  <strong>Protected</strong>
+                </div>
+              </div>
+
+              <div className="panelActions">
+                <button className="ghost" onClick={loadOrchestrationDashboard} disabled={orchestrationBusy}>
+                  {orchestrationBusy ? "Refreshing..." : "Refresh orchestration"}
+                </button>
+                <button className="ghost" onClick={runOrchestrationSmokeTest} disabled={orchestrationBusy}>
+                  Run safe smoke test
+                </button>
+              </div>
+
+              <div className="timeline">
+                {(orchestration?.routes?.routes || []).slice(-5).reverse().map((route: any, index: number) => (
+                  <div className="timelineItem" key={route.routing_id || index}>
+                    <b>{route.status || "route"}</b>
+                    <span>{route.agent_id || "agent"} → {route.selected_provider || route.provider_category || "provider"}</span>
+                    <p>{route.route_state || route.action_type || "Workflow route decision recorded."}</p>
+                  </div>
+                ))}
+                {!(orchestration?.routes?.routes || []).length ? (
+                  <div className="timelineItem">
+                    <b>No route events loaded</b>
+                    <span>Refresh or run a safe smoke test</span>
+                    <p>Workflow provider routing decisions will appear here.</p>
+                  </div>
+                ) : null}
+              </div>
+            </Panel>
+
+            <Panel title="Execution Review Centre" subtitle="Live provider outputs, dead letters and manual review queue.">
+              <div className="reviewRows">
+                <div>
+                  <span>Live provider outputs</span>
+                  <b>{orchestration?.liveExecutions?.count || 0}</b>
+                </div>
+                <div>
+                  <span>Dead-letter items</span>
+                  <b>{orchestration?.deadLetters?.count || 0}</b>
+                </div>
+                <div>
+                  <span>Manual review items</span>
+                  <b>{orchestration?.manualReview?.count || 0}</b>
+                </div>
+              </div>
+
+              <div className="reviewList">
+                {(orchestration?.manualReview?.manual_review_items || []).slice(-4).reverse().map((item: any, index: number) => (
+                  <div className="reviewItem" key={item.review_id || index}>
+                    <strong>{item.status || "pending_owner_review"}</strong>
+                    <span>{item.agent_id || "agent"} · {item.action_type || "action"}</span>
+                    <p>{item.failure_reason || "Owner/admin review required before recovery."}</p>
+                  </div>
+                ))}
+                {!(orchestration?.manualReview?.manual_review_items || []).length ? (
+                  <div className="reviewItem">
+                    <strong>No pending manual reviews</strong>
+                    <span>Dead-letter/manual-review runtime is ready</span>
+                    <p>Items requiring owner/admin decisions will appear here.</p>
+                  </div>
+                ) : null}
+              </div>
+
+              <pre className={orchestrationResult ? "output has" : "output"}>
+                {orchestrationResult ? JSON.stringify(orchestrationResult, null, 2) : "Orchestration test result will appear here..."}
+              </pre>
+            </Panel>
+          </section>
+
           <section className="grid two">
             <div id="admin-recovery">
               <Panel title="Operational Recovery" subtitle="Recovery, retry preparation, replay, and artifact visibility.">
@@ -604,9 +823,12 @@ export default function AdminPage() {
         .split{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.output{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:14px;min-height:80px;color:#3E4A5C;white-space:pre-wrap;margin-top:12px;max-height:360px;overflow:auto}.output.has{color:#B8C4D8;border-color:rgba(14,207,188,.18)}.output.error{color:#fecaca;border-color:rgba(239,68,68,.25)}.actionStatus{margin-top:14px;border-radius:12px;padding:14px 16px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.035)}.actionStatus strong{display:block;color:#EEF2FF;margin-bottom:6px}.actionStatus p{margin:0;color:#B8C4D8}.actionStatus small{display:block;color:#F5C518;margin-top:10px;line-height:1.5}.actionStatus.ok{border-color:rgba(14,207,188,.22);background:rgba(14,207,188,.055)}.actionStatus.error{border-color:rgba(239,68,68,.25);background:rgba(239,68,68,.055)}.progress{height:4px;background:rgba(255,255,255,.08);border-radius:9px;overflow:hidden;margin:10px 0}.progress span{display:block;height:100%;width:80%;background:linear-gradient(90deg,#5B52F0,#0ECFBC);animation:load 1s infinite}
         .status{display:flex;justify-content:space-between;align-items:center;gap:16px;border-bottom:1px solid rgba(255,255,255,.06);padding:11px 0}.status b{font-size:11px;border-radius:20px;padding:4px 11px}.status .ready{background:rgba(14,207,188,.1);color:#0ECFBC}.status .warn{background:rgba(245,197,24,.1);color:#F5C518}.status .error{background:rgba(239,68,68,.1);color:#EF4444}
         .registryStats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.registryStats div{background:rgba(255,255,255,.03);border-radius:9px;padding:12px}.registryStats small{color:#3E4A5C}.registryStats strong{display:block;color:#EEF2FF;font-size:22px}.clientRow{margin-top:12px;background:rgba(255,255,255,.03);border-left:3px solid #3E4A5C;border-radius:9px;padding:13px}.clientRow strong{color:#EEF2FF}.clientRow span{float:right;color:#7A8899}.billingGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}.gradient{font-size:30px;background:linear-gradient(135deg,#7C74FF,#0ECFBC);-webkit-background-clip:text;color:transparent}
+        .orchestrationStrip{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:-8px 0 22px}.orchestrationMini{background:#0F1228;border:1px solid rgba(255,255,255,.06);border-radius:12px;padding:16px}.orchestrationMini small{display:block;color:#3E4A5C;text-transform:uppercase;letter-spacing:.09em;font-size:10px;font-weight:900}.orchestrationMini strong{display:block;color:#EEF2FF;font-size:28px;margin:7px 0}.orchestrationMini span{color:#7A8899;font-size:12px;line-height:1.4}
+        .orchestrationGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}.orchestrationGrid div{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:12px}.orchestrationGrid small{display:block;color:#3E4A5C;text-transform:uppercase;font-size:9px;font-weight:900}.orchestrationGrid strong{display:block;color:#EEF2FF;margin-top:6px;text-transform:capitalize}
+        .timeline,.reviewList{display:grid;gap:8px;margin-top:12px}.timelineItem,.reviewItem{background:rgba(255,255,255,.03);border-left:3px solid #5B52F0;border-radius:10px;padding:12px}.timelineItem b,.reviewItem strong{display:block;color:#EEF2FF;font-size:12px;text-transform:capitalize}.timelineItem span,.reviewItem span{display:block;color:#0ECFBC;font-size:11px;margin-top:4px}.timelineItem p,.reviewItem p{margin:6px 0 0;color:#7A8899;font-size:12px;line-height:1.45}.reviewRows{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}.reviewRows div{background:rgba(255,255,255,.03);border-radius:10px;padding:12px}.reviewRows span{display:block;color:#3E4A5C;font-size:10px;text-transform:uppercase;font-weight:900}.reviewRows b{display:block;color:#EEF2FF;font-size:24px;margin-top:6px}
         .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:grid;place-items:center;z-index:99}.modal>div{width:min(420px,90vw);background:#111426;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:28px}.toast{position:fixed;right:24px;bottom:24px;background:#0ECFBC;color:#06080F;border-radius:9px;padding:12px 22px;font-weight:800;z-index:120}
         @keyframes load{50%{transform:translateX(20%)}}
-        @media(max-width:1100px){.metrics{grid-template-columns:repeat(3,1fr)}.grid.two,.billingGrid{grid-template-columns:1fr}.sidebar{display:none}.content{padding:18px}.pills{max-height:320px}}@media(max-width:700px){.metrics{grid-template-columns:1fr 1fr}.topRight .clock{display:none}}
+        @media(max-width:1100px){.metrics{grid-template-columns:repeat(3,1fr)}.grid.two,.billingGrid,.orchestrationStrip{grid-template-columns:1fr}.orchestrationGrid,.reviewRows{grid-template-columns:1fr 1fr}.sidebar{display:none}.content{padding:18px}.pills{max-height:320px}}@media(max-width:700px){.metrics{grid-template-columns:1fr 1fr}.topRight .clock{display:none}}
       `}</style>
     </main>
   );
