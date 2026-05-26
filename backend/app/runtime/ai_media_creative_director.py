@@ -377,6 +377,9 @@ def run_shared_ai_media_creative_director(payload: Optional[Dict[str, Any]] = No
 
     orchestration_packet["character_consistency_plan"] = build_character_consistency_plan(payload, orchestration_packet)
 
+    orchestration_packet["multilingual_dubbing_plan"] = build_multilingual_dubbing_plan(payload, orchestration_packet)
+
+
 
 
     return {
@@ -511,6 +514,79 @@ def build_provider_fallback_execution_plan(orchestration_packet: Dict[str, Any])
             "preserve_ecommerce_objective": True,
             "do_not_publish_without_governance": True,
             "owner_review_required_for_spend_or_campaign_scaling": True,
+        },
+    }
+
+
+def build_multilingual_dubbing_plan(payload: Dict[str, Any], orchestration_packet: Dict[str, Any]) -> Dict[str, Any]:
+    language = _safe_text(payload.get("language"), "English")
+    target_languages = payload.get("target_languages") or payload.get("languages") or []
+    region = _safe_text(payload.get("region") or payload.get("country"), "global")
+    media_type = _safe_text(payload.get("media_type"), "")
+    objective = _safe_text(payload.get("objective") or payload.get("campaign_goal"), "")
+
+    if isinstance(target_languages, str):
+        target_languages = [item.strip() for item in target_languages.split(",") if item.strip()]
+
+    language_l = language.lower()
+    objective_l = objective.lower()
+    media_type_l = media_type.lower()
+
+    multilingual_required = bool(
+        target_languages
+        or language_l not in {"english", "en"}
+        or "dub" in media_type_l
+        or "multilingual" in objective_l
+        or "localized" in objective_l
+        or "localised" in objective_l
+    )
+
+    if multilingual_required and not target_languages:
+        target_languages = [language]
+
+    return {
+        "multilingual_required": multilingual_required,
+        "source_language": "English",
+        "primary_language": language,
+        "target_languages": target_languages,
+        "region": region,
+        "dubbing_mode": "native_sounding_region_aware_dubbing" if multilingual_required else "not_required",
+        "lip_sync_required": multilingual_required,
+        "caption_localisation_required": multilingual_required,
+        "voice_consistency_required": multilingual_required,
+        "script_adaptation_rules": {
+            "translate_meaning_not_literal_words": True,
+            "preserve_offer_and_claim_accuracy": True,
+            "preserve_brand_voice": True,
+            "adapt_idioms_to_region": multilingual_required,
+            "adapt_cta_to_platform_and_country": multilingual_required,
+            "avoid_unsupported_local_claims": True,
+        },
+        "voice_rules": {
+            "native_accent_required": multilingual_required,
+            "natural_pacing_required": multilingual_required,
+            "preserve_creator_energy": multilingual_required,
+            "preserve_character_voice_when_same_face_required": orchestration_packet.get("character_consistency_plan", {}).get("same_face_required", False),
+            "avoid_robotic_or_overacted_delivery": True,
+        },
+        "timing_rules": {
+            "allow_translation_length_variance": True,
+            "adjust_scene_pacing_for_language_length": multilingual_required,
+            "maintain_cta_readability": True,
+            "keep_hook_inside_first_two_seconds_where_possible": True,
+        },
+        "quality_checks": {
+            "translation_accuracy_check_required": multilingual_required,
+            "lip_sync_quality_check_required": multilingual_required,
+            "caption_readability_check_required": multilingual_required,
+            "regional_compliance_review_recommended": multilingual_required,
+            "manual_review_if_claims_change": True,
+        },
+        "provider_requirements": {
+            "requires_voice_provider": multilingual_required,
+            "requires_lip_sync_provider": multilingual_required,
+            "requires_caption_generation": multilingual_required,
+            "fallback_to_subtitled_variant_if_lip_sync_fails": multilingual_required,
         },
     }
 
