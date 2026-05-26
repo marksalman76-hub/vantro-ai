@@ -31,60 +31,86 @@ function extractTenant(payload: any): string {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.text();
+  const formData = await req.formData();
 
-  const candidates = ["/api/client-login", "/client-login", "/api/login", "/login"];
+  const email = String(formData.get("email") || "");
+  const password = String(formData.get("password") || "");
+  const nextPath = String(formData.get("next") || "/client");
+
+  const payloadBody = JSON.stringify({
+    email,
+    password,
+  });
+
+  const candidates = [
+    "/api/client-login",
+    "/client-login",
+    "/api/login",
+    "/login",
+  ];
+
   let finalResponse: Response | null = null;
   let finalText = "";
 
   for (const path of candidates) {
     const res = await fetch(`${BACKEND_URL}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "x-actor-role": "client" },
-      body,
+      headers: {
+        "Content-Type": "application/json",
+        "x-actor-role": "client",
+        origin: req.headers.get("origin") || "",
+        referer: req.headers.get("referer") || "",
+      },
+      body: payloadBody,
       cache: "no-store",
     });
 
     finalResponse = res;
     finalText = await res.text();
 
-    if (res.status !== 404) break;
+    if (res.status !== 404) {
+      break;
+    }
   }
 
   let payload: any = {};
+
   try {
     payload = finalText ? JSON.parse(finalText) : {};
   } catch {
     payload = {};
   }
 
-  const response = NextResponse.json(payload, {
-    status: finalResponse?.status || 500,
-    headers: { "Cache-Control": "no-store" },
-  });
-
   const token = extractToken(payload);
   const tenantId = extractTenant(payload);
 
-  if (token) {
-    response.cookies.set("client_token", token, {
-      httpOnly: false,
-      secure: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+  if (!finalResponse?.ok || !token) {
+    return NextResponse.redirect(
+      new URL("/login?error=1", req.url),
+      { status: 302 }
+    );
   }
 
-  if (tenantId) {
-    response.cookies.set("tenant_id", tenantId, {
-      httpOnly: false,
-      secure: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
-  }
+  const response = NextResponse.redirect(
+    new URL(nextPath, req.url),
+    { status: 302 }
+  );
+
+  response.cookies.set("client_token", token, {
+    httpOnly: false,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+
+  response.cookies.set("tenant_id", tenantId, {
+    httpOnly: false,
+    secure: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 7,
+  });
 
   return response;
 }
