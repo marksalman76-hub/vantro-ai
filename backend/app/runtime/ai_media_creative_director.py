@@ -379,6 +379,9 @@ def run_shared_ai_media_creative_director(payload: Optional[Dict[str, Any]] = No
 
     orchestration_packet["multilingual_dubbing_plan"] = build_multilingual_dubbing_plan(payload, orchestration_packet)
 
+    orchestration_packet["provider_ready_execution_packet"] = build_provider_ready_execution_packet(orchestration_packet)
+
+
 
 
 
@@ -587,6 +590,83 @@ def build_multilingual_dubbing_plan(payload: Dict[str, Any], orchestration_packe
             "requires_lip_sync_provider": multilingual_required,
             "requires_caption_generation": multilingual_required,
             "fallback_to_subtitled_variant_if_lip_sync_fails": multilingual_required,
+        },
+    }
+
+
+def build_provider_ready_execution_packet(orchestration_packet: Dict[str, Any]) -> Dict[str, Any]:
+    adapter_payload = orchestration_packet.get("adapter_ready_payload", {})
+    provider_strategy = orchestration_packet.get("provider_strategy", {})
+    cinematic_preset = orchestration_packet.get("cinematic_parameter_preset", {})
+    character_plan = orchestration_packet.get("character_consistency_plan", {})
+    dubbing_plan = orchestration_packet.get("multilingual_dubbing_plan", {})
+    fallback_plan = orchestration_packet.get("provider_fallback_execution_plan", {})
+    score = orchestration_packet.get("orchestration_score", {})
+
+    return {
+        "packet_type": "provider_ready_ai_media_execution_packet",
+        "packet_version": "1.0.0",
+        "execution_allowed": score.get("provider_execution_allowed", True),
+        "manual_review_required": score.get("manual_review_required", False),
+        "quality_threshold": fallback_plan.get("quality_threshold", 80),
+        "primary_provider_slot": provider_strategy.get("primary_provider_slot"),
+        "fallback_provider_slots": provider_strategy.get("fallback_provider_slots", []),
+        "creative_brief": adapter_payload.get("creative_brief"),
+        "media_type": orchestration_packet.get("media_type"),
+        "platform": orchestration_packet.get("platform"),
+        "brand": orchestration_packet.get("brand"),
+        "product": orchestration_packet.get("product"),
+        "target_audience": orchestration_packet.get("target_audience"),
+        "language": orchestration_packet.get("language"),
+        "region": orchestration_packet.get("region"),
+        "provider_parameters": {
+            "style": adapter_payload.get("style"),
+            "camera_language": adapter_payload.get("camera_language"),
+            "lighting": adapter_payload.get("lighting"),
+            "pacing": adapter_payload.get("pacing"),
+            "hook": adapter_payload.get("hook"),
+            "scene_plan": adapter_payload.get("scenes", []),
+            "aspect_ratio_priority": cinematic_preset.get("provider_parameter_guidance", {}).get("aspect_ratio_priority"),
+            "motion_guidance": cinematic_preset.get("provider_parameter_guidance", {}).get("motion_guidance"),
+            "lighting_guidance": cinematic_preset.get("provider_parameter_guidance", {}).get("lighting_guidance"),
+            "shot_type_guidance": cinematic_preset.get("provider_parameter_guidance", {}).get("shot_type_guidance", []),
+            "caption_guidance": cinematic_preset.get("provider_parameter_guidance", {}).get("caption_guidance"),
+            "voice_guidance": cinematic_preset.get("provider_parameter_guidance", {}).get("voice_guidance"),
+        },
+        "continuity_controls": {
+            "same_face_required": character_plan.get("same_face_required", False),
+            "character_id": character_plan.get("character_id"),
+            "reference_asset_id": character_plan.get("reference_asset_id"),
+            "identity_lock_fields": character_plan.get("identity_lock_fields", []),
+            "face_drift_check_required": character_plan.get("quality_checks", {}).get("face_drift_check_required", False),
+            "minimum_identity_confidence": character_plan.get("quality_checks", {}).get("minimum_identity_confidence"),
+        },
+        "multilingual_controls": {
+            "multilingual_required": dubbing_plan.get("multilingual_required", False),
+            "target_languages": dubbing_plan.get("target_languages", []),
+            "lip_sync_required": dubbing_plan.get("lip_sync_required", False),
+            "caption_localisation_required": dubbing_plan.get("caption_localisation_required", False),
+            "voice_consistency_required": dubbing_plan.get("voice_consistency_required", False),
+            "fallback_to_subtitled_variant_if_lip_sync_fails": dubbing_plan.get("provider_requirements", {}).get("fallback_to_subtitled_variant_if_lip_sync_fails", False),
+        },
+        "fallback_controls": {
+            "fallback_enabled": fallback_plan.get("fallback_enabled", True),
+            "execution_mode": fallback_plan.get("execution_mode"),
+            "fallback_steps": fallback_plan.get("fallback_steps", []),
+            "manual_review_final_step": fallback_plan.get("manual_review_final_step", True),
+        },
+        "governance_controls": {
+            "do_not_publish_without_governance": True,
+            "owner_review_required_for_spend_or_campaign_scaling": True,
+            "client_safe_output_only": True,
+            "internal_rules_hidden_from_client": True,
+        },
+        "quality_controls": {
+            "overall_score": score.get("overall_score"),
+            "readiness_level": score.get("readiness_level"),
+            "score_breakdown": score.get("scores", {}),
+            "premium_only": orchestration_packet.get("quality_rules", {}).get("premium_only", True),
+            "no_placeholder_outputs": orchestration_packet.get("quality_rules", {}).get("no_placeholder_outputs", True),
         },
     }
 
