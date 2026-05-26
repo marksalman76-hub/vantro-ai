@@ -12,6 +12,12 @@ This module does not expose secrets to frontend/client UI.
 
 from __future__ import annotations
 
+from backend.app.runtime.ai_media_live_provider_execution import (
+    detect_ai_media_provider_readiness,
+    execute_ai_media_provider_ready_packet,
+    select_provider_route,
+)
+
 import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -535,4 +541,37 @@ def enrich_provider_payload_with_ai_media_packet(payload):
     enriched["provider_quality_controls"] = provider_ready_packet.get("quality_controls", {})
 
     return enriched
+
+
+def ai_media_provider_execution_bridge(payload):
+    if not isinstance(payload, dict):
+        return {
+            "success": False,
+            "error": "payload_required",
+            "runtime": "ai_media_provider_execution_bridge",
+        }
+
+    packet = None
+
+    if isinstance(payload.get("provider_ready_execution_packet"), dict):
+        packet = payload.get("provider_ready_execution_packet")
+    elif isinstance(payload.get("ai_media_provider_ready_packet"), dict):
+        packet = payload.get("ai_media_provider_ready_packet")
+    elif isinstance(payload.get("orchestration_packet"), dict):
+        packet = payload["orchestration_packet"].get("provider_ready_execution_packet")
+    elif isinstance(payload.get("creative_direction"), dict):
+        nested = payload["creative_direction"].get("orchestration_packet", {})
+        if isinstance(nested, dict):
+            packet = nested.get("provider_ready_execution_packet")
+
+    if not isinstance(packet, dict):
+        return {
+            "success": False,
+            "error": "provider_ready_execution_packet_missing",
+            "runtime": "ai_media_provider_execution_bridge",
+        }
+
+    result = execute_ai_media_provider_ready_packet(packet)
+    result["bridge_runtime"] = "ai_media_provider_execution_bridge"
+    return result
 
