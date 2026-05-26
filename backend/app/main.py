@@ -2190,3 +2190,34 @@ async def hardened_stripe_webhook(payload: dict):
 async def admin_billing_dashboard_route(payload: dict):
     return admin_billing_dashboard(payload)
 
+# --- Provider bridge admin diagnostic endpoints ---
+# Admin/runtime diagnostics only. No secrets are exposed.
+
+@app.get("/admin/provider-connectors/readiness")
+async def admin_provider_connectors_readiness():
+    from backend.app.runtime.provider_connector_registry import readiness
+
+    return readiness()
+
+
+@app.get("/admin/provider-bridge/readiness")
+async def admin_provider_bridge_readiness():
+    from backend.app.runtime.execution_stack import runtime_provider_bridge_readiness
+
+    return runtime_provider_bridge_readiness()
+
+
+@app.post("/admin/provider-bridge/test-safe-generation")
+async def admin_provider_bridge_test_safe_generation(payload: dict | None = None):
+    from backend.app.runtime.execution_stack import execute_safe_generation_via_provider_bridge
+
+    payload = payload or {}
+    return execute_safe_generation_via_provider_bridge(
+        action_type=payload.get("action_type", "marketing_campaign_execution"),
+        payload=payload.get("payload", {"test": "provider bridge admin safe-generation test"}),
+        tenant_id=payload.get("tenant_id", "owner_admin_test"),
+        actor_role=payload.get("actor_role", "owner_admin"),
+        preferred_provider=payload.get("preferred_provider", "openai"),
+        capability=payload.get("capability"),
+    )
+
