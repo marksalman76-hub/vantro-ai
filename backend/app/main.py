@@ -145,6 +145,7 @@ from backend.app.core.final_deployment_readiness_runtime import final_deployment
 from backend.app.core.stripe_advanced_billing_runtime import advanced_billing_readiness
 from backend.app.core.stripe_customer_billing_portal import billing_portal_readiness
 from backend.app.runtime.dead_letter_manual_review_runtime import create_dead_letter_record, dead_letter_readiness, list_dead_letters, list_manual_review_queue, record_manual_review_decision
+from backend.app.runtime.workflow_provider_auto_routing import list_workflow_provider_routes, route_workflow_to_provider_bridge, workflow_provider_routing_readiness
 
 app = FastAPI(
     title="Ecommerce AI Agent Platform",
@@ -2407,4 +2408,26 @@ def admin_record_manual_review_decision(payload: dict):
         actor_role=str(payload.get("actor_role", "")),
         notes=str(payload.get("notes", "")),
     )
+
+@app.get("/admin/workflow-provider-routing/readiness")
+def admin_workflow_provider_routing_readiness():
+    return workflow_provider_routing_readiness()
+
+
+@app.post("/admin/workflow-provider-routing/route")
+def admin_route_workflow_to_provider(payload: dict):
+    return route_workflow_to_provider_bridge(
+        tenant_id=str(payload.get("tenant_id", "tenant_unknown")),
+        workflow_id=str(payload.get("workflow_id", "workflow_unknown")),
+        agent_id=str(payload.get("agent_id", "unknown_agent")),
+        action_type=str(payload.get("action_type", "unknown_action")),
+        workflow_payload=dict(payload.get("workflow_payload", {})),
+        available_providers=list(payload.get("available_providers", [])) if payload.get("available_providers") is not None else None,
+        entitlement_active=bool(payload.get("entitlement_active", True)),
+    )
+
+
+@app.get("/admin/workflow-provider-routing/list")
+def admin_list_workflow_provider_routes(tenant_id: str | None = None, status: str | None = None, limit: int = 50):
+    return list_workflow_provider_routes(tenant_id=tenant_id, status=status, limit=limit)
 
