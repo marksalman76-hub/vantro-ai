@@ -144,6 +144,7 @@ from backend.app.core.live_stripe_bridge_runtime import live_stripe_bridge_readi
 from backend.app.core.final_deployment_readiness_runtime import final_deployment_readiness
 from backend.app.core.stripe_advanced_billing_runtime import advanced_billing_readiness
 from backend.app.core.stripe_customer_billing_portal import billing_portal_readiness
+from backend.app.runtime.dead_letter_manual_review_runtime import create_dead_letter_record, dead_letter_readiness, list_dead_letters, list_manual_review_queue, record_manual_review_decision
 
 app = FastAPI(
     title="Ecommerce AI Agent Platform",
@@ -2368,4 +2369,42 @@ async def admin_cross_agent_orchestration_get(orchestration_id: str):
     from backend.app.runtime.cross_agent_workflow_orchestration import get_cross_agent_orchestration
 
     return get_cross_agent_orchestration(orchestration_id)
+
+@app.get("/admin/dead-letter/readiness")
+def admin_dead_letter_readiness():
+    return dead_letter_readiness()
+
+
+@app.post("/admin/dead-letter/create")
+def admin_create_dead_letter(payload: dict):
+    return create_dead_letter_record(
+        tenant_id=str(payload.get("tenant_id", "tenant_unknown")),
+        workflow_id=payload.get("workflow_id"),
+        agent_id=str(payload.get("agent_id", "unknown_agent")),
+        action_type=str(payload.get("action_type", "unknown_action")),
+        failure_reason=str(payload.get("failure_reason", "unspecified_failure")),
+        payload=dict(payload.get("payload", {})),
+        retry_count=int(payload.get("retry_count", 0)),
+        severity=str(payload.get("severity", "medium")),
+    )
+
+
+@app.get("/admin/dead-letter/list")
+def admin_list_dead_letters(tenant_id: str | None = None, status: str | None = None, limit: int = 50):
+    return list_dead_letters(tenant_id=tenant_id, status=status, limit=limit)
+
+
+@app.get("/admin/manual-review/list")
+def admin_list_manual_review_queue(tenant_id: str | None = None, status: str | None = None, limit: int = 50):
+    return list_manual_review_queue(tenant_id=tenant_id, status=status, limit=limit)
+
+
+@app.post("/admin/manual-review/decision")
+def admin_record_manual_review_decision(payload: dict):
+    return record_manual_review_decision(
+        review_id=str(payload.get("review_id", "")),
+        decision=str(payload.get("decision", "")),
+        actor_role=str(payload.get("actor_role", "")),
+        notes=str(payload.get("notes", "")),
+    )
 
