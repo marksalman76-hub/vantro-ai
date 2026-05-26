@@ -4,7 +4,7 @@ const BACKEND_URL =
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_BASE_URL ||
-  "https://ecommerce-ai-agent-platform-1.onrender.com";
+  "https://api.trance-formation.com.au";
 
 const ADMIN_TOKEN =
   process.env.ADMIN_PLATFORM_TOKEN ||

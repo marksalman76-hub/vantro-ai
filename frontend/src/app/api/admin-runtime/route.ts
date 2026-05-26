@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 const BACKEND_URL =
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_BACKEND_URL ||
-  "https://ecommerce-ai-agent-platform-1.onrender.com";
+  "https://api.trance-formation.com.au";
 
 async function safeFetch(path: string) {
   try {
