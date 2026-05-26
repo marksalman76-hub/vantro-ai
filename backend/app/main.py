@@ -2804,3 +2804,24 @@ def debug_live_auth_fingerprint():
         "app_env": os.getenv("APP_ENV", ""),
         "service": "control-api",
     }
+@app.get("/system/live-auth-fingerprint")
+def system_live_auth_fingerprint():
+    def fp(name: str):
+        value = os.getenv(name, "").strip()
+        return {
+            "present": bool(value),
+            "length": len(value),
+            "sha_prefix": hashlib.sha256(value.encode()).hexdigest()[:10] if value else None,
+        }
+
+    return {
+        "success": True,
+        "safe_debug": True,
+        "public_safe": True,
+        "secrets_not_returned": True,
+        "admin_platform_token": fp("ADMIN_PLATFORM_TOKEN"),
+        "admin_auth_secret": fp("ADMIN_AUTH_SECRET"),
+        "admin_auth_token": fp("ADMIN_AUTH_TOKEN"),
+        "app_env": os.getenv("APP_ENV", ""),
+        "service": "control-api",
+    }
