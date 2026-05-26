@@ -151,6 +151,7 @@ from backend.app.runtime.ai_media_creative_model_registry import ai_media_regist
 from backend.app.runtime.ai_media_execution_router import ai_media_execution_router_readiness, list_ai_media_router_results, route_ai_media_request
 from backend.app.runtime.ai_media_provider_adapters import ai_media_provider_adapters_readiness, execute_ai_media_provider_adapter, get_provider_adapter_status, list_ai_media_provider_adapter_results, prepare_provider_payload
 from backend.app.runtime.ai_media_quality_gate import ai_media_quality_gate_readiness, gate_ai_media_execution_packet, list_ai_media_quality_scores, score_ai_media_quality
+from backend.app.runtime.ai_media_brand_character_memory import ai_media_brand_character_memory_readiness, enrich_ai_media_payload_with_memory, get_ai_media_memory_context, list_ai_media_memory, save_brand_memory, save_campaign_style_memory, save_character_memory
 
 app = FastAPI(
     title="Ecommerce AI Agent Platform",
@@ -2599,4 +2600,77 @@ def admin_gate_ai_media_execution_packet(payload: dict):
 @app.get("/admin/ai-media-quality/scores")
 def admin_list_ai_media_quality_scores(tenant_id: str | None = None, status: str | None = None, limit: int = 50):
     return list_ai_media_quality_scores(tenant_id=tenant_id, status=status, limit=limit)
+
+@app.get("/admin/ai-media-memory/readiness")
+def admin_ai_media_brand_character_memory_readiness():
+    return ai_media_brand_character_memory_readiness()
+
+
+@app.post("/admin/ai-media-memory/brand")
+def admin_save_ai_media_brand_memory(payload: dict):
+    return save_brand_memory(
+        tenant_id=str(payload.get("tenant_id", "tenant_unknown")),
+        brand_name=str(payload.get("brand_name", "Brand")),
+        brand_colours=list(payload.get("brand_colours", [])) if payload.get("brand_colours") is not None else [],
+        typography_style=str(payload.get("typography_style", "")),
+        visual_style=str(payload.get("visual_style", "")),
+        product_identity=str(payload.get("product_identity", "")),
+        forbidden_styles=list(payload.get("forbidden_styles", [])) if payload.get("forbidden_styles") is not None else [],
+        region_preferences=dict(payload.get("region_preferences", {})),
+        platform_preferences=dict(payload.get("platform_preferences", {})),
+    )
+
+
+@app.post("/admin/ai-media-memory/character")
+def admin_save_ai_media_character_memory(payload: dict):
+    return save_character_memory(
+        tenant_id=str(payload.get("tenant_id", "tenant_unknown")),
+        character_name=str(payload.get("character_name", "Creator")),
+        reference_id=str(payload.get("reference_id", "")),
+        face_consistency_notes=str(payload.get("face_consistency_notes", "")),
+        voice_notes=str(payload.get("voice_notes", "")),
+        age_range=str(payload.get("age_range", "")),
+        gender_presentation=str(payload.get("gender_presentation", "")),
+        ethnicity_or_regional_style=str(payload.get("ethnicity_or_regional_style", "")),
+        accent_or_language_style=str(payload.get("accent_or_language_style", "")),
+        usage_rules=list(payload.get("usage_rules", [])) if payload.get("usage_rules") is not None else [],
+    )
+
+
+@app.post("/admin/ai-media-memory/campaign-style")
+def admin_save_ai_media_campaign_style_memory(payload: dict):
+    return save_campaign_style_memory(
+        tenant_id=str(payload.get("tenant_id", "tenant_unknown")),
+        campaign_name=str(payload.get("campaign_name", "Campaign")),
+        target_platform=str(payload.get("target_platform", "Meta Ads")),
+        media_type=str(payload.get("media_type", "video")),
+        style_rules=list(payload.get("style_rules", [])) if payload.get("style_rules") is not None else [],
+        winning_hooks=list(payload.get("winning_hooks", [])) if payload.get("winning_hooks") is not None else [],
+        winning_visual_patterns=list(payload.get("winning_visual_patterns", [])) if payload.get("winning_visual_patterns") is not None else [],
+        avoided_patterns=list(payload.get("avoided_patterns", [])) if payload.get("avoided_patterns") is not None else [],
+        performance_notes=str(payload.get("performance_notes", "")),
+    )
+
+
+@app.get("/admin/ai-media-memory/context")
+def admin_get_ai_media_memory_context(tenant_id: str, brand_name: str = "", target_platform: str = "", media_type: str = ""):
+    return get_ai_media_memory_context(
+        tenant_id=tenant_id,
+        brand_name=brand_name,
+        target_platform=target_platform,
+        media_type=media_type,
+    )
+
+
+@app.post("/admin/ai-media-memory/enrich")
+def admin_enrich_ai_media_payload_with_memory(payload: dict):
+    return enrich_ai_media_payload_with_memory(
+        tenant_id=str(payload.get("tenant_id", "tenant_unknown")),
+        payload=dict(payload.get("payload", {})),
+    )
+
+
+@app.get("/admin/ai-media-memory/list")
+def admin_list_ai_media_memory(tenant_id: str | None = None, memory_type: str = "all", limit: int = 50):
+    return list_ai_media_memory(tenant_id=tenant_id, memory_type=memory_type, limit=limit)
 
