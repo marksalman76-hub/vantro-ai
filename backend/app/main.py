@@ -1,3 +1,4 @@
+from backend.app.runtime.ai_media_creative_director import readiness as ai_media_creative_director_readiness, run_shared_ai_media_creative_director
 from backend.app.core.integration_live_adapter_registry import (
     adapter_registry_summary,
     execute_integration_action,
@@ -154,6 +155,7 @@ from backend.app.runtime.ai_media_quality_gate import ai_media_quality_gate_read
 from backend.app.runtime.ai_media_brand_character_memory import ai_media_brand_character_memory_readiness, enrich_ai_media_payload_with_memory, get_ai_media_memory_context, list_ai_media_memory, save_brand_memory, save_campaign_style_memory, save_character_memory
 from backend.app.runtime.ai_media_prompt_template_pack import ai_media_prompt_template_pack_readiness, list_ai_media_prompt_templates, list_rendered_ai_media_prompts, recommend_ai_media_prompt_template, render_ai_media_prompt_template
 from backend.app.runtime.ai_media_multi_provider_execution_packets import advance_packet_to_next_provider, ai_media_multi_provider_packets_readiness, create_ai_media_multi_provider_packet, list_ai_media_multi_provider_packets
+from backend.app.runtime.ai_media_end_to_end_pipeline import ai_media_end_to_end_pipeline_readiness, list_ai_media_pipeline_runs, run_ai_media_end_to_end_pipeline
 
 app = FastAPI(
     title="Ecommerce AI Agent Platform",
@@ -2742,3 +2744,41 @@ def admin_advance_ai_media_packet_provider(payload: dict):
 def admin_list_ai_media_multi_provider_packets(tenant_id: str | None = None, status: str | None = None, limit: int = 50):
     return list_ai_media_multi_provider_packets(tenant_id=tenant_id, status=status, limit=limit)
 
+@app.get("/admin/ai-media-pipeline/readiness")
+def admin_ai_media_end_to_end_pipeline_readiness():
+    return ai_media_end_to_end_pipeline_readiness()
+
+
+@app.post("/admin/ai-media-pipeline/run")
+def admin_run_ai_media_end_to_end_pipeline(payload: dict):
+    return run_ai_media_end_to_end_pipeline(
+        tenant_id=str(payload.get("tenant_id", "tenant_unknown")),
+        brand_name=str(payload.get("brand_name", "Brand")),
+        media_type=str(payload.get("media_type", "ugc video")),
+        objective=str(payload.get("objective", "Create premium commercial media asset")),
+        product_or_offer=str(payload.get("product_or_offer", "")),
+        target_platform=str(payload.get("target_platform", "TikTok")),
+        region=str(payload.get("region", "global")),
+        audience=str(payload.get("audience", "")),
+        benefit=str(payload.get("benefit", "")),
+        cta=str(payload.get("cta", "Shop now")),
+        requested_style=str(payload.get("requested_style", "")),
+        preferred_provider=str(payload.get("preferred_provider", "")),
+        owner_approved=bool(payload.get("owner_approved", False)),
+        entitlement_active=bool(payload.get("entitlement_active", True)),
+        live_keys_available=bool(payload.get("live_keys_available", False)),
+        context=dict(payload.get("context", {})),
+    )
+
+
+@app.get("/admin/ai-media-pipeline/runs")
+def admin_list_ai_media_pipeline_runs(tenant_id: str | None = None, status: str | None = None, limit: int = 50):
+    return list_ai_media_pipeline_runs(tenant_id=tenant_id, status=status, limit=limit)
+@app.get("/admin/ai-media-creative-director/readiness")
+def admin_ai_media_creative_director_readiness():
+    return ai_media_creative_director_readiness()
+
+
+@app.post("/admin/ai-media-creative-director/run")
+def admin_ai_media_creative_director_run(payload: dict):
+    return run_shared_ai_media_creative_director(payload)
