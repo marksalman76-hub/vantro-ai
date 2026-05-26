@@ -260,6 +260,9 @@ def run_shared_ai_media_creative_director(payload: Optional[Dict[str, Any]] = No
 
     orchestration_packet["orchestration_score"] = score_ai_media_orchestration(orchestration_packet)
 
+    orchestration_packet["provider_fallback_execution_plan"] = build_provider_fallback_execution_plan(orchestration_packet)
+
+
     return {
         "success": True,
         "status": "shared_ai_media_creative_director_ready",
@@ -268,6 +271,78 @@ def run_shared_ai_media_creative_director(payload: Optional[Dict[str, Any]] = No
         "orchestration_packet": orchestration_packet,
     }
 
+
+
+def build_provider_fallback_execution_plan(orchestration_packet: Dict[str, Any]) -> Dict[str, Any]:
+    provider_strategy = orchestration_packet.get("provider_strategy", {})
+    orchestration_score = orchestration_packet.get("orchestration_score", {})
+    adapter_payload = orchestration_packet.get("adapter_ready_payload", {})
+
+    primary_provider = provider_strategy.get("primary_provider_slot", "multi_modal_generation_provider")
+    fallback_providers = provider_strategy.get("fallback_provider_slots", [])
+
+    fallback_steps = []
+
+    fallback_steps.append({
+        "step": 1,
+        "provider_slot": primary_provider,
+        "execution_role": "primary_generation_attempt",
+        "allowed": orchestration_score.get("provider_execution_allowed", True),
+        "failure_triggers": [
+            "provider_timeout",
+            "provider_error",
+            "low_quality_result",
+            "brand_mismatch",
+            "character_inconsistency",
+            "policy_or_safety_rejection",
+        ],
+    })
+
+    for index, fallback_provider in enumerate(fallback_providers, start=2):
+        fallback_steps.append({
+            "step": index,
+            "provider_slot": fallback_provider,
+            "execution_role": "fallback_generation_attempt",
+            "allowed": True,
+            "inherits_payload": True,
+            "payload_adjustment": "preserve creative direction, simplify provider-specific execution constraints if needed",
+            "failure_triggers": [
+                "provider_timeout",
+                "provider_error",
+                "low_quality_result",
+                "brand_mismatch",
+                "character_inconsistency",
+            ],
+        })
+
+    fallback_steps.append({
+        "step": len(fallback_steps) + 1,
+        "provider_slot": "manual_review_queue",
+        "execution_role": "human_review_or_owner_review",
+        "allowed": True,
+        "trigger": "all_provider_attempts_failed_or_quality_score_below_threshold",
+        "required_action": "review creative brief, provider payload, quality issues, and retry recommendation",
+    })
+
+    return {
+        "fallback_enabled": True,
+        "execution_mode": "primary_then_fallback_provider_chain",
+        "primary_provider_slot": primary_provider,
+        "fallback_provider_slots": fallback_providers,
+        "manual_review_final_step": True,
+        "quality_threshold": 80,
+        "score_at_plan_time": orchestration_score.get("overall_score"),
+        "adapter_payload_present": bool(adapter_payload),
+        "fallback_steps": fallback_steps,
+        "rules": {
+            "preserve_brand_memory": True,
+            "preserve_character_consistency": True,
+            "preserve_cinematic_direction": True,
+            "preserve_ecommerce_objective": True,
+            "do_not_publish_without_governance": True,
+            "owner_review_required_for_spend_or_campaign_scaling": True,
+        },
+    }
 
 def readiness() -> Dict[str, Any]:
     return {
