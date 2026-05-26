@@ -147,6 +147,7 @@ from backend.app.core.stripe_customer_billing_portal import billing_portal_readi
 from backend.app.runtime.dead_letter_manual_review_runtime import create_dead_letter_record, dead_letter_readiness, list_dead_letters, list_manual_review_queue, record_manual_review_decision
 from backend.app.runtime.workflow_provider_auto_routing import list_workflow_provider_routes, route_workflow_to_provider_bridge, workflow_provider_routing_readiness
 from backend.app.runtime.live_provider_execution_outputs import execute_live_provider_packet, list_live_provider_executions, live_provider_execution_readiness
+from backend.app.runtime.ai_media_creative_model_registry import ai_media_registry_readiness, create_ai_media_execution_packet, create_creative_director_plan, list_ai_media_execution_packets, list_ai_media_models, list_creative_director_plans
 
 app = FastAPI(
     title="Ecommerce AI Agent Platform",
@@ -2456,4 +2457,53 @@ def admin_execute_live_provider_packet(payload: dict):
 @app.get("/admin/live-provider-execution/list")
 def admin_list_live_provider_executions(tenant_id: str | None = None, status: str | None = None, limit: int = 50):
     return list_live_provider_executions(tenant_id=tenant_id, status=status, limit=limit)
+
+@app.get("/admin/ai-media/readiness")
+def admin_ai_media_registry_readiness():
+    return ai_media_registry_readiness()
+
+
+@app.get("/admin/ai-media/models")
+def admin_list_ai_media_models(category: str | None = None):
+    return list_ai_media_models(category=category)
+
+
+@app.post("/admin/ai-media/creative-plan")
+def admin_create_ai_media_creative_plan(payload: dict):
+    return create_creative_director_plan(
+        tenant_id=str(payload.get("tenant_id", "tenant_unknown")),
+        brand_name=str(payload.get("brand_name", "Brand")),
+        media_type=str(payload.get("media_type", "image")),
+        objective=str(payload.get("objective", "Create commercial media asset")),
+        product_or_offer=str(payload.get("product_or_offer", "")),
+        target_platform=str(payload.get("target_platform", "Meta Ads")),
+        region=str(payload.get("region", "global")),
+        requested_style=str(payload.get("requested_style", "")),
+        brand_colours=list(payload.get("brand_colours", [])) if payload.get("brand_colours") is not None else [],
+        character_reference=payload.get("character_reference"),
+        owner_approved=bool(payload.get("owner_approved", False)),
+    )
+
+
+@app.get("/admin/ai-media/creative-plans")
+def admin_list_ai_media_creative_plans(tenant_id: str | None = None, limit: int = 50):
+    return list_creative_director_plans(tenant_id=tenant_id, limit=limit)
+
+
+@app.post("/admin/ai-media/execution-packet")
+def admin_create_ai_media_execution_packet(payload: dict):
+    return create_ai_media_execution_packet(
+        tenant_id=str(payload.get("tenant_id", "tenant_unknown")),
+        plan_id=str(payload.get("plan_id", "")),
+        selected_model=str(payload.get("selected_model", "")),
+        prompt=str(payload.get("prompt", "")),
+        media_type=str(payload.get("media_type", "image")),
+        live_keys_available=bool(payload.get("live_keys_available", False)),
+        owner_approved=bool(payload.get("owner_approved", False)),
+    )
+
+
+@app.get("/admin/ai-media/execution-packets")
+def admin_list_ai_media_execution_packets(tenant_id: str | None = None, limit: int = 50):
+    return list_ai_media_execution_packets(tenant_id=tenant_id, limit=limit)
 
