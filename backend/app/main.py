@@ -2221,3 +2221,151 @@ async def admin_provider_bridge_test_safe_generation(payload: dict | None = None
         capability=payload.get("capability"),
     )
 
+# --- Persistent workflow admin diagnostic endpoints ---
+# Admin/runtime diagnostics only. Customer-facing UI remains untouched.
+
+@app.get("/admin/workflows/readiness")
+async def admin_persistent_workflows_readiness():
+    from backend.app.runtime.persistent_workflow_runtime import readiness
+
+    return readiness()
+
+
+@app.post("/admin/workflows/create-test")
+async def admin_persistent_workflows_create_test(payload: dict | None = None):
+    from backend.app.runtime.persistent_workflow_runtime import create_workflow
+
+    payload = payload or {}
+    return create_workflow(
+        workflow_id=payload.get("workflow_id", "admin_test_workflow_001"),
+        workflow_type=payload.get("workflow_type", "marketing_campaign_execution"),
+        payload=payload.get("payload", {"test": "admin persistent workflow test"}),
+        tenant_id=payload.get("tenant_id", "owner_admin_test"),
+        actor_role=payload.get("actor_role", "owner_admin"),
+        max_retries=int(payload.get("max_retries", 3)),
+    )
+
+
+@app.post("/admin/workflows/advance")
+async def admin_persistent_workflows_advance(payload: dict | None = None):
+    from backend.app.runtime.persistent_workflow_runtime import advance_workflow
+
+    payload = payload or {}
+    return advance_workflow(
+        workflow_id=payload.get("workflow_id", "admin_test_workflow_001"),
+        step_result=payload.get("step_result", {"admin_test": "advanced"}),
+    )
+
+
+@app.post("/admin/workflows/fail")
+async def admin_persistent_workflows_fail(payload: dict | None = None):
+    from backend.app.runtime.persistent_workflow_runtime import fail_workflow
+
+    payload = payload or {}
+    return fail_workflow(
+        workflow_id=payload.get("workflow_id", "admin_test_workflow_001"),
+        error=payload.get("error", {"admin_test": "temporary failure"}),
+    )
+
+
+@app.post("/admin/workflows/complete")
+async def admin_persistent_workflows_complete(payload: dict | None = None):
+    from backend.app.runtime.persistent_workflow_runtime import complete_workflow
+
+    payload = payload or {}
+    return complete_workflow(
+        workflow_id=payload.get("workflow_id", "admin_test_workflow_001"),
+        result=payload.get("result", {"admin_test": "completed"}),
+    )
+
+
+@app.get("/admin/workflows/{workflow_id}")
+async def admin_persistent_workflows_get(workflow_id: str):
+    from backend.app.runtime.persistent_workflow_runtime import get_workflow
+
+    return get_workflow(workflow_id)
+
+# --- Cross-agent orchestration admin diagnostic endpoints ---
+# Admin/runtime diagnostics only. Customer-facing UI remains untouched.
+
+@app.get("/admin/orchestration/readiness")
+async def admin_cross_agent_orchestration_readiness():
+    from backend.app.runtime.cross_agent_workflow_orchestration import readiness
+
+    return readiness()
+
+
+@app.post("/admin/orchestration/create-test")
+async def admin_cross_agent_orchestration_create_test(payload: dict | None = None):
+    from backend.app.runtime.cross_agent_workflow_orchestration import create_cross_agent_orchestration
+
+    payload = payload or {}
+    return create_cross_agent_orchestration(
+        orchestration_id=payload.get("orchestration_id", "admin_orchestration_test_001"),
+        workflow_id=payload.get("workflow_id", "admin_orchestration_workflow_001"),
+        tenant_id=payload.get("tenant_id", "owner_admin_test"),
+        head_agent_id=payload.get("head_agent_id", "head_agent"),
+        active_agent_count=int(payload.get("active_agent_count", 3)),
+        objective=payload.get(
+            "objective",
+            {
+                "workflow_type": "marketing_campaign_execution",
+                "goal": "Admin cross-agent orchestration test",
+            },
+        ),
+        tasks=payload.get(
+            "tasks",
+            [
+                {
+                    "task_id": "admin_task_marketing_001",
+                    "assigned_agent_id": "marketing_specialist_agent",
+                    "task_type": "content_generation",
+                    "payload": {"brief": "Campaign angle"},
+                },
+                {
+                    "task_id": "admin_task_email_001",
+                    "assigned_agent_id": "email_reply_agent",
+                    "task_type": "email_copy_generation",
+                    "payload": {"brief": "Launch email"},
+                },
+                {
+                    "task_id": "admin_task_spend_001",
+                    "assigned_agent_id": "marketing_specialist_agent",
+                    "task_type": "scale_campaign",
+                    "payload": {"budget_increase": 1000},
+                },
+            ],
+        ),
+    )
+
+
+@app.post("/admin/orchestration/task-complete")
+async def admin_cross_agent_orchestration_task_complete(payload: dict | None = None):
+    from backend.app.runtime.cross_agent_workflow_orchestration import complete_cross_agent_task
+
+    payload = payload or {}
+    return complete_cross_agent_task(
+        orchestration_id=payload.get("orchestration_id", "admin_orchestration_test_001"),
+        task_id=payload.get("task_id", "admin_task_marketing_001"),
+        result=payload.get("result", {"admin_test": "task completed"}),
+    )
+
+
+@app.post("/admin/orchestration/task-fail")
+async def admin_cross_agent_orchestration_task_fail(payload: dict | None = None):
+    from backend.app.runtime.cross_agent_workflow_orchestration import fail_cross_agent_task
+
+    payload = payload or {}
+    return fail_cross_agent_task(
+        orchestration_id=payload.get("orchestration_id", "admin_orchestration_test_001"),
+        task_id=payload.get("task_id", "admin_task_email_001"),
+        error=payload.get("error", {"admin_test": "temporary failure"}),
+    )
+
+
+@app.get("/admin/orchestration/{orchestration_id}")
+async def admin_cross_agent_orchestration_get(orchestration_id: str):
+    from backend.app.runtime.cross_agent_workflow_orchestration import get_cross_agent_orchestration
+
+    return get_cross_agent_orchestration(orchestration_id)
+

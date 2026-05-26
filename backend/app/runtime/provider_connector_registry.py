@@ -16,6 +16,10 @@ import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
+from backend.app.runtime.provider_result_quality_loop import (
+    apply_quality_loop_to_provider_result,
+    decide_retry_from_quality,
+)
 
 
 OWNER_APPROVAL_ACTIONS = {
@@ -261,7 +265,7 @@ def execute_provider_action(
             actor_role=actor_role,
         )
 
-    return {
+    return _with_provider_quality_loop({
         "success": True,
         "status": "provider_action_ready",
         "execution_status": "provider_connector_ready",
@@ -276,12 +280,13 @@ def execute_provider_action(
         "actor_role": actor_role,
         "payload_received": bool(payload),
         "payload_keys": sorted(list(payload.keys())),
+        "output_text": "Provider connector is ready. Configure the provider API key for live premium output generation.",
         "governance_preserved": True,
         "owner_approval_controls_preserved": True,
         "client_secret_exposure": False,
         "next_stage": "wire_real_provider_api_call_when_key_configured",
         "generated_at": utc_now_iso(),
-    }
+    }, task_type=action_type)
 
 
 def readiness() -> Dict[str, Any]:
@@ -318,7 +323,7 @@ def _safe_openai_text_execution(action_type, payload, tenant_id=None, actor_role
 
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
     if not api_key:
-        return {
+        return _with_provider_quality_loop({
             "success": True,
             "status": "provider_action_ready",
             "execution_status": "provider_connector_ready",
@@ -333,12 +338,13 @@ def _safe_openai_text_execution(action_type, payload, tenant_id=None, actor_role
             "actor_role": actor_role,
             "payload_received": bool(payload),
             "payload_keys": sorted(list((payload or {}).keys())),
+            "output_text": "Provider connector is ready. Configure OPENAI_API_KEY for live premium output generation.",
             "governance_preserved": True,
             "owner_approval_controls_preserved": True,
             "client_secret_exposure": False,
             "next_stage": "configure_OPENAI_API_KEY_for_live_provider_execution",
             "generated_at": utc_now_iso(),
-        }
+        }, task_type=action_type)
 
     model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini").strip() or "gpt-4.1-mini"
 
@@ -381,7 +387,7 @@ def _safe_openai_text_execution(action_type, payload, tenant_id=None, actor_role
                 if content.get("type") == "output_text":
                     output_text += content.get("text", "")
 
-        return {
+        return _with_provider_quality_loop({
             "success": True,
             "status": "provider_execution_completed",
             "execution_status": "completed",
@@ -401,7 +407,7 @@ def _safe_openai_text_execution(action_type, payload, tenant_id=None, actor_role
             "owner_approval_controls_preserved": True,
             "client_secret_exposure": False,
             "generated_at": utc_now_iso(),
-        }
+        }, task_type=action_type)
 
     except urllib.error.HTTPError as exc:
         error_body = exc.read().decode("utf-8", errors="replace")[:1200]
@@ -448,4 +454,34 @@ def _safe_openai_text_execution(action_type, payload, tenant_id=None, actor_role
             "client_secret_exposure": False,
             "generated_at": utc_now_iso(),
         }
+
+# --- Provider result quality loop bridge ---
+
+def _with_provider_quality_loop(result, task_type=None, minimum_score=72):
+    try:
+        quality_result = apply_quality_loop_to_provider_result(
+            result,
+            task_type=task_type or result.get("action_type"),
+            minimum_score=minimum_score,
+        )
+        retry_decision = decide_retry_from_quality(
+            quality_result,
+            retry_count=int(result.get("retry_count", 0) or 0),
+            max_retries=int(result.get("max_retries", 3) or 3),
+        )
+        quality_result["quality_retry_decision"] = retry_decision
+        return quality_result
+    except Exception as exc:
+        safe_result = dict(result)
+        safe_result.update(
+            {
+                "quality_loop_applied": False,
+                "quality_loop_error": str(exc)[:500],
+                "quality_gate_passed": False,
+                "finalisation_status": "requires_manual_review",
+                "governance_preserved": True,
+                "owner_approval_controls_preserved": True,
+            }
+        )
+        return safe_result
 
