@@ -152,6 +152,49 @@ def build_provider_strategy(agent_id: str, media_type: str, quality_target: str 
     }
 
 
+
+def score_ai_media_orchestration(orchestration_packet: Dict[str, Any]) -> Dict[str, Any]:
+    quality_rules = orchestration_packet.get("quality_rules", {})
+    provider_strategy = orchestration_packet.get("provider_strategy", {})
+    scene_plan = orchestration_packet.get("scene_plan", [])
+    cinematic_direction = orchestration_packet.get("cinematic_direction", {})
+    hook_strategy = orchestration_packet.get("hook_strategy", {})
+
+    scores = {
+        "brand_fit": 90 if orchestration_packet.get("brand") else 72,
+        "cinematic_quality": 92 if cinematic_direction.get("camera_language") and cinematic_direction.get("lighting") else 70,
+        "ecommerce_conversion_strength": 91 if hook_strategy.get("hook_direction") and len(scene_plan) >= 4 else 68,
+        "character_consistency_readiness": 90 if quality_rules.get("same_character_consistency_required_when_character_present") else 65,
+        "provider_fallback_readiness": 94 if provider_strategy.get("fallback_required") and provider_strategy.get("fallback_provider_slots") else 60,
+        "multilingual_readiness": 88 if quality_rules.get("multilingual_adaptation_supported") else 62,
+        "premium_output_readiness": 95 if quality_rules.get("premium_only") and quality_rules.get("no_placeholder_outputs") else 58,
+    }
+
+    overall_score = round(sum(scores.values()) / len(scores), 2)
+
+    if overall_score >= 90:
+        readiness_level = "premium_ready"
+    elif overall_score >= 80:
+        readiness_level = "ready_with_minor_review"
+    elif overall_score >= 70:
+        readiness_level = "manual_review_recommended"
+    else:
+        readiness_level = "not_ready_for_provider_execution"
+
+    return {
+        "overall_score": overall_score,
+        "readiness_level": readiness_level,
+        "scores": scores,
+        "provider_execution_allowed": overall_score >= 80,
+        "manual_review_required": overall_score < 80,
+        "recommendations": [
+            "Preserve brand and character consistency before provider execution.",
+            "Use fallback provider strategy for failed or low-quality provider results.",
+            "Reject placeholder/basic media prompts before generation.",
+            "Keep ecommerce conversion objective visible in hook, scene flow, and CTA.",
+        ],
+    }
+
 def run_shared_ai_media_creative_director(payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     payload = payload or {}
 
@@ -213,6 +256,9 @@ def run_shared_ai_media_creative_director(payload: Optional[Dict[str, Any]] = No
             "provider_strategy": provider_strategy,
         },
     }
+
+
+    orchestration_packet["orchestration_score"] = score_ai_media_orchestration(orchestration_packet)
 
     return {
         "success": True,
