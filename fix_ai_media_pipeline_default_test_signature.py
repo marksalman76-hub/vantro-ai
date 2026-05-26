@@ -1,3 +1,11 @@
+from pathlib import Path
+
+test_file = Path("test_ai_media_pipeline_creative_director_default.py")
+
+if not test_file.exists():
+    raise SystemExit("test_ai_media_pipeline_creative_director_default.py not found")
+
+test_file.write_text(r'''
 from backend.app.runtime.ai_media_end_to_end_pipeline import run_ai_media_end_to_end_pipeline
 
 
@@ -29,3 +37,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+'''.strip() + "\n", encoding="utf-8")
+
+print("AI_MEDIA_PIPELINE_DEFAULT_TEST_SIGNATURE_FIXED")
+print(f"Updated: {test_file}")
