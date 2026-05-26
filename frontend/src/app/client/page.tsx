@@ -734,7 +734,7 @@ useEffect(() => {
       const eventTenantId = account?.tenant_id || account?.client_id || "unknown_client";
 
       const response = await fetch(
-        `${BACKEND_API_BASE}/client/execution-events?tenant_id=${encodeURIComponent(eventTenantId)}&project_id=live_readiness_matrix&limit=20`,
+        `/api/client-execution-matrix?tenant_id=${encodeURIComponent(eventTenantId)}&project_id=live_readiness_matrix&limit=20`,
         {
           cache: "no-store",
           headers: {
@@ -758,7 +758,7 @@ useEffect(() => {
 
   async function loadIntegrations() {
     try {
-      const response = await fetch(`${BACKEND_API_BASE}/client/integrations`, { cache: "no-store", headers: { "x-tenant-id": tenantId, "x-actor-role": "customer" } });
+      const response = await fetch(`/api/client-integrations`, { cache: "no-store", headers: { "x-tenant-id": tenantId, "x-actor-role": "customer" } });
       const data = await response.json();
       if (data?.success && Array.isArray(data.integrations)) {
         setIntegrations(data.integrations);
@@ -780,7 +780,7 @@ useEffect(() => {
       "";
     if (!credential.trim()) return;
 
-    const response = await fetch(`${BACKEND_API_BASE}/client/integrations/connect`, {
+    const response = await fetch(`/api/client-integrations-connect`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-tenant-id": tenantId, "x-actor-role": "customer" },
       body: JSON.stringify({
@@ -816,7 +816,7 @@ useEffect(() => {
   }
 
   async function testIntegration(integration: ClientIntegration) {
-    const response = await fetch(`${BACKEND_API_BASE}/client/integrations/test`, {
+    const response = await fetch(`/api/client-integrations-test`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-tenant-id": tenantId, "x-actor-role": "customer" },
       body: JSON.stringify({ integration_key: integration.integration_key }),
@@ -839,7 +839,7 @@ useEffect(() => {
   }
 
   async function disconnectIntegration(integration: ClientIntegration) {
-    const response = await fetch(`${BACKEND_API_BASE}/client/integrations/disconnect`, {
+    const response = await fetch(`/api/client-integrations-disconnect`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-tenant-id": tenantId, "x-actor-role": "customer" },
       body: JSON.stringify({ integration_key: integration.integration_key }),
