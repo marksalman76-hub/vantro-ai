@@ -146,6 +146,7 @@ from backend.app.core.stripe_advanced_billing_runtime import advanced_billing_re
 from backend.app.core.stripe_customer_billing_portal import billing_portal_readiness
 from backend.app.runtime.dead_letter_manual_review_runtime import create_dead_letter_record, dead_letter_readiness, list_dead_letters, list_manual_review_queue, record_manual_review_decision
 from backend.app.runtime.workflow_provider_auto_routing import list_workflow_provider_routes, route_workflow_to_provider_bridge, workflow_provider_routing_readiness
+from backend.app.runtime.live_provider_execution_outputs import execute_live_provider_packet, list_live_provider_executions, live_provider_execution_readiness
 
 app = FastAPI(
     title="Ecommerce AI Agent Platform",
@@ -2430,4 +2431,29 @@ def admin_route_workflow_to_provider(payload: dict):
 @app.get("/admin/workflow-provider-routing/list")
 def admin_list_workflow_provider_routes(tenant_id: str | None = None, status: str | None = None, limit: int = 50):
     return list_workflow_provider_routes(tenant_id=tenant_id, status=status, limit=limit)
+
+@app.get("/admin/live-provider-execution/readiness")
+def admin_live_provider_execution_readiness():
+    return live_provider_execution_readiness()
+
+
+@app.post("/admin/live-provider-execution/execute")
+def admin_execute_live_provider_packet(payload: dict):
+    return execute_live_provider_packet(
+        tenant_id=str(payload.get("tenant_id", "tenant_unknown")),
+        workflow_id=str(payload.get("workflow_id", "workflow_unknown")),
+        agent_id=str(payload.get("agent_id", "unknown_agent")),
+        provider=str(payload.get("provider", "")),
+        action_type=str(payload.get("action_type", "unknown_action")),
+        payload=dict(payload.get("payload", {})),
+        execution_allowed=bool(payload.get("execution_allowed", True)),
+        owner_approved=bool(payload.get("owner_approved", False)),
+        live_keys_available=bool(payload.get("live_keys_available", False)),
+        entitlement_active=bool(payload.get("entitlement_active", True)),
+    )
+
+
+@app.get("/admin/live-provider-execution/list")
+def admin_list_live_provider_executions(tenant_id: str | None = None, status: str | None = None, limit: int = 50):
+    return list_live_provider_executions(tenant_id=tenant_id, status=status, limit=limit)
 
