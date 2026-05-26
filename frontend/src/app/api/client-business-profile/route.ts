@@ -7,6 +7,18 @@ const BACKEND_URL =
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   "https://api.trance-formation.com.au";
 
+function getSessionToken(req: NextRequest): string {
+  const auth = req.headers.get("authorization") || "";
+  if (auth.toLowerCase().startsWith("bearer ")) return auth.slice(7).trim();
+
+  return (
+    req.cookies.get("client_token")?.value ||
+    req.cookies.get("token")?.value ||
+    req.cookies.get("auth_token")?.value ||
+    ""
+  );
+}
+
 function getBearer(req: NextRequest): string {
   const auth = req.headers.get("authorization") || "";
   if (auth.toLowerCase().startsWith("bearer ")) return auth;
@@ -42,7 +54,15 @@ async function proxy(req: NextRequest, path: string) {
     if (text) init.body = text;
   }
 
-  const res = await fetch(`${BACKEND_URL}${path}`, init);
+  const sessionToken = getSessionToken(req);
+  let backendPath = path;
+
+  if (sessionToken && (path === "/client/me" || path === "/client/business-profile")) {
+    const joiner = backendPath.includes("?") ? "&" : "?";
+    backendPath = `${backendPath}${joiner}session_token=${encodeURIComponent(sessionToken)}`;
+  }
+
+  const res = await fetch(`${BACKEND_URL}${backendPath}`, init);
   const contentType = res.headers.get("content-type") || "application/json";
   const body = await res.text();
 
