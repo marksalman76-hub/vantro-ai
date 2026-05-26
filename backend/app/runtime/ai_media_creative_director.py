@@ -375,6 +375,9 @@ def run_shared_ai_media_creative_director(payload: Optional[Dict[str, Any]] = No
 
     orchestration_packet["provider_fallback_execution_plan"] = build_provider_fallback_execution_plan(orchestration_packet)
 
+    orchestration_packet["character_consistency_plan"] = build_character_consistency_plan(payload, orchestration_packet)
+
+
 
     return {
         "success": True,
@@ -385,6 +388,60 @@ def run_shared_ai_media_creative_director(payload: Optional[Dict[str, Any]] = No
     }
 
 
+
+
+def build_character_consistency_plan(payload: Dict[str, Any], orchestration_packet: Dict[str, Any]) -> Dict[str, Any]:
+    character_id = _safe_text(payload.get("character_id") or payload.get("avatar_id") or payload.get("creator_id"), "")
+    character_description = _safe_text(payload.get("character_description") or payload.get("avatar_description"), "")
+    reference_asset_id = _safe_text(payload.get("reference_asset_id") or payload.get("face_reference_id"), "")
+    requires_same_face = bool(character_id or character_description or reference_asset_id)
+
+    locked_identity_fields = [
+        "face_shape",
+        "skin_tone",
+        "hair_style",
+        "hair_colour",
+        "eye_shape",
+        "age_range",
+        "facial_hair",
+        "distinctive_features",
+        "body_type",
+        "voice_profile",
+        "accent",
+        "speaking_pace",
+        "creator_style",
+    ]
+
+    return {
+        "same_face_required": requires_same_face,
+        "character_id": character_id or None,
+        "reference_asset_id": reference_asset_id or None,
+        "character_description_present": bool(character_description),
+        "identity_lock_fields": locked_identity_fields,
+        "continuity_rules": {
+            "preserve_face_across_scenes": requires_same_face,
+            "preserve_face_across_provider_retries": requires_same_face,
+            "preserve_face_across_platform_variants": requires_same_face,
+            "preserve_voice_across_dubs": requires_same_face,
+            "preserve_creator_style": requires_same_face,
+            "reject_if_face_drift_detected": requires_same_face,
+            "manual_review_if_identity_confidence_low": requires_same_face,
+        },
+        "provider_prompt_rules": [
+            "Use the same character identity across every shot.",
+            "Do not alter age, ethnicity, facial structure, hairstyle, or distinctive features between scenes.",
+            "Preserve the same speaker identity when creating multilingual variants.",
+            "Use reference assets where supported by the selected provider.",
+            "If provider cannot preserve identity, route to fallback provider or manual review.",
+        ],
+        "quality_checks": {
+            "minimum_identity_confidence": 0.86 if requires_same_face else None,
+            "face_drift_check_required": requires_same_face,
+            "voice_drift_check_required": requires_same_face,
+            "scene_to_scene_identity_check_required": requires_same_face,
+            "provider_retry_identity_check_required": requires_same_face,
+        },
+    }
 
 def build_provider_fallback_execution_plan(orchestration_packet: Dict[str, Any]) -> Dict[str, Any]:
     provider_strategy = orchestration_packet.get("provider_strategy", {})
