@@ -153,6 +153,7 @@ from backend.app.runtime.ai_media_provider_adapters import ai_media_provider_ada
 from backend.app.runtime.ai_media_quality_gate import ai_media_quality_gate_readiness, gate_ai_media_execution_packet, list_ai_media_quality_scores, score_ai_media_quality
 from backend.app.runtime.ai_media_brand_character_memory import ai_media_brand_character_memory_readiness, enrich_ai_media_payload_with_memory, get_ai_media_memory_context, list_ai_media_memory, save_brand_memory, save_campaign_style_memory, save_character_memory
 from backend.app.runtime.ai_media_prompt_template_pack import ai_media_prompt_template_pack_readiness, list_ai_media_prompt_templates, list_rendered_ai_media_prompts, recommend_ai_media_prompt_template, render_ai_media_prompt_template
+from backend.app.runtime.ai_media_multi_provider_execution_packets import advance_packet_to_next_provider, ai_media_multi_provider_packets_readiness, create_ai_media_multi_provider_packet, list_ai_media_multi_provider_packets
 
 app = FastAPI(
     title="Ecommerce AI Agent Platform",
@@ -2706,4 +2707,38 @@ def admin_render_ai_media_prompt_template(payload: dict):
 @app.get("/admin/ai-media-templates/rendered")
 def admin_list_rendered_ai_media_prompts(tenant_id: str | None = None, template_id: str | None = None, limit: int = 50):
     return list_rendered_ai_media_prompts(tenant_id=tenant_id, template_id=template_id, limit=limit)
+
+@app.get("/admin/ai-media-packets/readiness")
+def admin_ai_media_multi_provider_packets_readiness():
+    return ai_media_multi_provider_packets_readiness()
+
+
+@app.post("/admin/ai-media-packets/create")
+def admin_create_ai_media_multi_provider_packet(payload: dict):
+    return create_ai_media_multi_provider_packet(
+        tenant_id=str(payload.get("tenant_id", "tenant_unknown")),
+        brand_name=str(payload.get("brand_name", "Brand")),
+        media_type=str(payload.get("media_type", "image")),
+        prompt=str(payload.get("prompt", "")),
+        target_platform=str(payload.get("target_platform", "")),
+        preferred_provider=str(payload.get("preferred_provider", "")),
+        payload=dict(payload.get("payload", {})),
+        owner_approved=bool(payload.get("owner_approved", False)),
+        entitlement_active=bool(payload.get("entitlement_active", True)),
+        quality_score=int(payload.get("quality_score", 0)),
+        max_attempts=int(payload.get("max_attempts", 3)),
+    )
+
+
+@app.post("/admin/ai-media-packets/advance-provider")
+def admin_advance_ai_media_packet_provider(payload: dict):
+    return advance_packet_to_next_provider(
+        packet=dict(payload.get("packet", {})),
+        failure_reason=str(payload.get("failure_reason", "provider_failed")),
+    )
+
+
+@app.get("/admin/ai-media-packets/list")
+def admin_list_ai_media_multi_provider_packets(tenant_id: str | None = None, status: str | None = None, limit: int = 50):
+    return list_ai_media_multi_provider_packets(tenant_id=tenant_id, status=status, limit=limit)
 
