@@ -160,6 +160,9 @@ from backend.app.runtime.ai_media_multi_provider_execution_packets import advanc
 from backend.app.runtime.ai_media_end_to_end_pipeline import ai_media_end_to_end_pipeline_readiness, list_ai_media_pipeline_runs, run_ai_media_end_to_end_pipeline
 from backend.app.runtime.ai_media_session_auth_compat import validate_ai_media_admin_session_compatibility
 from backend.app.runtime.global_real_provider_connector_layer import build_global_connector_execution_packet
+from backend.app.runtime.global_provider_execution_runtime import global_provider_execution_readiness, build_global_provider_execution_packet
+from backend.app.runtime.global_real_provider_connector_layer import global_real_provider_connector_readiness, build_global_connector_execution_packet
+from backend.app.runtime.real_provider_activation_layer import real_provider_activation_readiness
 
 app = FastAPI(
     title="Ecommerce AI Agent Platform",
@@ -2834,3 +2837,34 @@ def system_live_auth_fingerprint():
         "app_env": os.getenv("APP_ENV", ""),
         "service": "control-api",
     }
+
+
+# Global provider execution admin routes
+@app.get("/admin/global-provider/readiness")
+def admin_global_provider_readiness() -> Dict[str, object]:
+    return {
+        "success": True,
+        "scope": "platform_wide_multi_agent",
+        "real_provider_activation": real_provider_activation_readiness(),
+        "global_provider_execution": global_provider_execution_readiness(),
+        "global_connector": global_real_provider_connector_readiness(),
+        "credential_values_exposed": False,
+        "internal_config_exposed": False,
+        "governance_preserved": True,
+        "owner_approval_gate_preserved": True,
+    }
+
+
+@app.post("/admin/global-provider/execution-packet")
+def admin_global_provider_execution_packet(payload: dict) -> Dict[str, object]:
+    return {
+        "success": True,
+        "scope": "platform_wide_multi_agent",
+        "provider_execution_packet": build_global_provider_execution_packet(payload),
+        "connector_execution_packet": build_global_connector_execution_packet(payload),
+        "credential_values_exposed": False,
+        "internal_config_exposed": False,
+        "governance_preserved": True,
+        "owner_approval_gate_preserved": True,
+    }
+
