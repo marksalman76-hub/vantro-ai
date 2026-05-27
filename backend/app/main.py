@@ -4710,3 +4710,53 @@ async def controlled_openai_live_execution_execute_route(payload: dict):
         }
     return execute_controlled_openai_live_request(dict(payload or {}))
 
+
+# ---------------------------------------------------------------------------
+# OpenAI execution audit + asset persistence routes
+# Added by wire_openai_execution_audit_asset_routes.py
+# Purpose:
+# - expose controlled OpenAI audit/asset persistence integration status
+# - create execution ledger + asset preview packets after successful OpenAI execution
+# - never expose credentials or internal storage keys
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.real_provider_http_execution_layer import (
+        controlled_openai_audit_asset_integration_status,
+        persist_openai_execution_audit_asset,
+    )
+except Exception:  # pragma: no cover
+    controlled_openai_audit_asset_integration_status = None
+    persist_openai_execution_audit_asset = None
+
+
+@app.get("/controlled-openai-audit-assets/status")
+def controlled_openai_audit_assets_status_route():
+    if controlled_openai_audit_asset_integration_status is None:
+        return {
+            "status": "unavailable",
+            "reason": "controlled_openai_audit_asset_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return controlled_openai_audit_asset_integration_status()
+
+
+@app.post("/controlled-openai-audit-assets/persist")
+async def controlled_openai_audit_assets_persist_route(payload: dict):
+    if persist_openai_execution_audit_asset is None:
+        return {
+            "status": "unavailable",
+            "reason": "controlled_openai_audit_asset_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return persist_openai_execution_audit_asset(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        provider_job_id=safe_payload.get("provider_job_id") or "unknown-provider-job",
+        output_text=safe_payload.get("output_text"),
+        asset_type=safe_payload.get("asset_type") or "text",
+        latency_ms=int(safe_payload.get("latency_ms", 0) or 0),
+    )
+
