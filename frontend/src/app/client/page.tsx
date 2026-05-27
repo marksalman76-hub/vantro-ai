@@ -12,7 +12,7 @@ function CustomerAgentStatusBadge({ active }: { active: boolean }) {
           ? "border-emerald-300/60 bg-emerald-50 text-emerald-700"
           : "border-rose-300/60 bg-rose-50 text-rose-700"
       }`}
-      aria-label={active ? "ACTIVE" : "INACTIVE"}
+      aria-label={active ? "ACTIVE - Agent selections are locked after activation - owner/admin approval" : "INACTIVE - Agent selections are locked after activation - owner/admin approval"}
     >
       <span
         className={`h-2.5 w-2.5 rounded-full ${
