@@ -297,38 +297,68 @@ export default function AdminPage() {
       const results = [];
 
       for (const agentId of selectedRun) {
-        const response = await fetch("/api/run-agent", {
+        const payload = {
+          account_reference: "owner_admin",
+          requested_agent: agentId,
+          workflow_stage: "admin_internal_execution",
+          action_type: "admin_owner_execution",
+          actor_role: "owner",
+          owner_approved: true,
+          admin_execution: true,
+          bypass_client_credits: true,
+          task,
+        };
+
+        const response = await fetch("/api/admin-deployment-control", {
           method: "POST",
+          cache: "no-store",
           headers: {
             "Content-Type": "application/json",
             "x-actor-role": "owner",
             "x-tenant-id": "owner",
           },
           body: JSON.stringify({
-            account_reference: "owner_admin",
-            requested_agent: agentId,
-            workflow_stage: "admin_internal_execution",
-            action_type: "admin_owner_execution",
-            actor_role: "owner",
-            owner_approved: true,
-            task,
+            path: "/run-agent",
+            method: "POST",
+            payload,
           }),
         });
 
-        const data = await response.json();
-        results.push({ agent_id: agentId, http_status: response.status, result: data });
+        const data = await response.json().catch(() => ({
+          success: false,
+          message: "Invalid admin execution response.",
+        }));
+
+        results.push({
+          agent_id: agentId,
+          http_status: response.status,
+          success: data?.success === true,
+          status:
+            data?.workflow_status ||
+            data?.execution_status ||
+            data?.status ||
+            data?.error ||
+            "completed",
+          message:
+            data?.message ||
+            data?.summary ||
+            data?.error ||
+            "Execution response received.",
+        });
       }
 
-      const allSucceeded = results.every((item) => item.result?.success === true);
+      const allSucceeded = results.every((item) => item.success === true);
 
       setRunResult({
         success: allSucceeded,
-        status: allSucceeded ? "admin_multi_agent_execution_completed" : "admin_multi_agent_execution_partially_blocked",
+        status: allSucceeded
+          ? "Admin execution completed"
+          : "Admin execution needs review",
         selected_agent_count: selectedRun.length,
         results,
       });
 
-      showToast(allSucceeded ? "Selected agents completed." : "Some agent runs were blocked or failed.");
+      showToast(allSucceeded ? "Selected agents completed." : "Some agent runs need review.");
     } catch {
       setRunResult({ success: false, message: "Admin execution failed." });
       showToast("Admin execution failed.");
@@ -554,9 +584,31 @@ export default function AdminPage() {
 
               <button className="primary" onClick={runAdminAgent} disabled={running}>{running ? "Running..." : selectedRun.length > 1 ? "Run Selected Agents" : "Run Agent"}</button>
 
-              <pre className={runResult ? "output has" : "output"}>
-                {runResult ? JSON.stringify(runResult, null, 2) : "Agent output will appear here..."}
-              </pre>
+              <div className={runResult ? "output has" : "output"}>
+                {!runResult ? (
+                  "Agent output will appear here..."
+                ) : (
+                  <div className="adminResultCard">
+                    <strong>{runResult?.status || "Execution result"}</strong>
+                    <p>
+                      {runResult?.message ||
+                        `${runResult?.selected_agent_count || 0} selected agent run(s) processed.`}
+                    </p>
+
+                    {Array.isArray(runResult?.results) ? (
+                      <div className="resultList">
+                        {runResult.results.map((item: any, index: number) => (
+                          <div className="resultRow" key={index}>
+                            <span>{item?.agent_id || "agent"}</span>
+                            <b>{item?.success ? "SUCCESS" : "REVIEW"}</b>
+                            <small>{item?.message || item?.status || "Processed"}</small>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="panel" id="admin-deploy">
