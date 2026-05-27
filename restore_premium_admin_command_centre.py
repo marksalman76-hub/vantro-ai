@@ -1,4 +1,17 @@
-const adminCards = [
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+root = Path.cwd()
+target = root / "frontend" / "src" / "app" / "admin" / "page.tsx"
+
+backup_dir = root / "backups" / f"admin_command_centre_restore_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+backup_dir.mkdir(parents=True, exist_ok=True)
+
+if target.exists():
+    shutil.copy2(target, backup_dir / "page.tsx")
+
+content = r'''const adminCards = [
   {
     eyebrow: "Control Status",
     status: "GOVERNED",
@@ -330,3 +343,10 @@ export default function AdminCommandCentrePage() {
     </main>
   );
 }
+'''
+
+target.write_text(content, encoding="utf-8")
+
+print("PREMIUM_ADMIN_COMMAND_CENTRE_RESTORED")
+print(f"Backup folder: {backup_dir}")
+print(f"Updated: {target}")
