@@ -1,10 +1,6 @@
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-
 
 
 function CustomerAgentStatusBadge({ active }: { active: boolean }) {
@@ -73,7 +69,6 @@ type ClientIntegration = {
   last_tested_at?: string;
   credential_hint?: string;
 };
-
 
 const DEFAULT_CLIENT_INTEGRATIONS: ClientIntegration[] = [
   {
@@ -195,7 +190,6 @@ type LiveDeliverable = {
   tags?: string[];
 };
 
-
 type ExecutionTimelineEvent = {
   event_id: string;
   created_at: string;
@@ -211,7 +205,6 @@ type ExecutionTimelineEvent = {
   title?: string;
   summary?: string;
 };
-
 
 const DEFAULT_AGENTS: string[] = [
   "product_research_agent",
@@ -329,7 +322,6 @@ function getAgentDisplayName(agentId: string) {
       .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-
 // client_portal_ux_pass3_layout_foundation
 // client_portal_ux_pass4_two_column_layout
 // client_portal_ux_pass5_premium_inputs
@@ -412,7 +404,6 @@ export default function ClientPage() {
     } catch {}
   }, [darkModeEnabled]);
 
-
   const shellStyle = {
     maxWidth: "none",
     width: "100%",
@@ -461,7 +452,6 @@ export default function ClientPage() {
     gap: 14,
     alignItems: "start",
   };
-
 
 const modalContentGridStyle = {
     display: "grid",
@@ -701,8 +691,6 @@ useEffect(() => {
 
 
 
-
-
   useEffect(() => {
     function handleProfileMenuOutsideClick(event: MouseEvent) {
       const menu = profileMenuRef.current;
@@ -715,7 +703,6 @@ useEffect(() => {
     document.addEventListener("mousedown", handleProfileMenuOutsideClick);
     return () => document.removeEventListener("mousedown", handleProfileMenuOutsideClick);
   }, []);
-
 
   async function loadBusinessProfile() {
     try {
@@ -971,8 +958,6 @@ useEffect(() => {
 
 
 
-
-
         {/* BOTTOM_DARK_INNER_CARD_POLISH_V1 */}
         <style>{`
           ${darkModeEnabled ? `
@@ -1035,7 +1020,6 @@ useEffect(() => {
             }
           ` : ``}
         `}</style>
-
 
         {/* FULL_PAGE_DARK_MODE_CSS_LAYER_V1 */}
         <style>{`
@@ -1557,7 +1541,6 @@ useEffect(() => {
               </button>
             </div>
 
-
             <div style={{ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))", gap: 12 }}>
               {activeAccountPanel === "settings" ? (
                 <>
@@ -1907,7 +1890,6 @@ useEffect(() => {
           </div>
         </section>
 
-
         {/* TARGETED_DARK_MODE_WORKFLOW_INTEGRATION_POLISH_V1 */}
         <style>{`
           ${darkModeEnabled ? `
@@ -2082,9 +2064,7 @@ useEffect(() => {
         </div>
       </section>
 
-
         
-
 
         {/* TARGETED_DARK_MODE_BLOCKS_1_2_POLISH_V1 */}
         <style>{`
@@ -2433,7 +2413,6 @@ useEffect(() => {
             </div>
           </div>
         </section>
-
 
 
         <section style={{ ...responsiveSecondaryGridStyle, alignItems: "stretch", marginBottom: 20 }}>
@@ -3052,7 +3031,6 @@ useEffect(() => {
                     onClick={(event) => { event.preventDefault(); window.location.href = "#media-preview-popup"; }}
                     style={{
 
-
                       border: "1px solid rgba(37, 99, 235, 0.14)",
                       background: darkModeEnabled ? "linear-gradient(135deg, rgba(79,70,229,.28), rgba(15,23,42,.94))" : "linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96))",
                       color: "var(--color-brand)",
@@ -3250,7 +3228,6 @@ useEffect(() => {
 
       </div>
 
-
 {/* OUTPUT_VIEWER_POPUP_MODAL_LOCKED_V1 */}
       {showDeliverableModal ? (
         <div
@@ -3415,7 +3392,6 @@ useEffect(() => {
         </div>
       ) : null}
 
-
       {/* DEDICATED_MEDIA_PREVIEW_OVERLAY_V1 */}
       {showMediaPreviewOverlay ? (
         <div
@@ -3553,7 +3529,6 @@ useEffect(() => {
           </div>
         </div>
       ) : null}
-
 
       {/* HASH_MEDIA_PREVIEW_POPUP_V1 */}
       <style>{`
