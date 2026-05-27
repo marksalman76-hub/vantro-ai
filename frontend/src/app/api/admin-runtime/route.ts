@@ -1,14 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 
-function isAdminRequest(req: Request): boolean {
-  const expected = process.env.ADMIN_PLATFORM_TOKEN || "";
-  if (!expected) return false;
+function isAdminRequest(req: NextRequest): boolean {
+  const adminToken = process.env.ADMIN_PLATFORM_TOKEN || "";
+  const portalAccessCode = process.env.PORTAL_ACCESS_CODE || "";
 
   const auth = req.headers.get("authorization") || "";
   const adminHeader = req.headers.get("x-admin-token") || "";
+  const portalCookie = req.cookies.get("portal_access")?.value || "";
 
-  return auth === `Bearer ${expected}` || adminHeader === expected;
+  const tokenAllowed =
+    !!adminToken && (auth === `Bearer ${adminToken}` || adminHeader === adminToken);
+
+  const portalCookieAllowed =
+    !!portalAccessCode && portalCookie === portalAccessCode;
+
+  return tokenAllowed || portalCookieAllowed;
 }
 
 function unauthorizedAdminResponse() {
@@ -55,7 +62,7 @@ async function safeFetch(path: string) {
   }
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   if (!isAdminRequest(req)) {
     return unauthorizedAdminResponse();
   }
