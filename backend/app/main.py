@@ -1,4 +1,12 @@
 
+from backend.app.runtime.provider_asset_delivery_packet_runtime import (
+    create_delivery_packet_from_provider_job,
+    get_delivery_packet,
+    get_provider_asset_delivery_packet_status,
+    list_delivery_packets,
+)
+
+
 from backend.app.runtime.provider_retry_timeout_orchestration import (
     get_provider_retry_timeout_status,
     list_retry_ready_provider_jobs,
@@ -5905,4 +5913,26 @@ async def provider_retry_timeout_scan_timeouts(request: Request):
     return mark_stale_running_jobs_timed_out(
         timeout_seconds=int(body.get("timeout_seconds", 900)),
     )
+
+
+
+@app.get("/provider-asset-delivery/status")
+async def provider_asset_delivery_status():
+    return get_provider_asset_delivery_packet_status()
+
+
+@app.post("/provider-asset-delivery/create")
+async def provider_asset_delivery_create(request: Request):
+    body = await request.json()
+    return create_delivery_packet_from_provider_job(body.get("job_id"))
+
+
+@app.get("/provider-asset-delivery/packet/{packet_id}")
+async def provider_asset_delivery_get(packet_id: str):
+    return get_delivery_packet(packet_id)
+
+
+@app.get("/provider-asset-delivery/packets")
+async def provider_asset_delivery_list(tenant_id: str = "", execution_id: str = ""):
+    return list_delivery_packets(tenant_id, execution_id)
 
