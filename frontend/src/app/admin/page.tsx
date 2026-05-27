@@ -499,12 +499,12 @@ export default function AdminPage() {
 
           <section className="metrics">
             {[
-              ["Successful executions", runtime?.execution_summary?.successful_executions || 148, "teal"],
-              ["Pending approvals", runtime?.execution_summary?.pending_approvals || 2, "gold"],
-              ["Blocked executions", runtime?.execution_summary?.blocked_executions || 6, "red"],
-              ["Premium outputs", runtime?.execution_summary?.premium_outputs_generated || 221, "brand"],
-              ["Active subscriptions", runtime?.billing_summary?.subscriptions_active || 8, "brand"],
-              ["Credits remaining", runtime?.billing_summary?.credits_remaining || 1188, "neutral"],
+              ["Successful executions", runtime?.execution_summary?.successful_executions ?? 0, "teal"],
+              ["Pending approvals", runtime?.execution_summary?.pending_approvals ?? 0, "gold"],
+              ["Blocked executions", runtime?.execution_summary?.blocked_executions ?? 0, "red"],
+              ["Premium outputs", runtime?.execution_summary?.premium_outputs_generated ?? 0, "brand"],
+              ["Active subscriptions", runtime?.billing_summary?.subscriptions_active ?? 0, "brand"],
+              ["Credits remaining", runtime?.billing_summary?.credits_remaining ?? 0, "neutral"],
             ].map(([label, value, tone]) => (
               <div className={`metric ${tone}`} key={label}>
                 <small>{label}</small>
@@ -515,10 +515,10 @@ export default function AdminPage() {
 
           <section className="orchestrationStrip">
             {[
-              ["Routes", orchestration?.routes?.count || 0, "Workflow → provider routing"],
-              ["Live outputs", orchestration?.liveExecutions?.count || 0, "Prepared / executed provider packets"],
-              ["Dead letters", orchestration?.deadLetters?.count || 0, "Failed workflows needing review"],
-              ["Manual review", orchestration?.manualReview?.count || 0, "Owner/admin review queue"],
+              ["Routes", orchestration?.routes?.count ?? 0, "Workflow → provider routing"],
+              ["Live outputs", orchestration?.liveExecutions?.count ?? 0, "Prepared / executed provider packets"],
+              ["Dead letters", orchestration?.deadLetters?.count ?? 0, "Failed workflows needing review"],
+              ["Manual review", orchestration?.manualReview?.count ?? 0, "Owner/admin review queue"],
             ].map(([label, value, hint]) => (
               <div className="orchestrationMini" key={label}>
                 <small>{label}</small>
@@ -698,15 +698,15 @@ export default function AdminPage() {
               <div className="reviewRows">
                 <div>
                   <span>Live provider outputs</span>
-                  <b>{orchestration?.liveExecutions?.count || 0}</b>
+                  <b>{orchestration?.liveExecutions?.count ?? 0}</b>
                 </div>
                 <div>
                   <span>Dead-letter items</span>
-                  <b>{orchestration?.deadLetters?.count || 0}</b>
+                  <b>{orchestration?.deadLetters?.count ?? 0}</b>
                 </div>
                 <div>
                   <span>Manual review items</span>
-                  <b>{orchestration?.manualReview?.count || 0}</b>
+                  <b>{orchestration?.manualReview?.count ?? 0}</b>
                 </div>
               </div>
 
