@@ -227,3 +227,111 @@ def real_provider_http_runtime_status(provider_key: str) -> Dict[str, Any]:
         "credential_values_exposed": False,
         "customer_safe": True,
     }
+
+def controlled_openai_live_execution_status() -> Dict[str, Any]:
+    return {
+        "provider_key": "openai",
+        "controlled_live_execution_ready": True,
+        "openai_api_key_present": bool(os.getenv("OPENAI_API_KEY")),
+        "real_dispatch_globally_enabled": os.getenv("REAL_PROVIDER_HTTP_DISPATCH_ENABLED", "").lower() == "true",
+        "requires_live_execution_requested": True,
+        "requires_owner_governed_execution_confirmed": True,
+        "actual_network_call_enabled": os.getenv("OPENAI_ACTUAL_NETWORK_CALL_ENABLED", "").lower() == "true",
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+def execute_controlled_openai_live_request(payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    payload = dict(payload or {})
+    started_at = _now_ms()
+
+    base = execute_real_provider_http_request("openai", payload)
+
+    if base.get("status") != "ready_for_real_http_dispatch":
+        return {
+            "provider_key": "openai",
+            "status": "blocked",
+            "reason": base.get("reason") or base.get("status"),
+            "base_result": base,
+            "live_external_call_executed": False,
+            "latency_ms": _now_ms() - started_at,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
+    if os.getenv("REAL_PROVIDER_HTTP_DISPATCH_ENABLED", "").lower() != "true":
+        return {
+            "provider_key": "openai",
+            "status": "blocked",
+            "reason": "real_provider_http_dispatch_globally_disabled",
+            "base_result": base,
+            "live_external_call_executed": False,
+            "latency_ms": _now_ms() - started_at,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
+    if os.getenv("OPENAI_ACTUAL_NETWORK_CALL_ENABLED", "").lower() != "true":
+        return {
+            "provider_key": "openai",
+            "status": "ready_but_network_call_disabled",
+            "reason": "OPENAI_ACTUAL_NETWORK_CALL_ENABLED_not_true",
+            "base_result": base,
+            "request_packet": base.get("request_packet"),
+            "live_external_call_executed": False,
+            "latency_ms": _now_ms() - started_at,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
+    try:
+        from openai import OpenAI  # type: ignore
+
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        request_packet = base.get("request_packet", {})
+        body = request_packet.get("request_body") or {}
+
+        response = client.responses.create(**body)
+        response_id = getattr(response, "id", None) or f"openai_response_{uuid.uuid4().hex[:12]}"
+        output_text = getattr(response, "output_text", None)
+
+        normalised = normalise_provider_success_response(
+            provider_key="openai",
+            tenant_id=payload.get("tenant_id") or "unknown-tenant",
+            request_id=payload.get("request_id") or "unknown-request",
+            raw_response={
+                "id": response_id,
+                "output_text": output_text,
+            },
+            asset_type=payload.get("asset_type") or "text",
+        )
+
+        return {
+            "provider_key": "openai",
+            "status": "completed",
+            "provider_job_id": response_id,
+            "normalised_response": normalised,
+            "live_external_call_executed": True,
+            "latency_ms": _now_ms() - started_at,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
+    except Exception as exc:
+        failure = map_provider_http_exception(
+            "openai",
+            exception_type="provider_unknown_error",
+            status_code=None,
+        )
+        failure["safe_error"] = str(exc)[:300]
+        return {
+            "provider_key": "openai",
+            "status": "failed",
+            "failure": failure,
+            "live_external_call_executed": False,
+            "latency_ms": _now_ms() - started_at,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+

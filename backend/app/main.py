@@ -4669,3 +4669,44 @@ def asset_delivery_events_route(
 async def asset_storage_reset_for_tests_route():
     return reset_asset_storage_for_tests()
 
+
+# ---------------------------------------------------------------------------
+# Controlled OpenAI live execution routes
+# Added by wire_controlled_openai_live_execution_routes.py
+# Purpose:
+# - expose controlled OpenAI live execution readiness
+# - keep actual network calls disabled unless explicit env + owner gates allow
+# - never expose credentials
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.real_provider_http_execution_layer import (
+        controlled_openai_live_execution_status,
+        execute_controlled_openai_live_request,
+    )
+except Exception:  # pragma: no cover
+    controlled_openai_live_execution_status = None
+    execute_controlled_openai_live_request = None
+
+
+@app.get("/controlled-openai-live-execution/status")
+def controlled_openai_live_execution_status_route():
+    if controlled_openai_live_execution_status is None:
+        return {
+            "status": "unavailable",
+            "reason": "controlled_openai_live_execution_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return controlled_openai_live_execution_status()
+
+
+@app.post("/controlled-openai-live-execution/execute")
+async def controlled_openai_live_execution_execute_route(payload: dict):
+    if execute_controlled_openai_live_request is None:
+        return {
+            "status": "unavailable",
+            "reason": "controlled_openai_live_execution_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return execute_controlled_openai_live_request(dict(payload or {}))
+
