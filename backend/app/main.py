@@ -4830,3 +4830,99 @@ async def provider_result_quality_evaluate_route(payload: dict):
         owner_review_required=bool(safe_payload.get("owner_review_required", False)),
     )
 
+
+# ---------------------------------------------------------------------------
+# Provider outcome learning routes
+# Added by wire_provider_outcome_learning_routes.py
+# Purpose:
+# - record provider outcome signals
+# - summarise provider/task success patterns
+# - generate owner-reviewed improvement recommendations
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.provider_outcome_learning_runtime import (
+        generate_provider_improvement_recommendation,
+        list_provider_outcome_learning,
+        provider_outcome_learning_status,
+        record_provider_outcome_learning,
+        reset_provider_outcome_learning_for_tests,
+        summarise_provider_outcome_learning,
+    )
+except Exception:  # pragma: no cover
+    generate_provider_improvement_recommendation = None
+    list_provider_outcome_learning = None
+    provider_outcome_learning_status = None
+    record_provider_outcome_learning = None
+    reset_provider_outcome_learning_for_tests = None
+    summarise_provider_outcome_learning = None
+
+
+@app.get("/provider-outcome-learning/status")
+def provider_outcome_learning_status_route():
+    return provider_outcome_learning_status()
+
+
+@app.post("/provider-outcome-learning/record")
+async def provider_outcome_learning_record_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return record_provider_outcome_learning(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        execution_id=safe_payload.get("execution_id") or "unknown-execution",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        task_type=safe_payload.get("task_type") or "provider_generation",
+        quality_score=int(safe_payload.get("quality_score", 0) or 0),
+        review_action=safe_payload.get("review_action") or "manual_review_required",
+        final_outcome=safe_payload.get("final_outcome") or "unknown",
+        retry_count=int(safe_payload.get("retry_count", 0) or 0),
+        latency_ms=int(safe_payload.get("latency_ms", 0) or 0),
+        notes=safe_payload.get("notes"),
+    )
+
+
+@app.get("/provider-outcome-learning/list")
+def provider_outcome_learning_list_route(
+    tenant_id: str = "",
+    provider_key: str = "",
+    task_type: str = "",
+    limit: int = 100,
+):
+    return list_provider_outcome_learning(
+        tenant_id=tenant_id or None,
+        provider_key=provider_key or None,
+        task_type=task_type or None,
+        limit=limit,
+    )
+
+
+@app.get("/provider-outcome-learning/summary")
+def provider_outcome_learning_summary_route(
+    tenant_id: str = "",
+    provider_key: str = "",
+    task_type: str = "",
+):
+    return summarise_provider_outcome_learning(
+        tenant_id=tenant_id or None,
+        provider_key=provider_key or None,
+        task_type=task_type or None,
+    )
+
+
+@app.get("/provider-outcome-learning/recommendation")
+def provider_outcome_learning_recommendation_route(
+    tenant_id: str = "",
+    provider_key: str = "",
+    task_type: str = "",
+):
+    return generate_provider_improvement_recommendation(
+        tenant_id=tenant_id or None,
+        provider_key=provider_key or None,
+        task_type=task_type or None,
+    )
+
+
+@app.post("/provider-outcome-learning/reset-for-tests")
+async def provider_outcome_learning_reset_route():
+    return reset_provider_outcome_learning_for_tests()
+
