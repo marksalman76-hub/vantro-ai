@@ -144,6 +144,9 @@ export default function AdminPage() {
         cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          path: "/run-agent",
+          method: "POST",
+          payload: {
           path: "/admin/deployment-control/list?limit=25",
           method: "GET",
         }),
@@ -160,6 +163,9 @@ export default function AdminPage() {
         cache: "no-store",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          path: "/run-agent",
+          method: "POST",
+          payload: {
           path: "/admin/deployment-control/summary",
           method: "GET",
         }),
@@ -297,7 +303,7 @@ export default function AdminPage() {
       const results = [];
 
       for (const agentId of selectedRun) {
-        const response = await fetch("/api/run-agent", {
+        const response = await fetch("/api/admin-deployment-control", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -305,6 +311,9 @@ export default function AdminPage() {
             "x-tenant-id": "owner",
           },
           body: JSON.stringify({
+          path: "/run-agent",
+          method: "POST",
+          payload: {
             account_reference: "owner_admin",
             requested_agent: agentId,
             workflow_stage: "admin_internal_execution",
@@ -349,7 +358,10 @@ export default function AdminPage() {
           "x-actor-role": "owner",
           "x-tenant-id": "owner",
         },
-        body: JSON.stringify({ path, method: "POST", payload }),
+        body: JSON.stringify({
+          path: "/run-agent",
+          method: "POST",
+          payload: { path, method: "POST", payload }),
       });
 
       const data = await response.json();
@@ -554,9 +566,40 @@ export default function AdminPage() {
 
               <button className="primary" onClick={runAdminAgent} disabled={running}>{running ? "Running..." : selectedRun.length > 1 ? "Run Selected Agents" : "Run Agent"}</button>
 
-              <pre className={runResult ? "output has" : "output"}>
-                {runResult ? JSON.stringify(runResult, null, 2) : "Agent output will appear here..."}
-              </pre>
+              <div className={runResult ? "output has" : "output"}>
+                {!runResult ? (
+                  "Agent output will appear here..."
+                ) : (
+                  <div className="adminResultCard">
+                    <strong>
+                      {runResult?.success === false
+                        ? "Execution blocked or failed"
+                        : "Execution completed"}
+                    </strong>
+
+                    <p>
+                      {runResult?.message ||
+                        runResult?.status ||
+                        "Execution finished."}
+                    </p>
+
+                    {Array.isArray(runResult?.results) ? (
+                      <div className="resultList">
+                        {runResult.results.map((item: any, index: number) => (
+                          <div className="resultRow" key={index}>
+                            <span>{item?.agent_id || "agent"}</span>
+                            <b>
+                              {item?.http_status === 200
+                                ? "SUCCESS"
+                                : item?.http_status || "CHECK"}
+                            </b>
+                          </div>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="panel" id="admin-deploy">
