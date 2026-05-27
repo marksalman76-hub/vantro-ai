@@ -465,14 +465,27 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             },
         }
 
-    system_entitlement_check = hydrate_entitlements_for_execution({
-        "actor_role": request.actor_role,
-        "tenant_id": request.tenant_id,
-        "client_id": request.tenant_id,
-        "agent_id": requested_agent,
-        "agent_key": requested_agent,
-        "requested_agent": requested_agent,
-    })
+    if owner_admin_internal_execution:
+        system_entitlement_check = {
+            "execution_allowed": True,
+            "entitlement_status": "owner_admin_internal_bypass",
+            "owner_admin_entitlement_bypass": True,
+            "client_entitlement_gate_applied": False,
+            "bypass_reason": "owner_admin_internal_execution",
+            "tenant_id": request.tenant_id,
+            "requested_agent": requested_agent,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+    else:
+        system_entitlement_check = hydrate_entitlements_for_execution({
+            "actor_role": request.actor_role,
+            "tenant_id": request.tenant_id,
+            "client_id": request.tenant_id,
+            "agent_id": requested_agent,
+            "agent_key": requested_agent,
+            "requested_agent": requested_agent,
+        })
 
     if not system_entitlement_check.get("execution_allowed"):
         return {
