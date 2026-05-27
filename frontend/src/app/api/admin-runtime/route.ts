@@ -1,5 +1,29 @@
 import { NextResponse } from "next/server";
 
+
+function isAdminRequest(req: Request): boolean {
+  const expected = process.env.ADMIN_PLATFORM_TOKEN || "";
+  if (!expected) return false;
+
+  const auth = req.headers.get("authorization") || "";
+  const adminHeader = req.headers.get("x-admin-token") || "";
+
+  return auth === `Bearer ${expected}` || adminHeader === expected;
+}
+
+function unauthorizedAdminResponse() {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "unauthorized",
+      message: "Admin access required.",
+      credential_values_exposed: false,
+      customer_safe: true,
+    },
+    { status: 401 }
+  );
+}
+
 const BACKEND_URL =
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_BACKEND_URL ||
@@ -31,7 +55,11 @@ async function safeFetch(path: string) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (!isAdminRequest(req)) {
+    return unauthorizedAdminResponse();
+  }
+
   const health = await safeFetch("/health");
   const providerReadiness = await safeFetch("/admin/provider-readiness");
   const providerAudit = await safeFetch("/admin/provider-execution-audit?limit=10");

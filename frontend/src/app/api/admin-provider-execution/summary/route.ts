@@ -2,10 +2,38 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+
+function isAdminRequest(req: Request): boolean {
+  const expected = process.env.ADMIN_PLATFORM_TOKEN || "";
+  if (!expected) return false;
+
+  const auth = req.headers.get("authorization") || "";
+  const adminHeader = req.headers.get("x-admin-token") || "";
+
+  return auth === `Bearer ${expected}` || adminHeader === expected;
+}
+
+function unauthorizedAdminResponse() {
+  return NextResponse.json(
+    {
+      success: false,
+      error: "unauthorized",
+      message: "Admin access required.",
+      credential_values_exposed: false,
+      customer_safe: true,
+    },
+    { status: 401 }
+  );
+}
+
 const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL;
 const adminToken = process.env.ADMIN_PLATFORM_TOKEN;
 
-export async function GET() {
+export async function GET(req: Request) {
+  if (!isAdminRequest(req)) {
+    return unauthorizedAdminResponse();
+  }
+
   if (!backendUrl || !adminToken) {
     return NextResponse.json(
       {
