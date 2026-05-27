@@ -1,4 +1,7 @@
 
+from backend.app.runtime.runtime_entitlement_hydration_bridge import hydrate_entitlements_for_execution
+
+
 from backend.app.runtime.runtime_entitlement_hydration_bridge import (
     get_runtime_entitlement_hydration_bridge_status,
     hydrate_entitlements_for_execution,
@@ -406,21 +409,28 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             },
         }
 
-    active_agents = tenant_account.get("account", {}).get("active_agents", [])
+    runtime_entitlement_check = hydrate_entitlements_for_execution({
+        "actor_role": request.actor_role,
+        "tenant_id": request.tenant_id,
+        "client_id": request.tenant_id,
+        "agent_id": requested_agent,
+        "agent_key": requested_agent,
+        "requested_agent": requested_agent,
+    })
 
-    if not owner_admin_internal_execution:
-        normalised_active_agents = [
-            normalize_agent_id(agent) for agent in active_agents
-        ]
-
-        if requested_agent not in normalised_active_agents:
-            return {
-                "success": False,
-                "error": "agent_not_active_for_tenant",
-                "tenant_id": request.tenant_id,
-                "requested_agent": request.requested_agent,
-                "normalised_agent": requested_agent,
-            }
+    if not runtime_entitlement_check.get("execution_allowed"):
+        return {
+            "success": False,
+            "status": "runtime_entitlement_blocked",
+            "error": runtime_entitlement_check.get("error", "runtime_entitlement_denied"),
+            "tenant_id": request.tenant_id,
+            "requested_agent": request.requested_agent,
+            "normalised_agent": requested_agent,
+            "next_stage": runtime_entitlement_check.get("next_stage", "owner_admin_review_required"),
+            "runtime_entitlement_check": runtime_entitlement_check,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
 
     workflow_engine = EcommerceWorkflowEngine()
     approval_gateway = OwnerApprovalGateway()
