@@ -3555,3 +3555,213 @@ async def provider_worker_foundation_advance_job_route(provider_key: str, payloa
         failure_code=safe_payload.get("failure_code"),
     )
 
+
+# ---------------------------------------------------------------------------
+# Provider execution persistence ledger routes
+# Added by wire_provider_execution_ledger_routes_and_worker_bridge.py
+# Purpose:
+# - expose execution records, worker ledger, dispatch attempts, retry history,
+#   and latency metrics
+# - use safe in-memory fallback until Postgres binding is added
+# - never expose credentials
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.provider_execution_persistence_ledger import (
+        append_worker_event_ledger_entry,
+        create_provider_execution_record,
+        get_provider_execution_record,
+        list_dispatch_attempt_records,
+        list_provider_execution_records,
+        list_provider_latency_metrics,
+        list_retry_history_records,
+        list_worker_event_ledger,
+        provider_execution_persistence_status,
+        record_dispatch_attempt,
+        record_provider_latency_metric,
+        record_retry_history,
+        reset_provider_execution_ledger_for_tests,
+        update_provider_execution_record,
+    )
+except Exception:  # pragma: no cover
+    append_worker_event_ledger_entry = None
+    create_provider_execution_record = None
+    get_provider_execution_record = None
+    list_dispatch_attempt_records = None
+    list_provider_execution_records = None
+    list_provider_latency_metrics = None
+    list_retry_history_records = None
+    list_worker_event_ledger = None
+    provider_execution_persistence_status = None
+    record_dispatch_attempt = None
+    record_provider_latency_metric = None
+    record_retry_history = None
+    reset_provider_execution_ledger_for_tests = None
+    update_provider_execution_record = None
+
+
+@app.get("/provider-execution-ledger/status")
+def provider_execution_ledger_status_route():
+    if provider_execution_persistence_status is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_execution_ledger_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return provider_execution_persistence_status()
+
+
+@app.post("/provider-execution-ledger/create-record")
+async def provider_execution_ledger_create_record_route(payload: dict):
+    if create_provider_execution_record is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_execution_ledger_not_loaded",
+            "credential_values_exposed": False,
+        }
+    safe_payload = dict(payload or {})
+    return create_provider_execution_record(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        task_type=safe_payload.get("task_type") or "provider_generation",
+        execution_status=safe_payload.get("execution_status") or "created",
+        worker_job_id=safe_payload.get("worker_job_id"),
+        provider_job_id=safe_payload.get("provider_job_id"),
+    )
+
+
+@app.post("/provider-execution-ledger/update-record/{execution_id}")
+async def provider_execution_ledger_update_record_route(execution_id: str, payload: dict):
+    if update_provider_execution_record is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_execution_ledger_not_loaded",
+            "credential_values_exposed": False,
+        }
+    safe_payload = dict(payload or {})
+    return update_provider_execution_record(
+        execution_id=execution_id,
+        execution_status=safe_payload.get("execution_status"),
+        worker_job_id=safe_payload.get("worker_job_id"),
+        provider_job_id=safe_payload.get("provider_job_id"),
+        extra=safe_payload.get("extra"),
+    )
+
+
+@app.get("/provider-execution-ledger/record/{execution_id}")
+def provider_execution_ledger_get_record_route(execution_id: str):
+    if get_provider_execution_record is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_execution_ledger_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return get_provider_execution_record(execution_id)
+
+
+@app.get("/provider-execution-ledger/records")
+def provider_execution_ledger_list_records_route(
+    tenant_id: str = "",
+    provider_key: str = "",
+    limit: int = 50,
+):
+    if list_provider_execution_records is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_execution_ledger_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return list_provider_execution_records(
+        tenant_id=tenant_id or None,
+        provider_key=provider_key or None,
+        limit=limit,
+    )
+
+
+@app.get("/provider-execution-ledger/worker-events")
+def provider_execution_ledger_worker_events_route(
+    tenant_id: str = "",
+    execution_id: str = "",
+    limit: int = 100,
+):
+    if list_worker_event_ledger is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_execution_ledger_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return list_worker_event_ledger(
+        tenant_id=tenant_id or None,
+        execution_id=execution_id or None,
+        limit=limit,
+    )
+
+
+@app.get("/provider-execution-ledger/dispatch-attempts")
+def provider_execution_ledger_dispatch_attempts_route(
+    tenant_id: str = "",
+    execution_id: str = "",
+    limit: int = 100,
+):
+    if list_dispatch_attempt_records is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_execution_ledger_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return list_dispatch_attempt_records(
+        tenant_id=tenant_id or None,
+        execution_id=execution_id or None,
+        limit=limit,
+    )
+
+
+@app.get("/provider-execution-ledger/retry-history")
+def provider_execution_ledger_retry_history_route(
+    tenant_id: str = "",
+    execution_id: str = "",
+    limit: int = 100,
+):
+    if list_retry_history_records is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_execution_ledger_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return list_retry_history_records(
+        tenant_id=tenant_id or None,
+        execution_id=execution_id or None,
+        limit=limit,
+    )
+
+
+@app.get("/provider-execution-ledger/latency-metrics")
+def provider_execution_ledger_latency_metrics_route(
+    tenant_id: str = "",
+    provider_key: str = "",
+    limit: int = 100,
+):
+    if list_provider_latency_metrics is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_execution_ledger_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return list_provider_latency_metrics(
+        tenant_id=tenant_id or None,
+        provider_key=provider_key or None,
+        limit=limit,
+    )
+
+
+@app.post("/provider-execution-ledger/reset-for-tests")
+async def provider_execution_ledger_reset_for_tests_route():
+    if reset_provider_execution_ledger_for_tests is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_execution_ledger_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return reset_provider_execution_ledger_for_tests()
+

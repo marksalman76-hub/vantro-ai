@@ -6,6 +6,14 @@ import uuid
 from typing import Any, Dict, Optional
 
 from backend.app.runtime.real_provider_http_execution_layer import execute_real_provider_http_request
+from backend.app.runtime.provider_execution_persistence_ledger import (
+    append_worker_event_ledger_entry,
+    create_provider_execution_record,
+    record_dispatch_attempt,
+    record_provider_latency_metric,
+    record_retry_history,
+    update_provider_execution_record,
+)
 from backend.app.runtime.async_provider_orchestration_runtime import (
     create_provider_http_dispatch_preparation_packet,
     create_retry_escalation_packet,
@@ -116,6 +124,47 @@ def create_provider_worker_job_packet(
         status=worker_state,
     )
 
+    execution_record = create_provider_execution_record(
+        tenant_id=tenant_id,
+        request_id=request_id,
+        provider_key=provider_key,
+        task_type=task_type,
+        execution_status=worker_state,
+        worker_job_id=worker_job_id,
+    )
+
+    ledger_entry = append_worker_event_ledger_entry(
+        tenant_id=tenant_id,
+        request_id=request_id,
+        execution_id=execution_record["execution_id"],
+        worker_job_id=worker_job_id,
+        provider_key=provider_key,
+        event_type="provider_worker_job_prepared",
+        status=worker_state,
+        details={"next_action": next_action},
+    )
+
+    dispatch_attempt = record_dispatch_attempt(
+        tenant_id=tenant_id,
+        request_id=request_id,
+        execution_id=execution_record["execution_id"],
+        worker_job_id=worker_job_id,
+        provider_key=provider_key,
+        attempt_number=1,
+        allowed_by_policy=policy["dispatch_allowed"],
+        result_status=worker_state,
+        reason=policy["reason"],
+    )
+
+    latency_metric = record_provider_latency_metric(
+        tenant_id=tenant_id,
+        request_id=request_id,
+        execution_id=execution_record["execution_id"],
+        provider_key=provider_key,
+        latency_ms=int(policy.get("http_packet", {}).get("latency_ms", 0) or 0),
+        operation="worker_dispatch_policy_evaluation",
+    )
+
     return {
         "worker_job_id": worker_job_id,
         "tenant_id": tenant_id,
@@ -127,6 +176,10 @@ def create_provider_worker_job_packet(
         "bridge_packet": bridge_packet,
         "dispatch_policy": policy,
         "timeline_event": timeline_event,
+        "execution_record": execution_record,
+        "ledger_entry": ledger_entry,
+        "dispatch_attempt": dispatch_attempt,
+        "latency_metric": latency_metric,
         "live_external_call_executed": False,
         "customer_safe": True,
         "credential_values_exposed": False,
@@ -173,12 +226,58 @@ def advance_provider_worker_job(
         status=next_state,
     )
 
+    synthetic_execution = create_provider_execution_record(
+        tenant_id=tenant_id,
+        request_id=request_id,
+        provider_key=provider_key,
+        task_type="provider_worker_advance",
+        execution_status=next_state,
+        worker_job_id=worker_job_id,
+    )
+
+    ledger_entry = append_worker_event_ledger_entry(
+        tenant_id=tenant_id,
+        request_id=request_id,
+        execution_id=synthetic_execution["execution_id"],
+        worker_job_id=worker_job_id,
+        provider_key=provider_key,
+        event_type="provider_worker_job_advanced",
+        status=next_state,
+        details={
+            "previous_state": current_state,
+            "next_action": next_action,
+        },
+    )
+
+    retry_record = None
+    if failure_code:
+        retry_record = record_retry_history(
+            tenant_id=tenant_id,
+            request_id=request_id,
+            execution_id=synthetic_execution["execution_id"],
+            worker_job_id=worker_job_id,
+            provider_key=provider_key,
+            attempt_number=attempt_count,
+            failure_code=failure_code,
+            retry_allowed=next_state == "retry_queued",
+            next_action=next_action,
+        )
+
+    update_provider_execution_record(
+        execution_id=synthetic_execution["execution_id"],
+        execution_status=next_state,
+        worker_job_id=worker_job_id,
+    )
+
     return {
         "worker_job_id": worker_job_id,
         "previous_state": current_state,
         "next_state": next_state,
         "next_action": next_action,
         "timeline_event": timeline_event,
+        "execution_record": synthetic_execution,
+        "ledger_entry": ledger_entry,
+        "retry_record": retry_record,
         "live_external_call_executed": False,
         "customer_safe": True,
         "credential_values_exposed": False,
