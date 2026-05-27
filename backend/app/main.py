@@ -3765,3 +3765,206 @@ async def provider_execution_ledger_reset_for_tests_route():
         }
     return reset_provider_execution_ledger_for_tests()
 
+
+# ---------------------------------------------------------------------------
+# Provider execution Postgres ledger bridge routes
+# Added by wire_provider_execution_postgres_ledger_bridge_routes.py
+# Purpose:
+# - expose Postgres schema/readiness bridge
+# - keep safe in-memory fallback active until DB driver/migration is enabled
+# - never expose credentials
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.provider_execution_postgres_ledger_bridge import (
+        apply_provider_ledger_schema_if_possible,
+        get_provider_ledger_schema_sql,
+        persist_dispatch_attempt_bridge,
+        persist_latency_metric_bridge,
+        persist_provider_execution_record_bridge,
+        persist_retry_history_bridge,
+        persist_worker_event_bridge,
+        provider_postgres_bridge_summary,
+        provider_postgres_ledger_bridge_status,
+        reset_provider_postgres_bridge_fallback_for_tests,
+    )
+except Exception:  # pragma: no cover
+    apply_provider_ledger_schema_if_possible = None
+    get_provider_ledger_schema_sql = None
+    persist_dispatch_attempt_bridge = None
+    persist_latency_metric_bridge = None
+    persist_provider_execution_record_bridge = None
+    persist_retry_history_bridge = None
+    persist_worker_event_bridge = None
+    provider_postgres_bridge_summary = None
+    provider_postgres_ledger_bridge_status = None
+    reset_provider_postgres_bridge_fallback_for_tests = None
+
+
+@app.get("/provider-postgres-ledger-bridge/status")
+def provider_postgres_ledger_bridge_status_route():
+    if provider_postgres_ledger_bridge_status is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_ledger_bridge_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return provider_postgres_ledger_bridge_status()
+
+
+@app.get("/provider-postgres-ledger-bridge/schema")
+def provider_postgres_ledger_bridge_schema_route():
+    if get_provider_ledger_schema_sql is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_ledger_bridge_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return get_provider_ledger_schema_sql()
+
+
+@app.post("/provider-postgres-ledger-bridge/apply-schema")
+async def provider_postgres_ledger_bridge_apply_schema_route():
+    if apply_provider_ledger_schema_if_possible is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_ledger_bridge_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return apply_provider_ledger_schema_if_possible()
+
+
+@app.post("/provider-postgres-ledger-bridge/persist-execution-record")
+async def provider_postgres_ledger_bridge_persist_execution_record_route(payload: dict):
+    if persist_provider_execution_record_bridge is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_ledger_bridge_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return persist_provider_execution_record_bridge(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        task_type=safe_payload.get("task_type") or "provider_generation",
+        execution_status=safe_payload.get("execution_status") or "created",
+        worker_job_id=safe_payload.get("worker_job_id"),
+        provider_job_id=safe_payload.get("provider_job_id"),
+    )
+
+
+@app.post("/provider-postgres-ledger-bridge/persist-worker-event")
+async def provider_postgres_ledger_bridge_persist_worker_event_route(payload: dict):
+    if persist_worker_event_bridge is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_ledger_bridge_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    details = safe_payload.get("details") or {}
+    if not isinstance(details, dict):
+        details = {}
+
+    return persist_worker_event_bridge(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        execution_id=safe_payload.get("execution_id") or "unknown-execution",
+        worker_job_id=safe_payload.get("worker_job_id") or "unknown-worker",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        event_type=safe_payload.get("event_type") or "provider_worker_event",
+        status=safe_payload.get("status") or "created",
+        details=details,
+    )
+
+
+@app.post("/provider-postgres-ledger-bridge/persist-dispatch-attempt")
+async def provider_postgres_ledger_bridge_persist_dispatch_attempt_route(payload: dict):
+    if persist_dispatch_attempt_bridge is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_ledger_bridge_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return persist_dispatch_attempt_bridge(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        execution_id=safe_payload.get("execution_id") or "unknown-execution",
+        worker_job_id=safe_payload.get("worker_job_id") or "unknown-worker",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        attempt_number=int(safe_payload.get("attempt_number", 1) or 1),
+        allowed_by_policy=bool(safe_payload.get("allowed_by_policy", False)),
+        result_status=safe_payload.get("result_status") or "blocked",
+        reason=safe_payload.get("reason"),
+    )
+
+
+@app.post("/provider-postgres-ledger-bridge/persist-retry-history")
+async def provider_postgres_ledger_bridge_persist_retry_history_route(payload: dict):
+    if persist_retry_history_bridge is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_ledger_bridge_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return persist_retry_history_bridge(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        execution_id=safe_payload.get("execution_id") or "unknown-execution",
+        worker_job_id=safe_payload.get("worker_job_id") or "unknown-worker",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        attempt_number=int(safe_payload.get("attempt_number", 1) or 1),
+        failure_code=safe_payload.get("failure_code") or "provider_error",
+        retry_allowed=bool(safe_payload.get("retry_allowed", False)),
+        next_action=safe_payload.get("next_action") or "owner_review_required",
+    )
+
+
+@app.post("/provider-postgres-ledger-bridge/persist-latency-metric")
+async def provider_postgres_ledger_bridge_persist_latency_metric_route(payload: dict):
+    if persist_latency_metric_bridge is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_ledger_bridge_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return persist_latency_metric_bridge(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        execution_id=safe_payload.get("execution_id") or "unknown-execution",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        latency_ms=int(safe_payload.get("latency_ms", 0) or 0),
+        operation=safe_payload.get("operation") or "provider_operation",
+    )
+
+
+@app.get("/provider-postgres-ledger-bridge/summary")
+def provider_postgres_ledger_bridge_summary_route():
+    if provider_postgres_bridge_summary is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_ledger_bridge_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return provider_postgres_bridge_summary()
+
+
+@app.post("/provider-postgres-ledger-bridge/reset-for-tests")
+async def provider_postgres_ledger_bridge_reset_for_tests_route():
+    if reset_provider_postgres_bridge_fallback_for_tests is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_ledger_bridge_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return reset_provider_postgres_bridge_fallback_for_tests()
+
