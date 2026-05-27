@@ -1,3 +1,10 @@
+
+from backend.app.runtime.runtime_entitlement_hydration_bridge import (
+    get_runtime_entitlement_hydration_bridge_status,
+    hydrate_entitlements_for_execution,
+    seed_execution_entitlements_from_activation_packet,
+)
+
 from backend.app.runtime.real_provider_adapter_layer import get_provider_adapter_status as get_unified_provider_adapter_status
 import os
 import hashlib
@@ -5652,4 +5659,26 @@ async def governed_activation_persistence_reconcile(tenant_id: str):
 @app.get("/governed-activation-persistence/audit-ledger")
 async def governed_activation_persistence_audit_ledger(tenant_id: str = ""):
     return get_activation_audit_ledger(tenant_id or None)
+
+
+
+@app.get("/runtime-entitlement-hydration/status")
+async def runtime_entitlement_hydration_status():
+    return get_runtime_entitlement_hydration_bridge_status()
+
+
+@app.post("/runtime-entitlement-hydration/check")
+async def runtime_entitlement_hydration_check(request: Request):
+    body = await request.json()
+    if "actor_role" not in body:
+        body["actor_role"] = request.headers.get("x-actor-role", "client")
+    return hydrate_entitlements_for_execution(body)
+
+
+@app.post("/runtime-entitlement-hydration/seed")
+async def runtime_entitlement_hydration_seed(request: Request):
+    body = await request.json()
+    if "actor_role" not in body:
+        body["actor_role"] = request.headers.get("x-actor-role", "system")
+    return seed_execution_entitlements_from_activation_packet(body)
 
