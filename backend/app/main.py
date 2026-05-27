@@ -5014,3 +5014,95 @@ async def provider_health_failover_post_result_recommendation_route(payload: dic
         retry_count=int(safe_payload.get("retry_count", 0) or 0),
     )
 
+
+# ---------------------------------------------------------------------------
+# Global agent output quality routes
+# Added by wire_global_agent_output_quality_routes.py
+# Purpose:
+# - enforce premium output quality across all agents
+# - score, classify, improve, and trigger Head Agent/manual review when needed
+# - prevent unsafe/internal wording from reaching clients
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.global_agent_output_quality_runtime import (
+        classify_global_agent_output_action,
+        evaluate_global_agent_output,
+        generate_agent_output_improvement_brief,
+        get_agent_quality_rubric,
+        global_agent_output_quality_status,
+        score_global_agent_output,
+    )
+except Exception:  # pragma: no cover
+    classify_global_agent_output_action = None
+    evaluate_global_agent_output = None
+    generate_agent_output_improvement_brief = None
+    get_agent_quality_rubric = None
+    global_agent_output_quality_status = None
+    score_global_agent_output = None
+
+
+@app.get("/global-agent-output-quality/status")
+def global_agent_output_quality_status_route():
+    return global_agent_output_quality_status()
+
+
+@app.get("/global-agent-output-quality/rubric/{agent_key}")
+def global_agent_output_quality_rubric_route(agent_key: str):
+    return get_agent_quality_rubric(agent_key)
+
+
+@app.post("/global-agent-output-quality/score")
+async def global_agent_output_quality_score_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return score_global_agent_output(
+        agent_key=safe_payload.get("agent_key") or "default",
+        output_text=safe_payload.get("output_text") or "",
+        business_context=safe_payload.get("business_context") or {},
+        task_type=safe_payload.get("task_type") or "general",
+        consequence_level=safe_payload.get("consequence_level") or "medium",
+    )
+
+
+@app.post("/global-agent-output-quality/classify")
+async def global_agent_output_quality_classify_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return classify_global_agent_output_action(
+        quality_score=int(safe_payload.get("quality_score", 0) or 0),
+        quality_band=safe_payload.get("quality_band") or "reject",
+        consequence_level=safe_payload.get("consequence_level") or "medium",
+        client_safe=bool(safe_payload.get("client_safe", True)),
+        retry_count=int(safe_payload.get("retry_count", 0) or 0),
+    )
+
+
+@app.post("/global-agent-output-quality/improvement-brief")
+async def global_agent_output_quality_improvement_brief_route(payload: dict):
+    safe_payload = dict(payload or {})
+    score_result = safe_payload.get("score_result") or {}
+    if not isinstance(score_result, dict):
+        score_result = {}
+
+    return generate_agent_output_improvement_brief(
+        agent_key=safe_payload.get("agent_key") or "default",
+        output_text=safe_payload.get("output_text") or "",
+        score_result=score_result,
+    )
+
+
+@app.post("/global-agent-output-quality/evaluate")
+async def global_agent_output_quality_evaluate_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return evaluate_global_agent_output(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        execution_id=safe_payload.get("execution_id") or "unknown-execution",
+        agent_key=safe_payload.get("agent_key") or "default",
+        output_text=safe_payload.get("output_text") or "",
+        business_context=safe_payload.get("business_context") or {},
+        task_type=safe_payload.get("task_type") or "general",
+        consequence_level=safe_payload.get("consequence_level") or "medium",
+        retry_count=int(safe_payload.get("retry_count", 0) or 0),
+        latency_ms=int(safe_payload.get("latency_ms", 0) or 0),
+    )
+
