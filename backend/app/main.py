@@ -3449,3 +3449,109 @@ def real_provider_http_dispatch_bridge_status_route(provider_key: str):
         }
     return provider_http_dispatch_bridge_status(provider_key)
 
+
+# ---------------------------------------------------------------------------
+# Provider dispatch policy + worker foundation routes
+# Added by wire_provider_dispatch_policy_worker_routes.py
+# Purpose:
+# - expose dispatch policy status/evaluation
+# - expose worker job preparation
+# - expose safe worker state advancement
+# - keep real background dispatch disabled
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.provider_dispatch_policy_worker_foundation import (
+        advance_provider_worker_job,
+        create_provider_worker_job_packet,
+        evaluate_provider_dispatch_policy,
+        provider_dispatch_policy_status,
+        provider_worker_foundation_status,
+    )
+except Exception:  # pragma: no cover
+    advance_provider_worker_job = None
+    create_provider_worker_job_packet = None
+    evaluate_provider_dispatch_policy = None
+    provider_dispatch_policy_status = None
+    provider_worker_foundation_status = None
+
+
+@app.get("/provider-dispatch-policy/status")
+def provider_dispatch_policy_status_route():
+    if provider_dispatch_policy_status is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_dispatch_policy_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return provider_dispatch_policy_status()
+
+
+@app.post("/provider-dispatch-policy/evaluate/{provider_key}")
+async def provider_dispatch_policy_evaluate_route(provider_key: str, payload: dict):
+    if evaluate_provider_dispatch_policy is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_dispatch_policy_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return evaluate_provider_dispatch_policy(
+        provider_key=provider_key,
+        payload=dict(payload or {}),
+    )
+
+
+@app.get("/provider-worker-foundation/status")
+def provider_worker_foundation_status_route():
+    if provider_worker_foundation_status is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_worker_foundation_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return provider_worker_foundation_status()
+
+
+@app.post("/provider-worker-foundation/create-job/{provider_key}")
+async def provider_worker_foundation_create_job_route(provider_key: str, payload: dict):
+    if create_provider_worker_job_packet is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_worker_foundation_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return create_provider_worker_job_packet(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        provider_key=provider_key,
+        task_type=safe_payload.get("task_type") or "provider_generation",
+        payload=safe_payload.get("payload") or {},
+        live_execution_requested=bool(safe_payload.get("live_execution_requested", False)),
+        owner_governed_execution_confirmed=bool(
+            safe_payload.get("owner_governed_execution_confirmed", False)
+        ),
+    )
+
+
+@app.post("/provider-worker-foundation/advance-job/{provider_key}")
+async def provider_worker_foundation_advance_job_route(provider_key: str, payload: dict):
+    if advance_provider_worker_job is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_worker_foundation_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return advance_provider_worker_job(
+        worker_job_id=safe_payload.get("worker_job_id") or "unknown-worker-job",
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        provider_key=provider_key,
+        current_state=safe_payload.get("current_state") or "dispatch_blocked",
+        attempt_count=int(safe_payload.get("attempt_count", 0) or 0),
+        failure_code=safe_payload.get("failure_code"),
+    )
+
