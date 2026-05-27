@@ -1,4 +1,10 @@
 
+from backend.app.runtime.activation_governance_admin_visibility import (
+    get_activation_governance_admin_visibility,
+    get_activation_governance_admin_visibility_status,
+)
+
+
 from backend.app.runtime.activation_execution_audit_link import (
     get_activation_execution_audit_status,
     list_activation_execution_decisions,
@@ -5722,4 +5728,15 @@ async def activation_execution_audit_record(request: Request):
         entitlement_check=body.get("entitlement_check", {}),
         source=body.get("source", "manual_record"),
     )
+
+
+
+@app.get("/activation-governance-admin-visibility/status")
+async def activation_governance_admin_visibility_status():
+    return get_activation_governance_admin_visibility_status()
+
+
+@app.get("/activation-governance-admin-visibility/summary")
+async def activation_governance_admin_visibility_summary(tenant_id: str = ""):
+    return get_activation_governance_admin_visibility(tenant_id)
 
