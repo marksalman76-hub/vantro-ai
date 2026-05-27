@@ -1,4 +1,14 @@
 
+from backend.app.runtime.provider_job_persistence_runtime import (
+    create_provider_job,
+    get_provider_job,
+    get_provider_job_persistence_status,
+    list_provider_job_events,
+    list_provider_jobs,
+    update_provider_job_status,
+)
+
+
 from backend.app.runtime.activation_governance_admin_visibility import (
     get_activation_governance_admin_visibility,
     get_activation_governance_admin_visibility_status,
@@ -5739,4 +5749,50 @@ async def activation_governance_admin_visibility_status():
 @app.get("/activation-governance-admin-visibility/summary")
 async def activation_governance_admin_visibility_summary(tenant_id: str = ""):
     return get_activation_governance_admin_visibility(tenant_id)
+
+
+
+@app.get("/provider-job-persistence/status")
+async def provider_job_persistence_status():
+    return get_provider_job_persistence_status()
+
+
+@app.post("/provider-job-persistence/create")
+async def provider_job_persistence_create(request: Request):
+    body = await request.json()
+    return create_provider_job(body)
+
+
+@app.post("/provider-job-persistence/update")
+async def provider_job_persistence_update(request: Request):
+    body = await request.json()
+
+    return update_provider_job_status(
+        body.get("job_id"),
+        body.get("status"),
+        result_payload=body.get("result_payload"),
+        error=body.get("error"),
+        provider_job_reference=body.get("provider_job_reference"),
+        asset_records=body.get("asset_records"),
+        next_retry_at=body.get("next_retry_at"),
+    )
+
+
+@app.get("/provider-job-persistence/job/{job_id}")
+async def provider_job_persistence_get(job_id: str):
+    return get_provider_job(job_id)
+
+
+@app.get("/provider-job-persistence/jobs")
+async def provider_job_persistence_list(
+    status: str = "",
+    tenant_id: str = "",
+    provider: str = "",
+):
+    return list_provider_jobs(status, tenant_id, provider)
+
+
+@app.get("/provider-job-persistence/events")
+async def provider_job_persistence_events(job_id: str = ""):
+    return list_provider_job_events(job_id)
 
