@@ -10,6 +10,17 @@ import urllib.request
 import urllib.error
 import json
 from fastapi.middleware.cors import CORSMiddleware
+
+from backend.app.runtime.governed_activation_persistence import (
+    approve_activation_change_request,
+    get_activation_audit_ledger,
+    get_activation_persistence_status,
+    hydrate_activation_state,
+    hydrate_runtime_entitlements,
+    persist_activation_packet,
+    reconcile_activation_state,
+    submit_activation_change_request,
+)
 from backend.app.core.client_business_profile_runtime import get_client_business_profile, save_client_business_profile
 from backend.app.core.client_integrations_runtime import (
     disconnect_client_integration,
@@ -78,7 +89,7 @@ behaviour optimisation, and execution stack routing.
 
 from backend.app.core.priority5_final_security_readiness import priority5_final_security_readiness
 from backend.app.core.priority5_active_security_runtime import active_security_readiness, csrf_check_passed, csrf_check_required, log_security_event, rate_limit_check
-from fastapi import FastAPI, Header
+from fastapi import FastAPI, Request, Header
 from backend.app.runtime.real_provider_activation_registry import get_all_provider_activation_statuses, get_provider_activation_status, select_ready_provider_for_capability
 from backend.app.runtime.async_provider_job_runtime import create_async_provider_job, get_async_provider_job, list_async_provider_jobs, update_async_provider_job_status, mark_async_provider_job_retry
 from backend.app.runtime.real_provider_adapter_layer import get_provider_adapter_status, normalise_provider_request, route_provider_request, execute_provider_request_scaffold
@@ -5588,4 +5599,57 @@ async def signup_locked_activation_request_change_route(payload: dict):
         requested_agent_keys=selected,
         reason=safe_payload.get("reason") or "",
     )
+
+
+
+@app.get("/governed-activation-persistence/status")
+async def governed_activation_persistence_status():
+    return get_activation_persistence_status()
+
+
+@app.post("/governed-activation-persistence/persist")
+async def governed_activation_persistence_persist(request: Request):
+    body = await request.json()
+    actor_role = request.headers.get("x-actor-role", body.get("actor_role", "system"))
+    return persist_activation_packet(body, actor_role=actor_role)
+
+
+@app.get("/governed-activation-persistence/hydrate/{tenant_id}")
+async def governed_activation_persistence_hydrate(tenant_id: str):
+    return hydrate_activation_state(tenant_id)
+
+
+@app.get("/governed-activation-persistence/runtime-entitlements/{tenant_id}")
+async def governed_activation_persistence_runtime_entitlements(tenant_id: str):
+    return hydrate_runtime_entitlements(tenant_id)
+
+
+@app.post("/governed-activation-persistence/change-request")
+async def governed_activation_persistence_change_request(request: Request):
+    body = await request.json()
+    return submit_activation_change_request(
+        tenant_id=body.get("tenant_id", ""),
+        requested_agents=body.get("requested_agents", []),
+        reason=body.get("reason", ""),
+        actor_role=request.headers.get("x-actor-role", body.get("actor_role", "client")),
+    )
+
+
+@app.post("/governed-activation-persistence/change-request/approve")
+async def governed_activation_persistence_approve_change_request(request: Request):
+    body = await request.json()
+    return approve_activation_change_request(
+        request_id=body.get("request_id", ""),
+        actor_role=request.headers.get("x-actor-role", body.get("actor_role", "owner_admin")),
+    )
+
+
+@app.get("/governed-activation-persistence/reconcile/{tenant_id}")
+async def governed_activation_persistence_reconcile(tenant_id: str):
+    return reconcile_activation_state(tenant_id)
+
+
+@app.get("/governed-activation-persistence/audit-ledger")
+async def governed_activation_persistence_audit_ledger(tenant_id: str = ""):
+    return get_activation_audit_ledger(tenant_id or None)
 
