@@ -5418,3 +5418,92 @@ async def signup_agent_selection_activation_packet_route(payload: dict):
         selected,
     )
 
+
+# ---------------------------------------------------------------------------
+# One-time agent selection lock routes
+# Added by wire_one_time_agent_selection_lock_routes.py
+# Purpose:
+# - clients select agents once per package during signup/onboarding
+# - lock selected agents after activation
+# - require owner/admin approval for post-activation changes
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.one_time_agent_selection_lock import (
+        activate_agent_selection_once,
+        create_agent_selection_draft,
+        get_activated_agent_selection,
+        one_time_agent_selection_lock_status,
+        request_post_activation_agent_change,
+        reset_one_time_agent_selection_lock_for_tests,
+    )
+except Exception:  # pragma: no cover
+    activate_agent_selection_once = None
+    create_agent_selection_draft = None
+    get_activated_agent_selection = None
+    one_time_agent_selection_lock_status = None
+    request_post_activation_agent_change = None
+    reset_one_time_agent_selection_lock_for_tests = None
+
+
+@app.get("/one-time-agent-selection-lock/status")
+def one_time_agent_selection_lock_status_route():
+    return one_time_agent_selection_lock_status()
+
+
+@app.post("/one-time-agent-selection-lock/draft")
+async def one_time_agent_selection_lock_draft_route(payload: dict):
+    safe_payload = dict(payload or {})
+    selected = safe_payload.get("selected_agent_keys") or []
+    if not isinstance(selected, list):
+        selected = []
+
+    return create_agent_selection_draft(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        package_id=safe_payload.get("package_id") or "unknown-package",
+        plan=safe_payload.get("plan") or "business",
+        selected_agent_keys=selected,
+    )
+
+
+@app.post("/one-time-agent-selection-lock/activate")
+async def one_time_agent_selection_lock_activate_route(payload: dict):
+    safe_payload = dict(payload or {})
+
+    return activate_agent_selection_once(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        package_id=safe_payload.get("package_id") or "unknown-package",
+        draft_id=safe_payload.get("draft_id") or "",
+    )
+
+
+@app.get("/one-time-agent-selection-lock/activated")
+def one_time_agent_selection_lock_activated_route(
+    tenant_id: str,
+    package_id: str,
+):
+    return get_activated_agent_selection(
+        tenant_id=tenant_id,
+        package_id=package_id,
+    )
+
+
+@app.post("/one-time-agent-selection-lock/request-change")
+async def one_time_agent_selection_lock_request_change_route(payload: dict):
+    safe_payload = dict(payload or {})
+    selected = safe_payload.get("requested_agent_keys") or []
+    if not isinstance(selected, list):
+        selected = []
+
+    return request_post_activation_agent_change(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        package_id=safe_payload.get("package_id") or "unknown-package",
+        requested_agent_keys=selected,
+        reason=safe_payload.get("reason"),
+    )
+
+
+@app.post("/one-time-agent-selection-lock/reset-for-tests")
+async def one_time_agent_selection_lock_reset_route():
+    return reset_one_time_agent_selection_lock_for_tests()
+
