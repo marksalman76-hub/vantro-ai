@@ -1,4 +1,22 @@
-"use client";
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path.cwd()
+STAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
+BACKUP_DIR = ROOT / "backups" / f"admin_owner_control_plane_before_{STAMP}"
+
+ADMIN_PAGE = ROOT / "frontend" / "src" / "app" / "admin" / "page.tsx"
+TEST_FILE = ROOT / "test_admin_owner_control_plane.py"
+
+for path in [ADMIN_PAGE, TEST_FILE]:
+    if path.exists():
+        target = BACKUP_DIR / path.relative_to(ROOT)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, target)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+page = r'''"use client";
 
 const commandCentreCards = [
   {
@@ -173,3 +191,55 @@ export default function AdminPage() {
     </main>
   );
 }
+'''
+
+test = r'''from pathlib import Path
+
+ROOT = Path.cwd()
+admin = (ROOT / "frontend/src/app/admin/page.tsx").read_text(encoding="utf-8")
+
+checks = {
+    "admin_command_centre": "Admin Command Centre" in admin,
+    "provider_execution_link": "/admin/provider-execution" in admin,
+    "runtime_health": "Runtime Health" in admin,
+    "approvals": "Approvals" in admin,
+    "clients_tenants": "Clients & Tenants" in admin,
+    "entitlements": "Entitlements" in admin,
+    "billing": "Billing" in admin,
+    "agent_execution": "Agent Execution" in admin,
+    "integrations": "Integrations" in admin,
+    "readiness_panel": "Readiness Panel" in admin,
+    "owner_governance_rules": "Owner Governance Rules" in admin,
+    "credential_exposure_false": "Credential exposure" in admin and "FALSE" in admin,
+    "owner_spend_rule": "No agent may increase spend without owner approval." in admin,
+    "customer_safe_wording": "customer-safe" in admin.lower(),
+}
+
+failed = [name for name, ok in checks.items() if not ok]
+assert not failed, f"Admin owner control plane checks failed: {failed}"
+
+for forbidden in [
+    "sk-",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "raw JSON",
+    "debug route",
+]:
+    assert forbidden not in admin, f"Forbidden marker found in admin page: {forbidden}"
+
+print("ADMIN_OWNER_CONTROL_PLANE_TESTS_PASSED")
+print("admin_command_centre_ready", True)
+print("provider_execution_link_ready", True)
+print("readiness_panel_ready", True)
+print("credential_values_exposed", False)
+'''
+
+ADMIN_PAGE.write_text(page, encoding="utf-8")
+TEST_FILE.write_text(test, encoding="utf-8")
+
+print("ADMIN_OWNER_CONTROL_PLANE_INSTALLED")
+print(f"Backup folder: {BACKUP_DIR}")
+print(f"Updated: {ADMIN_PAGE}")
+print(f"Created/updated: {TEST_FILE}")
