@@ -1,5 +1,6 @@
 "use client";
 
+import SignupAgentSelectionBridge from "@/components/SignupAgentSelectionBridge";
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -206,7 +207,8 @@ function SignupContent() {
           </div>
         </section>
       </section>
-    </main>
+            <SignupAgentSelectionBridge />
+</main>
   );
 }
 
