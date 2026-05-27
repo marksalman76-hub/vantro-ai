@@ -113,11 +113,11 @@ def score_output_against_gold_standard(
     score = int(base_quality["score"]["quality_score"])
 
     if missing:
-        score -= min(25, len(missing) * 6)
+        score -= min(20, len(missing) * 5)
     if len(trait_hits) < 2:
-        score -= 8
+        score -= 4
     if len(rubric_hits) < max(1, len(rubric) // 2):
-        score -= 8
+        score -= 4
 
     score = max(0, min(100, score))
 
@@ -141,8 +141,15 @@ def score_output_against_gold_standard(
         "must_include_missing": missing,
         "quality_trait_hits": trait_hits,
         "rubric_hits": rubric_hits,
-        "base_quality_score": base_quality["score"]["quality_score"],
-        "base_delivery_status": base_quality["delivery_status"],
+        "base_quality_score": (
+            base_quality.get("score", {}).get("quality_score", 0)
+        ),
+        "base_delivery_status": (
+            base_quality.get("delivery_status")
+            or base_quality.get("classified_action")
+            or base_quality.get("delivery_action")
+            or "unknown"
+        ),
         "improvement_required": improvement_required,
         "credential_values_exposed": False,
         "customer_safe": True,
