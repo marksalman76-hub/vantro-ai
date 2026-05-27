@@ -4760,3 +4760,73 @@ async def controlled_openai_audit_assets_persist_route(payload: dict):
         latency_ms=int(safe_payload.get("latency_ms", 0) or 0),
     )
 
+
+# ---------------------------------------------------------------------------
+# Provider result quality review routes
+# Added by wire_provider_result_quality_review_routes.py
+# Purpose:
+# - score provider outputs
+# - classify output as ready, retry, manual review, or owner review
+# - preserve customer-safe delivery and no credential exposure
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.provider_result_quality_review_runtime import (
+        classify_provider_result_review_action,
+        evaluate_provider_result_for_delivery,
+        provider_result_quality_review_status,
+        score_provider_result_quality,
+    )
+except Exception:  # pragma: no cover
+    classify_provider_result_review_action = None
+    evaluate_provider_result_for_delivery = None
+    provider_result_quality_review_status = None
+    score_provider_result_quality = None
+
+
+@app.get("/provider-result-quality/status")
+def provider_result_quality_status_route():
+    if provider_result_quality_review_status is None:
+        return {"status": "unavailable", "credential_values_exposed": False}
+    return provider_result_quality_review_status()
+
+
+@app.post("/provider-result-quality/score")
+async def provider_result_quality_score_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return score_provider_result_quality(
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        task_type=safe_payload.get("task_type") or "provider_generation",
+        result_payload=safe_payload.get("result_payload") or {},
+        latency_ms=int(safe_payload.get("latency_ms", 0) or 0),
+        retry_count=int(safe_payload.get("retry_count", 0) or 0),
+    )
+
+
+@app.post("/provider-result-quality/classify")
+async def provider_result_quality_classify_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return classify_provider_result_review_action(
+        quality_score=int(safe_payload.get("quality_score", 0) or 0),
+        consequence_level=safe_payload.get("consequence_level") or "medium",
+        retry_count=int(safe_payload.get("retry_count", 0) or 0),
+        owner_review_required=bool(safe_payload.get("owner_review_required", False)),
+    )
+
+
+@app.post("/provider-result-quality/evaluate")
+async def provider_result_quality_evaluate_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return evaluate_provider_result_for_delivery(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        execution_id=safe_payload.get("execution_id") or "unknown-execution",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        task_type=safe_payload.get("task_type") or "provider_generation",
+        result_payload=safe_payload.get("result_payload") or {},
+        latency_ms=int(safe_payload.get("latency_ms", 0) or 0),
+        retry_count=int(safe_payload.get("retry_count", 0) or 0),
+        consequence_level=safe_payload.get("consequence_level") or "medium",
+        owner_review_required=bool(safe_payload.get("owner_review_required", False)),
+    )
+
