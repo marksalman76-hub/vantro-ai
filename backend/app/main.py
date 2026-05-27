@@ -4531,3 +4531,141 @@ async def background_worker_loop_reset_for_tests_route():
 
     return reset_background_worker_loop_for_tests()
 
+
+# ---------------------------------------------------------------------------
+# Asset storage + signed delivery routes
+# Added by wire_asset_storage_signed_delivery_routes.py
+# Purpose:
+# - expose customer-safe generated asset records, signed previews/downloads,
+#   and delivery event records
+# - do not expose internal storage keys or credentials
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.asset_storage_signed_delivery_runtime import (
+        asset_storage_signed_delivery_status,
+        create_asset_record,
+        create_customer_safe_asset_preview,
+        create_signed_asset_delivery_packet,
+        get_asset_record,
+        list_asset_delivery_events,
+        list_asset_records,
+        reset_asset_storage_for_tests,
+        update_asset_status,
+        verify_signed_asset_delivery_packet,
+    )
+except Exception:  # pragma: no cover
+    asset_storage_signed_delivery_status = None
+    create_asset_record = None
+    create_customer_safe_asset_preview = None
+    create_signed_asset_delivery_packet = None
+    get_asset_record = None
+    list_asset_delivery_events = None
+    list_asset_records = None
+    reset_asset_storage_for_tests = None
+    update_asset_status = None
+    verify_signed_asset_delivery_packet = None
+
+
+@app.get("/asset-storage/status")
+def asset_storage_status_route():
+    if asset_storage_signed_delivery_status is None:
+        return {"status": "unavailable", "credential_values_exposed": False}
+    return asset_storage_signed_delivery_status()
+
+
+@app.post("/asset-storage/create")
+async def asset_storage_create_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return create_asset_record(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        asset_type=safe_payload.get("asset_type") or "generated_asset",
+        asset_status=safe_payload.get("asset_status") or "prepared",
+        source_url=safe_payload.get("source_url"),
+        storage_key=safe_payload.get("storage_key"),
+        metadata=safe_payload.get("metadata") or {},
+    )
+
+
+@app.get("/asset-storage/record/{asset_id}")
+def asset_storage_get_route(asset_id: str):
+    return get_asset_record(asset_id)
+
+
+@app.get("/asset-storage/list")
+def asset_storage_list_route(
+    tenant_id: str = "",
+    request_id: str = "",
+    provider_key: str = "",
+    limit: int = 100,
+):
+    return list_asset_records(
+        tenant_id=tenant_id or None,
+        request_id=request_id or None,
+        provider_key=provider_key or None,
+        limit=limit,
+    )
+
+
+@app.post("/asset-storage/update-status/{asset_id}")
+async def asset_storage_update_status_route(asset_id: str, payload: dict):
+    safe_payload = dict(payload or {})
+    return update_asset_status(
+        asset_id=asset_id,
+        asset_status=safe_payload.get("asset_status") or "prepared",
+        metadata=safe_payload.get("metadata") or {},
+    )
+
+
+@app.post("/asset-delivery/signed-packet")
+async def asset_delivery_signed_packet_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return create_signed_asset_delivery_packet(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        asset_id=safe_payload.get("asset_id") or "unknown-asset",
+        delivery_type=safe_payload.get("delivery_type") or "preview",
+        expires_in_seconds=int(safe_payload.get("expires_in_seconds", 3600) or 3600),
+    )
+
+
+@app.post("/asset-delivery/verify")
+async def asset_delivery_verify_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return verify_signed_asset_delivery_packet(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        asset_id=safe_payload.get("asset_id") or "unknown-asset",
+        delivery_type=safe_payload.get("delivery_type") or "preview",
+        expires_at_ms=int(safe_payload.get("expires_at_ms", 0) or 0),
+        nonce=safe_payload.get("nonce") or "",
+        signature=safe_payload.get("signature") or "",
+    )
+
+
+@app.post("/asset-delivery/customer-preview")
+async def asset_delivery_customer_preview_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return create_customer_safe_asset_preview(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        asset_id=safe_payload.get("asset_id") or "unknown-asset",
+    )
+
+
+@app.get("/asset-delivery/events")
+def asset_delivery_events_route(
+    tenant_id: str = "",
+    asset_id: str = "",
+    limit: int = 100,
+):
+    return list_asset_delivery_events(
+        tenant_id=tenant_id or None,
+        asset_id=asset_id or None,
+        limit=limit,
+    )
+
+
+@app.post("/asset-storage/reset-for-tests")
+async def asset_storage_reset_for_tests_route():
+    return reset_asset_storage_for_tests()
+
