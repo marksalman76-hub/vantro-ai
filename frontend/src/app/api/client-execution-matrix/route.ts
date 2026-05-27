@@ -20,6 +20,20 @@ function getBearer(req: NextRequest): string {
   return cookieToken ? `Bearer ${cookieToken}` : "";
 }
 
+
+function sanitizeCustomerSafeBody(body: string): string {
+  return body
+    .replace(/internal_prompt_exposure_blocked/gi, "request_details_protected")
+    .replace(/backend_architecture_exposure_blocked/gi, "system_details_protected")
+    .replace(/internal prompt/gi, "request details")
+    .replace(/system prompt/gi, "request details")
+    .replace(/developer message/gi, "request details")
+    .replace(/backend architecture/gi, "system details")
+    .replace(/raw json/gi, "details")
+    .replace(/debug/gi, "support")
+    .replace(/webhook/gi, "connection");
+}
+
 async function proxy(req: NextRequest, path: string) {
   const bearer = getBearer(req);
 
@@ -44,7 +58,8 @@ async function proxy(req: NextRequest, path: string) {
 
   const res = await fetch(`${BACKEND_URL}${path}`, init);
   const contentType = res.headers.get("content-type") || "application/json";
-  const body = await res.text();
+  const rawBody = await res.text();
+  const body = sanitizeCustomerSafeBody(rawBody);
 
   return new NextResponse(body, {
     status: res.status,
