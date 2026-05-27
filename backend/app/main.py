@@ -5360,3 +5360,61 @@ async def catalogue_entitlement_bridge_activation_packet_route(payload: dict):
         selected_agent_keys=selected,
     )
 
+
+# ---------------------------------------------------------------------------
+# Signup agent selection routes
+# Added by wire_signup_agent_selection_routes.py
+# Purpose:
+# - expose locked 27-agent catalogue selection during signup/onboarding
+# - validate selected agents by plan before activation
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.signup_agent_selection_bridge import (
+        build_signup_activation_packet,
+        get_signup_agent_selection_options,
+        signup_agent_selection_bridge_status,
+        validate_signup_agent_selection,
+    )
+except Exception:  # pragma: no cover
+    build_signup_activation_packet = None
+    get_signup_agent_selection_options = None
+    signup_agent_selection_bridge_status = None
+    validate_signup_agent_selection = None
+
+
+@app.get("/signup-agent-selection/status")
+def signup_agent_selection_status_route():
+    return signup_agent_selection_bridge_status()
+
+
+@app.get("/signup-agent-selection/options/{plan}")
+def signup_agent_selection_options_route(plan: str):
+    return get_signup_agent_selection_options(plan)
+
+
+@app.post("/signup-agent-selection/validate")
+async def signup_agent_selection_validate_route(payload: dict):
+    safe_payload = dict(payload or {})
+    selected = safe_payload.get("selected_agent_keys") or []
+    if not isinstance(selected, list):
+        selected = []
+
+    return validate_signup_agent_selection(
+        safe_payload.get("plan") or "business",
+        selected,
+    )
+
+
+@app.post("/signup-agent-selection/activation-packet")
+async def signup_agent_selection_activation_packet_route(payload: dict):
+    safe_payload = dict(payload or {})
+    selected = safe_payload.get("selected_agent_keys") or []
+    if not isinstance(selected, list):
+        selected = []
+
+    return build_signup_activation_packet(
+        safe_payload.get("plan") or "business",
+        selected,
+    )
+
