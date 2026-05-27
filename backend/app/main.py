@@ -1,3 +1,4 @@
+from backend.app.runtime.real_provider_adapter_layer import get_provider_adapter_status as get_unified_provider_adapter_status
 import os
 import hashlib
 from backend.app.runtime.ai_media_creative_director import readiness as ai_media_creative_director_readiness, run_shared_ai_media_creative_director
@@ -78,6 +79,9 @@ behaviour optimisation, and execution stack routing.
 from backend.app.core.priority5_final_security_readiness import priority5_final_security_readiness
 from backend.app.core.priority5_active_security_runtime import active_security_readiness, csrf_check_passed, csrf_check_required, log_security_event, rate_limit_check
 from fastapi import FastAPI, Header
+from backend.app.runtime.real_provider_activation_registry import get_all_provider_activation_statuses, get_provider_activation_status, select_ready_provider_for_capability
+from backend.app.runtime.async_provider_job_runtime import create_async_provider_job, get_async_provider_job, list_async_provider_jobs, update_async_provider_job_status, mark_async_provider_job_retry
+from backend.app.runtime.real_provider_adapter_layer import get_provider_adapter_status, normalise_provider_request, route_provider_request, execute_provider_request_scaffold
 from pydantic import BaseModel
 from typing import Dict, List
 
@@ -2868,3 +2872,100 @@ def admin_global_provider_execution_packet(payload: dict) -> Dict[str, object]:
         "owner_approval_gate_preserved": True,
     }
 
+
+
+@app.get("/admin/provider-activation/status")
+def admin_provider_activation_status():
+    return get_all_provider_activation_statuses()
+
+
+@app.get("/admin/provider-activation/status/{provider_key}")
+def admin_provider_activation_single_status(provider_key: str):
+    return get_provider_activation_status(provider_key)
+
+
+@app.get("/admin/provider-activation/select/{capability}")
+def admin_provider_activation_select(capability: str):
+    return select_ready_provider_for_capability(capability)
+
+
+@app.post("/admin/provider-jobs/create")
+def admin_provider_jobs_create(payload: dict):
+    return create_async_provider_job(
+        tenant_id=str(payload.get("tenant_id", "admin-internal")),
+        actor_role=str(payload.get("actor_role", "owner")),
+        provider_key=str(payload.get("provider_key", "openai")),
+        capability=str(payload.get("capability", "text")),
+        request_payload=dict(payload.get("request_payload", {})),
+        owner_approval_required=bool(payload.get("owner_approval_required", True)),
+    )
+
+
+@app.get("/admin/provider-jobs/list")
+def admin_provider_jobs_list(tenant_id: str = None, status: str = None):
+    return list_async_provider_jobs(tenant_id=tenant_id, status=status)
+
+
+@app.get("/admin/provider-jobs/{job_id}")
+def admin_provider_jobs_get(job_id: str):
+    return get_async_provider_job(job_id)
+
+
+@app.post("/admin/provider-jobs/{job_id}/status")
+def admin_provider_jobs_update_status(job_id: str, payload: dict):
+    return update_async_provider_job_status(
+        job_id=job_id,
+        status=str(payload.get("status", "queued")),
+        provider_job_id=payload.get("provider_job_id"),
+        provider_status=payload.get("provider_status"),
+        failure_reason=payload.get("failure_reason"),
+        asset_delivery_packet=payload.get("asset_delivery_packet"),
+    )
+
+
+@app.post("/admin/provider-jobs/{job_id}/retry")
+def admin_provider_jobs_retry(job_id: str, payload: dict):
+    return mark_async_provider_job_retry(
+        job_id=job_id,
+        reason=str(payload.get("reason", "manual_retry_requested")),
+    )
+
+
+@app.get("/admin/provider-adapters/status/{provider_key}")
+def admin_provider_adapter_status(provider_key: str):
+    return get_provider_adapter_status(provider_key)
+
+
+@app.post("/admin/provider-adapters/normalise")
+def admin_provider_adapter_normalise(payload: dict):
+    return normalise_provider_request(payload)
+
+
+@app.post("/admin/provider-adapters/route")
+def admin_provider_adapter_route(payload: dict):
+    return route_provider_request(payload)
+
+
+@app.post("/admin/provider-adapters/execute-scaffold")
+def admin_provider_adapter_execute_scaffold(payload: dict):
+    return execute_provider_request_scaffold(payload)
+
+
+@app.get("/admin/provider-adapters/unified-status/{provider_key}")
+def admin_provider_adapter_unified_status(provider_key: str):
+    return get_provider_adapter_status(provider_key)
+
+
+@app.get("/admin/unified-provider-adapter-status/{provider_key}")
+def admin_unified_provider_adapter_status(provider_key: str):
+    return get_provider_adapter_status(provider_key)
+
+
+@app.get("/provider-adapter-unified-status/{provider_key}")
+def root_provider_adapter_unified_status(provider_key: str):
+    return get_provider_adapter_status(provider_key)
+
+
+@app.get("/provider-adapter-runtime-status/{provider_key}")
+def provider_adapter_runtime_status(provider_key: str):
+    return get_unified_provider_adapter_status(provider_key)
