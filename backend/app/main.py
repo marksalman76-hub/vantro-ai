@@ -1,11 +1,11 @@
 
-from backend.app.runtime.provider_execution_admin_visibility import (
+from backend.app.system.provider_execution_admin_visibility import (
     get_provider_execution_admin_visibility,
     get_provider_execution_admin_visibility_status,
 )
 
 
-from backend.app.runtime.provider_asset_delivery_packet_runtime import (
+from backend.app.system.provider_asset_delivery_packet_system import (
     create_delivery_packet_from_provider_job,
     get_delivery_packet,
     get_provider_asset_delivery_packet_status,
@@ -13,7 +13,7 @@ from backend.app.runtime.provider_asset_delivery_packet_runtime import (
 )
 
 
-from backend.app.runtime.provider_retry_timeout_orchestration import (
+from backend.app.system.provider_retry_timeout_orchestration import (
     get_provider_retry_timeout_status,
     list_retry_ready_provider_jobs,
     mark_provider_job_timed_out,
@@ -23,7 +23,7 @@ from backend.app.runtime.provider_retry_timeout_orchestration import (
 )
 
 
-from backend.app.runtime.async_provider_worker_runtime import (
+from backend.app.system.async_provider_worker_system import (
     enqueue_async_provider_job,
     get_async_provider_worker_status,
     process_next_queued_provider_job,
@@ -32,7 +32,7 @@ from backend.app.runtime.async_provider_worker_runtime import (
 )
 
 
-from backend.app.runtime.provider_job_persistence_runtime import (
+from backend.app.system.provider_job_persistence_system import (
     create_provider_job,
     get_provider_job,
     get_provider_job_persistence_status,
@@ -42,32 +42,32 @@ from backend.app.runtime.provider_job_persistence_runtime import (
 )
 
 
-from backend.app.runtime.activation_governance_admin_visibility import (
+from backend.app.system.activation_governance_admin_visibility import (
     get_activation_governance_admin_visibility,
     get_activation_governance_admin_visibility_status,
 )
 
 
-from backend.app.runtime.activation_execution_audit_link import (
+from backend.app.system.activation_execution_audit_link import (
     get_activation_execution_audit_status,
     list_activation_execution_decisions,
     record_activation_execution_decision,
 )
 
 
-from backend.app.runtime.runtime_entitlement_hydration_bridge import hydrate_entitlements_for_execution
+from backend.app.system.system_entitlement_hydration_bridge import hydrate_entitlements_for_execution
 
 
-from backend.app.runtime.runtime_entitlement_hydration_bridge import (
-    get_runtime_entitlement_hydration_bridge_status,
+from backend.app.system.system_entitlement_hydration_bridge import (
+    get_system_entitlement_hydration_bridge_status,
     hydrate_entitlements_for_execution,
     seed_execution_entitlements_from_activation_packet,
 )
 
-from backend.app.runtime.real_provider_adapter_layer import get_provider_adapter_status as get_unified_provider_adapter_status
+from backend.app.system.real_provider_adapter_layer import get_provider_adapter_status as get_unified_provider_adapter_status
 import os
 import hashlib
-from backend.app.runtime.ai_media_creative_director import readiness as ai_media_creative_director_readiness, run_shared_ai_media_creative_director
+from backend.app.system.ai_media_creative_director import readiness as ai_media_creative_director_readiness, run_shared_ai_media_creative_director
 from backend.app.core.integration_live_adapter_registry import (
     adapter_registry_summary,
     execute_integration_action,
@@ -77,18 +77,18 @@ import urllib.error
 import json
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.app.runtime.governed_activation_persistence import (
+from backend.app.system.governed_activation_persistence import (
     approve_activation_change_request,
     get_activation_audit_ledger,
     get_activation_persistence_status,
     hydrate_activation_state,
-    hydrate_runtime_entitlements,
+    hydrate_system_entitlements,
     persist_activation_packet,
     reconcile_activation_state,
     submit_activation_change_request,
 )
-from backend.app.core.client_business_profile_runtime import get_client_business_profile, save_client_business_profile
-from backend.app.core.client_integrations_runtime import (
+from backend.app.core.client_business_profile_system import get_client_business_profile, save_client_business_profile
+from backend.app.core.client_integrations_system import (
     disconnect_client_integration,
     integration_audit,
     integration_catalogue,
@@ -107,7 +107,7 @@ from backend.app.api.admin_deployment_control_routes import (
 )
 
 
-from backend.app.core.subscription_billing_runtime import (
+from backend.app.core.subscription_billing_system import (
     billing_readiness,
     get_subscription,
     record_billing_event,
@@ -117,8 +117,8 @@ from backend.app.core.subscription_billing_runtime import (
 )
 
 
-# Step 173 durable Postgres account runtime
-from backend.app.core.postgres_account_runtime import (
+# Step 173 durable Postgres account system
+from backend.app.core.postgres_account_system import (
     activate_account as pg_activate_account,
     create_activation_invite as pg_create_activation_invite,
     get_activation_invite as pg_get_activation_invite,
@@ -132,8 +132,8 @@ from backend.app.core.postgres_account_runtime import (
 )
 
 
-# Step 157 tenant-aware client account runtime
-from backend.app.core.tenant_account_runtime import (
+# Step 157 tenant-aware client account system
+from backend.app.core.tenant_account_system import (
     activate_client_account,
     create_client_activation_invite,
     get_account_from_session,
@@ -154,11 +154,11 @@ behaviour optimisation, and execution stack routing.
 """
 
 from backend.app.core.priority5_final_security_readiness import priority5_final_security_readiness
-from backend.app.core.priority5_active_security_runtime import active_security_readiness, csrf_check_passed, csrf_check_required, log_security_event, rate_limit_check
+from backend.app.core.priority5_active_security_system import active_security_readiness, csrf_check_passed, csrf_check_required, log_security_event, rate_limit_check
 from fastapi import FastAPI, Request, Header
-from backend.app.runtime.real_provider_activation_registry import get_all_provider_activation_statuses, get_provider_activation_status, select_ready_provider_for_capability
-from backend.app.runtime.async_provider_job_runtime import create_async_provider_job, get_async_provider_job, list_async_provider_jobs, update_async_provider_job_status, mark_async_provider_job_retry
-from backend.app.runtime.real_provider_adapter_layer import get_provider_adapter_status, normalise_provider_request, route_provider_request, execute_provider_request_scaffold
+from backend.app.system.real_provider_activation_registry import get_all_provider_activation_statuses, get_provider_activation_status, select_ready_provider_for_capability
+from backend.app.system.async_provider_job_system import create_async_provider_job, get_async_provider_job, list_async_provider_jobs, update_async_provider_job_status, mark_async_provider_job_retry
+from backend.app.system.real_provider_adapter_layer import get_provider_adapter_status, normalise_provider_request, route_provider_request, execute_provider_request_scaffold
 from pydantic import BaseModel
 from typing import Dict, List
 
@@ -176,74 +176,74 @@ from backend.app.quality.premium_quality_gate import (
     PremiumQualityGate,
     quality_summary,
 )
-from backend.app.runtime.behaviour_optimisation_memory import (
+from backend.app.system.behaviour_optimisation_memory import (
     BehaviourOptimisationMemory,
     behaviour_optimisation_summary,
 )
-from backend.app.runtime.execution_stack import (
+from backend.app.system.execution_stack import (
     ExecutionRequest,
     ExecutionStack,
     execution_summary,
 )
 from backend.app.core.execution_event_ledger import execution_event_ledger
-from backend.app.core.execution_event_runtime import add_execution_event, list_execution_events
-from backend.app.core.execution_queue_runtime import enqueue_execution, list_execution_queue, mark_execution_failed, queue_readiness
-from backend.app.runtime.learning_recommendation_engine import (
+from backend.app.core.execution_event_system import add_execution_event, list_execution_events
+from backend.app.core.execution_queue_system import enqueue_execution, list_execution_queue, mark_execution_failed, queue_readiness
+from backend.app.system.learning_recommendation_engine import (
     LearningRecommendationEngine,
     learning_recommendation_summary,
 )
-from backend.app.runtime.memory_store import MemoryStore
-from backend.app.runtime.sqlite_store import SQLiteStore
+from backend.app.system.memory_store import MemoryStore
+from backend.app.system.sqlite_store import SQLiteStore
 from backend.app.workflows.ecommerce_workflow_engine import (
     EcommerceWorkflowEngine,
     workflow_summary,
 )
 
 
-from backend.app.core.security_hardening_runtime import install_security_hardening, security_hardening_readiness
+from backend.app.core.security_hardening_system import install_security_hardening, security_hardening_readiness
 
-from backend.app.core.session_auth_hardening_runtime import install_session_auth_hardening, session_auth_hardening_readiness
+from backend.app.core.session_auth_hardening_system import install_session_auth_hardening, session_auth_hardening_readiness
 
-from backend.app.core.security_audit_enforcement_runtime import install_security_audit_enforcement, security_audit_enforcement_readiness
+from backend.app.core.security_audit_enforcement_system import install_security_audit_enforcement, security_audit_enforcement_readiness
 
 from backend.app.core.production_security_switch import production_security_switch_readiness
 
-from backend.app.core.execution_queue_worker_runtime import queue_worker_health, worker_heartbeat, clear_queue_worker_locks, claim_execution_queue_batch, run_queue_worker_once
+from backend.app.core.execution_queue_worker_system import queue_worker_health, worker_heartbeat, clear_queue_worker_locks, claim_execution_queue_batch, run_queue_worker_once
 
-from backend.app.core.multi_agent_orchestration_runtime import orchestration_readiness, create_orchestration_plan, orchestration_execution_readiness, enqueue_orchestration_plan
+from backend.app.core.multi_agent_orchestration_system import orchestration_readiness, create_orchestration_plan, orchestration_execution_readiness, enqueue_orchestration_plan
 
-from backend.app.core.orchestration_state_runtime import orchestration_state_readiness, record_orchestration_state, record_orchestration_result, get_orchestration_context, orchestration_recovery_packet
+from backend.app.core.orchestration_state_system import orchestration_state_readiness, record_orchestration_state, record_orchestration_result, get_orchestration_context, orchestration_recovery_packet
 
-from backend.app.core.governed_learning_optimisation_runtime import governed_learning_readiness, score_learning_outcome, aggregate_learning_patterns, generate_agent_coaching_recommendations
+from backend.app.core.governed_learning_optimisation_system import governed_learning_readiness, score_learning_outcome, aggregate_learning_patterns, generate_agent_coaching_recommendations
 
-from backend.app.core.saas_provisioning_runtime import provisioning_readiness, provision_tenant, validate_one_time_link, retrieve_tenant_bootstrap, update_tenant_lifecycle, cleanup_expired_activation_links
-from backend.app.core.marketplace_entitlement_runtime import build_marketplace_entitlement_summary
+from backend.app.core.saas_provisioning_system import provisioning_readiness, provision_tenant, validate_one_time_link, retrieve_tenant_bootstrap, update_tenant_lifecycle, cleanup_expired_activation_links
+from backend.app.core.marketplace_entitlement_system import build_marketplace_entitlement_summary
 from backend.app.core.global_agent_registry import global_agent_registry_summary
-from backend.app.core.marketplace_activation_runtime import activate_marketplace_agent, deactivate_marketplace_agent, build_client_marketplace_workspace, build_package_upgrade_preview
-from backend.app.core.marketplace_state_runtime import upsert_marketplace_state, get_marketplace_state, persist_activation_action, validate_package_downgrade, marketplace_audit_history
+from backend.app.core.marketplace_activation_system import activate_marketplace_agent, deactivate_marketplace_agent, build_client_marketplace_workspace, build_package_upgrade_preview
+from backend.app.core.marketplace_state_system import upsert_marketplace_state, get_marketplace_state, persist_activation_action, validate_package_downgrade, marketplace_audit_history
 from backend.app.core.marketplace_commercial_bridge import package_pricing_catalogue, build_purchase_flow_payload, create_entitlement_change_request, apply_entitlement_change_after_billing, marketplace_commercial_summary
-from backend.app.core.billing_automation_runtime import create_checkout_session_payload, handle_checkout_completed, handle_invoice_payment_succeeded_runtime, handle_invoice_payment_failed_runtime, cancel_subscription_runtime, reactivate_subscription_runtime, billing_automation_summary
-from backend.app.core.stripe_production_hardening_runtime import stripe_production_env_readiness, verify_stripe_webhook_signature, route_stripe_webhook_event, schedule_failed_payment_recovery, transition_trial_to_paid, build_customer_billing_portal_payload, admin_billing_dashboard
-from backend.app.core.live_stripe_bridge_runtime import live_stripe_bridge_readiness, create_live_checkout_session, create_live_billing_portal_session, ingest_live_stripe_webhook
-from backend.app.core.final_deployment_readiness_runtime import final_deployment_readiness
-from backend.app.core.stripe_advanced_billing_runtime import advanced_billing_readiness
+from backend.app.core.billing_automation_system import create_checkout_session_payload, handle_checkout_completed, handle_invoice_payment_succeeded_system, handle_invoice_payment_failed_system, cancel_subscription_system, reactivate_subscription_system, billing_automation_summary
+from backend.app.core.stripe_production_hardening_system import stripe_production_env_readiness, verify_stripe_connection_signature, route_stripe_connection_event, schedule_failed_payment_recovery, transition_trial_to_paid, build_customer_billing_portal_payload, admin_billing_dashboard
+from backend.app.core.live_stripe_bridge_system import live_stripe_bridge_readiness, create_live_checkout_session, create_live_billing_portal_session, ingest_live_stripe_connection
+from backend.app.core.final_deployment_readiness_system import final_deployment_readiness
+from backend.app.core.stripe_advanced_billing_system import advanced_billing_readiness
 from backend.app.core.stripe_customer_billing_portal import billing_portal_readiness
-from backend.app.runtime.dead_letter_manual_review_runtime import create_dead_letter_record, dead_letter_readiness, list_dead_letters, list_manual_review_queue, record_manual_review_decision
-from backend.app.runtime.workflow_provider_auto_routing import list_workflow_provider_routes, route_workflow_to_provider_bridge, workflow_provider_routing_readiness
-from backend.app.runtime.live_provider_execution_outputs import execute_live_provider_packet, list_live_provider_executions, live_provider_execution_readiness
-from backend.app.runtime.ai_media_creative_model_registry import ai_media_registry_readiness, create_ai_media_execution_packet, create_creative_director_plan, list_ai_media_execution_packets, list_ai_media_models, list_creative_director_plans
-from backend.app.runtime.ai_media_execution_router import ai_media_execution_router_readiness, list_ai_media_router_results, route_ai_media_request
-from backend.app.runtime.ai_media_provider_adapters import ai_media_provider_adapters_readiness, execute_ai_media_provider_adapter, get_provider_adapter_status, list_ai_media_provider_adapter_results, prepare_provider_payload
-from backend.app.runtime.ai_media_quality_gate import ai_media_quality_gate_readiness, gate_ai_media_execution_packet, list_ai_media_quality_scores, score_ai_media_quality
-from backend.app.runtime.ai_media_brand_character_memory import ai_media_brand_character_memory_readiness, enrich_ai_media_payload_with_memory, get_ai_media_memory_context, list_ai_media_memory, save_brand_memory, save_campaign_style_memory, save_character_memory
-from backend.app.runtime.ai_media_prompt_template_pack import ai_media_prompt_template_pack_readiness, list_ai_media_prompt_templates, list_rendered_ai_media_prompts, recommend_ai_media_prompt_template, render_ai_media_prompt_template
-from backend.app.runtime.ai_media_multi_provider_execution_packets import advance_packet_to_next_provider, ai_media_multi_provider_packets_readiness, create_ai_media_multi_provider_packet, list_ai_media_multi_provider_packets
-from backend.app.runtime.ai_media_end_to_end_pipeline import ai_media_end_to_end_pipeline_readiness, list_ai_media_pipeline_runs, run_ai_media_end_to_end_pipeline
-from backend.app.runtime.ai_media_session_auth_compat import validate_ai_media_admin_session_compatibility
-from backend.app.runtime.global_real_provider_connector_layer import build_global_connector_execution_packet
-from backend.app.runtime.global_provider_execution_runtime import global_provider_execution_readiness, build_global_provider_execution_packet
-from backend.app.runtime.global_real_provider_connector_layer import global_real_provider_connector_readiness, build_global_connector_execution_packet
-from backend.app.runtime.real_provider_activation_layer import real_provider_activation_readiness
+from backend.app.system.dead_letter_manual_review_system import create_dead_letter_record, dead_letter_readiness, list_dead_letters, list_manual_review_queue, record_manual_review_decision
+from backend.app.system.workflow_provider_auto_routing import list_workflow_provider_routes, route_workflow_to_provider_bridge, workflow_provider_routing_readiness
+from backend.app.system.live_provider_execution_outputs import execute_live_provider_packet, list_live_provider_executions, live_provider_execution_readiness
+from backend.app.system.ai_media_creative_model_registry import ai_media_registry_readiness, create_ai_media_execution_packet, create_creative_director_plan, list_ai_media_execution_packets, list_ai_media_models, list_creative_director_plans
+from backend.app.system.ai_media_execution_router import ai_media_execution_router_readiness, list_ai_media_router_results, route_ai_media_request
+from backend.app.system.ai_media_provider_adapters import ai_media_provider_adapters_readiness, execute_ai_media_provider_adapter, get_provider_adapter_status, list_ai_media_provider_adapter_results, prepare_provider_payload
+from backend.app.system.ai_media_quality_gate import ai_media_quality_gate_readiness, gate_ai_media_execution_packet, list_ai_media_quality_scores, score_ai_media_quality
+from backend.app.system.ai_media_brand_character_memory import ai_media_brand_character_memory_readiness, enrich_ai_media_payload_with_memory, get_ai_media_memory_context, list_ai_media_memory, save_brand_memory, save_campaign_style_memory, save_character_memory
+from backend.app.system.ai_media_prompt_template_pack import ai_media_prompt_template_pack_readiness, list_ai_media_prompt_templates, list_rendered_ai_media_prompts, recommend_ai_media_prompt_template, render_ai_media_prompt_template
+from backend.app.system.ai_media_multi_provider_execution_packets import advance_packet_to_next_provider, ai_media_multi_provider_packets_readiness, create_ai_media_multi_provider_packet, list_ai_media_multi_provider_packets
+from backend.app.system.ai_media_end_to_end_pipeline import ai_media_end_to_end_pipeline_readiness, list_ai_media_pipeline_runs, run_ai_media_end_to_end_pipeline
+from backend.app.system.ai_media_session_auth_compat import validate_ai_media_admin_session_compatibility
+from backend.app.system.global_real_provider_connector_layer import build_global_connector_execution_packet
+from backend.app.system.global_provider_execution_system import global_provider_execution_readiness, build_global_provider_execution_packet
+from backend.app.system.global_real_provider_connector_layer import global_real_provider_connector_readiness, build_global_connector_execution_packet
+from backend.app.system.real_provider_activation_layer import real_provider_activation_readiness
 
 app = FastAPI(
     title="Ecommerce AI Agent Platform",
@@ -465,7 +465,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             },
         }
 
-    runtime_entitlement_check = hydrate_entitlements_for_execution({
+    system_entitlement_check = hydrate_entitlements_for_execution({
         "actor_role": request.actor_role,
         "tenant_id": request.tenant_id,
         "client_id": request.tenant_id,
@@ -474,16 +474,16 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
         "requested_agent": requested_agent,
     })
 
-    if not runtime_entitlement_check.get("execution_allowed"):
+    if not system_entitlement_check.get("execution_allowed"):
         return {
             "success": False,
-            "status": "runtime_entitlement_blocked",
-            "error": runtime_entitlement_check.get("error", "runtime_entitlement_denied"),
+            "status": "system_entitlement_blocked",
+            "error": system_entitlement_check.get("error", "system_entitlement_denied"),
             "tenant_id": request.tenant_id,
             "requested_agent": request.requested_agent,
             "normalised_agent": requested_agent,
-            "next_stage": runtime_entitlement_check.get("next_stage", "owner_admin_review_required"),
-            "runtime_entitlement_check": runtime_entitlement_check,
+            "next_stage": system_entitlement_check.get("next_stage", "owner_admin_review_required"),
+            "system_entitlement_check": system_entitlement_check,
             "credential_values_exposed": False,
             "customer_safe": True,
         }
@@ -832,7 +832,7 @@ def admin_provider_execution_audit(limit: int = 20):
 
     Does not expose:
     - provider credential values
-    - internal prompts
+    - request detailss
     - backend configuration
     - learning internals
     - governance internals
@@ -1252,7 +1252,7 @@ def admin_platform_progress_matrix():
         "success": True,
         "route": "/admin/platform-progress-matrix",
         "platform_phase": "premium_ecommerce_ai_agent_platform_build",
-        "current_status": "core_runtime_llm_provider_stack_and_output_quality_layers_complete",
+        "current_status": "core_system_llm_provider_stack_and_output_quality_layers_complete",
         "completed_matrix": {
             "51": "Persistent tenant/project memory layer",
             "52": "Memory wired into /run-agent",
@@ -1261,7 +1261,7 @@ def admin_platform_progress_matrix():
             "55": "Behaviour optimisation memory",
             "56": "Behaviour optimisation wired into /run-agent",
             "57": "SQLite production persistence foundation",
-            "58": "SQLite persistence wired into runtime",
+            "58": "SQLite persistence wired into system",
             "59": "LLM provider orchestration foundation",
             "60": "LLM routing wired into AI generation service",
             "61": "Provider execution adapter layer",
@@ -1335,7 +1335,7 @@ def admin_operational_dashboard():
         "success": True,
         "route": "/admin/operational-dashboard",
         "dashboard_status": "admin_safe_operational_dashboard_ready",
-        "runtime_status": {
+        "system_status": {
             "memory_stack_complete": True,
             "learning_stack_complete": True,
             "sqlite_persistence_complete": True,
@@ -1489,7 +1489,7 @@ async def admin_billing_invoice_payment_failed(payload: dict):
 
 
 
-# Step 201 subscription policy and Stripe webhook hardening
+# Step 201 subscription policy and Stripe connection hardening
 app.include_router(subscription_policy_router)
 
 # Step 207C single safe billing execution guard for client /run-agent requests
@@ -1629,7 +1629,7 @@ app.include_router(storage_router)
 
 
 
-# Client business profile persistence runtime
+# Client business profile persistence system
 @app.get("/client/business-profile")
 async def client_business_profile_get(session_token: str):
     return get_client_business_profile(session_token)
@@ -2104,22 +2104,22 @@ def billing_checkout_completed(payload: dict):
 
 @app.post("/billing/invoice-payment-succeeded")
 def billing_invoice_payment_succeeded(payload: dict):
-    return handle_invoice_payment_succeeded_runtime(payload)
+    return handle_invoice_payment_succeeded_system(payload)
 
 
 @app.post("/billing/invoice-payment-failed")
 def billing_invoice_payment_failed(payload: dict):
-    return handle_invoice_payment_failed_runtime(payload)
+    return handle_invoice_payment_failed_system(payload)
 
 
 @app.post("/billing/cancel-subscription")
 def billing_cancel_subscription(payload: dict):
-    return cancel_subscription_runtime(payload)
+    return cancel_subscription_system(payload)
 
 
 @app.post("/billing/reactivate-subscription")
 def billing_reactivate_subscription(payload: dict):
-    return reactivate_subscription_runtime(payload)
+    return reactivate_subscription_system(payload)
 
 
 @app.post("/billing/automation-summary")
@@ -2132,14 +2132,14 @@ def billing_stripe_production_readiness():
     return stripe_production_env_readiness()
 
 
-@app.post("/billing/verify-webhook-signature")
-def billing_verify_webhook_signature(payload: dict):
-    return verify_stripe_webhook_signature(payload)
+@app.post("/billing/verify-connection-signature")
+def billing_verify_connection_signature(payload: dict):
+    return verify_stripe_connection_signature(payload)
 
 
-@app.post("/billing/stripe-webhook-route")
-def billing_stripe_webhook_route(payload: dict):
-    return route_stripe_webhook_event(payload)
+@app.post("/billing/stripe-connection-route")
+def billing_stripe_connection_route(payload: dict):
+    return route_stripe_connection_event(payload)
 
 
 @app.post("/billing/failed-payment-recovery")
@@ -2177,9 +2177,9 @@ def billing_live_portal_session(payload: dict):
     return create_live_billing_portal_session(payload)
 
 
-@app.post("/webhooks/stripe/live")
-def webhooks_stripe_live(payload: dict):
-    return ingest_live_stripe_webhook(payload)
+@app.post("/connections/stripe/live")
+def connections_stripe_live(payload: dict):
+    return ingest_live_stripe_connection(payload)
 
 
 @app.get("/admin/final-deployment-readiness")
@@ -2254,7 +2254,7 @@ async def priority5_active_security_middleware(request, call_next):
     response = await call_next(request)
 
     if is_protected:
-        response.headers["X-Security-Profile"] = "priority5_active_security_runtime_v1"
+        response.headers["X-Security-Profile"] = "priority5_active_security_system_v1"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
@@ -2263,8 +2263,8 @@ async def priority5_active_security_middleware(request, call_next):
 
 
 
-@app.get("/admin/security/active-runtime-readiness")
-def admin_security_active_runtime_readiness():
+@app.get("/admin/security/active-system-readiness")
+def admin_security_active_system_readiness():
     return active_security_readiness()
 
 
@@ -2290,14 +2290,14 @@ async def admin_customer_billing_portal_readiness(
     return billing_portal_readiness(tenant_id)
 
 
-@app.post("/webhooks/stripe/hardened")
-async def hardened_stripe_webhook(payload: dict):
-    verification = verify_stripe_webhook_signature(payload)
+@app.post("/connections/stripe/hardened")
+async def hardened_stripe_connection(payload: dict):
+    verification = verify_stripe_connection_signature(payload)
 
     if not verification.get("success"):
         return verification
 
-    return route_stripe_webhook_event(payload)
+    return route_stripe_connection_event(payload)
 
 
 @app.post("/admin/billing-dashboard")
@@ -2305,25 +2305,25 @@ async def admin_billing_dashboard_route(payload: dict):
     return admin_billing_dashboard(payload)
 
 # --- Provider bridge admin diagnostic endpoints ---
-# Admin/runtime diagnostics only. No secrets are exposed.
+# Admin/system diagnostics only. No secrets are exposed.
 
 @app.get("/admin/provider-connectors/readiness")
 async def admin_provider_connectors_readiness():
-    from backend.app.runtime.provider_connector_registry import readiness
+    from backend.app.system.provider_connector_registry import readiness
 
     return readiness()
 
 
 @app.get("/admin/provider-bridge/readiness")
 async def admin_provider_bridge_readiness():
-    from backend.app.runtime.execution_stack import runtime_provider_bridge_readiness
+    from backend.app.system.execution_stack import system_provider_bridge_readiness
 
-    return runtime_provider_bridge_readiness()
+    return system_provider_bridge_readiness()
 
 
 @app.post("/admin/provider-bridge/test-safe-generation")
 async def admin_provider_bridge_test_safe_generation(payload: dict | None = None):
-    from backend.app.runtime.execution_stack import execute_safe_generation_via_provider_bridge
+    from backend.app.system.execution_stack import execute_safe_generation_via_provider_bridge
 
     payload = payload or {}
     return execute_safe_generation_via_provider_bridge(
@@ -2336,18 +2336,18 @@ async def admin_provider_bridge_test_safe_generation(payload: dict | None = None
     )
 
 # --- Persistent workflow admin diagnostic endpoints ---
-# Admin/runtime diagnostics only. Customer-facing UI remains untouched.
+# Admin/system diagnostics only. Customer-facing UI remains untouched.
 
 @app.get("/admin/workflows/readiness")
 async def admin_persistent_workflows_readiness():
-    from backend.app.runtime.persistent_workflow_runtime import readiness
+    from backend.app.system.persistent_workflow_system import readiness
 
     return readiness()
 
 
 @app.post("/admin/workflows/create-test")
 async def admin_persistent_workflows_create_test(payload: dict | None = None):
-    from backend.app.runtime.persistent_workflow_runtime import create_workflow
+    from backend.app.system.persistent_workflow_system import create_workflow
 
     payload = payload or {}
     return create_workflow(
@@ -2362,7 +2362,7 @@ async def admin_persistent_workflows_create_test(payload: dict | None = None):
 
 @app.post("/admin/workflows/advance")
 async def admin_persistent_workflows_advance(payload: dict | None = None):
-    from backend.app.runtime.persistent_workflow_runtime import advance_workflow
+    from backend.app.system.persistent_workflow_system import advance_workflow
 
     payload = payload or {}
     return advance_workflow(
@@ -2373,7 +2373,7 @@ async def admin_persistent_workflows_advance(payload: dict | None = None):
 
 @app.post("/admin/workflows/fail")
 async def admin_persistent_workflows_fail(payload: dict | None = None):
-    from backend.app.runtime.persistent_workflow_runtime import fail_workflow
+    from backend.app.system.persistent_workflow_system import fail_workflow
 
     payload = payload or {}
     return fail_workflow(
@@ -2384,7 +2384,7 @@ async def admin_persistent_workflows_fail(payload: dict | None = None):
 
 @app.post("/admin/workflows/complete")
 async def admin_persistent_workflows_complete(payload: dict | None = None):
-    from backend.app.runtime.persistent_workflow_runtime import complete_workflow
+    from backend.app.system.persistent_workflow_system import complete_workflow
 
     payload = payload or {}
     return complete_workflow(
@@ -2395,23 +2395,23 @@ async def admin_persistent_workflows_complete(payload: dict | None = None):
 
 @app.get("/admin/workflows/{workflow_id}")
 async def admin_persistent_workflows_get(workflow_id: str):
-    from backend.app.runtime.persistent_workflow_runtime import get_workflow
+    from backend.app.system.persistent_workflow_system import get_workflow
 
     return get_workflow(workflow_id)
 
 # --- Cross-agent orchestration admin diagnostic endpoints ---
-# Admin/runtime diagnostics only. Customer-facing UI remains untouched.
+# Admin/system diagnostics only. Customer-facing UI remains untouched.
 
 @app.get("/admin/orchestration/readiness")
 async def admin_cross_agent_orchestration_readiness():
-    from backend.app.runtime.cross_agent_workflow_orchestration import readiness
+    from backend.app.system.cross_agent_workflow_orchestration import readiness
 
     return readiness()
 
 
 @app.post("/admin/orchestration/create-test")
 async def admin_cross_agent_orchestration_create_test(payload: dict | None = None):
-    from backend.app.runtime.cross_agent_workflow_orchestration import create_cross_agent_orchestration
+    from backend.app.system.cross_agent_workflow_orchestration import create_cross_agent_orchestration
 
     payload = payload or {}
     return create_cross_agent_orchestration(
@@ -2455,7 +2455,7 @@ async def admin_cross_agent_orchestration_create_test(payload: dict | None = Non
 
 @app.post("/admin/orchestration/task-complete")
 async def admin_cross_agent_orchestration_task_complete(payload: dict | None = None):
-    from backend.app.runtime.cross_agent_workflow_orchestration import complete_cross_agent_task
+    from backend.app.system.cross_agent_workflow_orchestration import complete_cross_agent_task
 
     payload = payload or {}
     return complete_cross_agent_task(
@@ -2467,7 +2467,7 @@ async def admin_cross_agent_orchestration_task_complete(payload: dict | None = N
 
 @app.post("/admin/orchestration/task-fail")
 async def admin_cross_agent_orchestration_task_fail(payload: dict | None = None):
-    from backend.app.runtime.cross_agent_workflow_orchestration import fail_cross_agent_task
+    from backend.app.system.cross_agent_workflow_orchestration import fail_cross_agent_task
 
     payload = payload or {}
     return fail_cross_agent_task(
@@ -2479,7 +2479,7 @@ async def admin_cross_agent_orchestration_task_fail(payload: dict | None = None)
 
 @app.get("/admin/orchestration/{orchestration_id}")
 async def admin_cross_agent_orchestration_get(orchestration_id: str):
-    from backend.app.runtime.cross_agent_workflow_orchestration import get_cross_agent_orchestration
+    from backend.app.system.cross_agent_workflow_orchestration import get_cross_agent_orchestration
 
     return get_cross_agent_orchestration(orchestration_id)
 
@@ -2884,8 +2884,8 @@ def admin_ai_media_creative_director_readiness():
 @app.post("/admin/ai-media-creative-director/run")
 def admin_ai_media_creative_director_run(payload: dict):
     return run_shared_ai_media_creative_director(payload)
-@app.get("/debug/live-auth-fingerprint")
-def debug_live_auth_fingerprint():
+@app.get("/support/live-auth-fingerprint")
+def support_live_auth_fingerprint():
     def fp(name: str):
         value = os.getenv(name, "").strip()
         return {
@@ -2896,7 +2896,7 @@ def debug_live_auth_fingerprint():
 
     return {
         "success": True,
-        "safe_debug": True,
+        "safe_support": True,
         "secrets_not_returned": True,
         "admin_platform_token": fp("ADMIN_PLATFORM_TOKEN"),
         "admin_auth_secret": fp("ADMIN_AUTH_SECRET"),
@@ -2916,7 +2916,7 @@ def system_live_auth_fingerprint():
 
     return {
         "success": True,
-        "safe_debug": True,
+        "safe_support": True,
         "public_safe": True,
         "secrets_not_returned": True,
         "admin_platform_token": fp("ADMIN_PLATFORM_TOKEN"),
@@ -3050,8 +3050,8 @@ def root_provider_adapter_unified_status(provider_key: str):
     return get_provider_adapter_status(provider_key)
 
 
-@app.get("/provider-adapter-runtime-status/{provider_key}")
-def provider_adapter_runtime_status(provider_key: str):
+@app.get("/provider-adapter-system-status/{provider_key}")
+def provider_adapter_system_status(provider_key: str):
     return get_unified_provider_adapter_status(provider_key)
 
 
@@ -3059,20 +3059,20 @@ def provider_adapter_runtime_status(provider_key: str):
 # Gate-safe live provider adapter routes
 # Added by wire_gate_safe_live_provider_adapter_routes.py
 # Purpose:
-# - expose credential-safe provider adapter runtime checks
+# - expose credential-safe provider adapter system checks
 # - expose owner-governed execution preparation only
 # - keep real provider calls blocked unless credentials + owner execution gates pass
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.live_provider_adapters import (
+    from backend.app.system.live_provider_adapters import (
         build_failover_routing_packet,
         build_polling_packet,
         calculate_provider_health_score,
         create_execution_audit_linkage,
         create_signed_asset_delivery_packet,
         execute_gate_safe_provider_request,
-        live_provider_adapter_runtime_status,
+        live_provider_adapter_system_status,
         normalise_provider_failure,
         provider_timeout_policy,
     )
@@ -3083,21 +3083,21 @@ except Exception:  # pragma: no cover
     create_execution_audit_linkage = None
     create_signed_asset_delivery_packet = None
     execute_gate_safe_provider_request = None
-    live_provider_adapter_runtime_status = None
+    live_provider_adapter_system_status = None
     normalise_provider_failure = None
     provider_timeout_policy = None
 
 
-@app.get("/live-provider-adapter-runtime-status/{provider_key}")
-def live_provider_adapter_runtime_status_route(provider_key: str):
-    if live_provider_adapter_runtime_status is None:
+@app.get("/live-provider-adapter-system-status/{provider_key}")
+def live_provider_adapter_system_status_route(provider_key: str):
+    if live_provider_adapter_system_status is None:
         return {
             "status": "unavailable",
-            "reason": "live_provider_adapter_runtime_not_loaded",
+            "reason": "live_provider_adapter_system_not_loaded",
             "credential_values_exposed": False,
         }
 
-    return live_provider_adapter_runtime_status(provider_key)
+    return live_provider_adapter_system_status(provider_key)
 
 
 @app.post("/live-provider-adapter-execute/{provider_key}")
@@ -3105,7 +3105,7 @@ async def live_provider_adapter_execute_route(provider_key: str, payload: dict):
     if execute_gate_safe_provider_request is None:
         return {
             "status": "blocked",
-            "reason": "live_provider_adapter_runtime_not_loaded",
+            "reason": "live_provider_adapter_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3142,7 +3142,7 @@ def live_provider_adapter_timeout_policy_route(provider_key: str):
     if provider_timeout_policy is None:
         return {
             "status": "unavailable",
-            "reason": "live_provider_adapter_runtime_not_loaded",
+            "reason": "live_provider_adapter_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3158,7 +3158,7 @@ def live_provider_adapter_polling_packet_route(provider_key: str, provider_job_i
     if build_polling_packet is None:
         return {
             "status": "unavailable",
-            "reason": "live_provider_adapter_runtime_not_loaded",
+            "reason": "live_provider_adapter_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3170,7 +3170,7 @@ async def live_provider_adapter_failover_routing_route(payload: dict):
     if build_failover_routing_packet is None:
         return {
             "status": "unavailable",
-            "reason": "live_provider_adapter_runtime_not_loaded",
+            "reason": "live_provider_adapter_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3189,7 +3189,7 @@ async def live_provider_adapter_health_score_route(payload: dict):
     if calculate_provider_health_score is None:
         return {
             "status": "unavailable",
-            "reason": "live_provider_adapter_runtime_not_loaded",
+            "reason": "live_provider_adapter_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3207,7 +3207,7 @@ async def live_provider_adapter_failure_normalisation_route(payload: dict):
     if normalise_provider_failure is None:
         return {
             "status": "unavailable",
-            "reason": "live_provider_adapter_runtime_not_loaded",
+            "reason": "live_provider_adapter_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3226,7 +3226,7 @@ async def live_provider_adapter_asset_packet_route(payload: dict):
     if create_signed_asset_delivery_packet is None:
         return {
             "status": "unavailable",
-            "reason": "live_provider_adapter_runtime_not_loaded",
+            "reason": "live_provider_adapter_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3253,7 +3253,7 @@ async def live_provider_adapter_asset_packet_route(payload: dict):
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.async_provider_orchestration_runtime import (
+    from backend.app.system.async_provider_orchestration_system import (
         advance_provider_polling_state,
         aggregate_provider_latency_metrics,
         build_provider_execution_timeline_event,
@@ -3275,7 +3275,7 @@ async def async_provider_orchestration_packet_route(payload: dict):
     if create_provider_orchestration_packet is None:
         return {
             "status": "unavailable",
-            "reason": "async_provider_orchestration_runtime_not_loaded",
+            "reason": "async_provider_orchestration_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3298,7 +3298,7 @@ async def async_provider_orchestration_polling_state_route(payload: dict):
     if advance_provider_polling_state is None:
         return {
             "status": "unavailable",
-            "reason": "async_provider_orchestration_runtime_not_loaded",
+            "reason": "async_provider_orchestration_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3317,7 +3317,7 @@ async def async_provider_orchestration_retry_escalation_route(payload: dict):
     if create_retry_escalation_packet is None:
         return {
             "status": "unavailable",
-            "reason": "async_provider_orchestration_runtime_not_loaded",
+            "reason": "async_provider_orchestration_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3337,7 +3337,7 @@ async def async_provider_orchestration_timeline_event_route(payload: dict):
     if build_provider_execution_timeline_event is None:
         return {
             "status": "unavailable",
-            "reason": "async_provider_orchestration_runtime_not_loaded",
+            "reason": "async_provider_orchestration_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3358,7 +3358,7 @@ async def async_provider_orchestration_latency_metrics_route(payload: dict):
     if aggregate_provider_latency_metrics is None:
         return {
             "status": "unavailable",
-            "reason": "async_provider_orchestration_runtime_not_loaded",
+            "reason": "async_provider_orchestration_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3375,7 +3375,7 @@ async def async_provider_orchestration_provider_selection_route(payload: dict):
     if prepare_provider_selection_packet is None:
         return {
             "status": "unavailable",
-            "reason": "async_provider_orchestration_runtime_not_loaded",
+            "reason": "async_provider_orchestration_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3406,14 +3406,14 @@ async def async_provider_orchestration_provider_selection_route(payload: dict):
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.real_provider_http_execution_layer import (
+    from backend.app.system.real_provider_http_execution_layer import (
         build_provider_http_request_packet,
         execute_real_provider_http_request,
         map_provider_http_exception,
         normalise_provider_success_response,
-        real_provider_http_runtime_status,
+        real_provider_http_system_status,
     )
-    from backend.app.runtime.async_provider_orchestration_runtime import (
+    from backend.app.system.async_provider_orchestration_system import (
         create_provider_http_dispatch_preparation_packet,
         provider_http_dispatch_bridge_status,
     )
@@ -3422,20 +3422,20 @@ except Exception:  # pragma: no cover
     execute_real_provider_http_request = None
     map_provider_http_exception = None
     normalise_provider_success_response = None
-    real_provider_http_runtime_status = None
+    real_provider_http_system_status = None
     create_provider_http_dispatch_preparation_packet = None
     provider_http_dispatch_bridge_status = None
 
 
-@app.get("/real-provider-http/runtime-status/{provider_key}")
-def real_provider_http_runtime_status_route(provider_key: str):
-    if real_provider_http_runtime_status is None:
+@app.get("/real-provider-http/system-status/{provider_key}")
+def real_provider_http_system_status_route(provider_key: str):
+    if real_provider_http_system_status is None:
         return {
             "status": "unavailable",
-            "reason": "real_provider_http_runtime_not_loaded",
+            "reason": "real_provider_http_system_not_loaded",
             "credential_values_exposed": False,
         }
-    return real_provider_http_runtime_status(provider_key)
+    return real_provider_http_system_status(provider_key)
 
 
 @app.post("/real-provider-http/request-packet/{provider_key}")
@@ -3443,7 +3443,7 @@ async def real_provider_http_request_packet_route(provider_key: str, payload: di
     if build_provider_http_request_packet is None:
         return {
             "status": "unavailable",
-            "reason": "real_provider_http_runtime_not_loaded",
+            "reason": "real_provider_http_system_not_loaded",
             "credential_values_exposed": False,
         }
     return build_provider_http_request_packet(provider_key, dict(payload or {}))
@@ -3454,7 +3454,7 @@ async def real_provider_http_execute_route(provider_key: str, payload: dict):
     if execute_real_provider_http_request is None:
         return {
             "status": "blocked",
-            "reason": "real_provider_http_runtime_not_loaded",
+            "reason": "real_provider_http_system_not_loaded",
             "credential_values_exposed": False,
         }
     return execute_real_provider_http_request(provider_key, dict(payload or {}))
@@ -3465,7 +3465,7 @@ async def real_provider_http_success_normalisation_route(provider_key: str, payl
     if normalise_provider_success_response is None:
         return {
             "status": "unavailable",
-            "reason": "real_provider_http_runtime_not_loaded",
+            "reason": "real_provider_http_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3488,7 +3488,7 @@ async def real_provider_http_error_normalisation_route(provider_key: str, payloa
     if map_provider_http_exception is None:
         return {
             "status": "unavailable",
-            "reason": "real_provider_http_runtime_not_loaded",
+            "reason": "real_provider_http_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3545,7 +3545,7 @@ def real_provider_http_dispatch_bridge_status_route(provider_key: str):
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.provider_dispatch_policy_worker_foundation import (
+    from backend.app.system.provider_dispatch_policy_worker_foundation import (
         advance_provider_worker_job,
         create_provider_worker_job_packet,
         evaluate_provider_dispatch_policy,
@@ -3565,7 +3565,7 @@ def provider_dispatch_policy_status_route():
     if provider_dispatch_policy_status is None:
         return {
             "status": "unavailable",
-            "reason": "provider_dispatch_policy_runtime_not_loaded",
+            "reason": "provider_dispatch_policy_system_not_loaded",
             "credential_values_exposed": False,
         }
     return provider_dispatch_policy_status()
@@ -3576,7 +3576,7 @@ async def provider_dispatch_policy_evaluate_route(provider_key: str, payload: di
     if evaluate_provider_dispatch_policy is None:
         return {
             "status": "unavailable",
-            "reason": "provider_dispatch_policy_runtime_not_loaded",
+            "reason": "provider_dispatch_policy_system_not_loaded",
             "credential_values_exposed": False,
         }
     return evaluate_provider_dispatch_policy(
@@ -3590,7 +3590,7 @@ def provider_worker_foundation_status_route():
     if provider_worker_foundation_status is None:
         return {
             "status": "unavailable",
-            "reason": "provider_worker_foundation_runtime_not_loaded",
+            "reason": "provider_worker_foundation_system_not_loaded",
             "credential_values_exposed": False,
         }
     return provider_worker_foundation_status()
@@ -3601,7 +3601,7 @@ async def provider_worker_foundation_create_job_route(provider_key: str, payload
     if create_provider_worker_job_packet is None:
         return {
             "status": "unavailable",
-            "reason": "provider_worker_foundation_runtime_not_loaded",
+            "reason": "provider_worker_foundation_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3624,7 +3624,7 @@ async def provider_worker_foundation_advance_job_route(provider_key: str, payloa
     if advance_provider_worker_job is None:
         return {
             "status": "unavailable",
-            "reason": "provider_worker_foundation_runtime_not_loaded",
+            "reason": "provider_worker_foundation_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -3651,7 +3651,7 @@ async def provider_worker_foundation_advance_job_route(provider_key: str, payloa
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.provider_execution_persistence_ledger import (
+    from backend.app.system.provider_execution_persistence_ledger import (
         append_worker_event_ledger_entry,
         create_provider_execution_record,
         get_provider_execution_record,
@@ -3860,7 +3860,7 @@ async def provider_execution_ledger_reset_for_tests_route():
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.provider_execution_postgres_ledger_bridge import (
+    from backend.app.system.provider_execution_postgres_ledger_bridge import (
         apply_provider_ledger_schema_if_possible,
         get_provider_ledger_schema_sql,
         persist_dispatch_attempt_bridge,
@@ -4063,7 +4063,7 @@ async def provider_postgres_ledger_bridge_reset_for_tests_route():
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.provider_execution_postgres_ledger_bridge import (
+    from backend.app.system.provider_execution_postgres_ledger_bridge import (
         apply_provider_ledger_schema_with_driver,
         detect_postgres_driver,
         provider_postgres_migration_apply_status,
@@ -4079,7 +4079,7 @@ def provider_postgres_migration_status_route():
     if provider_postgres_migration_apply_status is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_migration_runtime_not_loaded",
+            "reason": "provider_postgres_migration_system_not_loaded",
             "credential_values_exposed": False,
         }
     return provider_postgres_migration_apply_status()
@@ -4090,7 +4090,7 @@ def provider_postgres_migration_driver_route():
     if detect_postgres_driver is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_migration_runtime_not_loaded",
+            "reason": "provider_postgres_migration_system_not_loaded",
             "credential_values_exposed": False,
         }
     return detect_postgres_driver()
@@ -4101,7 +4101,7 @@ async def provider_postgres_migration_apply_route():
     if apply_provider_ledger_schema_with_driver is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_migration_runtime_not_loaded",
+            "reason": "provider_postgres_migration_system_not_loaded",
             "credential_values_exposed": False,
         }
     return apply_provider_ledger_schema_with_driver()
@@ -4117,7 +4117,7 @@ async def provider_postgres_migration_apply_route():
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.provider_execution_postgres_ledger_bridge import (
+    from backend.app.system.provider_execution_postgres_ledger_bridge import (
         persist_provider_execution_record_bridge,
         postgres_read_provider_execution_records,
         provider_postgres_read_write_status,
@@ -4133,7 +4133,7 @@ def provider_postgres_read_write_status_route():
     if provider_postgres_read_write_status is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_read_write_runtime_not_loaded",
+            "reason": "provider_postgres_read_write_system_not_loaded",
             "credential_values_exposed": False,
         }
     return provider_postgres_read_write_status()
@@ -4144,7 +4144,7 @@ async def provider_postgres_read_write_execution_record_route(payload: dict):
     if persist_provider_execution_record_bridge is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_read_write_runtime_not_loaded",
+            "reason": "provider_postgres_read_write_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4169,7 +4169,7 @@ def provider_postgres_read_write_execution_records_route(
     if postgres_read_provider_execution_records is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_read_write_runtime_not_loaded",
+            "reason": "provider_postgres_read_write_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4191,7 +4191,7 @@ def provider_postgres_read_write_execution_records_route(
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.provider_execution_postgres_ledger_bridge import (
+    from backend.app.system.provider_execution_postgres_ledger_bridge import (
         persist_dispatch_attempt_bridge,
         persist_latency_metric_bridge,
         persist_retry_history_bridge,
@@ -4211,7 +4211,7 @@ def provider_postgres_extended_ledger_write_status_route():
     if provider_postgres_extended_ledger_write_status is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_extended_ledger_write_runtime_not_loaded",
+            "reason": "provider_postgres_extended_ledger_write_system_not_loaded",
             "credential_values_exposed": False,
         }
     return provider_postgres_extended_ledger_write_status()
@@ -4222,7 +4222,7 @@ async def provider_postgres_extended_worker_event_route(payload: dict):
     if persist_worker_event_bridge is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_extended_ledger_write_runtime_not_loaded",
+            "reason": "provider_postgres_extended_ledger_write_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4248,7 +4248,7 @@ async def provider_postgres_extended_dispatch_attempt_route(payload: dict):
     if persist_dispatch_attempt_bridge is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_extended_ledger_write_runtime_not_loaded",
+            "reason": "provider_postgres_extended_ledger_write_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4271,7 +4271,7 @@ async def provider_postgres_extended_retry_history_route(payload: dict):
     if persist_retry_history_bridge is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_extended_ledger_write_runtime_not_loaded",
+            "reason": "provider_postgres_extended_ledger_write_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4294,7 +4294,7 @@ async def provider_postgres_extended_latency_metric_route(payload: dict):
     if persist_latency_metric_bridge is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_extended_ledger_write_runtime_not_loaded",
+            "reason": "provider_postgres_extended_ledger_write_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4320,7 +4320,7 @@ async def provider_postgres_extended_latency_metric_route(payload: dict):
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.provider_execution_postgres_ledger_bridge import (
+    from backend.app.system.provider_execution_postgres_ledger_bridge import (
         provider_postgres_extended_ledger_read_status,
         postgres_read_dispatch_attempts,
         postgres_read_latency_metrics,
@@ -4340,7 +4340,7 @@ def provider_postgres_extended_ledger_read_status_route():
     if provider_postgres_extended_ledger_read_status is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_extended_ledger_read_runtime_not_loaded",
+            "reason": "provider_postgres_extended_ledger_read_system_not_loaded",
             "credential_values_exposed": False,
         }
     return provider_postgres_extended_ledger_read_status()
@@ -4355,7 +4355,7 @@ def provider_postgres_extended_worker_events_read_route(
     if postgres_read_worker_events is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_extended_ledger_read_runtime_not_loaded",
+            "reason": "provider_postgres_extended_ledger_read_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4375,7 +4375,7 @@ def provider_postgres_extended_dispatch_attempts_read_route(
     if postgres_read_dispatch_attempts is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_extended_ledger_read_runtime_not_loaded",
+            "reason": "provider_postgres_extended_ledger_read_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4395,7 +4395,7 @@ def provider_postgres_extended_retry_history_read_route(
     if postgres_read_retry_history is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_extended_ledger_read_runtime_not_loaded",
+            "reason": "provider_postgres_extended_ledger_read_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4415,7 +4415,7 @@ def provider_postgres_extended_latency_metrics_read_route(
     if postgres_read_latency_metrics is None:
         return {
             "status": "unavailable",
-            "reason": "provider_postgres_extended_ledger_read_runtime_not_loaded",
+            "reason": "provider_postgres_extended_ledger_read_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4436,7 +4436,7 @@ def provider_postgres_extended_latency_metrics_read_route(
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.background_worker_loop_foundation import (
+    from backend.app.system.background_worker_loop_foundation import (
         background_worker_loop_foundation_status,
         enqueue_background_provider_job,
         list_background_worker_queue,
@@ -4464,7 +4464,7 @@ def background_worker_loop_status_route():
     if background_worker_loop_foundation_status is None:
         return {
             "status": "unavailable",
-            "reason": "background_worker_loop_runtime_not_loaded",
+            "reason": "background_worker_loop_system_not_loaded",
             "credential_values_exposed": False,
         }
     return background_worker_loop_foundation_status()
@@ -4475,7 +4475,7 @@ async def background_worker_loop_enqueue_route(payload: dict):
     if enqueue_background_provider_job is None:
         return {
             "status": "unavailable",
-            "reason": "background_worker_loop_runtime_not_loaded",
+            "reason": "background_worker_loop_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4502,7 +4502,7 @@ def background_worker_loop_queue_route(
     if list_background_worker_queue is None:
         return {
             "status": "unavailable",
-            "reason": "background_worker_loop_runtime_not_loaded",
+            "reason": "background_worker_loop_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4518,7 +4518,7 @@ async def background_worker_loop_cycle_once_route():
     if run_background_worker_cycle_once is None:
         return {
             "status": "unavailable",
-            "reason": "background_worker_loop_runtime_not_loaded",
+            "reason": "background_worker_loop_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4530,7 +4530,7 @@ async def background_worker_loop_dispatch_check_route(payload: dict):
     if run_background_worker_dispatch_check is None:
         return {
             "status": "unavailable",
-            "reason": "background_worker_loop_runtime_not_loaded",
+            "reason": "background_worker_loop_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4547,7 +4547,7 @@ async def background_worker_loop_polling_cycle_route(payload: dict):
     if run_background_worker_polling_cycle is None:
         return {
             "status": "unavailable",
-            "reason": "background_worker_loop_runtime_not_loaded",
+            "reason": "background_worker_loop_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4568,7 +4568,7 @@ async def background_worker_loop_retry_scheduler_route(payload: dict):
     if run_background_worker_retry_scheduler is None:
         return {
             "status": "unavailable",
-            "reason": "background_worker_loop_runtime_not_loaded",
+            "reason": "background_worker_loop_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4588,7 +4588,7 @@ async def background_worker_loop_reconcile_completion_route(payload: dict):
     if reconcile_background_worker_completion is None:
         return {
             "status": "unavailable",
-            "reason": "background_worker_loop_runtime_not_loaded",
+            "reason": "background_worker_loop_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4609,7 +4609,7 @@ async def background_worker_loop_reset_for_tests_route():
     if reset_background_worker_loop_for_tests is None:
         return {
             "status": "unavailable",
-            "reason": "background_worker_loop_runtime_not_loaded",
+            "reason": "background_worker_loop_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4626,7 +4626,7 @@ async def background_worker_loop_reset_for_tests_route():
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.asset_storage_signed_delivery_runtime import (
+    from backend.app.system.asset_storage_signed_delivery_system import (
         asset_storage_signed_delivery_status,
         create_asset_record,
         create_customer_safe_asset_preview,
@@ -4764,7 +4764,7 @@ async def asset_storage_reset_for_tests_route():
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.real_provider_http_execution_layer import (
+    from backend.app.system.real_provider_http_execution_layer import (
         controlled_openai_live_execution_status,
         execute_controlled_openai_live_request,
     )
@@ -4778,7 +4778,7 @@ def controlled_openai_live_execution_status_route():
     if controlled_openai_live_execution_status is None:
         return {
             "status": "unavailable",
-            "reason": "controlled_openai_live_execution_runtime_not_loaded",
+            "reason": "controlled_openai_live_execution_system_not_loaded",
             "credential_values_exposed": False,
         }
     return controlled_openai_live_execution_status()
@@ -4789,7 +4789,7 @@ async def controlled_openai_live_execution_execute_route(payload: dict):
     if execute_controlled_openai_live_request is None:
         return {
             "status": "unavailable",
-            "reason": "controlled_openai_live_execution_runtime_not_loaded",
+            "reason": "controlled_openai_live_execution_system_not_loaded",
             "credential_values_exposed": False,
         }
     return execute_controlled_openai_live_request(dict(payload or {}))
@@ -4805,7 +4805,7 @@ async def controlled_openai_live_execution_execute_route(payload: dict):
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.real_provider_http_execution_layer import (
+    from backend.app.system.real_provider_http_execution_layer import (
         controlled_openai_audit_asset_integration_status,
         persist_openai_execution_audit_asset,
     )
@@ -4819,7 +4819,7 @@ def controlled_openai_audit_assets_status_route():
     if controlled_openai_audit_asset_integration_status is None:
         return {
             "status": "unavailable",
-            "reason": "controlled_openai_audit_asset_runtime_not_loaded",
+            "reason": "controlled_openai_audit_asset_system_not_loaded",
             "credential_values_exposed": False,
         }
     return controlled_openai_audit_asset_integration_status()
@@ -4830,7 +4830,7 @@ async def controlled_openai_audit_assets_persist_route(payload: dict):
     if persist_openai_execution_audit_asset is None:
         return {
             "status": "unavailable",
-            "reason": "controlled_openai_audit_asset_runtime_not_loaded",
+            "reason": "controlled_openai_audit_asset_system_not_loaded",
             "credential_values_exposed": False,
         }
 
@@ -4855,7 +4855,7 @@ async def controlled_openai_audit_assets_persist_route(payload: dict):
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.provider_result_quality_review_runtime import (
+    from backend.app.system.provider_result_quality_review_system import (
         classify_provider_result_review_action,
         evaluate_provider_result_for_delivery,
         provider_result_quality_review_status,
@@ -4925,7 +4925,7 @@ async def provider_result_quality_evaluate_route(payload: dict):
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.provider_outcome_learning_runtime import (
+    from backend.app.system.provider_outcome_learning_system import (
         generate_provider_improvement_recommendation,
         list_provider_outcome_learning,
         provider_outcome_learning_status,
@@ -5021,7 +5021,7 @@ async def provider_outcome_learning_reset_route():
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.provider_health_failover_automation_runtime import (
+    from backend.app.system.provider_health_failover_automation_system import (
         automate_provider_selection,
         build_provider_health_profile,
         provider_health_failover_automation_status,
@@ -5109,7 +5109,7 @@ async def provider_health_failover_post_result_recommendation_route(payload: dic
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.global_agent_output_quality_runtime import (
+    from backend.app.system.global_agent_output_quality_system import (
         classify_global_agent_output_action,
         evaluate_global_agent_output,
         generate_agent_output_improvement_brief,
@@ -5200,7 +5200,7 @@ async def global_agent_output_quality_evaluate_route(payload: dict):
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.agent_execution_quality_gate_bridge import (
+    from backend.app.system.agent_execution_quality_gate_bridge import (
         agent_execution_quality_gate_bridge_status,
         apply_global_quality_gate_to_agent_result,
         extract_agent_output_text,
@@ -5264,7 +5264,7 @@ async def agent_execution_quality_gate_extract_output_route(payload: dict):
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.gold_standard_agent_output_benchmark_runtime import (
+    from backend.app.system.gold_standard_agent_output_benchmark_system import (
         evaluate_output_against_gold_standard,
         generate_benchmark_improvement_plan,
         get_gold_standard_benchmark,
@@ -5331,11 +5331,11 @@ async def gold_standard_agent_output_benchmark_evaluate_route(payload: dict):
 # Added by wire_real_agent_component_catalogue_routes.py
 # Purpose:
 # - lock commercial agent count separately from internal operational components
-# - clarify 27 commercial agents vs larger runtime intelligence count
+# - clarify 27 commercial agents vs larger system intelligence count
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.real_agent_component_catalogue import (
+    from backend.app.system.real_agent_component_catalogue import (
         calculate_catalogue_counts,
         get_catalogue_component_by_key,
         list_client_selectable_agents,
@@ -5389,7 +5389,7 @@ def real_agent_component_catalogue_client_selectable_route(plan: str = "business
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.catalogue_entitlement_bridge import (
+    from backend.app.system.catalogue_entitlement_bridge import (
         build_agent_activation_entitlement_packet,
         catalogue_entitlement_bridge_status,
         get_package_catalogue_rules,
@@ -5454,7 +5454,7 @@ async def catalogue_entitlement_bridge_activation_packet_route(payload: dict):
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.signup_agent_selection_bridge import (
+    from backend.app.system.signup_agent_selection_bridge import (
         build_signup_activation_packet,
         get_signup_agent_selection_options,
         signup_agent_selection_bridge_status,
@@ -5513,7 +5513,7 @@ async def signup_agent_selection_activation_packet_route(payload: dict):
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.one_time_agent_selection_lock import (
+    from backend.app.system.one_time_agent_selection_lock import (
         activate_agent_selection_once,
         create_agent_selection_draft,
         get_activated_agent_selection,
@@ -5602,7 +5602,7 @@ async def one_time_agent_selection_lock_reset_route():
 # ---------------------------------------------------------------------------
 
 try:
-    from backend.app.runtime.signup_locked_activation_bridge import (
+    from backend.app.system.signup_locked_activation_bridge import (
         activate_signup_locked_selection,
         create_signup_locked_selection_draft,
         get_signup_locked_selection_status,
@@ -5692,9 +5692,9 @@ async def governed_activation_persistence_hydrate(tenant_id: str):
     return hydrate_activation_state(tenant_id)
 
 
-@app.get("/governed-activation-persistence/runtime-entitlements/{tenant_id}")
-async def governed_activation_persistence_runtime_entitlements(tenant_id: str):
-    return hydrate_runtime_entitlements(tenant_id)
+@app.get("/governed-activation-persistence/system-entitlements/{tenant_id}")
+async def governed_activation_persistence_system_entitlements(tenant_id: str):
+    return hydrate_system_entitlements(tenant_id)
 
 
 @app.post("/governed-activation-persistence/change-request")
@@ -5728,21 +5728,21 @@ async def governed_activation_persistence_audit_ledger(tenant_id: str = ""):
 
 
 
-@app.get("/runtime-entitlement-hydration/status")
-async def runtime_entitlement_hydration_status():
-    return get_runtime_entitlement_hydration_bridge_status()
+@app.get("/system-entitlement-hydration/status")
+async def system_entitlement_hydration_status():
+    return get_system_entitlement_hydration_bridge_status()
 
 
-@app.post("/runtime-entitlement-hydration/check")
-async def runtime_entitlement_hydration_check(request: Request):
+@app.post("/system-entitlement-hydration/check")
+async def system_entitlement_hydration_check(request: Request):
     body = await request.json()
     if "actor_role" not in body:
         body["actor_role"] = request.headers.get("x-actor-role", "client")
     return hydrate_entitlements_for_execution(body)
 
 
-@app.post("/runtime-entitlement-hydration/seed")
-async def runtime_entitlement_hydration_seed(request: Request):
+@app.post("/system-entitlement-hydration/seed")
+async def system_entitlement_hydration_seed(request: Request):
     body = await request.json()
     if "actor_role" not in body:
         body["actor_role"] = request.headers.get("x-actor-role", "system")
@@ -5991,7 +5991,7 @@ def _provider_action_event(action: str, payload: _ProviderGovernedActionRequest)
         "credential_values_exposed": False,
         "customer_safe": True,
         "status": f"{action}_requested",
-        "message": f"Governed provider job {action} request accepted for admin review/runtime handling.",
+        "message": f"Governed provider job {action} request accepted for admin review/system handling.",
         "reason": payload.reason or "Admin provider execution dashboard action.",
         "timestamp": now,
     }
