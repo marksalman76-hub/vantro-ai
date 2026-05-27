@@ -3310,3 +3310,142 @@ async def async_provider_orchestration_provider_selection_route(payload: dict):
         provider_health=provider_health,
     )
 
+
+# ---------------------------------------------------------------------------
+# Real provider HTTP execution routes + orchestration bridge
+# Added by wire_real_provider_http_execution_routes.py
+# Purpose:
+# - expose HTTP request builders/status safely
+# - expose success/error normalisation safely
+# - expose orchestration-to-HTTP dispatch preparation bridge
+# - do NOT execute real external provider calls
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.real_provider_http_execution_layer import (
+        build_provider_http_request_packet,
+        execute_real_provider_http_request,
+        map_provider_http_exception,
+        normalise_provider_success_response,
+        real_provider_http_runtime_status,
+    )
+    from backend.app.runtime.async_provider_orchestration_runtime import (
+        create_provider_http_dispatch_preparation_packet,
+        provider_http_dispatch_bridge_status,
+    )
+except Exception:  # pragma: no cover
+    build_provider_http_request_packet = None
+    execute_real_provider_http_request = None
+    map_provider_http_exception = None
+    normalise_provider_success_response = None
+    real_provider_http_runtime_status = None
+    create_provider_http_dispatch_preparation_packet = None
+    provider_http_dispatch_bridge_status = None
+
+
+@app.get("/real-provider-http/runtime-status/{provider_key}")
+def real_provider_http_runtime_status_route(provider_key: str):
+    if real_provider_http_runtime_status is None:
+        return {
+            "status": "unavailable",
+            "reason": "real_provider_http_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return real_provider_http_runtime_status(provider_key)
+
+
+@app.post("/real-provider-http/request-packet/{provider_key}")
+async def real_provider_http_request_packet_route(provider_key: str, payload: dict):
+    if build_provider_http_request_packet is None:
+        return {
+            "status": "unavailable",
+            "reason": "real_provider_http_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return build_provider_http_request_packet(provider_key, dict(payload or {}))
+
+
+@app.post("/real-provider-http/execute/{provider_key}")
+async def real_provider_http_execute_route(provider_key: str, payload: dict):
+    if execute_real_provider_http_request is None:
+        return {
+            "status": "blocked",
+            "reason": "real_provider_http_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return execute_real_provider_http_request(provider_key, dict(payload or {}))
+
+
+@app.post("/real-provider-http/success-normalisation/{provider_key}")
+async def real_provider_http_success_normalisation_route(provider_key: str, payload: dict):
+    if normalise_provider_success_response is None:
+        return {
+            "status": "unavailable",
+            "reason": "real_provider_http_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    raw_response = safe_payload.get("raw_response") or {}
+    if not isinstance(raw_response, dict):
+        raw_response = {}
+
+    return normalise_provider_success_response(
+        provider_key=provider_key,
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        raw_response=raw_response,
+        asset_type=safe_payload.get("asset_type") or "generated_asset",
+    )
+
+
+@app.post("/real-provider-http/error-normalisation/{provider_key}")
+async def real_provider_http_error_normalisation_route(provider_key: str, payload: dict):
+    if map_provider_http_exception is None:
+        return {
+            "status": "unavailable",
+            "reason": "real_provider_http_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return map_provider_http_exception(
+        provider_key,
+        exception_type=safe_payload.get("exception_type") or "provider_unknown_error",
+        status_code=safe_payload.get("status_code"),
+    )
+
+
+@app.post("/real-provider-http/dispatch-bridge/{provider_key}")
+async def real_provider_http_dispatch_bridge_route(provider_key: str, payload: dict):
+    if create_provider_http_dispatch_preparation_packet is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_http_dispatch_bridge_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return create_provider_http_dispatch_preparation_packet(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        provider_key=provider_key,
+        task_type=safe_payload.get("task_type") or "provider_generation",
+        payload=safe_payload.get("payload") or {},
+        live_execution_requested=bool(safe_payload.get("live_execution_requested", False)),
+        owner_governed_execution_confirmed=bool(
+            safe_payload.get("owner_governed_execution_confirmed", False)
+        ),
+    )
+
+
+@app.get("/real-provider-http/dispatch-bridge-status/{provider_key}")
+def real_provider_http_dispatch_bridge_status_route(provider_key: str):
+    if provider_http_dispatch_bridge_status is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_http_dispatch_bridge_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return provider_http_dispatch_bridge_status(provider_key)
+

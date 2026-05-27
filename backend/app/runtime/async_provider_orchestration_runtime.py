@@ -4,6 +4,7 @@ import time
 import uuid
 from typing import Any, Dict, List, Optional
 
+from backend.app.runtime.real_provider_http_execution_layer import execute_real_provider_http_request, real_provider_http_runtime_status
 from backend.app.runtime.live_provider_adapters import (
     build_failover_routing_packet,
     build_polling_packet,
@@ -234,3 +235,65 @@ def prepare_provider_selection_packet(
         "credential_values_exposed": False,
         "customer_safe": True,
     }
+
+def create_provider_http_dispatch_preparation_packet(
+    *,
+    tenant_id: str,
+    request_id: str,
+    provider_key: str,
+    task_type: str,
+    payload: Optional[Dict[str, Any]] = None,
+    live_execution_requested: bool = False,
+    owner_governed_execution_confirmed: bool = False,
+) -> Dict[str, Any]:
+    safe_payload = dict(payload or {})
+    safe_payload.update({
+        "tenant_id": tenant_id,
+        "request_id": request_id,
+        "task_type": task_type,
+        "live_execution_requested": live_execution_requested,
+        "owner_governed_execution_confirmed": owner_governed_execution_confirmed,
+    })
+
+    orchestration_packet = create_provider_orchestration_packet(
+        tenant_id=tenant_id,
+        request_id=request_id,
+        provider_key=provider_key,
+        task_type=task_type,
+        payload=payload or {},
+        live_execution_requested=live_execution_requested,
+        owner_governed_execution_confirmed=owner_governed_execution_confirmed,
+    )
+
+    http_dispatch = execute_real_provider_http_request(provider_key, safe_payload)
+
+    return {
+        "tenant_id": tenant_id,
+        "request_id": request_id,
+        "provider_key": provider_key,
+        "task_type": task_type,
+        "orchestration_status": orchestration_packet.get("orchestration_status"),
+        "http_dispatch_status": http_dispatch.get("status"),
+        "orchestration_packet": orchestration_packet,
+        "http_dispatch_packet": http_dispatch,
+        "real_http_dispatch_enabled": False,
+        "live_external_call_executed": False,
+        "owner_governed_execution_required": True,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+        "created_at_ms": _now_ms(),
+    }
+
+
+def provider_http_dispatch_bridge_status(provider_key: str) -> Dict[str, Any]:
+    return {
+        "provider_key": provider_key,
+        "orchestration_runtime_ready": True,
+        "http_runtime_status": real_provider_http_runtime_status(provider_key),
+        "bridge_ready": True,
+        "real_http_dispatch_enabled": False,
+        "owner_governed_execution_required": True,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
