@@ -4224,3 +4224,120 @@ async def provider_postgres_extended_latency_metric_route(payload: dict):
         operation=safe_payload.get("operation") or "provider_operation",
     )
 
+
+# ---------------------------------------------------------------------------
+# Provider execution Postgres extended ledger read routes
+# Added by wire_provider_execution_postgres_extended_ledger_read_routes.py
+# Purpose:
+# - expose read views for worker events, dispatch attempts, retry history,
+#   and latency metrics
+# - preserve safe fallback when DB is unavailable
+# - never expose credentials
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.provider_execution_postgres_ledger_bridge import (
+        provider_postgres_extended_ledger_read_status,
+        postgres_read_dispatch_attempts,
+        postgres_read_latency_metrics,
+        postgres_read_retry_history,
+        postgres_read_worker_events,
+    )
+except Exception:  # pragma: no cover
+    provider_postgres_extended_ledger_read_status = None
+    postgres_read_dispatch_attempts = None
+    postgres_read_latency_metrics = None
+    postgres_read_retry_history = None
+    postgres_read_worker_events = None
+
+
+@app.get("/provider-postgres-extended-ledger-reads/status")
+def provider_postgres_extended_ledger_read_status_route():
+    if provider_postgres_extended_ledger_read_status is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_extended_ledger_read_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return provider_postgres_extended_ledger_read_status()
+
+
+@app.get("/provider-postgres-extended-ledger-reads/worker-events")
+def provider_postgres_extended_worker_events_read_route(
+    tenant_id: str = "",
+    execution_id: str = "",
+    limit: int = 100,
+):
+    if postgres_read_worker_events is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_extended_ledger_read_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    return postgres_read_worker_events(
+        tenant_id=tenant_id or None,
+        execution_id=execution_id or None,
+        limit=limit,
+    )
+
+
+@app.get("/provider-postgres-extended-ledger-reads/dispatch-attempts")
+def provider_postgres_extended_dispatch_attempts_read_route(
+    tenant_id: str = "",
+    execution_id: str = "",
+    limit: int = 100,
+):
+    if postgres_read_dispatch_attempts is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_extended_ledger_read_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    return postgres_read_dispatch_attempts(
+        tenant_id=tenant_id or None,
+        execution_id=execution_id or None,
+        limit=limit,
+    )
+
+
+@app.get("/provider-postgres-extended-ledger-reads/retry-history")
+def provider_postgres_extended_retry_history_read_route(
+    tenant_id: str = "",
+    execution_id: str = "",
+    limit: int = 100,
+):
+    if postgres_read_retry_history is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_extended_ledger_read_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    return postgres_read_retry_history(
+        tenant_id=tenant_id or None,
+        execution_id=execution_id or None,
+        limit=limit,
+    )
+
+
+@app.get("/provider-postgres-extended-ledger-reads/latency-metrics")
+def provider_postgres_extended_latency_metrics_read_route(
+    tenant_id: str = "",
+    provider_key: str = "",
+    limit: int = 100,
+):
+    if postgres_read_latency_metrics is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_extended_ledger_read_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    return postgres_read_latency_metrics(
+        tenant_id=tenant_id or None,
+        provider_key=provider_key or None,
+        limit=limit,
+    )
+

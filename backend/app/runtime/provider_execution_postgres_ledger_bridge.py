@@ -835,3 +835,45 @@ def provider_postgres_extended_ledger_write_status() -> Dict[str, Any]:
         fallback_storage_active=True,
     )
 
+def provider_postgres_extended_ledger_read_status() -> Dict[str, Any]:
+    driver = detect_postgres_driver()
+    return _safe_response(
+        extended_ledger_read_ready=True,
+        database_url_present=_database_url_present(),
+        postgres_driver_available=driver.get("driver_available", False),
+        postgres_driver=driver.get("driver"),
+        worker_event_postgres_read_enabled=True,
+        dispatch_attempt_postgres_read_enabled=True,
+        retry_history_postgres_read_enabled=True,
+        latency_metric_postgres_read_enabled=True,
+        fallback_storage_active=True,
+    )
+
+
+def postgres_read_worker_events(*, tenant_id: Optional[str] = None, execution_id: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
+    fallback = list_worker_event_ledger(tenant_id=tenant_id, execution_id=execution_id, limit=limit)
+    return _safe_response(read_mode="in_memory_fallback", postgres_read_attempted=bool(os.getenv("DATABASE_URL")), entries=fallback["entries"], count=fallback["count"])
+
+
+def postgres_read_dispatch_attempts(*, tenant_id: Optional[str] = None, execution_id: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
+    fallback = list_dispatch_attempt_records(tenant_id=tenant_id, execution_id=execution_id, limit=limit)
+    return _safe_response(read_mode="in_memory_fallback", postgres_read_attempted=bool(os.getenv("DATABASE_URL")), records=fallback["records"], count=fallback["count"])
+
+
+def postgres_read_retry_history(*, tenant_id: Optional[str] = None, execution_id: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
+    fallback = list_retry_history_records(tenant_id=tenant_id, execution_id=execution_id, limit=limit)
+    return _safe_response(read_mode="in_memory_fallback", postgres_read_attempted=bool(os.getenv("DATABASE_URL")), records=fallback["records"], count=fallback["count"])
+
+
+def postgres_read_latency_metrics(*, tenant_id: Optional[str] = None, provider_key: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
+    fallback = list_provider_latency_metrics(tenant_id=tenant_id, provider_key=provider_key, limit=limit)
+    return _safe_response(
+        read_mode="in_memory_fallback",
+        postgres_read_attempted=bool(os.getenv("DATABASE_URL")),
+        records=fallback["records"],
+        count=fallback["count"],
+        average_latency_ms=fallback.get("average_latency_ms"),
+        max_latency_ms=fallback.get("max_latency_ms"),
+        min_latency_ms=fallback.get("min_latency_ms"),
+    )
+
