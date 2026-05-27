@@ -1,4 +1,11 @@
 
+from backend.app.runtime.activation_execution_audit_link import (
+    get_activation_execution_audit_status,
+    list_activation_execution_decisions,
+    record_activation_execution_decision,
+)
+
+
 from backend.app.runtime.runtime_entitlement_hydration_bridge import hydrate_entitlements_for_execution
 
 
@@ -5691,4 +5698,28 @@ async def runtime_entitlement_hydration_seed(request: Request):
     if "actor_role" not in body:
         body["actor_role"] = request.headers.get("x-actor-role", "system")
     return seed_execution_entitlements_from_activation_packet(body)
+
+
+
+@app.get("/activation-execution-audit/status")
+async def activation_execution_audit_status():
+    return get_activation_execution_audit_status()
+
+
+@app.get("/activation-execution-audit/decisions")
+async def activation_execution_audit_decisions(tenant_id: str = ""):
+    return list_activation_execution_decisions(tenant_id)
+
+
+@app.post("/activation-execution-audit/record")
+async def activation_execution_audit_record(request: Request):
+    body = await request.json()
+    return record_activation_execution_decision(
+        tenant_id=body.get("tenant_id", ""),
+        requested_agent=body.get("requested_agent", ""),
+        actor_role=body.get("actor_role", "system"),
+        execution_allowed=bool(body.get("execution_allowed", False)),
+        entitlement_check=body.get("entitlement_check", {}),
+        source=body.get("source", "manual_record"),
+    )
 
