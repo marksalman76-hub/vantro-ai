@@ -2,6 +2,46 @@
 
 import React, { useEffect, useRef, useState } from "react";
 
+
+
+function CustomerAgentStatusBadge({ active }: { active: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] ${
+        active
+          ? "border-emerald-300/60 bg-emerald-50 text-emerald-700"
+          : "border-rose-300/60 bg-rose-50 text-rose-700"
+      }`}
+      aria-label={active ? "ACTIVE" : "INACTIVE"}
+    >
+      <span
+        className={`h-2.5 w-2.5 rounded-full ${
+          active ? "bg-emerald-500" : "bg-rose-500"
+        }`}
+      />
+      {active ? "ACTIVE" : "INACTIVE"}
+    </span>
+  );
+}
+
+function customerPortalSafeText(value: unknown, fallback = "") {
+  const raw = value === null || value === undefined ? fallback : String(value);
+  return raw
+    .replace(/service details?/gi, "service details")
+    .replace(/processing status?/gi, "processing status")
+    .replace(/raw json/gi, "details")
+    .replace(/debug/gi, "support")
+    .replace(/webhook/gi, "connection")
+    .replace(/prompt/gi, "request")
+    .replace(/credential/gi, "secure access")
+    .replace(/governance/gi, "approval")
+    .replace(/runtime/gi, "system");
+}
+
+function customerPortalSelectionLockedNotice() {
+  return "Agent selections are locked after activation. Package changes, swaps, upgrades, or added agents require owner/admin approval.";
+}
+
 type Account = {
   tenant_id?: string;
   client_id?: string;
@@ -916,6 +956,16 @@ useEffect(() => {
           'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
     >
+        <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
+            Agent Status
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <CustomerAgentStatusBadge active={true} />
+            <CustomerAgentStatusBadge active={false} />
+          </div>
+        </div>
+
 
 
 
@@ -2394,7 +2444,7 @@ useEffect(() => {
             <div style={{ display: "grid", gap: 9, marginTop: 14 }}>
               {[
                 ["Client review", reviewStatus === "approved" ? "Approved" : reviewStatus === "rejected" ? "Revision requested" : "Pending"],
-                ["Owner-safe controls", "Active"],
+                ["Owner-safe controls", "ACTIVE"],
                 ["High-risk actions", "Approval gated"],
               ].map(([label, value]) => (
                 <div
