@@ -521,6 +521,10 @@ useEffect(() => {
     ? visibleAgentCatalogue.slice(0, 7)
     : visibleAgentCatalogue;
   const accountStatus = account?.status || "active";
+  const activationLocked = Boolean((account as any)?.activation_locked);
+  const entitlementHydrated = Boolean((account as any)?.entitlement_hydrated);
+  const postActivationChangesBlocked = Boolean((account as any)?.post_activation_client_changes_blocked);
+  const ownerAdminReviewRequiredForChanges = Boolean((account as any)?.owner_admin_required_for_post_activation_changes);
   const activeAgentCount = visibleAgentCount;
   const accountAny = account as any;
   const businessProfileAny = businessProfile as any;
@@ -1193,6 +1197,66 @@ useEffect(() => {
                 {accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "ACTIVE" : "INACTIVE"}
               </span>
             </div>
+
+            <div
+              title="Activation entitlement state"
+              style={{
+                background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff",
+                borderRadius: 16,
+                padding: "9px 14px",
+                border: darkModeEnabled ? "1px solid rgba(99,102,241,.38)" : "1px solid #e5eaf2",
+                fontWeight: 850,
+                boxShadow: darkModeEnabled ? "0 0 0 1px rgba(99,102,241,.10), 0 12px 34px rgba(0,0,0,.24)" : "0 8px 22px rgba(15,23,42,.045)",
+                color: darkModeEnabled ? "#eef2ff" : "var(--color-dark)",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                minHeight: 34,
+                whiteSpace: "nowrap",
+                fontSize: 12,
+              }}
+            >
+              <span>{activationLocked ? "🔒" : "🔓"}</span>
+              <span>
+                {activationLocked ? "AGENTS LOCKED" : "AGENTS UNLOCKED"}
+              </span>
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 999,
+                  background: entitlementHydrated ? "#22c55e" : "#f59e0b",
+                  boxShadow: entitlementHydrated ? "0 0 12px rgba(34,197,94,.55)" : "0 0 12px rgba(245,158,11,.45)",
+                }}
+              />
+              <span style={{ opacity: 0.78 }}>
+                {entitlementHydrated ? "RESTORED" : "PENDING"}
+              </span>
+            </div>
+
+            {postActivationChangesBlocked && (
+              <div
+                title="Post-activation changes require owner/admin review"
+                style={{
+                  background: darkModeEnabled ? "rgba(76,29,149,.28)" : "#f5f3ff",
+                  borderRadius: 16,
+                  padding: "9px 14px",
+                  border: darkModeEnabled ? "1px solid rgba(167,139,250,.36)" : "1px solid #ddd6fe",
+                  fontWeight: 850,
+                  boxShadow: darkModeEnabled ? "0 0 0 1px rgba(167,139,250,.10), 0 12px 34px rgba(0,0,0,.22)" : "0 8px 22px rgba(15,23,42,.04)",
+                  color: darkModeEnabled ? "#f5f3ff" : "#4c1d95",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  minHeight: 34,
+                  whiteSpace: "nowrap",
+                  fontSize: 12,
+                }}
+              >
+                <span>🛡️</span>
+                <span>{ownerAdminReviewRequiredForChanges ? "CHANGES REQUIRE APPROVAL" : "CHANGE PROTECTED"}</span>
+              </div>
+            )}
 
             <button
               aria-label="Notifications"
