@@ -605,6 +605,24 @@ export default function AdminPage() {
           </section>
 
           <section className="grid two">
+        <a
+          href="/admin/provider-execution"
+          className="group rounded-3xl border border-slate-800 bg-slate-900/80 p-5 shadow-xl transition hover:border-indigo-400 hover:bg-slate-900"
+        >
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-indigo-300">
+            Provider Runtime
+          </p>
+          <h2 className="mt-3 text-xl font-bold text-white">
+            Provider Execution
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-300">
+            Monitor queued, running, completed, failed, retry-ready, timeout, and delivery-packet provider jobs from the protected admin console.
+          </p>
+          <div className="mt-4 text-sm font-semibold text-indigo-200 group-hover:text-indigo-100">
+            Open provider execution →
+          </div>
+        </a>
+
             <div className="panel" id="admin-run">
               <h2>Run Agent <span>{selectedRun.length} selected</span></h2>
               <p>Run any selected agents from the full 27-agent catalogue. Owner/admin execution bypasses client credit limits while preserving governance.</p>

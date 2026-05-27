@@ -14,6 +14,12 @@ type ProviderJob = {
   timeout_at?: string;
   delivery_packet_ready?: boolean;
   customer_safe_summary?: string;
+  lifecycle_events?: Array<{
+    event?: string;
+    status?: string;
+    timestamp?: string;
+    message?: string;
+  }>;
 };
 
 type ProviderSummary = {
@@ -37,6 +43,9 @@ export default function ProviderExecutionAdminPage() {
   const [data, setData] = useState<ProviderSummary | null>(null);
   const [status, setStatus] = useState<Record<string, unknown> | null>(null);
   const [filter, setFilter] = useState("all");
+  const [selectedJob, setSelectedJob] = useState<ProviderJob | null>(null);
+  const [actionMessage, setActionMessage] = useState<string>("");
+  const [actionBusy, setActionBusy] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string>("");
 
@@ -91,6 +100,43 @@ export default function ProviderExecutionAdminPage() {
 
   const deliveryPacketCount = Array.isArray(data?.delivery_packets) ? data.delivery_packets.length : 0;
   const credentialSafe = data?.credential_values_exposed === false;
+
+  async function runGovernedAction(action: "retry" | "requeue" | "cancel") {
+    if (!selectedJob?.job_id) {
+      setActionMessage("No provider job selected.");
+      return;
+    }
+
+    setActionBusy(action);
+    setActionMessage("");
+
+    try {
+      const response = await fetch(`/api/admin-provider-execution/${action}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          job_id: selectedJob.job_id,
+          reason: `Admin requested governed provider ${action}.`,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || result?.credential_values_exposed !== false) {
+        setActionMessage(result?.error || `Provider ${action} request was not accepted.`);
+        return;
+      }
+
+      setActionMessage(result?.message || `Governed provider ${action} request accepted.`);
+      await loadProviderExecution();
+    } catch {
+      setActionMessage(`Provider ${action} request failed before reaching the governed runtime.`);
+    } finally {
+      setActionBusy("");
+    }
+  }
 
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-8 text-slate-100">
@@ -254,7 +300,13 @@ export default function ProviderExecutionAdminPage() {
                       </td>
                       <td className="px-4 py-4 text-slate-400">{safeText(job.updated_at || job.created_at)}</td>
                       <td className="max-w-md px-4 py-4 text-slate-300">
-                        {safeText(job.customer_safe_summary, "Customer-safe summary pending.")}
+                        <div>{safeText(job.customer_safe_summary, "Customer-safe summary pending.")}</div>
+                        <button
+                          onClick={() => setSelectedJob(job)}
+                          className="mt-3 rounded-lg border border-slate-700 px-3 py-1 text-xs font-semibold text-indigo-200 hover:border-indigo-400"
+                        >
+                          View details
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -276,6 +328,105 @@ export default function ProviderExecutionAdminPage() {
             {JSON.stringify(status || {}, null, 2)}
           </pre>
         </section>
+
+        {selectedJob ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 px-4">
+            <div className="max-h-[88vh] w-full max-w-4xl overflow-auto rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-indigo-300">
+                    Provider Job Detail
+                  </p>
+                  <h2 className="mt-2 text-2xl font-bold text-white">
+                    {safeText(selectedJob.job_id, "Provider job")}
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-400">
+                    Customer-safe operational details only. Credentials, prompts, provider secrets, and internal runtime payloads are not displayed.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedJob(null)}
+                  className="rounded-xl border border-slate-700 px-4 py-2 text-sm font-semibold text-slate-200 hover:border-slate-500"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-3">
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Provider</p>
+                  <p className="mt-2 font-semibold text-white">{safeText(selectedJob.provider)}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Status</p>
+                  <p className="mt-2 font-semibold uppercase text-indigo-200">{safeText(selectedJob.status)}</p>
+                </div>
+                <div className="rounded-2xl border border-slate-800 bg-slate-950 p-4">
+                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Attempts</p>
+                  <p className="mt-2 font-semibold text-white">{safeText(selectedJob.attempts ?? selectedJob.retry_count ?? 0)}</p>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                <h3 className="text-sm font-bold text-white">Execution Timeline</h3>
+                <div className="mt-4 space-y-3">
+                  {(selectedJob.lifecycle_events && selectedJob.lifecycle_events.length > 0
+                    ? selectedJob.lifecycle_events
+                    : [
+                        { event: "job_created", status: selectedJob.status, timestamp: selectedJob.created_at, message: "Provider job record created." },
+                        { event: "last_update", status: selectedJob.status, timestamp: selectedJob.updated_at, message: "Latest provider execution state." },
+                      ]
+                  ).map((event, index) => (
+                    <div key={`${event.event || "event"}-${index}`} className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
+                      <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+                        <p className="text-sm font-semibold text-white">{safeText(event.event, "Runtime event")}</p>
+                        <p className="text-xs uppercase tracking-[0.14em] text-indigo-300">{safeText(event.status)}</p>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">{safeText(event.timestamp)}</p>
+                      <p className="mt-2 text-sm text-slate-300">{safeText(event.message, "No customer-safe event message available.")}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-slate-800 bg-slate-950 p-5">
+                <h3 className="text-sm font-bold text-white">Governed Actions</h3>
+                <p className="mt-2 text-sm leading-6 text-slate-400">
+                  Retry, requeue, and cancel actions are routed through protected backend governance routes. Actions are accepted only as admin-governed runtime requests and do not expose internal credentials or provider payloads.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <button
+                    onClick={() => runGovernedAction("retry")}
+                    disabled={Boolean(actionBusy)}
+                    className="rounded-xl border border-emerald-500/50 px-4 py-2 text-sm font-semibold text-emerald-200 hover:border-emerald-300 disabled:opacity-50"
+                  >
+                    {actionBusy === "retry" ? "Requesting..." : "Retry job"}
+                  </button>
+                  <button
+                    onClick={() => runGovernedAction("requeue")}
+                    disabled={Boolean(actionBusy)}
+                    className="rounded-xl border border-indigo-500/50 px-4 py-2 text-sm font-semibold text-indigo-200 hover:border-indigo-300 disabled:opacity-50"
+                  >
+                    {actionBusy === "requeue" ? "Requesting..." : "Requeue job"}
+                  </button>
+                  <button
+                    onClick={() => runGovernedAction("cancel")}
+                    disabled={Boolean(actionBusy)}
+                    className="rounded-xl border border-amber-500/50 px-4 py-2 text-sm font-semibold text-amber-200 hover:border-amber-300 disabled:opacity-50"
+                  >
+                    {actionBusy === "cancel" ? "Requesting..." : "Cancel job"}
+                  </button>
+                </div>
+                {actionMessage ? (
+                  <p className="mt-4 rounded-xl border border-slate-700 bg-slate-900 p-3 text-sm text-slate-200">
+                    {actionMessage}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
       </div>
     </main>
   );

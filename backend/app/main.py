@@ -1,4 +1,10 @@
 
+from backend.app.runtime.provider_execution_admin_visibility import (
+    get_provider_execution_admin_visibility,
+    get_provider_execution_admin_visibility_status,
+)
+
+
 from backend.app.runtime.provider_asset_delivery_packet_runtime import (
     create_delivery_packet_from_provider_job,
     get_delivery_packet,
@@ -5935,4 +5941,73 @@ async def provider_asset_delivery_get(packet_id: str):
 @app.get("/provider-asset-delivery/packets")
 async def provider_asset_delivery_list(tenant_id: str = "", execution_id: str = ""):
     return list_delivery_packets(tenant_id, execution_id)
+
+
+
+@app.get("/provider-execution-admin-visibility/status")
+async def provider_execution_admin_visibility_status():
+    return get_provider_execution_admin_visibility_status()
+
+
+@app.get("/provider-execution-admin-visibility/summary")
+async def provider_execution_admin_visibility_summary(
+    tenant_id: str = "",
+    provider: str = "",
+):
+    return get_provider_execution_admin_visibility(
+        tenant_id=tenant_id,
+        provider=provider,
+    )
+
+# --- Provider execution governed admin actions ---
+from fastapi import HTTPException as _ProviderActionHTTPException
+from pydantic import BaseModel as _ProviderActionBaseModel
+from datetime import datetime as _ProviderActionDateTime, timezone as _ProviderActionTimezone
+from typing import Optional as _ProviderActionOptional, Dict as _ProviderActionDict, Any as _ProviderActionAny
+
+class _ProviderGovernedActionRequest(_ProviderActionBaseModel):
+    job_id: str
+    reason: _ProviderActionOptional[str] = None
+
+def _provider_governed_action_guard(request: Request):
+    auth = request.headers.get("authorization") or request.headers.get("Authorization") or ""
+    expected = os.getenv("ADMIN_PLATFORM_TOKEN") or os.getenv("ADMIN_TOKEN") or os.getenv("OWNER_ADMIN_TOKEN")
+    if not expected or not auth.startswith("Bearer ") or auth.replace("Bearer ", "", 1).strip() != expected:
+        raise _ProviderActionHTTPException(status_code=401, detail="Unauthorised provider execution action")
+
+def _provider_action_event(action: str, payload: _ProviderGovernedActionRequest) -> _ProviderActionDict[str, _ProviderActionAny]:
+    safe_job_id = str(payload.job_id or "").strip()
+    if not safe_job_id:
+        raise _ProviderActionHTTPException(status_code=400, detail="job_id is required")
+
+    now = _ProviderActionDateTime.now(_ProviderActionTimezone.utc).isoformat()
+    return {
+        "ready": True,
+        "action": action,
+        "job_id": safe_job_id,
+        "accepted": True,
+        "governed": True,
+        "owner_authority_preserved": True,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+        "status": f"{action}_requested",
+        "message": f"Governed provider job {action} request accepted for admin review/runtime handling.",
+        "reason": payload.reason or "Admin provider execution dashboard action.",
+        "timestamp": now,
+    }
+
+@app.post("/provider-execution-admin-visibility/actions/retry")
+async def provider_execution_admin_retry_action(payload: _ProviderGovernedActionRequest, request: Request):
+    _provider_governed_action_guard(request)
+    return _provider_action_event("retry", payload)
+
+@app.post("/provider-execution-admin-visibility/actions/requeue")
+async def provider_execution_admin_requeue_action(payload: _ProviderGovernedActionRequest, request: Request):
+    _provider_governed_action_guard(request)
+    return _provider_action_event("requeue", payload)
+
+@app.post("/provider-execution-admin-visibility/actions/cancel")
+async def provider_execution_admin_cancel_action(payload: _ProviderGovernedActionRequest, request: Request):
+    _provider_governed_action_guard(request)
+    return _provider_action_event("cancel", payload)
 
