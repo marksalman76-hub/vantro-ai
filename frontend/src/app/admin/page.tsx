@@ -432,9 +432,35 @@ export default function AdminPage() {
     );
   }
 
-  const navItems = ["Overview", "Run Agent", "Deploy Clients", "Client Registry", "Runtime Health", "Provider Governance", "Orchestration", "Recovery", "Billing"];
+  const navItems = ["Overview", "Run Agent", "Deploy Clients", "Client Registry", "Runtime Health", "Provider Governance", "Orchestration", "Recovery", "Billing", "Activation Governance"];
   const runtimeStatus = runtime?.runtime?.platform_status || "online";
   const registryTotal = clientRegistrySummary?.total || clientRegistrySummary?.tenant_count || clientRegistry.length || 0;
+
+  const [activationGovernance, setActivationGovernance] = useState<any>(null);
+
+  async function loadActivationGovernance() {
+    try {
+      const response = await fetch("/api/admin-activation-governance/summary", {
+        method: "GET",
+        credentials: "include",
+      });
+      const data = await response.json();
+      setActivationGovernance(data);
+    } catch {
+      setActivationGovernance({
+        success: false,
+        message: "Activation governance summary unavailable.",
+        credential_values_exposed: false,
+        customer_safe: true,
+      });
+    }
+  }
+
+
+
+  useEffect(() => {
+    loadActivationGovernance();
+  }, []);
 
   return (
     <main className="admin-v2">
@@ -452,6 +478,56 @@ export default function AdminPage() {
           <span className="avatar">OW</span>
         </div>
       </div>
+
+      <section className="card" style={{ marginTop: 18 }}>
+        <div className="cardHeader">
+          <div>
+            <h2>Activation Governance</h2>
+            <p>Owner visibility for activation locks, entitlement hydration, blocked changes, and review requirements.</p>
+          </div>
+          <button className="secondaryBtn" onClick={loadActivationGovernance}>
+            Refresh
+          </button>
+        </div>
+
+        <div className="metricsGrid">
+          <div className="metric">
+            <span>Activation events</span>
+            <strong>{activationGovernance?.summary?.activation_ledger_event_count ?? 0}</strong>
+          </div>
+          <div className="metric">
+            <span>Execution decisions</span>
+            <strong>{activationGovernance?.summary?.execution_decision_event_count ?? 0}</strong>
+          </div>
+          <div className="metric">
+            <span>Blocked decisions</span>
+            <strong>{activationGovernance?.summary?.blocked_execution_decision_count ?? 0}</strong>
+          </div>
+          <div className="metric">
+            <span>Owner review required</span>
+            <strong>{activationGovernance?.summary?.owner_admin_review_required_count ?? 0}</strong>
+          </div>
+        </div>
+
+        <div className="statusList" style={{ marginTop: 16 }}>
+          <div>
+            <strong>Runtime entitlement hydration</strong>
+            <span>{activationGovernance?.summary?.runtime_entitlement_hydration_ready ? "READY" : "PENDING"}</span>
+          </div>
+          <div>
+            <strong>Client execution limited to activated agents</strong>
+            <span>{activationGovernance?.summary?.client_execution_limited_to_activated_agents ? "ENFORCED" : "CHECK"}</span>
+          </div>
+          <div>
+            <strong>Owner/admin unrestricted access</strong>
+            <span>{activationGovernance?.summary?.owner_admin_unrestricted_access_preserved ? "PRESERVED" : "CHECK"}</span>
+          </div>
+          <div>
+            <strong>Credential exposure</strong>
+            <span>{activationGovernance?.credential_values_exposed === false ? "FALSE" : "CHECK"}</span>
+          </div>
+        </div>
+      </section>
 
       <div className="layout">
         <aside className="sidebar">
