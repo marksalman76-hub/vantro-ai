@@ -5294,3 +5294,69 @@ def real_agent_component_catalogue_component_route(component_key: str):
 def real_agent_component_catalogue_client_selectable_route(plan: str = "business"):
     return list_client_selectable_agents(plan)
 
+
+# ---------------------------------------------------------------------------
+# Catalogue entitlement bridge routes
+# Added by wire_catalogue_entitlement_bridge_routes.py
+# Purpose:
+# - use locked 27-agent catalogue as package/selection source of truth
+# - validate plan-specific selected agents
+# - build activation entitlement packets without exposing internals
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.catalogue_entitlement_bridge import (
+        build_agent_activation_entitlement_packet,
+        catalogue_entitlement_bridge_status,
+        get_package_catalogue_rules,
+        list_package_selectable_agents,
+        validate_package_agent_selection,
+    )
+except Exception:  # pragma: no cover
+    build_agent_activation_entitlement_packet = None
+    catalogue_entitlement_bridge_status = None
+    get_package_catalogue_rules = None
+    list_package_selectable_agents = None
+    validate_package_agent_selection = None
+
+
+@app.get("/catalogue-entitlement-bridge/status")
+def catalogue_entitlement_bridge_status_route():
+    return catalogue_entitlement_bridge_status()
+
+
+@app.get("/catalogue-entitlement-bridge/package-rules/{plan}")
+def catalogue_entitlement_bridge_package_rules_route(plan: str):
+    return get_package_catalogue_rules(plan)
+
+
+@app.get("/catalogue-entitlement-bridge/selectable-agents/{plan}")
+def catalogue_entitlement_bridge_selectable_agents_route(plan: str):
+    return list_package_selectable_agents(plan)
+
+
+@app.post("/catalogue-entitlement-bridge/validate-selection")
+async def catalogue_entitlement_bridge_validate_selection_route(payload: dict):
+    safe_payload = dict(payload or {})
+    selected = safe_payload.get("selected_agent_keys") or []
+    if not isinstance(selected, list):
+        selected = []
+
+    return validate_package_agent_selection(
+        plan=safe_payload.get("plan") or "business",
+        selected_agent_keys=selected,
+    )
+
+
+@app.post("/catalogue-entitlement-bridge/activation-packet")
+async def catalogue_entitlement_bridge_activation_packet_route(payload: dict):
+    safe_payload = dict(payload or {})
+    selected = safe_payload.get("selected_agent_keys") or []
+    if not isinstance(selected, list):
+        selected = []
+
+    return build_agent_activation_entitlement_packet(
+        plan=safe_payload.get("plan") or "business",
+        selected_agent_keys=selected,
+    )
+
