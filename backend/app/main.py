@@ -5106,3 +5106,67 @@ async def global_agent_output_quality_evaluate_route(payload: dict):
         latency_ms=int(safe_payload.get("latency_ms", 0) or 0),
     )
 
+
+# ---------------------------------------------------------------------------
+# Agent execution quality gate bridge routes
+# Added by wire_agent_execution_quality_gate_routes.py
+# Purpose:
+# - apply global output quality gate to agent execution results
+# - prevent weak/unsafe outputs from reaching clients
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.agent_execution_quality_gate_bridge import (
+        agent_execution_quality_gate_bridge_status,
+        apply_global_quality_gate_to_agent_result,
+        extract_agent_output_text,
+    )
+except Exception:  # pragma: no cover
+    agent_execution_quality_gate_bridge_status = None
+    apply_global_quality_gate_to_agent_result = None
+    extract_agent_output_text = None
+
+
+@app.get("/agent-execution-quality-gate/status")
+def agent_execution_quality_gate_status_route():
+    return agent_execution_quality_gate_bridge_status()
+
+
+@app.post("/agent-execution-quality-gate/apply")
+async def agent_execution_quality_gate_apply_route(payload: dict):
+    safe_payload = dict(payload or {})
+    execution_result = safe_payload.get("execution_result") or {}
+    if not isinstance(execution_result, dict):
+        execution_result = {"output_text": str(execution_result)}
+
+    business_context = safe_payload.get("business_context") or {}
+    if not isinstance(business_context, dict):
+        business_context = {}
+
+    return apply_global_quality_gate_to_agent_result(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        execution_id=safe_payload.get("execution_id") or "unknown-execution",
+        agent_key=safe_payload.get("agent_key") or "default",
+        execution_result=execution_result,
+        business_context=business_context,
+        task_type=safe_payload.get("task_type") or "general",
+        consequence_level=safe_payload.get("consequence_level") or "medium",
+        retry_count=int(safe_payload.get("retry_count", 0) or 0),
+        latency_ms=int(safe_payload.get("latency_ms", 0) or 0),
+    )
+
+
+@app.post("/agent-execution-quality-gate/extract-output")
+async def agent_execution_quality_gate_extract_output_route(payload: dict):
+    safe_payload = dict(payload or {})
+    execution_result = safe_payload.get("execution_result") or {}
+    if not isinstance(execution_result, dict):
+        execution_result = {"output_text": str(execution_result)}
+
+    return {
+        "output_text": extract_agent_output_text(execution_result),
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
