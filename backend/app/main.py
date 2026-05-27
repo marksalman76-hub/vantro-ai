@@ -3968,3 +3968,57 @@ async def provider_postgres_ledger_bridge_reset_for_tests_route():
         }
     return reset_provider_postgres_bridge_fallback_for_tests()
 
+
+# ---------------------------------------------------------------------------
+# Provider execution Postgres migration apply routes
+# Added by wire_provider_execution_postgres_migration_apply_routes.py
+# Purpose:
+# - expose DB driver/schema apply readiness
+# - apply schema only when DATABASE_URL and driver are available
+# - keep safe fallback active on failure
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.provider_execution_postgres_ledger_bridge import (
+        apply_provider_ledger_schema_with_driver,
+        detect_postgres_driver,
+        provider_postgres_migration_apply_status,
+    )
+except Exception:  # pragma: no cover
+    apply_provider_ledger_schema_with_driver = None
+    detect_postgres_driver = None
+    provider_postgres_migration_apply_status = None
+
+
+@app.get("/provider-postgres-migration/status")
+def provider_postgres_migration_status_route():
+    if provider_postgres_migration_apply_status is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_migration_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return provider_postgres_migration_apply_status()
+
+
+@app.get("/provider-postgres-migration/driver")
+def provider_postgres_migration_driver_route():
+    if detect_postgres_driver is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_migration_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return detect_postgres_driver()
+
+
+@app.post("/provider-postgres-migration/apply")
+async def provider_postgres_migration_apply_route():
+    if apply_provider_ledger_schema_with_driver is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_migration_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return apply_provider_ledger_schema_with_driver()
+

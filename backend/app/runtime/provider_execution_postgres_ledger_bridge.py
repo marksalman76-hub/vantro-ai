@@ -237,3 +237,108 @@ def provider_postgres_bridge_summary() -> Dict[str, Any]:
 
 def reset_provider_postgres_bridge_fallback_for_tests() -> Dict[str, Any]:
     return reset_provider_execution_ledger_for_tests()
+
+def detect_postgres_driver() -> Dict[str, Any]:
+    try:
+        import psycopg  # type: ignore
+        return _safe_response(driver_available=True, driver="psycopg")
+    except Exception:
+        pass
+
+    try:
+        import psycopg2  # type: ignore
+        return _safe_response(driver_available=True, driver="psycopg2")
+    except Exception:
+        pass
+
+    return _safe_response(driver_available=False, driver=None)
+
+
+def apply_provider_ledger_schema_with_driver() -> Dict[str, Any]:
+    if not _database_url_present():
+        return _safe_response(
+            status="skipped",
+            reason="DATABASE_URL_missing",
+            applied=False,
+            fallback_storage_active=True,
+        )
+
+    schema = get_provider_ledger_schema_sql()
+    if not schema.get("schema_sql_present"):
+        return _safe_response(
+            status="failed",
+            reason="schema_sql_missing",
+            applied=False,
+            fallback_storage_active=True,
+        )
+
+    driver = detect_postgres_driver()
+    if not driver.get("driver_available"):
+        return _safe_response(
+            status="skipped",
+            reason="postgres_driver_missing",
+            applied=False,
+            fallback_storage_active=True,
+            database_url_present=True,
+        )
+
+    database_url = os.getenv("DATABASE_URL")
+    sql = schema["sql"]
+
+    try:
+        if driver["driver"] == "psycopg":
+            import psycopg  # type: ignore
+            with psycopg.connect(database_url) as conn:
+                with conn.cursor() as cur:
+                    cur.execute(sql)
+                conn.commit()
+
+        elif driver["driver"] == "psycopg2":
+            import psycopg2  # type: ignore
+            conn = psycopg2.connect(database_url)
+            try:
+                cur = conn.cursor()
+                cur.execute(sql)
+                conn.commit()
+                cur.close()
+            finally:
+                conn.close()
+        else:
+            return _safe_response(
+                status="skipped",
+                reason="unsupported_driver",
+                applied=False,
+                fallback_storage_active=True,
+            )
+
+        return _safe_response(
+            status="applied",
+            reason="schema_applied_successfully",
+            applied=True,
+            fallback_storage_active=True,
+            driver=driver["driver"],
+        )
+
+    except Exception as exc:
+        return _safe_response(
+            status="failed",
+            reason="schema_apply_failed",
+            applied=False,
+            fallback_storage_active=True,
+            driver=driver.get("driver"),
+            safe_error=str(exc)[:300],
+        )
+
+
+def provider_postgres_migration_apply_status() -> Dict[str, Any]:
+    driver = detect_postgres_driver()
+    return _safe_response(
+        migration_apply_ready=True,
+        database_url_present=_database_url_present(),
+        schema_sql_present=get_provider_ledger_schema_sql().get("schema_sql_present", False),
+        postgres_driver_available=driver.get("driver_available", False),
+        postgres_driver=driver.get("driver"),
+        fallback_storage_active=True,
+        credential_values_exposed=False,
+    )
+
