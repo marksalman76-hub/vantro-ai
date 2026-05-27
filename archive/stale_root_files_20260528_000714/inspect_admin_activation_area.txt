@@ -1,0 +1,152 @@
+"application/json",
+            "x-actor-role": "owner",
+            "x-tenant-id": "owner",
+          },
+          body: JSON.stringify({
+            account_reference: "owner_admin",
+            requested_agent: agentId,
+            workflow_stage: "admin_internal_execution",
+            action_type: "admin_owner_execution",
+            actor_role: "owner",
+            owner_approved: true,
+            task,
+          }),
+        });
+
+        const data = await response.json();
+        results.push({ agent_id: agentId, http_status: response.status, result: data });
+      }
+
+      const allSucceeded = results.every((item) => item.result?.success === true);
+
+      setRunResult({
+        success: allSucceeded,
+        status: allSucceeded ? "admin_multi_agent_execution_completed" : "admin_multi_agent_execution_partially_blocked",
+        selected_agent_count: selectedRun.length,
+        results,
+      });
+
+      showToast(allSucceeded ? "Selected agents completed." : "Some agent runs were blocked or failed.");
+    } catch {
+      setRunResult({ success: false, message: "Admin execution failed." });
+      showToast("Admin execution failed.");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  async function callDeploymentControl(path: string, payload: any, label: string) {
+    setBusyAction(label);
+    setDeploymentResult(null);
+
+    try {
+      const response = await fetch("/api/admin-deployment-control", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-actor-role": "owner",
+          "x-tenant-id": "owner",
+        },
+        body: JSON.stringify({ path, method: "POST", payload }),
+      });
+
+      const data = await response.json();
+      setDeploymentResult(data);
+      await loadClientRegistry();
+
+      const activationLink =
+        data?.tenant?.activation_link ||
+        data?.activation_link ||
+        data?.activation?.activation_link ||
+        data?.invite?.activation_link ||
+        "";
+
+      if (activationLink) {
+        showToast("Deployment completed. Activation link generated.");
+      } else {
+        showToast(data?.success === false ? "Deployment action failed." : `${label} completed.`);
+      }
+    } catch {
+      setDeploymentResult({ success: false, message: "Deployment control action failed." });
+      showToast("Deployment control action failed.");
+    } finally {
+      setBusyAction("");
+    }
+  }
+
+  function deployClient() {
+    const cleanEmail = deployEmail.trim().toLowerCase();
+
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      showToast("Enter a valid client email before deploying.");
+      return;
+    }
+
+    callDeploymentControl(
+      "/admin/deployment-control/manual-deploy",
+      {
+        account_reference: deployTenant,
+        company_name: deployCompany,
+        contact_email: cleanEmail,
+        package: "Manual Unlimited",
+        active_agents: selectedDeploy,
+        unlimited_credits: true,
+      },
+      "Deploy"
+    );
+  }
+
+  function suspendClient() {
+    callDeploymentControl(
+      "/admin/deployment-control/suspend",
+      {
+        account_reference: deployTenant,
+        reason: "Suspended from admin portal.",
+      },
+      "Suspend"
+    );
+  }
+
+  function reactivateClient() {
+    callDeploymentControl(
+      "/admin/deployment-control/reactivate",
+      {
+        account_reference: deployTenant,
+        reason: "Reactivated from admin portal.",
+      },
+      "Reactivate"
+    );
+  }
+
+  function cancelClient() {
+    setCancelOpen(false);
+    callDeploymentControl(
+      "/admin/deployment-control/cancel",
+      {
+        account_reference: deployTenant,
+        reason: "Cancelled from admin portal.",
+      },
+      "Cancel"
+    );
+  }
+
+  const navItems = ["Overview", "Run Agent", "Deploy Clients", "Client Registry", "Runtime Health", "Provider Governance", "Orchestration", "Recovery", "Billing"];
+  const runtimeStatus = runtime?.runtime?.platform_status || "online";
+  const registryTotal = clientRegistrySummary?.total || clientRegistrySummary?.tenant_count || clientRegistry.length || 0;
+
+  return (
+    <main className="admin-v2">
+      <div className="topbar">
+        <div className="brand">
+          <div className="mark">AI</div>
+          <div>
+            <strong>Owner Command Centre</strong>
+            <span>AI Workforce Platform</span>
+          </div>
+        </div>
+        <div className="topRight">
+          <span className="runtime"><i /> Runtime: {runtimeStatus}</span>
+          <span className="clock">{clock}</span>
+          <span className="avatar">OW</span>
+        </div>
+      </d

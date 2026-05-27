@@ -1,0 +1,168 @@
+LEN 156417
+HAS_ACTIVE True
+HAS_INACTIVE True
+HAS_DOT_GREEN False
+HAS_DOT_RED False
+HAS_BUSINESS_PROFILE True
+HAS_INTEGRATIONS True
+HAS_BILLING True
+HAS_SUPPORT True
+"use client";
+
+import React, { useEffect, useRef, useState } from "react";
+
+type Account = {
+  tenant_id?: string;
+  client_id?: string;
+  package?: string;
+  package_name?: string;
+  status?: string;
+  package_status?: string;
+  active_agents?: string[];
+  company_name?: string;
+  contact_email?: string;
+  credits_remaining?: number;
+  credits_monthly?: number;
+  credits_used?: number;
+};
+
+type ClientIntegration = {
+  integration_key: string;
+  name: string;
+  providers: string[];
+  used_by_agents: string[];
+  recommended_auth: string;
+  high_risk_actions: string[];
+  connected: boolean;
+  provider?: string;
+  status: string;
+  last_tested_at?: string;
+  credential_hint?: string;
+};
+
+
+const DEFAULT_CLIENT_INTEGRATIONS: ClientIntegration[] = [
+  {
+    integration_key: "email",
+    name: "Email",
+    providers: ["Gmail", "Outlook", "IMAP/SMTP", "Brevo"],
+    used_by_agents: ["Email Reply Agent", "Sales / Closer Agent", "Customer Support Agent"],
+    recommended_auth: "OAuth or scoped provider API key",
+    high_risk_actions: ["send email", "bulk send"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "crm",
+    name: "CRM",
+    providers: ["GoHighLevel", "HubSpot", "Salesforce", "Pipedrive", "Zoho"],
+    used_by_agents: ["CRM AI Agent", "Sales / Closer Agent", "Lead Generator / Appointment Setter Agent"],
+    recommended_auth: "OAuth or scoped API key",
+    high_risk_actions: ["create contact", "update deal", "create opportunity"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "store",
+    name: "Ecommerce Store",
+    providers: ["Shopify", "WooCommerce", "BigCommerce", "Wix", "Squarespace"],
+    used_by_agents: ["Ecommerce Agent", "Product Research Agent", "Product Copywriting Agent", "Analytics Optimisation Agent"],
+    recommended_auth: "OAuth or private app token with least privilege",
+    high_risk_actions: ["update product", "publish product", "change price"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "website",
+    name: "Website / CMS",
+    providers: ["WordPress", "Webflow", "Shopify CMS", "Wix", "Squarespace"],
+    used_by_agents: ["Website / Landing Page / Apps Agent", "SEO Agent", "Brand Strategy Agent"],
+    recommended_auth: "Scoped CMS token or collaborator access",
+    high_risk_actions: ["publish page", "deploy site", "update DNS"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "calendar",
+    name: "Calendar",
+    providers: ["Google Calendar", "Outlook Calendar"],
+    used_by_agents: ["Receptionist Agent", "Appointment Setter Agent", "Sales / Closer Agent"],
+    recommended_auth: "OAuth calendar scope",
+    high_risk_actions: ["book appointment", "cancel appointment"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "sms",
+    name: "SMS / Phone",
+    providers: ["ClickSend", "Twilio"],
+    used_by_agents: ["Receptionist Agent", "Sales / Closer Agent", "Customer Support Agent"],
+    recommended_auth: "Scoped provider API key",
+    high_risk_actions: ["send SMS", "bulk SMS"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "social",
+    name: "Social Media",
+    providers: ["Meta", "Instagram", "TikTok", "LinkedIn", "Pinterest"],
+    used_by_agents: ["Social Media Manager Agent", "UGC Creative Agent", "Influencer Collaboration Agent"],
+    recommended_auth: "OAuth publishing/insights scopes",
+    high_risk_actions: ["publish post", "send DM"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "ads",
+    name: "Ad Accounts",
+    providers: ["Meta Ads", "Google Ads", "TikTok Ads"],
+    used_by_agents: ["Paid Ads Agent", "Analytics Optimisation Agent", "Marketing Specialist Agent"],
+    recommended_auth: "OAuth ads scope with spending approval controls",
+    high_risk_actions: ["launch campaign", "increase budget", "change bid strategy"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "analytics",
+    name: "Analytics",
+    providers: ["GA4", "Search Console", "Meta Pixel", "Shopify Analytics"],
+    used_by_agents: ["Analytics Optimisation Agent", "SEO Agent", "Marketing Specialist Agent"],
+    recommended_auth: "Read-only analytics scope where possible",
+    high_risk_actions: [],
+    connected: false,
+    status: "not_connected",
+  },
+];
+
+type DeliverableAsset = {
+  url?: string;
+  image_url?: string;
+  src?: string;
+  title?: string;
+  name?: string;
+  type?: string;
+  mime_type?: string;
+  size?: string;
+  source?: string;
+  created_at?: string;
+};
+
+type LiveDeliverable = {
+  title?: string;
+  summary?: string;
+  created_at?: string;
+  image_url?: string;
+  asset_url?: string;
+  preview_url?: string;
+  download_url?: string;
+  export_url?: string;
+  assets?: DeliverableAsset[];
+  images?: DeliverableAsset[];
+  tags?: string[];
+};
+
+
+type ExecutionTimelineEvent = {
+  event_id: string;
+  created_at: string;
+  agent_id: strin

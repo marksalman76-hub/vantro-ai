@@ -1,0 +1,1219 @@
+
+
+========== DEFAULT_AGENTS ==========
+
+--- occurrence 1 at 5260 ---
+alse,
+    status: "not_connected",
+  },
+];
+
+type DeliverableAsset = {
+  url?: string;
+  image_url?: string;
+  src?: string;
+  title?: string;
+  name?: string;
+  type?: string;
+  mime_type?: string;
+  size?: string;
+  source?: string;
+  created_at?: string;
+};
+
+type LiveDeliverable = {
+  title?: string;
+  summary?: string;
+  created_at?: string;
+  image_url?: string;
+  asset_url?: string;
+  preview_url?: string;
+  download_url?: string;
+  export_url?: string;
+  assets?: DeliverableAsset[];
+  images?: DeliverableAsset[];
+  tags?: string[];
+};
+
+
+type ExecutionTimelineEvent = {
+  event_id: string;
+  created_at: string;
+  agent_id: string;
+  event_type: string;
+  event_status: string;
+  workflow_stage: string;
+  action_type: string;
+  execution_action?: string;
+  approval_status?: string;
+  execution_status?: string;
+  quality_status?: string;
+  title?: string;
+  summary?: string;
+};
+
+
+const DEFAULT_AGENTS: string[] = [
+  "product_research_agent",
+  "product_copywriting_agent",
+  "ugc_creative_agent",
+  "product_image_agent",
+  "crm_ai_agent",
+];
+const BACKEND_API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_BASE_URL || "https://api.trance-formation.com.au";
+
+const AGENT_DISPLAY_NAMES: Record<string, string> = {
+    product_research_agent: "Product Research Agent",
+  competitor_intelligence_agent: "Competitor Intelligence Agent",
+  brand_strategy_agent: "Brand Strategy Agent",
+  store_builder_agent: "Store Builder Agent",
+  website_landing_apps_agent: "Website / Landing Page Agent",
+  product_copywriting_agent: "Product Copywriting Agent",
+  ugc_creative_agent: "UGC Creative Agent",
+  product_image_agent: "Product Image Agent",
+  paid_ads_agent: "Paid Ads Agent",
+  analytics_optimisation_agent: "Analytics Optimisation Agent",
+  email_reply_agent: "Email Reply Agent",
+  crm_ai_agent: "CRM AI Agent",
+  seo_agent: "SEO Agent",
+  social_media_manager_content_creator_agent: "Social Media Manager Agent",
+  influencer_collaboration_agent: "Influencer Collaboration Agent",
+  lead_generator_appointment_setter_agent: "Lead Generator / Appointment Setter Agent",
+  sales_closer_agent: "Sales / Closer Agent",
+  receptionist_agent: "Receptionist Agent",
+  product_development_agent: "Product Development Agent",
+  ecommerce_agent: "Ecommerce Agent",
+  customer_support_agent: "Customer Support Agent",
+    business_growth_partnerships_agent: "Business Growth & Partnerships Agent",
+};
+
+function getAgentDisplayName(agentId: string) {
+  return AGENT_DIS
+
+--- occurrence 2 at 57668 ---
+eSpace: "nowrap",
+            }}
+          >
+            + Add integration
+          </button>
+        </div>
+      </section>
+
+
+        
+
+        <section style={responsiveWorkspaceGridStyle}>
+          <div style={{ ...cardStyle, minHeight: 430 }}>
+            <StepHeader number="01" title="Run AI Agent" />
+            <h3 style={cardTitle}>Select agents and launch governed execution.</h3>
+            <p style={{ ...mutedText, margin: "6px 0 0" }}>
+              Configure your task and run using your saved business profile.
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "260px minmax(0,1fr)", gap: 16, marginTop: 18 }}>
+              <div>
+                <div style={labelStyle}>Active agents</div>
+                <div style={{ display: "grid", gap: 7, maxHeight: 268, overflowY: "auto", paddingRight: 4 }}>
+                  {(account?.active_agents || DEFAULT_AGENTS).map((agent) => {
+                    const active = selectedAgents.includes(agent);
+                    const agentName = getAgentDisplayName(agent);
+                    const agentIcon =
+                      agentName.toLowerCase().includes("research") ? "⌕" :
+                      agentName.toLowerCase().includes("copy") ? "✎" :
+                      agentName.toLowerCase().includes("ugc") ? "▣" :
+                      agentName.toLowerCase().includes("image") ? "▧" :
+                      agentName.toLowerCase().includes("crm") ? "♟" :
+                      agentName.toLowerCase().includes("email") ? "✉" :
+                      agentName.toLowerCase().includes("analytics") ? "↗" :
+                      agentName.toLowerCase().includes("influencer") ? "★" :
+                      "AI";
+
+                    return (
+                      <button
+                        key={agentName}
+                        onClick={() => toggleAgent(agent)}
+                        style={{
+                          border: active ? "1px solid rgba(37, 99, 235, 0.34)" : "1px solid rgba(15, 23, 42, 0.10)",
+                          background: active ? "linear-gradient(135deg,#eff6ff,#ffffff)" : "#ffffff",
+                          color: active ? "var(--color-brand)" : "var(--color-dark)",
+                          padding: "8px 10px",
+                          borderRadius: 13,
+                          cursor: "pointer",
+                          textAlign: "left",
+                          fontSize: 11.8,
+                          fontWeight: 760,
+                      
+
+COUNT: 2
+
+
+========== active_agents ==========
+
+--- occurrence 1 at 230 ---
+"use client";
+
+import React, { useEffect, useRef, useState } from "react";
+
+type Account = {
+  tenant_id?: string;
+  client_id?: string;
+  package?: string;
+  package_name?: string;
+  status?: string;
+  package_status?: string;
+  active_agents?: string[];
+  company_name?: string;
+  contact_email?: string;
+  credits_remaining?: number;
+  credits_monthly?: number;
+  credits_used?: number;
+};
+
+type ClientIntegration = {
+  integration_key: string;
+  name: string;
+  providers: string[];
+  used_by_agents: string[];
+  recommended_auth: string;
+  high_risk_actions: string[];
+  connected: boolean;
+  provider?: string;
+  status: string;
+  last_tested_at?: string;
+  credential_hint?: string;
+};
+
+
+const DEFAULT_CLIENT_INTEGRATIONS: ClientIntegration[] = [
+  {
+    integration_key: "email",
+    name: "Email",
+    providers: ["Gmail", "Outlook", "IMAP/SMTP", "Brevo"],
+    used_by_agents: ["Email Reply Agent", "Sales / Closer Agent", "Customer Support Agent"],
+    recommended_auth: "OAuth or scoped provider API key",
+    high_risk_actions: ["send email", "bulk send"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "crm",
+    name: "CRM",
+    providers: ["GoHighLevel", "HubSpot", "Salesforce", "Pipedrive", "Zoho"],
+    used_by_agents: ["CRM AI Agent", "Sales / Closer Agent", "Lead Generator / Appointment Setter Agent"],
+    recommended_auth: "OAuth or scoped API key",
+    high_risk_actions: ["create contact", "update deal", "create opportunity"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "store",
+    name: "Ecommerce Store",
+    providers: ["Shopify", "WooCommerce", "BigCommerce", "Wix", "Squarespace"],
+    used_by_agents: ["Ecommerce Agent", "Product Research Agent", "Product Copywriting Agent", "Analytics Optimisation Agent"],
+    recommended
+
+--- occurrence 2 at 10761 ---
+,280px),1fr))",
+    gap: 14,
+    padding: 16,
+    borderRadius: 12,
+    border: "1px solid #e5eaf2",
+    background: "#fff",
+  };
+
+  
+  const responsiveWorkspaceGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 14,
+    alignItems: "stretch",
+    marginBottom: 20,
+  };
+
+  const responsiveSecondaryGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 14,
+    alignItems: "start",
+  };
+
+
+const modalContentGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))",
+    gap: 14,
+    padding: "clamp(18px,2.4vw,28px)",
+  };
+useEffect(() => {
+    fetch("/api/client-me")
+      .then((r) => r.json())
+      .then((data) => {
+        const accountData = data?.account || data;
+        setAccount(accountData);
+
+        const deployedAgents =
+          accountData?.active_agents && Array.isArray(accountData.active_agents)
+            ? accountData.active_agents
+            : [];
+
+        if (deployedAgents.length > 0) {
+          setSelectedAgents(deployedAgents);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/client-latest-deliverable", {
+      method: "GET",
+      credentials: "include",
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.success && data?.deliverable) {
+          setLiveDeliverable(data.deliverable);
+          setSelectedAssetIndex(0);
+          setExecutionState("completed");
+          setReviewStatus("pending");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const syncAccountPanelFromHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (["settings", "profile", "password-reset", "two-factor-authentication"].includes(hash)) {
+        setActiveAccountPanel(hash);
+      }
+    };
+
+    syncAccountPanelFromHash();
+    window.addEventListener("hashchange", syncAccountPanelFromHash);
+    return () => window.removeEventListener("hashchange", syncAccountPanelFromHash);
+  }, []);
+
+  const creditsRemaining = account?.credits_remaining ?? 0;
+  const tenantId = account?.tenant_id || account?.client_id || "unknown_client";
+  const accountPackage = account?.package_name || account?.package || "Active workspace";
+  const accountStatus = account?.status || "active";
+  const activeAgentCount = account?.active_agents?.length || 0;
+  const accountAny = account as any;
+  const businessProfileAny = businessProfile as any;
+  const typedBusin
+
+--- occurrence 3 at 10804 ---
+6,
+    borderRadius: 12,
+    border: "1px solid #e5eaf2",
+    background: "#fff",
+  };
+
+  
+  const responsiveWorkspaceGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 14,
+    alignItems: "stretch",
+    marginBottom: 20,
+  };
+
+  const responsiveSecondaryGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 14,
+    alignItems: "start",
+  };
+
+
+const modalContentGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))",
+    gap: 14,
+    padding: "clamp(18px,2.4vw,28px)",
+  };
+useEffect(() => {
+    fetch("/api/client-me")
+      .then((r) => r.json())
+      .then((data) => {
+        const accountData = data?.account || data;
+        setAccount(accountData);
+
+        const deployedAgents =
+          accountData?.active_agents && Array.isArray(accountData.active_agents)
+            ? accountData.active_agents
+            : [];
+
+        if (deployedAgents.length > 0) {
+          setSelectedAgents(deployedAgents);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/client-latest-deliverable", {
+      method: "GET",
+      credentials: "include",
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.success && data?.deliverable) {
+          setLiveDeliverable(data.deliverable);
+          setSelectedAssetIndex(0);
+          setExecutionState("completed");
+          setReviewStatus("pending");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const syncAccountPanelFromHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (["settings", "profile", "password-reset", "two-factor-authentication"].includes(hash)) {
+        setActiveAccountPanel(hash);
+      }
+    };
+
+    syncAccountPanelFromHash();
+    window.addEventListener("hashchange", syncAccountPanelFromHash);
+    return () => window.removeEventListener("hashchange", syncAccountPanelFromHash);
+  }, []);
+
+  const creditsRemaining = account?.credits_remaining ?? 0;
+  const tenantId = account?.tenant_id || account?.client_id || "unknown_client";
+  const accountPackage = account?.package_name || account?.package || "Active workspace";
+  const accountStatus = account?.status || "active";
+  const activeAgentCount = account?.active_agents?.length || 0;
+  const accountAny = account as any;
+  const businessProfileAny = businessProfile as any;
+  const typedBusinessName = String(businessProfile.business_n
+
+--- occurrence 4 at 10845 ---
+ solid #e5eaf2",
+    background: "#fff",
+  };
+
+  
+  const responsiveWorkspaceGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 14,
+    alignItems: "stretch",
+    marginBottom: 20,
+  };
+
+  const responsiveSecondaryGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 14,
+    alignItems: "start",
+  };
+
+
+const modalContentGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))",
+    gap: 14,
+    padding: "clamp(18px,2.4vw,28px)",
+  };
+useEffect(() => {
+    fetch("/api/client-me")
+      .then((r) => r.json())
+      .then((data) => {
+        const accountData = data?.account || data;
+        setAccount(accountData);
+
+        const deployedAgents =
+          accountData?.active_agents && Array.isArray(accountData.active_agents)
+            ? accountData.active_agents
+            : [];
+
+        if (deployedAgents.length > 0) {
+          setSelectedAgents(deployedAgents);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/client-latest-deliverable", {
+      method: "GET",
+      credentials: "include",
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.success && data?.deliverable) {
+          setLiveDeliverable(data.deliverable);
+          setSelectedAssetIndex(0);
+          setExecutionState("completed");
+          setReviewStatus("pending");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const syncAccountPanelFromHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (["settings", "profile", "password-reset", "two-factor-authentication"].includes(hash)) {
+        setActiveAccountPanel(hash);
+      }
+    };
+
+    syncAccountPanelFromHash();
+    window.addEventListener("hashchange", syncAccountPanelFromHash);
+    return () => window.removeEventListener("hashchange", syncAccountPanelFromHash);
+  }, []);
+
+  const creditsRemaining = account?.credits_remaining ?? 0;
+  const tenantId = account?.tenant_id || account?.client_id || "unknown_client";
+  const accountPackage = account?.package_name || account?.package || "Active workspace";
+  const accountStatus = account?.status || "active";
+  const activeAgentCount = account?.active_agents?.length || 0;
+  const accountAny = account as any;
+  const businessProfileAny = businessProfile as any;
+  const typedBusinessName = String(businessProfile.business_name || "").trim();
+  const clientDisplayN
+
+--- occurrence 5 at 12225 ---
+e("completed");
+          setReviewStatus("pending");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const syncAccountPanelFromHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (["settings", "profile", "password-reset", "two-factor-authentication"].includes(hash)) {
+        setActiveAccountPanel(hash);
+      }
+    };
+
+    syncAccountPanelFromHash();
+    window.addEventListener("hashchange", syncAccountPanelFromHash);
+    return () => window.removeEventListener("hashchange", syncAccountPanelFromHash);
+  }, []);
+
+  const creditsRemaining = account?.credits_remaining ?? 0;
+  const tenantId = account?.tenant_id || account?.client_id || "unknown_client";
+  const accountPackage = account?.package_name || account?.package || "Active workspace";
+  const accountStatus = account?.status || "active";
+  const activeAgentCount = account?.active_agents?.length || 0;
+  const accountAny = account as any;
+  const businessProfileAny = businessProfile as any;
+  const typedBusinessName = String(businessProfile.business_name || "").trim();
+  const clientDisplayName =
+    typedBusinessName ||
+    businessProfileAny?.company_name ||
+    businessProfileAny?.brand_name ||
+    accountAny?.company_name ||
+    accountAny?.business_name ||
+    accountAny?.client_name ||
+    accountAny?.contact_name ||
+    accountAny?.full_name ||
+    accountAny?.email ||
+    "Client";
+  const clientEmail = accountAny?.email || accountAny?.contact_email || "";
+  const clientInitials =
+    String(clientDisplayName)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "CL";
+  const directMediaAssets: DeliverableAsset[] = [
+    liveDeliverable?.image_url
+      ? {
+          url: liveDeliverable.image_url,
+          title: "Primary generated asset",
+          type: "image",
+          source: "generated",
+        }
+      : null,
+    liveDeliverable?.asset_url
+      ? {
+          url: liveDeliverable.asset_url,
+          title: "Attached asset",
+          type: "asset",
+          source: "attached",
+        }
+      : null,
+    liveDeliverable?.preview_url
+      ? {
+          url: liveDeliverable.preview_url,
+          title: "Preview asset",
+          type: "preview",
+          source: "preview",
+        }
+      : null,
+  ].filter(Boolean) as DeliverableAsset[];
+
+  const attachedAssets = [
+    ...directMediaAssets,
+    ...(liveDeliverable?.assets || []),
+    ...(liveDe
+
+--- occurrence 6 at 57651 ---
+             whiteSpace: "nowrap",
+            }}
+          >
+            + Add integration
+          </button>
+        </div>
+      </section>
+
+
+        
+
+        <section style={responsiveWorkspaceGridStyle}>
+          <div style={{ ...cardStyle, minHeight: 430 }}>
+            <StepHeader number="01" title="Run AI Agent" />
+            <h3 style={cardTitle}>Select agents and launch governed execution.</h3>
+            <p style={{ ...mutedText, margin: "6px 0 0" }}>
+              Configure your task and run using your saved business profile.
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "260px minmax(0,1fr)", gap: 16, marginTop: 18 }}>
+              <div>
+                <div style={labelStyle}>Active agents</div>
+                <div style={{ display: "grid", gap: 7, maxHeight: 268, overflowY: "auto", paddingRight: 4 }}>
+                  {(account?.active_agents || DEFAULT_AGENTS).map((agent) => {
+                    const active = selectedAgents.includes(agent);
+                    const agentName = getAgentDisplayName(agent);
+                    const agentIcon =
+                      agentName.toLowerCase().includes("research") ? "⌕" :
+                      agentName.toLowerCase().includes("copy") ? "✎" :
+                      agentName.toLowerCase().includes("ugc") ? "▣" :
+                      agentName.toLowerCase().includes("image") ? "▧" :
+                      agentName.toLowerCase().includes("crm") ? "♟" :
+                      agentName.toLowerCase().includes("email") ? "✉" :
+                      agentName.toLowerCase().includes("analytics") ? "↗" :
+                      agentName.toLowerCase().includes("influencer") ? "★" :
+                      "AI";
+
+                    return (
+                      <button
+                        key={agentName}
+                        onClick={() => toggleAgent(agent)}
+                        style={{
+                          border: active ? "1px solid rgba(37, 99, 235, 0.34)" : "1px solid rgba(15, 23, 42, 0.10)",
+                          background: active ? "linear-gradient(135deg,#eff6ff,#ffffff)" : "#ffffff",
+                          color: active ? "var(--color-brand)" : "var(--color-dark)",
+                          padding: "8px 10px",
+                          borderRadius: 13,
+                          cursor: "pointer",
+                          textAlign: "left",
+                          fontSize: 11.8,
+                          fontWeight: 760,
+     
+
+COUNT: 6
+
+
+========== account?.active_agents ==========
+
+--- occurrence 1 at 12216 ---
+utionState("completed");
+          setReviewStatus("pending");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const syncAccountPanelFromHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (["settings", "profile", "password-reset", "two-factor-authentication"].includes(hash)) {
+        setActiveAccountPanel(hash);
+      }
+    };
+
+    syncAccountPanelFromHash();
+    window.addEventListener("hashchange", syncAccountPanelFromHash);
+    return () => window.removeEventListener("hashchange", syncAccountPanelFromHash);
+  }, []);
+
+  const creditsRemaining = account?.credits_remaining ?? 0;
+  const tenantId = account?.tenant_id || account?.client_id || "unknown_client";
+  const accountPackage = account?.package_name || account?.package || "Active workspace";
+  const accountStatus = account?.status || "active";
+  const activeAgentCount = account?.active_agents?.length || 0;
+  const accountAny = account as any;
+  const businessProfileAny = businessProfile as any;
+  const typedBusinessName = String(businessProfile.business_name || "").trim();
+  const clientDisplayName =
+    typedBusinessName ||
+    businessProfileAny?.company_name ||
+    businessProfileAny?.brand_name ||
+    accountAny?.company_name ||
+    accountAny?.business_name ||
+    accountAny?.client_name ||
+    accountAny?.contact_name ||
+    accountAny?.full_name ||
+    accountAny?.email ||
+    "Client";
+  const clientEmail = accountAny?.email || accountAny?.contact_email || "";
+  const clientInitials =
+    String(clientDisplayName)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "CL";
+  const directMediaAssets: DeliverableAsset[] = [
+    liveDeliverable?.image_url
+      ? {
+          url: liveDeliverable.image_url,
+          title: "Primary generated asset",
+          type: "image",
+          source: "generated",
+        }
+      : null,
+    liveDeliverable?.asset_url
+      ? {
+          url: liveDeliverable.asset_url,
+          title: "Attached asset",
+          type: "asset",
+          source: "attached",
+        }
+      : null,
+    liveDeliverable?.preview_url
+      ? {
+          url: liveDeliverable.preview_url,
+          title: "Preview asset",
+          type: "preview",
+          source: "preview",
+        }
+      : null,
+  ].filter(Boolean) as DeliverableAsset[];
+
+  const attachedAssets = [
+    ...directMediaAssets,
+    ...(liveDeliverable?.assets || []),
+    .
+
+--- occurrence 2 at 57642 ---
+inter",
+              whiteSpace: "nowrap",
+            }}
+          >
+            + Add integration
+          </button>
+        </div>
+      </section>
+
+
+        
+
+        <section style={responsiveWorkspaceGridStyle}>
+          <div style={{ ...cardStyle, minHeight: 430 }}>
+            <StepHeader number="01" title="Run AI Agent" />
+            <h3 style={cardTitle}>Select agents and launch governed execution.</h3>
+            <p style={{ ...mutedText, margin: "6px 0 0" }}>
+              Configure your task and run using your saved business profile.
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "260px minmax(0,1fr)", gap: 16, marginTop: 18 }}>
+              <div>
+                <div style={labelStyle}>Active agents</div>
+                <div style={{ display: "grid", gap: 7, maxHeight: 268, overflowY: "auto", paddingRight: 4 }}>
+                  {(account?.active_agents || DEFAULT_AGENTS).map((agent) => {
+                    const active = selectedAgents.includes(agent);
+                    const agentName = getAgentDisplayName(agent);
+                    const agentIcon =
+                      agentName.toLowerCase().includes("research") ? "⌕" :
+                      agentName.toLowerCase().includes("copy") ? "✎" :
+                      agentName.toLowerCase().includes("ugc") ? "▣" :
+                      agentName.toLowerCase().includes("image") ? "▧" :
+                      agentName.toLowerCase().includes("crm") ? "♟" :
+                      agentName.toLowerCase().includes("email") ? "✉" :
+                      agentName.toLowerCase().includes("analytics") ? "↗" :
+                      agentName.toLowerCase().includes("influencer") ? "★" :
+                      "AI";
+
+                    return (
+                      <button
+                        key={agentName}
+                        onClick={() => toggleAgent(agent)}
+                        style={{
+                          border: active ? "1px solid rgba(37, 99, 235, 0.34)" : "1px solid rgba(15, 23, 42, 0.10)",
+                          background: active ? "linear-gradient(135deg,#eff6ff,#ffffff)" : "#ffffff",
+                          color: active ? "var(--color-brand)" : "var(--color-dark)",
+                          padding: "8px 10px",
+                          borderRadius: 13,
+                          cursor: "pointer",
+                          textAlign: "left",
+                          fontSize: 11.8,
+                          fontWeight: 7
+
+COUNT: 2
+
+
+========== package ==========
+
+--- occurrence 1 at 139 ---
+"use client";
+
+import React, { useEffect, useRef, useState } from "react";
+
+type Account = {
+  tenant_id?: string;
+  client_id?: string;
+  package?: string;
+  package_name?: string;
+  status?: string;
+  package_status?: string;
+  active_agents?: string[];
+  company_name?: string;
+  contact_email?: string;
+  credits_remaining?: number;
+  credits_monthly?: number;
+  credits_used?: number;
+};
+
+type ClientIntegration = {
+  integration_key: string;
+  name: string;
+  providers: string[];
+  used_by_agents: string[];
+  recommended_auth: string;
+  high_risk_actions: string[];
+  connected: boolean;
+  provider?: string;
+  status: string;
+  last_tested_at?: string;
+  credential_hint?: string;
+};
+
+
+const DEFAULT_CLIENT_INTEGRATIONS: ClientIntegration[] = [
+  {
+    integration_key: "email",
+    name: "Email",
+    providers: ["Gmail", "Outlook", "IMAP/SMTP", "Brevo"],
+    used_by_agents: ["Email Reply Agent", "Sales / Closer Agent", "Customer Support Agent"],
+    recommended_auth: "OAuth or scoped provider API key",
+    high_risk_actions: ["send email", "bulk send"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "crm",
+    name: "CRM",
+    providers: ["GoHighLevel", "HubSpot", "Salesforce", "Pipedrive", "Zoho"],
+    used_by_agents: ["CRM AI Agent", "Sales / Closer Agent", "Lead Generator / Appointment Setter Agent"],
+    recommended_auth: "OAuth or scoped API key",
+    high_risk_actions: ["create contact", "update deal", "create opportunity"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "store",
+    name: "Ecommerce Store",
+    providers: ["Shopify", "WooCommerce", "BigCommerce", "Wix", "Squarespace"],
+    used_by_agents: ["Ecommerce Agent", "Product Res
+
+--- occurrence 2 at 159 ---
+"use client";
+
+import React, { useEffect, useRef, useState } from "react";
+
+type Account = {
+  tenant_id?: string;
+  client_id?: string;
+  package?: string;
+  package_name?: string;
+  status?: string;
+  package_status?: string;
+  active_agents?: string[];
+  company_name?: string;
+  contact_email?: string;
+  credits_remaining?: number;
+  credits_monthly?: number;
+  credits_used?: number;
+};
+
+type ClientIntegration = {
+  integration_key: string;
+  name: string;
+  providers: string[];
+  used_by_agents: string[];
+  recommended_auth: string;
+  high_risk_actions: string[];
+  connected: boolean;
+  provider?: string;
+  status: string;
+  last_tested_at?: string;
+  credential_hint?: string;
+};
+
+
+const DEFAULT_CLIENT_INTEGRATIONS: ClientIntegration[] = [
+  {
+    integration_key: "email",
+    name: "Email",
+    providers: ["Gmail", "Outlook", "IMAP/SMTP", "Brevo"],
+    used_by_agents: ["Email Reply Agent", "Sales / Closer Agent", "Customer Support Agent"],
+    recommended_auth: "OAuth or scoped provider API key",
+    high_risk_actions: ["send email", "bulk send"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "crm",
+    name: "CRM",
+    providers: ["GoHighLevel", "HubSpot", "Salesforce", "Pipedrive", "Zoho"],
+    used_by_agents: ["CRM AI Agent", "Sales / Closer Agent", "Lead Generator / Appointment Setter Agent"],
+    recommended_auth: "OAuth or scoped API key",
+    high_risk_actions: ["create contact", "update deal", "create opportunity"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "store",
+    name: "Ecommerce Store",
+    providers: ["Shopify", "WooCommerce", "BigCommerce", "Wix", "Squarespace"],
+    used_by_agents: ["Ecommerce Agent", "Product Research Agent", "Produ
+
+--- occurrence 3 at 203 ---
+"use client";
+
+import React, { useEffect, useRef, useState } from "react";
+
+type Account = {
+  tenant_id?: string;
+  client_id?: string;
+  package?: string;
+  package_name?: string;
+  status?: string;
+  package_status?: string;
+  active_agents?: string[];
+  company_name?: string;
+  contact_email?: string;
+  credits_remaining?: number;
+  credits_monthly?: number;
+  credits_used?: number;
+};
+
+type ClientIntegration = {
+  integration_key: string;
+  name: string;
+  providers: string[];
+  used_by_agents: string[];
+  recommended_auth: string;
+  high_risk_actions: string[];
+  connected: boolean;
+  provider?: string;
+  status: string;
+  last_tested_at?: string;
+  credential_hint?: string;
+};
+
+
+const DEFAULT_CLIENT_INTEGRATIONS: ClientIntegration[] = [
+  {
+    integration_key: "email",
+    name: "Email",
+    providers: ["Gmail", "Outlook", "IMAP/SMTP", "Brevo"],
+    used_by_agents: ["Email Reply Agent", "Sales / Closer Agent", "Customer Support Agent"],
+    recommended_auth: "OAuth or scoped provider API key",
+    high_risk_actions: ["send email", "bulk send"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "crm",
+    name: "CRM",
+    providers: ["GoHighLevel", "HubSpot", "Salesforce", "Pipedrive", "Zoho"],
+    used_by_agents: ["CRM AI Agent", "Sales / Closer Agent", "Lead Generator / Appointment Setter Agent"],
+    recommended_auth: "OAuth or scoped API key",
+    high_risk_actions: ["create contact", "update deal", "create opportunity"],
+    connected: false,
+    status: "not_connected",
+  },
+  {
+    integration_key: "store",
+    name: "Ecommerce Store",
+    providers: ["Shopify", "WooCommerce", "BigCommerce", "Wix", "Squarespace"],
+    used_by_agents: ["Ecommerce Agent", "Product Research Agent", "Product Copywriting Agent", "Analytics Optimisati
+
+--- occurrence 4 at 12080 ---
+a?.success && data?.deliverable) {
+          setLiveDeliverable(data.deliverable);
+          setSelectedAssetIndex(0);
+          setExecutionState("completed");
+          setReviewStatus("pending");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const syncAccountPanelFromHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (["settings", "profile", "password-reset", "two-factor-authentication"].includes(hash)) {
+        setActiveAccountPanel(hash);
+      }
+    };
+
+    syncAccountPanelFromHash();
+    window.addEventListener("hashchange", syncAccountPanelFromHash);
+    return () => window.removeEventListener("hashchange", syncAccountPanelFromHash);
+  }, []);
+
+  const creditsRemaining = account?.credits_remaining ?? 0;
+  const tenantId = account?.tenant_id || account?.client_id || "unknown_client";
+  const accountPackage = account?.package_name || account?.package || "Active workspace";
+  const accountStatus = account?.status || "active";
+  const activeAgentCount = account?.active_agents?.length || 0;
+  const accountAny = account as any;
+  const businessProfileAny = businessProfile as any;
+  const typedBusinessName = String(businessProfile.business_name || "").trim();
+  const clientDisplayName =
+    typedBusinessName ||
+    businessProfileAny?.company_name ||
+    businessProfileAny?.brand_name ||
+    accountAny?.company_name ||
+    accountAny?.business_name ||
+    accountAny?.client_name ||
+    accountAny?.contact_name ||
+    accountAny?.full_name ||
+    accountAny?.email ||
+    "Client";
+  const clientEmail = accountAny?.email || accountAny?.contact_email || "";
+  const clientInitials =
+    String(clientDisplayName)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "CL";
+  const directMediaAssets: DeliverableAsset[] = [
+    liveDeliverable?.image_url
+      ? {
+          url: liveDeliverable.image_url,
+          title: "Primary generated asset",
+          type: "image",
+          source: "generated",
+        }
+      : null,
+    liveDeliverable?.asset_url
+      ? {
+          url: liveDeliverable.asset_url,
+          title: "Attached asset",
+          type: "asset",
+          source: "attached",
+        }
+      : null,
+    liveDeliverable?.preview_url
+      ? {
+          url: liveDeliverable.preview_url,
+          title: "Preview asset",
+          type: "preview",
+          source: "preview",
+        }
+      : null,
+  ].fi
+
+--- occurrence 5 at 12105 ---
+erable) {
+          setLiveDeliverable(data.deliverable);
+          setSelectedAssetIndex(0);
+          setExecutionState("completed");
+          setReviewStatus("pending");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const syncAccountPanelFromHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (["settings", "profile", "password-reset", "two-factor-authentication"].includes(hash)) {
+        setActiveAccountPanel(hash);
+      }
+    };
+
+    syncAccountPanelFromHash();
+    window.addEventListener("hashchange", syncAccountPanelFromHash);
+    return () => window.removeEventListener("hashchange", syncAccountPanelFromHash);
+  }, []);
+
+  const creditsRemaining = account?.credits_remaining ?? 0;
+  const tenantId = account?.tenant_id || account?.client_id || "unknown_client";
+  const accountPackage = account?.package_name || account?.package || "Active workspace";
+  const accountStatus = account?.status || "active";
+  const activeAgentCount = account?.active_agents?.length || 0;
+  const accountAny = account as any;
+  const businessProfileAny = businessProfile as any;
+  const typedBusinessName = String(businessProfile.business_name || "").trim();
+  const clientDisplayName =
+    typedBusinessName ||
+    businessProfileAny?.company_name ||
+    businessProfileAny?.brand_name ||
+    accountAny?.company_name ||
+    accountAny?.business_name ||
+    accountAny?.client_name ||
+    accountAny?.contact_name ||
+    accountAny?.full_name ||
+    accountAny?.email ||
+    "Client";
+  const clientEmail = accountAny?.email || accountAny?.contact_email || "";
+  const clientInitials =
+    String(clientDisplayName)
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "CL";
+  const directMediaAssets: DeliverableAsset[] = [
+    liveDeliverable?.image_url
+      ? {
+          url: liveDeliverable.image_url,
+          title: "Primary generated asset",
+          type: "image",
+          source: "generated",
+        }
+      : null,
+    liveDeliverable?.asset_url
+      ? {
+          url: liveDeliverable.asset_url,
+          title: "Attached asset",
+          type: "asset",
+          source: "attached",
+        }
+      : null,
+    liveDeliverable?.preview_url
+      ? {
+          url: liveDeliverable.preview_url,
+          title: "Preview asset",
+          type: "preview",
+          source: "preview",
+        }
+      : null,
+  ].filter(Boolean) as Delivera
+
+COUNT: 5
+
+
+========== plan ==========
+
+--- occurrence 1 at 29556 ---
+     <div style={{ width: 46, height: 46, borderRadius: 999, background: "var(--color-dark)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800 }}>{clientInitials}</div>
+                  <div>
+                    <div style={{ fontWeight: 800, color: "var(--color-dark)" }}>{clientDisplayName}</div>
+                    <div style={{ fontSize: 12, color: "var(--color-muted)" }}>{clientEmail || accountPackage}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4, color: "var(--color-muted)" }}>
+                      <span style={{ color: accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444", marginRight: 6 }}>●</span>
+                      {accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "ACTIVE" : "INACTIVE"} · Paid plan
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setActiveAccountPanel("settings");
+                    window.location.hash = "settings";
+                    
+                  }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
+                >
+                  ⚙️ Settings
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveAccountPanel("profile");
+                    window.location.hash = "profile";
+                    window.setTimeout(() => {
+                      document.getElementById("account-centre-profile-panel")?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "start",
+                      });
+                    }, 50);
+                  }}
+                  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: "var(--color-dark)" }}
+                >
+                  👤 Profile
+                </button>
+
+                <button
+                  onClick={() => {
+                    setActiveAccountPanel("password-reset");
+                    window.location.hash = "password-reset";
+                    
+                  }}
+                  style={{ width: "100%", border: "none", background: "transparent", pa
+
+COUNT: 1
+
+
+========== subscription ==========
+
+COUNT: 0
+
+
+========== Run AI Agent ==========
+
+--- occurrence 1 at 57062 ---
+span>
+                <span style={{ display: "block", color: "var(--color-muted)", fontSize: 12, fontWeight: 800, marginTop: 3 }}>
+                  Connect
+                </span>
+              </span>
+            </button>
+          ))}
+
+          <button
+            type="button"
+            style={{
+              border: "1px solid #d8dcff",
+              borderRadius: 12,
+              background: "#fff",
+              color: "var(--color-primary)",
+              padding: "8px 12px",
+              minHeight: 48,
+              fontWeight: 900,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            + Add integration
+          </button>
+        </div>
+      </section>
+
+
+        
+
+        <section style={responsiveWorkspaceGridStyle}>
+          <div style={{ ...cardStyle, minHeight: 430 }}>
+            <StepHeader number="01" title="Run AI Agent" />
+            <h3 style={cardTitle}>Select agents and launch governed execution.</h3>
+            <p style={{ ...mutedText, margin: "6px 0 0" }}>
+              Configure your task and run using your saved business profile.
+            </p>
+
+            <div style={{ display: "grid", gridTemplateColumns: "260px minmax(0,1fr)", gap: 16, marginTop: 18 }}>
+              <div>
+                <div style={labelStyle}>Active agents</div>
+                <div style={{ display: "grid", gap: 7, maxHeight: 268, overflowY: "auto", paddingRight: 4 }}>
+                  {(account?.active_agents || DEFAULT_AGENTS).map((agent) => {
+                    const active = selectedAgents.includes(agent);
+                    const agentName = getAgentDisplayName(agent);
+                    const agentIcon =
+                      agentName.toLowerCase().includes("research") ? "⌕" :
+                      agentName.toLowerCase().includes("copy") ? "✎" :
+                      agentName.toLowerCase().includes("ugc") ? "▣" :
+                      agentName.toLowerCase().includes("image") ? "▧" :
+                      agentName.toLowerCase().includes("crm") ? "♟" :
+                      agentName.toLowerCase().includes("email") ? "✉" :
+                      agentName.toLowerCase().includes("analytics") ? "↗" :
+                      agentName.toLowerCase().includes("influencer") ? "★" :
+                      "AI";
+
+                    return (
+                      <button
+                        key={agentName}
+                        onClick={() => toggleAgent(agent)}
+                    
+
+COUNT: 1

@@ -1,0 +1,121 @@
+) 60px",
+    boxSizing: "border-box" as const,
+  };
+
+  const primaryGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 14,
+    alignItems: "stretch",
+    marginBottom: 20,
+  };
+
+  const secondaryGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 14,
+    alignItems: "start",
+  };
+
+  const deliverableCardGridStyle = {
+    marginTop: 12,
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,280px),1fr))",
+    gap: 14,
+    padding: 16,
+    borderRadius: 12,
+    border: "1px solid #e5eaf2",
+    background: "#fff",
+  };
+
+  
+  const responsiveWorkspaceGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 14,
+    alignItems: "stretch",
+    marginBottom: 20,
+  };
+
+  const responsiveSecondaryGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+    gap: 14,
+    alignItems: "start",
+  };
+
+
+const modalContentGridStyle = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))",
+    gap: 14,
+    padding: "clamp(18px,2.4vw,28px)",
+  };
+useEffect(() => {
+    fetch("/api/client-me")
+      .then((r) => r.json())
+      .then((data) => {
+        const accountData = data?.account || data;
+        setAccount(accountData);
+
+        const deployedAgents =
+          accountData?.active_agents && Array.isArray(accountData.active_agents)
+            ? accountData.active_agents
+            : [];
+
+        if (deployedAgents.length > 0) {
+          setSelectedAgents(deployedAgents);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/client-latest-deliverable", {
+      method: "GET",
+      credentials: "include",
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.success && data?.deliverable) {
+          setLiveDeliverable(data.deliverable);
+          setSelectedAssetIndex(0);
+          setExecutionState("completed");
+          setReviewStatus("pending");
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const syncAccountPanelFromHash = () => {
+      const hash = window.location.hash.replace("#", "");
+      if (["settings", "profile", "payment-update", "password-reset", "two-factor-authentication"].includes(hash)) {
+        setActiveAccountPanel(hash);
+      }
+    };
+
+    syncAccountPanelFromHash();
+    window.addEventListener("hashchange", syncAccountPanelFromHash);
+    return () => window.removeEventListener("hashchange", syncAccountPanelFromHash);
+  }, []);
+
+  const creditsRemaining = account?.credits_remaining ?? 0;
+  const tenantId = account?.tenant_id || account?.client_id || "unknown_client";
+  const accountPackage = account?.package_name || account?.package || "Starter";
+  const visibleAgentCatalogue = getPackageAgentCatalogue(accountPackage, account?.active_agents);
+  const visibleAgentCount = visibleAgentCatalogue.length;
+  const packageAgentLimitLabel = getPackageAgentLimitLabel(accountPackage, visibleAgentCount);
+  const isEnterprisePackage =
+    String(accountPackage || "").toLowerCase().includes("enterprise") ||
+    visibleAgentCount >= 20;
+  const inlineVisibleAgentCatalogue = isEnterprisePackage
+    ? visibleAgentCatalogue.slice(0, 7)
+    : visibleAgentCatalogue;
+  const accountStatus = account?.status || "active";
+  const activeAgentCount = visibleAgentCount;
+  const accountAny = account as any;
+  const businessProfileAny = businessProfile as any;
+  const typedBusinessName = String(businessProfile.business_name || "").trim();
+  const clientDisplayName =
+    typedBusinessName ||
+    businessProfileAny?.company_name ||
+    businessProfileAny?.brand_name 
