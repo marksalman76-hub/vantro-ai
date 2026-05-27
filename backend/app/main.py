@@ -2969,3 +2969,344 @@ def root_provider_adapter_unified_status(provider_key: str):
 @app.get("/provider-adapter-runtime-status/{provider_key}")
 def provider_adapter_runtime_status(provider_key: str):
     return get_unified_provider_adapter_status(provider_key)
+
+
+# ---------------------------------------------------------------------------
+# Gate-safe live provider adapter routes
+# Added by wire_gate_safe_live_provider_adapter_routes.py
+# Purpose:
+# - expose credential-safe provider adapter runtime checks
+# - expose owner-governed execution preparation only
+# - keep real provider calls blocked unless credentials + owner execution gates pass
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.live_provider_adapters import (
+        build_failover_routing_packet,
+        build_polling_packet,
+        calculate_provider_health_score,
+        create_execution_audit_linkage,
+        create_signed_asset_delivery_packet,
+        execute_gate_safe_provider_request,
+        live_provider_adapter_runtime_status,
+        normalise_provider_failure,
+        provider_timeout_policy,
+    )
+except Exception:  # pragma: no cover
+    build_failover_routing_packet = None
+    build_polling_packet = None
+    calculate_provider_health_score = None
+    create_execution_audit_linkage = None
+    create_signed_asset_delivery_packet = None
+    execute_gate_safe_provider_request = None
+    live_provider_adapter_runtime_status = None
+    normalise_provider_failure = None
+    provider_timeout_policy = None
+
+
+@app.get("/live-provider-adapter-runtime-status/{provider_key}")
+def live_provider_adapter_runtime_status_route(provider_key: str):
+    if live_provider_adapter_runtime_status is None:
+        return {
+            "status": "unavailable",
+            "reason": "live_provider_adapter_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    return live_provider_adapter_runtime_status(provider_key)
+
+
+@app.post("/live-provider-adapter-execute/{provider_key}")
+async def live_provider_adapter_execute_route(provider_key: str, payload: dict):
+    if execute_gate_safe_provider_request is None:
+        return {
+            "status": "blocked",
+            "reason": "live_provider_adapter_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    result = execute_gate_safe_provider_request(provider_key, safe_payload)
+
+    tenant_id = safe_payload.get("tenant_id") or "unknown-tenant"
+    request_id = safe_payload.get("request_id") or "unknown-request"
+    provider_job_id = result.get("provider_job_id")
+
+    audit_linkage = None
+    if create_execution_audit_linkage is not None:
+        audit_linkage = create_execution_audit_linkage(
+            tenant_id=tenant_id,
+            request_id=request_id,
+            provider_key=provider_key,
+            provider_job_id=provider_job_id,
+            execution_status=result.get("status", "blocked"),
+        )
+
+    return {
+        "status": result.get("status"),
+        "provider_key": provider_key,
+        "execution_result": result,
+        "audit_linkage": audit_linkage,
+        "owner_governed_execution_required": True,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+@app.get("/live-provider-adapter-timeout-policy/{provider_key}")
+def live_provider_adapter_timeout_policy_route(provider_key: str):
+    if provider_timeout_policy is None:
+        return {
+            "status": "unavailable",
+            "reason": "live_provider_adapter_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    return {
+        "provider_key": provider_key,
+        "timeout_policy": provider_timeout_policy(provider_key),
+        "credential_values_exposed": False,
+    }
+
+
+@app.get("/live-provider-adapter-polling-packet/{provider_key}/{provider_job_id}")
+def live_provider_adapter_polling_packet_route(provider_key: str, provider_job_id: str):
+    if build_polling_packet is None:
+        return {
+            "status": "unavailable",
+            "reason": "live_provider_adapter_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    return build_polling_packet(provider_key, provider_job_id)
+
+
+@app.post("/live-provider-adapter-failover-routing")
+async def live_provider_adapter_failover_routing_route(payload: dict):
+    if build_failover_routing_packet is None:
+        return {
+            "status": "unavailable",
+            "reason": "live_provider_adapter_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    requested_provider = safe_payload.get("requested_provider") or safe_payload.get("provider_key") or ""
+    available_providers = safe_payload.get("available_providers") or []
+
+    return build_failover_routing_packet(
+        requested_provider=requested_provider,
+        available_providers=available_providers,
+    )
+
+
+@app.post("/live-provider-adapter-health-score")
+async def live_provider_adapter_health_score_route(payload: dict):
+    if calculate_provider_health_score is None:
+        return {
+            "status": "unavailable",
+            "reason": "live_provider_adapter_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return calculate_provider_health_score(
+        success_count=int(safe_payload.get("success_count", 0) or 0),
+        failure_count=int(safe_payload.get("failure_count", 0) or 0),
+        timeout_count=int(safe_payload.get("timeout_count", 0) or 0),
+        average_latency_ms=safe_payload.get("average_latency_ms"),
+    )
+
+
+@app.post("/live-provider-adapter-failure-normalisation")
+async def live_provider_adapter_failure_normalisation_route(payload: dict):
+    if normalise_provider_failure is None:
+        return {
+            "status": "unavailable",
+            "reason": "live_provider_adapter_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return normalise_provider_failure(
+        provider_key=safe_payload.get("provider_key") or "unknown",
+        error_code=safe_payload.get("error_code") or "provider_error",
+        message=safe_payload.get("message") or "Provider execution failed safely.",
+        retryable=bool(safe_payload.get("retryable", True)),
+        status_code=safe_payload.get("status_code"),
+    )
+
+
+@app.post("/live-provider-adapter-asset-packet")
+async def live_provider_adapter_asset_packet_route(payload: dict):
+    if create_signed_asset_delivery_packet is None:
+        return {
+            "status": "unavailable",
+            "reason": "live_provider_adapter_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return create_signed_asset_delivery_packet(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        asset_id=safe_payload.get("asset_id") or "unknown-asset",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        asset_type=safe_payload.get("asset_type") or "generated_asset",
+        expires_in_seconds=int(safe_payload.get("expires_in_seconds", 3600) or 3600),
+    )
+
+
+# ---------------------------------------------------------------------------
+# Async provider orchestration routes
+# Added by wire_async_provider_orchestration_routes.py
+# Purpose:
+# - expose async provider orchestration packets
+# - expose polling state transitions
+# - expose retry/manual-review escalation
+# - expose execution timeline + latency aggregation
+# - expose provider selection/failover preparation
+# - do NOT execute real external provider calls
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.async_provider_orchestration_runtime import (
+        advance_provider_polling_state,
+        aggregate_provider_latency_metrics,
+        build_provider_execution_timeline_event,
+        create_provider_orchestration_packet,
+        create_retry_escalation_packet,
+        prepare_provider_selection_packet,
+    )
+except Exception:  # pragma: no cover
+    advance_provider_polling_state = None
+    aggregate_provider_latency_metrics = None
+    build_provider_execution_timeline_event = None
+    create_provider_orchestration_packet = None
+    create_retry_escalation_packet = None
+    prepare_provider_selection_packet = None
+
+
+@app.post("/async-provider-orchestration/packet")
+async def async_provider_orchestration_packet_route(payload: dict):
+    if create_provider_orchestration_packet is None:
+        return {
+            "status": "unavailable",
+            "reason": "async_provider_orchestration_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return create_provider_orchestration_packet(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        task_type=safe_payload.get("task_type") or "provider_generation",
+        payload=safe_payload.get("payload") or {},
+        live_execution_requested=bool(safe_payload.get("live_execution_requested", False)),
+        owner_governed_execution_confirmed=bool(
+            safe_payload.get("owner_governed_execution_confirmed", False)
+        ),
+    )
+
+
+@app.post("/async-provider-orchestration/polling-state")
+async def async_provider_orchestration_polling_state_route(payload: dict):
+    if advance_provider_polling_state is None:
+        return {
+            "status": "unavailable",
+            "reason": "async_provider_orchestration_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return advance_provider_polling_state(
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        provider_job_id=safe_payload.get("provider_job_id") or "unknown-job",
+        current_state=safe_payload.get("current_state") or "queued",
+        provider_status=safe_payload.get("provider_status") or "queued",
+        attempt_count=int(safe_payload.get("attempt_count", 0) or 0),
+    )
+
+
+@app.post("/async-provider-orchestration/retry-escalation")
+async def async_provider_orchestration_retry_escalation_route(payload: dict):
+    if create_retry_escalation_packet is None:
+        return {
+            "status": "unavailable",
+            "reason": "async_provider_orchestration_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return create_retry_escalation_packet(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        failure_code=safe_payload.get("failure_code") or "provider_error",
+        attempt_count=int(safe_payload.get("attempt_count", 0) or 0),
+        max_attempts=int(safe_payload.get("max_attempts", 3) or 3),
+    )
+
+
+@app.post("/async-provider-orchestration/timeline-event")
+async def async_provider_orchestration_timeline_event_route(payload: dict):
+    if build_provider_execution_timeline_event is None:
+        return {
+            "status": "unavailable",
+            "reason": "async_provider_orchestration_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return build_provider_execution_timeline_event(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        execution_id=safe_payload.get("execution_id") or "unknown-execution",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        event_type=safe_payload.get("event_type") or "provider_orchestration_event",
+        status=safe_payload.get("status") or "queued",
+        latency_ms=safe_payload.get("latency_ms"),
+    )
+
+
+@app.post("/async-provider-orchestration/latency-metrics")
+async def async_provider_orchestration_latency_metrics_route(payload: dict):
+    if aggregate_provider_latency_metrics is None:
+        return {
+            "status": "unavailable",
+            "reason": "async_provider_orchestration_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    events = safe_payload.get("events") or []
+    if not isinstance(events, list):
+        events = []
+
+    return aggregate_provider_latency_metrics(events)
+
+
+@app.post("/async-provider-orchestration/provider-selection")
+async def async_provider_orchestration_provider_selection_route(payload: dict):
+    if prepare_provider_selection_packet is None:
+        return {
+            "status": "unavailable",
+            "reason": "async_provider_orchestration_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    available_providers = safe_payload.get("available_providers") or []
+    provider_health = safe_payload.get("provider_health") or {}
+
+    if not isinstance(available_providers, list):
+        available_providers = []
+    if not isinstance(provider_health, dict):
+        provider_health = {}
+
+    return prepare_provider_selection_packet(
+        requested_provider=safe_payload.get("requested_provider") or "unknown-provider",
+        available_providers=available_providers,
+        provider_health=provider_health,
+    )
+
