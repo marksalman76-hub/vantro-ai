@@ -5241,3 +5241,56 @@ async def gold_standard_agent_output_benchmark_evaluate_route(payload: dict):
         consequence_level=safe_payload.get("consequence_level") or "medium",
     )
 
+
+# ---------------------------------------------------------------------------
+# Real agent/component catalogue routes
+# Added by wire_real_agent_component_catalogue_routes.py
+# Purpose:
+# - lock commercial agent count separately from internal operational components
+# - clarify 27 commercial agents vs larger runtime intelligence count
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.real_agent_component_catalogue import (
+        calculate_catalogue_counts,
+        get_catalogue_component_by_key,
+        list_client_selectable_agents,
+        list_real_agent_component_catalogue,
+        real_agent_component_catalogue_status,
+    )
+except Exception:  # pragma: no cover
+    calculate_catalogue_counts = None
+    get_catalogue_component_by_key = None
+    list_client_selectable_agents = None
+    list_real_agent_component_catalogue = None
+    real_agent_component_catalogue_status = None
+
+
+@app.get("/real-agent-component-catalogue/status")
+def real_agent_component_catalogue_status_route():
+    return real_agent_component_catalogue_status()
+
+
+@app.get("/real-agent-component-catalogue/full")
+def real_agent_component_catalogue_full_route():
+    return list_real_agent_component_catalogue()
+
+
+@app.get("/real-agent-component-catalogue/counts")
+def real_agent_component_catalogue_counts_route():
+    return {
+        "counts": calculate_catalogue_counts(),
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+@app.get("/real-agent-component-catalogue/component/{component_key}")
+def real_agent_component_catalogue_component_route(component_key: str):
+    return get_catalogue_component_by_key(component_key)
+
+
+@app.get("/real-agent-component-catalogue/client-selectable")
+def real_agent_component_catalogue_client_selectable_route(plan: str = "business"):
+    return list_client_selectable_agents(plan)
+
