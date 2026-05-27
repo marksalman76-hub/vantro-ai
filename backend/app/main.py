@@ -5507,3 +5507,85 @@ async def one_time_agent_selection_lock_request_change_route(payload: dict):
 async def one_time_agent_selection_lock_reset_route():
     return reset_one_time_agent_selection_lock_for_tests()
 
+
+# ---------------------------------------------------------------------------
+# Signup locked activation routes
+# Added by wire_signup_locked_activation_routes.py
+# Purpose:
+# - create signup agent-selection drafts
+# - lock selected agents once package is activated
+# - block post-activation client changes
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.signup_locked_activation_bridge import (
+        activate_signup_locked_selection,
+        create_signup_locked_selection_draft,
+        get_signup_locked_selection_status,
+        request_signup_agent_change_after_activation,
+        signup_locked_activation_bridge_status,
+    )
+except Exception:  # pragma: no cover
+    activate_signup_locked_selection = None
+    create_signup_locked_selection_draft = None
+    get_signup_locked_selection_status = None
+    request_signup_agent_change_after_activation = None
+    signup_locked_activation_bridge_status = None
+
+
+@app.get("/signup-locked-activation/status")
+def signup_locked_activation_status_route():
+    return signup_locked_activation_bridge_status()
+
+
+@app.post("/signup-locked-activation/draft")
+async def signup_locked_activation_draft_route(payload: dict):
+    safe_payload = dict(payload or {})
+    selected = safe_payload.get("selected_agent_keys") or []
+    if not isinstance(selected, list):
+        selected = []
+
+    return create_signup_locked_selection_draft(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        package_id=safe_payload.get("package_id") or "unknown-package",
+        plan=safe_payload.get("plan") or "business",
+        selected_agent_keys=selected,
+    )
+
+
+@app.post("/signup-locked-activation/activate")
+async def signup_locked_activation_activate_route(payload: dict):
+    safe_payload = dict(payload or {})
+
+    return activate_signup_locked_selection(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        package_id=safe_payload.get("package_id") or "unknown-package",
+        draft_id=safe_payload.get("draft_id") or "",
+    )
+
+
+@app.get("/signup-locked-activation/selection-status")
+def signup_locked_activation_selection_status_route(
+    tenant_id: str,
+    package_id: str,
+):
+    return get_signup_locked_selection_status(
+        tenant_id=tenant_id,
+        package_id=package_id,
+    )
+
+
+@app.post("/signup-locked-activation/request-change")
+async def signup_locked_activation_request_change_route(payload: dict):
+    safe_payload = dict(payload or {})
+    selected = safe_payload.get("requested_agent_keys") or []
+    if not isinstance(selected, list):
+        selected = []
+
+    return request_signup_agent_change_after_activation(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        package_id=safe_payload.get("package_id") or "unknown-package",
+        requested_agent_keys=selected,
+        reason=safe_payload.get("reason") or "",
+    )
+
