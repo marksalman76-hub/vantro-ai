@@ -4095,3 +4095,132 @@ def provider_postgres_read_write_execution_records_route(
         limit=limit,
     )
 
+
+# ---------------------------------------------------------------------------
+# Provider execution Postgres extended ledger write routes
+# Added by wire_provider_execution_postgres_extended_ledger_write_routes.py
+# Purpose:
+# - expose DB-capable worker event, dispatch attempt, retry history,
+#   and latency metric writes
+# - preserve safe fallback when DB is unavailable
+# - never expose credentials
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.provider_execution_postgres_ledger_bridge import (
+        persist_dispatch_attempt_bridge,
+        persist_latency_metric_bridge,
+        persist_retry_history_bridge,
+        persist_worker_event_bridge,
+        provider_postgres_extended_ledger_write_status,
+    )
+except Exception:  # pragma: no cover
+    persist_dispatch_attempt_bridge = None
+    persist_latency_metric_bridge = None
+    persist_retry_history_bridge = None
+    persist_worker_event_bridge = None
+    provider_postgres_extended_ledger_write_status = None
+
+
+@app.get("/provider-postgres-extended-ledger-writes/status")
+def provider_postgres_extended_ledger_write_status_route():
+    if provider_postgres_extended_ledger_write_status is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_extended_ledger_write_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return provider_postgres_extended_ledger_write_status()
+
+
+@app.post("/provider-postgres-extended-ledger-writes/worker-event")
+async def provider_postgres_extended_worker_event_route(payload: dict):
+    if persist_worker_event_bridge is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_extended_ledger_write_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    details = safe_payload.get("details") or {}
+    if not isinstance(details, dict):
+        details = {}
+
+    return persist_worker_event_bridge(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        execution_id=safe_payload.get("execution_id") or "unknown-execution",
+        worker_job_id=safe_payload.get("worker_job_id") or "unknown-worker",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        event_type=safe_payload.get("event_type") or "provider_worker_event",
+        status=safe_payload.get("status") or "created",
+        details=details,
+    )
+
+
+@app.post("/provider-postgres-extended-ledger-writes/dispatch-attempt")
+async def provider_postgres_extended_dispatch_attempt_route(payload: dict):
+    if persist_dispatch_attempt_bridge is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_extended_ledger_write_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return persist_dispatch_attempt_bridge(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        execution_id=safe_payload.get("execution_id") or "unknown-execution",
+        worker_job_id=safe_payload.get("worker_job_id") or "unknown-worker",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        attempt_number=int(safe_payload.get("attempt_number", 1) or 1),
+        allowed_by_policy=bool(safe_payload.get("allowed_by_policy", False)),
+        result_status=safe_payload.get("result_status") or "blocked",
+        reason=safe_payload.get("reason"),
+    )
+
+
+@app.post("/provider-postgres-extended-ledger-writes/retry-history")
+async def provider_postgres_extended_retry_history_route(payload: dict):
+    if persist_retry_history_bridge is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_extended_ledger_write_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return persist_retry_history_bridge(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        execution_id=safe_payload.get("execution_id") or "unknown-execution",
+        worker_job_id=safe_payload.get("worker_job_id") or "unknown-worker",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        attempt_number=int(safe_payload.get("attempt_number", 1) or 1),
+        failure_code=safe_payload.get("failure_code") or "provider_error",
+        retry_allowed=bool(safe_payload.get("retry_allowed", False)),
+        next_action=safe_payload.get("next_action") or "owner_review_required",
+    )
+
+
+@app.post("/provider-postgres-extended-ledger-writes/latency-metric")
+async def provider_postgres_extended_latency_metric_route(payload: dict):
+    if persist_latency_metric_bridge is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_extended_ledger_write_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return persist_latency_metric_bridge(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        execution_id=safe_payload.get("execution_id") or "unknown-execution",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        latency_ms=int(safe_payload.get("latency_ms", 0) or 0),
+        operation=safe_payload.get("operation") or "provider_operation",
+    )
+
