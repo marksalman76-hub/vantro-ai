@@ -4926,3 +4926,91 @@ def provider_outcome_learning_recommendation_route(
 async def provider_outcome_learning_reset_route():
     return reset_provider_outcome_learning_for_tests()
 
+
+# ---------------------------------------------------------------------------
+# Provider health + failover automation routes
+# Added by wire_provider_health_failover_automation_routes.py
+# Purpose:
+# - rank providers by health, quality, latency, retry/failure patterns
+# - recommend failover while preserving owner-review governance
+# - do not execute live external calls
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.provider_health_failover_automation_runtime import (
+        automate_provider_selection,
+        build_provider_health_profile,
+        provider_health_failover_automation_status,
+        rank_provider_failover_candidates,
+        recommend_provider_after_result,
+    )
+except Exception:  # pragma: no cover
+    automate_provider_selection = None
+    build_provider_health_profile = None
+    provider_health_failover_automation_status = None
+    rank_provider_failover_candidates = None
+    recommend_provider_after_result = None
+
+
+@app.get("/provider-health-failover/status")
+def provider_health_failover_status_route():
+    return provider_health_failover_automation_status()
+
+
+@app.post("/provider-health-failover/profile")
+async def provider_health_failover_profile_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return build_provider_health_profile(
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        success_count=int(safe_payload.get("success_count", 0) or 0),
+        failure_count=int(safe_payload.get("failure_count", 0) or 0),
+        timeout_count=int(safe_payload.get("timeout_count", 0) or 0),
+        average_latency_ms=safe_payload.get("average_latency_ms"),
+        average_quality_score=safe_payload.get("average_quality_score"),
+        retry_rate=float(safe_payload.get("retry_rate", 0.0) or 0.0),
+        learning_score=safe_payload.get("learning_score"),
+    )
+
+
+@app.post("/provider-health-failover/rank")
+async def provider_health_failover_rank_route(payload: dict):
+    safe_payload = dict(payload or {})
+    candidates = safe_payload.get("candidates") or []
+    if not isinstance(candidates, list):
+        candidates = []
+
+    return rank_provider_failover_candidates(
+        requested_provider=safe_payload.get("requested_provider") or "unknown-provider",
+        candidates=candidates,
+    )
+
+
+@app.post("/provider-health-failover/select")
+async def provider_health_failover_select_route(payload: dict):
+    safe_payload = dict(payload or {})
+    available = safe_payload.get("available_providers") or []
+    health_inputs = safe_payload.get("provider_health_inputs") or {}
+
+    if not isinstance(available, list):
+        available = []
+    if not isinstance(health_inputs, dict):
+        health_inputs = {}
+
+    return automate_provider_selection(
+        requested_provider=safe_payload.get("requested_provider") or "unknown-provider",
+        available_providers=available,
+        provider_health_inputs=health_inputs,
+    )
+
+
+@app.post("/provider-health-failover/post-result-recommendation")
+async def provider_health_failover_post_result_recommendation_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return recommend_provider_after_result(
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        task_type=safe_payload.get("task_type") or "provider_generation",
+        result_payload=safe_payload.get("result_payload") or {},
+        latency_ms=int(safe_payload.get("latency_ms", 0) or 0),
+        retry_count=int(safe_payload.get("retry_count", 0) or 0),
+    )
+
