@@ -342,3 +342,224 @@ def provider_postgres_migration_apply_status() -> Dict[str, Any]:
         credential_values_exposed=False,
     )
 
+def _get_db_connection():
+    database_url = os.getenv("DATABASE_URL")
+    if not database_url:
+        return None, None
+
+    driver = detect_postgres_driver()
+    if not driver.get("driver_available"):
+        return None, None
+
+    try:
+        if driver["driver"] == "psycopg":
+            import psycopg  # type: ignore
+            return psycopg.connect(database_url), "psycopg"
+
+        if driver["driver"] == "psycopg2":
+            import psycopg2  # type: ignore
+            return psycopg2.connect(database_url), "psycopg2"
+    except Exception:
+        return None, driver.get("driver")
+
+    return None, None
+
+
+def postgres_write_provider_execution_record(record: Dict[str, Any]) -> Dict[str, Any]:
+    conn, driver = _get_db_connection()
+    if conn is None:
+        return _safe_response(written=False, reason="db_unavailable", fallback_required=True)
+
+    sql = """
+    INSERT INTO provider_execution_records (
+        execution_id, tenant_id, request_id, provider_key, task_type,
+        execution_status, worker_job_id, provider_job_id,
+        live_external_call_executed, customer_safe, credential_values_exposed,
+        created_at_ms, updated_at_ms
+    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    ON CONFLICT (execution_id) DO UPDATE SET
+        execution_status = EXCLUDED.execution_status,
+        worker_job_id = EXCLUDED.worker_job_id,
+        provider_job_id = EXCLUDED.provider_job_id,
+        updated_at_ms = EXCLUDED.updated_at_ms
+    """
+
+    values = (
+        record.get("execution_id"),
+        record.get("tenant_id"),
+        record.get("request_id"),
+        record.get("provider_key"),
+        record.get("task_type"),
+        record.get("execution_status"),
+        record.get("worker_job_id"),
+        record.get("provider_job_id"),
+        False,
+        True,
+        False,
+        record.get("created_at_ms"),
+        record.get("updated_at_ms"),
+    )
+
+    try:
+        cur = conn.cursor()
+        cur.execute(sql, values)
+        conn.commit()
+        cur.close()
+        conn.close()
+        return _safe_response(written=True, reason="postgres_write_success", driver=driver)
+    except Exception as exc:
+        try:
+            conn.close()
+        except Exception:
+            pass
+        return _safe_response(
+            written=False,
+            reason="postgres_write_failed",
+            fallback_required=True,
+            safe_error=str(exc)[:300],
+            driver=driver,
+        )
+
+
+def persist_provider_execution_record_bridge(
+    *,
+    tenant_id: str,
+    request_id: str,
+    provider_key: str,
+    task_type: str,
+    execution_status: str = "created",
+    worker_job_id: Optional[str] = None,
+    provider_job_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    record = create_provider_execution_record(
+        tenant_id=tenant_id,
+        request_id=request_id,
+        provider_key=provider_key,
+        task_type=task_type,
+        execution_status=execution_status,
+        worker_job_id=worker_job_id,
+        provider_job_id=provider_job_id,
+    )
+
+    write_result = postgres_write_provider_execution_record(record)
+
+    return _safe_response(
+        persistence_mode="postgres" if write_result.get("written") else "in_memory_fallback",
+        postgres_write_attempted=bool(os.getenv("DATABASE_URL")),
+        postgres_write_result=write_result,
+        record=record,
+    )
+
+
+def postgres_read_provider_execution_records(
+    *,
+    tenant_id: Optional[str] = None,
+    provider_key: Optional[str] = None,
+    limit: int = 50,
+) -> Dict[str, Any]:
+    conn, driver = _get_db_connection()
+    db_url_present = bool(os.getenv("DATABASE_URL"))
+    if conn is None:
+        fallback = list_provider_execution_records(
+            tenant_id=tenant_id,
+            provider_key=provider_key,
+            limit=limit,
+        )
+        return _safe_response(
+            read_mode="in_memory_fallback",
+            postgres_read_attempted=db_url_present,
+            postgres_connection_available=False,
+            records=fallback["records"],
+            count=fallback["count"],
+        )
+
+    clauses = []
+    values = []
+
+    if tenant_id:
+        clauses.append("tenant_id = %s")
+        values.append(tenant_id)
+    if provider_key:
+        clauses.append("provider_key = %s")
+        values.append(provider_key)
+
+    where_clause = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    values.append(limit)
+
+    sql = f"""
+    SELECT execution_id, tenant_id, request_id, provider_key, task_type,
+           execution_status, worker_job_id, provider_job_id,
+           live_external_call_executed, customer_safe, credential_values_exposed,
+           created_at_ms, updated_at_ms
+    FROM provider_execution_records
+    {where_clause}
+    ORDER BY created_at_ms DESC
+    LIMIT %s
+    """
+
+    try:
+        cur = conn.cursor()
+        cur.execute(sql, tuple(values))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+
+        records = []
+        for row in rows:
+            records.append({
+                "execution_id": row[0],
+                "tenant_id": row[1],
+                "request_id": row[2],
+                "provider_key": row[3],
+                "task_type": row[4],
+                "execution_status": row[5],
+                "worker_job_id": row[6],
+                "provider_job_id": row[7],
+                "live_external_call_executed": bool(row[8]),
+                "customer_safe": bool(row[9]),
+                "credential_values_exposed": False,
+                "created_at_ms": row[11],
+                "updated_at_ms": row[12],
+            })
+
+        return _safe_response(
+            read_mode="postgres",
+            postgres_read_attempted=True,
+            driver=driver,
+            records=records,
+            count=len(records),
+        )
+
+    except Exception as exc:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+        fallback = list_provider_execution_records(
+            tenant_id=tenant_id,
+            provider_key=provider_key,
+            limit=limit,
+        )
+        return _safe_response(
+            read_mode="in_memory_fallback",
+            postgres_read_attempted=True,
+            postgres_read_failed=True,
+            safe_error=str(exc)[:300],
+            records=fallback["records"],
+            count=fallback["count"],
+        )
+
+
+def provider_postgres_read_write_status() -> Dict[str, Any]:
+    driver = detect_postgres_driver()
+    return _safe_response(
+        read_write_bridge_ready=True,
+        database_url_present=_database_url_present(),
+        postgres_driver_available=driver.get("driver_available", False),
+        postgres_driver=driver.get("driver"),
+        provider_execution_record_postgres_write_enabled=True,
+        provider_execution_record_postgres_read_enabled=True,
+        fallback_storage_active=True,
+    )
+

@@ -4022,3 +4022,76 @@ async def provider_postgres_migration_apply_route():
         }
     return apply_provider_ledger_schema_with_driver()
 
+
+# ---------------------------------------------------------------------------
+# Provider execution Postgres read/write bridge routes
+# Added by wire_provider_execution_postgres_read_write_routes.py
+# Purpose:
+# - expose DB-capable execution record write/read bridge
+# - keep safe fallback active when DB is unavailable
+# - never expose credentials
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.provider_execution_postgres_ledger_bridge import (
+        persist_provider_execution_record_bridge,
+        postgres_read_provider_execution_records,
+        provider_postgres_read_write_status,
+    )
+except Exception:  # pragma: no cover
+    persist_provider_execution_record_bridge = None
+    postgres_read_provider_execution_records = None
+    provider_postgres_read_write_status = None
+
+
+@app.get("/provider-postgres-read-write/status")
+def provider_postgres_read_write_status_route():
+    if provider_postgres_read_write_status is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_read_write_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+    return provider_postgres_read_write_status()
+
+
+@app.post("/provider-postgres-read-write/execution-record")
+async def provider_postgres_read_write_execution_record_route(payload: dict):
+    if persist_provider_execution_record_bridge is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_read_write_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    safe_payload = dict(payload or {})
+    return persist_provider_execution_record_bridge(
+        tenant_id=safe_payload.get("tenant_id") or "unknown-tenant",
+        request_id=safe_payload.get("request_id") or "unknown-request",
+        provider_key=safe_payload.get("provider_key") or "unknown-provider",
+        task_type=safe_payload.get("task_type") or "provider_generation",
+        execution_status=safe_payload.get("execution_status") or "created",
+        worker_job_id=safe_payload.get("worker_job_id"),
+        provider_job_id=safe_payload.get("provider_job_id"),
+    )
+
+
+@app.get("/provider-postgres-read-write/execution-records")
+def provider_postgres_read_write_execution_records_route(
+    tenant_id: str = "",
+    provider_key: str = "",
+    limit: int = 50,
+):
+    if postgres_read_provider_execution_records is None:
+        return {
+            "status": "unavailable",
+            "reason": "provider_postgres_read_write_runtime_not_loaded",
+            "credential_values_exposed": False,
+        }
+
+    return postgres_read_provider_execution_records(
+        tenant_id=tenant_id or None,
+        provider_key=provider_key or None,
+        limit=limit,
+    )
+
