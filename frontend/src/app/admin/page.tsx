@@ -779,13 +779,13 @@ export default function AdminPage() {
                 </div>
                 <div>
                   <label>Subscription tracking</label>
-                  <h3>Active</h3>
-                  <p>Last cycle: 22 May 2026</p>
+                  <h3>{(runtime?.billing_summary?.subscriptions_active ?? 0) > 0 ? "Active" : "No live subscriptions"}</h3>
+                  <p>Live subscription count: {runtime?.billing_summary?.subscriptions_active ?? 0}</p>
                 </div>
                 <div>
                   <label>Monthly revenue</label>
-                  <h3 className="gradient">$2,232</h3>
-                  <p>8 active subscriptions</p>
+                  <h3 className="gradient">${runtime?.billing_summary?.monthly_revenue ?? 0}</h3>
+                  <p>{runtime?.billing_summary?.subscriptions_active ?? 0} active subscriptions</p>
                 </div>
               </div>
               <button className="ghost full" onClick={() => window.open("https://dashboard.stripe.com", "_blank", "noopener,noreferrer")}>Open Stripe dashboard</button>
