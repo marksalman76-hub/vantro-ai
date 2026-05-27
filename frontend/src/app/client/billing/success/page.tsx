@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export default function BillingSuccessPage() {
   return (
     <main style={{ minHeight: "100vh", padding: 32, fontFamily: "Inter, system-ui, Arial", background: "#e2e8f0", color: "#f8fafc" }}>
