@@ -158,6 +158,8 @@ from backend.app.runtime.ai_media_brand_character_memory import ai_media_brand_c
 from backend.app.runtime.ai_media_prompt_template_pack import ai_media_prompt_template_pack_readiness, list_ai_media_prompt_templates, list_rendered_ai_media_prompts, recommend_ai_media_prompt_template, render_ai_media_prompt_template
 from backend.app.runtime.ai_media_multi_provider_execution_packets import advance_packet_to_next_provider, ai_media_multi_provider_packets_readiness, create_ai_media_multi_provider_packet, list_ai_media_multi_provider_packets
 from backend.app.runtime.ai_media_end_to_end_pipeline import ai_media_end_to_end_pipeline_readiness, list_ai_media_pipeline_runs, run_ai_media_end_to_end_pipeline
+from backend.app.runtime.ai_media_session_auth_compat import validate_ai_media_admin_session_compatibility
+from backend.app.runtime.global_real_provider_connector_layer import build_global_connector_execution_packet
 
 app = FastAPI(
     title="Ecommerce AI Agent Platform",
@@ -673,6 +675,13 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
         "execution": execution_summary(execution_result)
         if execution_result
         else None,
+        "global_provider_connector": build_global_connector_execution_packet({
+            "tenant_id": request.tenant_id,
+            "requested_agent": request.requested_agent,
+            "workflow_stage": request.workflow_stage,
+            "action_type": request.action_type,
+            "task": request.task,
+        }),
         "memory": {
             "memory_saved": True,
             "latest_memory_id": latest_execution_memory.get("memory_id")
