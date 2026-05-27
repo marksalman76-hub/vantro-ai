@@ -1,4 +1,13 @@
 
+from backend.app.runtime.async_provider_worker_runtime import (
+    enqueue_async_provider_job,
+    get_async_provider_worker_status,
+    process_next_queued_provider_job,
+    process_provider_job,
+    process_provider_job_batch,
+)
+
+
 from backend.app.runtime.provider_job_persistence_runtime import (
     create_provider_job,
     get_provider_job,
@@ -5795,4 +5804,45 @@ async def provider_job_persistence_list(
 @app.get("/provider-job-persistence/events")
 async def provider_job_persistence_events(job_id: str = ""):
     return list_provider_job_events(job_id)
+
+
+
+@app.get("/async-provider-worker/status")
+async def async_provider_worker_status():
+    return get_async_provider_worker_status()
+
+
+@app.post("/async-provider-worker/enqueue")
+async def async_provider_worker_enqueue(request: Request):
+    body = await request.json()
+    return enqueue_async_provider_job(body)
+
+
+@app.post("/async-provider-worker/process")
+async def async_provider_worker_process(request: Request):
+    body = await request.json()
+
+    return process_provider_job(
+        body.get("job_id"),
+        simulate_success=bool(body.get("simulate_success", True)),
+    )
+
+
+@app.post("/async-provider-worker/process-next")
+async def async_provider_worker_process_next(request: Request):
+    body = await request.json()
+
+    return process_next_queued_provider_job(
+        simulate_success=bool(body.get("simulate_success", True)),
+    )
+
+
+@app.post("/async-provider-worker/process-batch")
+async def async_provider_worker_process_batch_route(request: Request):
+    body = await request.json()
+
+    return process_provider_job_batch(
+        limit=int(body.get("limit", 5)),
+        simulate_success=bool(body.get("simulate_success", True)),
+    )
 
