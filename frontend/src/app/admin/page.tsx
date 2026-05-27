@@ -140,7 +140,7 @@ export default function AdminPage() {
                 "No agent may increase spend without owner approval.",
                 "No agent may change package entitlements without admin approval.",
                 "No client can alter activated agent selections directly.",
-                "No frontend view may expose provider secrets or internal prompts.",
+                "No frontend view may expose protected provider details or private request instructions.",
                 "Customer-facing outputs must remain safe, polished, and non-internal.",
                 "Runtime actions must remain protected by admin/server-side controls.",
               ].map((rule) => (
