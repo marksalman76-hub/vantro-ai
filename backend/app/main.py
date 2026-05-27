@@ -1,4 +1,14 @@
 
+from backend.app.runtime.provider_retry_timeout_orchestration import (
+    get_provider_retry_timeout_status,
+    list_retry_ready_provider_jobs,
+    mark_provider_job_timed_out,
+    mark_stale_running_jobs_timed_out,
+    requeue_retry_ready_provider_jobs,
+    schedule_provider_job_retry,
+)
+
+
 from backend.app.runtime.async_provider_worker_runtime import (
     enqueue_async_provider_job,
     get_async_provider_worker_status,
@@ -5844,5 +5854,55 @@ async def async_provider_worker_process_batch_route(request: Request):
     return process_provider_job_batch(
         limit=int(body.get("limit", 5)),
         simulate_success=bool(body.get("simulate_success", True)),
+    )
+
+
+
+@app.get("/provider-retry-timeout/status")
+async def provider_retry_timeout_status():
+    return get_provider_retry_timeout_status()
+
+
+@app.post("/provider-retry-timeout/schedule-retry")
+async def provider_retry_timeout_schedule_retry(request: Request):
+    body = await request.json()
+
+    return schedule_provider_job_retry(
+        body.get("job_id"),
+        reason=body.get("reason", "provider_job_failed"),
+        delay_seconds=int(body.get("delay_seconds", 60)),
+    )
+
+
+@app.post("/provider-retry-timeout/mark-timeout")
+async def provider_retry_timeout_mark_timeout(request: Request):
+    body = await request.json()
+
+    return mark_provider_job_timed_out(
+        body.get("job_id"),
+        reason=body.get("reason", "provider_job_timed_out"),
+    )
+
+
+@app.get("/provider-retry-timeout/retry-ready")
+async def provider_retry_timeout_retry_ready():
+    return list_retry_ready_provider_jobs()
+
+
+@app.post("/provider-retry-timeout/requeue")
+async def provider_retry_timeout_requeue(request: Request):
+    body = await request.json()
+
+    return requeue_retry_ready_provider_jobs(
+        limit=int(body.get("limit", 5)),
+    )
+
+
+@app.post("/provider-retry-timeout/scan-timeouts")
+async def provider_retry_timeout_scan_timeouts(request: Request):
+    body = await request.json()
+
+    return mark_stale_running_jobs_timed_out(
+        timeout_seconds=int(body.get("timeout_seconds", 900)),
     )
 
