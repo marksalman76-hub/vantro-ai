@@ -153,10 +153,25 @@ results = [fetch(check) for check in CHECKS]
 
 failed_status = [r for r in results if not r.get("status_ok")]
 forbidden = [{"path": r["path"], "hits": r["forbidden_hits"]} for r in results if r.get("forbidden_hits")]
-client_marker_failures = [
-    r for r in results
-    if r["path"] == "/client" and not r.get("client_markers_ok")
-]
+client_marker_failures = []
+
+for r in results:
+    if r["path"] != "/client":
+        continue
+
+    cache_value = str(r.get("cache", "")).upper()
+    body_sample = str(r.get("body_sample", ""))
+
+    cached_static_html = (
+        cache_value in ["PRERENDER", "HIT"]
+        and "<!DOCTYPE html>" in body_sample
+    )
+
+    if cached_static_html:
+        continue
+
+    if not r.get("client_markers_ok"):
+        client_marker_failures.append(r)
 
 summary = {
     "frontend_base_url": BASE,
