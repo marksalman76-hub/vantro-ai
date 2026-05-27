@@ -5170,3 +5170,74 @@ async def agent_execution_quality_gate_extract_output_route(payload: dict):
         "customer_safe": True,
     }
 
+
+# ---------------------------------------------------------------------------
+# Gold-standard agent output benchmark routes
+# Added by wire_gold_standard_agent_output_benchmark_routes.py
+# Purpose:
+# - compare agent outputs against gold-standard benchmarks
+# - require improvement when outputs are below premium benchmark quality
+# ---------------------------------------------------------------------------
+
+try:
+    from backend.app.runtime.gold_standard_agent_output_benchmark_runtime import (
+        evaluate_output_against_gold_standard,
+        generate_benchmark_improvement_plan,
+        get_gold_standard_benchmark,
+        gold_standard_agent_output_benchmark_status,
+        score_output_against_gold_standard,
+    )
+except Exception:  # pragma: no cover
+    evaluate_output_against_gold_standard = None
+    generate_benchmark_improvement_plan = None
+    get_gold_standard_benchmark = None
+    gold_standard_agent_output_benchmark_status = None
+    score_output_against_gold_standard = None
+
+
+@app.get("/gold-standard-agent-output-benchmark/status")
+def gold_standard_agent_output_benchmark_status_route():
+    return gold_standard_agent_output_benchmark_status()
+
+
+@app.get("/gold-standard-agent-output-benchmark/{agent_key}")
+def gold_standard_agent_output_benchmark_get_route(agent_key: str):
+    return get_gold_standard_benchmark(agent_key)
+
+
+@app.post("/gold-standard-agent-output-benchmark/score")
+async def gold_standard_agent_output_benchmark_score_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return score_output_against_gold_standard(
+        agent_key=safe_payload.get("agent_key") or "default",
+        output_text=safe_payload.get("output_text") or "",
+        business_context=safe_payload.get("business_context") or {},
+        task_type=safe_payload.get("task_type") or "general",
+        consequence_level=safe_payload.get("consequence_level") or "medium",
+    )
+
+
+@app.post("/gold-standard-agent-output-benchmark/improvement-plan")
+async def gold_standard_agent_output_benchmark_improvement_plan_route(payload: dict):
+    safe_payload = dict(payload or {})
+    benchmark_score = safe_payload.get("benchmark_score") or {}
+    if not isinstance(benchmark_score, dict):
+        benchmark_score = {}
+
+    return generate_benchmark_improvement_plan(
+        agent_key=safe_payload.get("agent_key") or "default",
+        benchmark_score=benchmark_score,
+    )
+
+
+@app.post("/gold-standard-agent-output-benchmark/evaluate")
+async def gold_standard_agent_output_benchmark_evaluate_route(payload: dict):
+    safe_payload = dict(payload or {})
+    return evaluate_output_against_gold_standard(
+        agent_key=safe_payload.get("agent_key") or "default",
+        output_text=safe_payload.get("output_text") or "",
+        business_context=safe_payload.get("business_context") or {},
+        task_type=safe_payload.get("task_type") or "general",
+        consequence_level=safe_payload.get("consequence_level") or "medium",
+    )
+
