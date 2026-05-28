@@ -316,7 +316,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
     })
 
     actor_role = (request.actor_role or "").strip().lower()
-    owner_admin_credit_bypass = actor_role in {"owner", "admin", "system"}
+    owner_admin_credit_bypass = actor_role in {"owner", "admin", "owner_admin", "system"}
 
     if not credit_gate.get("credit_gate_passed") and not owner_admin_credit_bypass:
         return {
@@ -343,7 +343,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             "normalised_agent": requested_agent,
         }
 
-    owner_admin_internal_execution = request.actor_role in {"owner", "admin", "system"}
+    owner_admin_internal_execution = (request.actor_role or "").strip().lower() in {"owner", "admin", "owner_admin", "system"}
 
     tenant_account = pg_lookup_client_account(request.tenant_id)
 
