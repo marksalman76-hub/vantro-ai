@@ -1,3 +1,15 @@
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path.cwd()
+page_file = ROOT / "frontend" / "src" / "app" / "admin" / "live-execution" / "page.tsx"
+
+backup_dir = ROOT / "backups" / f"admin_live_execution_client_style_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+backup_dir.mkdir(parents=True, exist_ok=True)
+shutil.copy2(page_file, backup_dir / "page.tsx")
+
+page_file.write_text(r'''
 "use client";
 
 import { useState } from "react";
@@ -221,3 +233,8 @@ export default function AdminLiveExecutionPage() {
     </main>
   );
 }
+'''.lstrip(), encoding="utf-8")
+
+print("ADMIN_LIVE_EXECUTION_REPLACED_WITH_CLIENT_STYLE_VIEWER")
+print(f"Backup folder: {backup_dir}")
+print(f"Updated: {page_file}")
