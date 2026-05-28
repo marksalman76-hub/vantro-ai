@@ -48,6 +48,17 @@ export async function POST(request: NextRequest) {
       "x-actor-role": "owner",
     };
 
+    const requestId =
+      request.headers.get("x-request-id") ||
+      `admin-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+    const idempotencyKey =
+      request.headers.get("x-idempotency-key") || requestId;
+
+    headers["x-request-id"] = requestId;
+    headers["x-idempotency-key"] = idempotencyKey;
+    headers["x-csrf-token"] = requestId;
+
     if (ADMIN_TOKEN) {
       headers.Authorization = `Bearer ${ADMIN_TOKEN}`;
       headers["x-admin-token"] = ADMIN_TOKEN;
