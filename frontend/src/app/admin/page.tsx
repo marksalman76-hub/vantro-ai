@@ -584,26 +584,55 @@ export default function AdminPage() {
 
               <button className="primary" onClick={runAdminAgent} disabled={running}>{running ? "Running..." : selectedRun.length > 1 ? "Run Selected Agents" : "Run Agent"}</button>
 
-              <div className={runResult ? "output has" : "output"}>
+              <div className={runResult ? "output has premiumExecutionOutput" : "output premiumExecutionOutput"}>
                 {!runResult ? (
-                  "Agent output will appear here..."
+                  <div className="emptyExecutionState">
+                    <strong>Ready to run</strong>
+                    <span>Select agents, enter a task, then run a governed owner/admin execution.</span>
+                  </div>
                 ) : (
-                  <div className="adminResultCard">
-                    <strong>{runResult?.status || "Execution result"}</strong>
-                    <p>
-                      {runResult?.message ||
-                        `${runResult?.selected_agent_count || 0} selected agent run(s) processed.`}
-                    </p>
+                  <div className="adminResultCard premium">
+                    <div className="executionHeader">
+                      <div>
+                        <small>Governed execution</small>
+                        <strong>{runResult?.status || "Execution processed"}</strong>
+                        <p>{runResult?.selected_agent_count || 0} selected agent run(s) processed through the owner/admin path.</p>
+                      </div>
+                      <b className={runResult?.success ? "statusPill success" : "statusPill review"}>
+                        {runResult?.success ? "COMPLETED" : "NEEDS REVIEW"}
+                      </b>
+                    </div>
 
                     {Array.isArray(runResult?.results) ? (
-                      <div className="resultList">
-                        {runResult.results.map((item: any, index: number) => (
-                          <div className="resultRow" key={index}>
-                            <span>{item?.agent_id || "agent"}</span>
-                            <b>{item?.success ? "SUCCESS" : "REVIEW"}</b>
-                            <small>{item?.message || item?.status || "Processed"}</small>
-                          </div>
-                        ))}
+                      <div className="premiumResultGrid">
+                        {runResult.results.map((item: any, index: number) => {
+                          const cleanStatus = item?.success
+                            ? "Completed"
+                            : item?.status === "unsupported_execution_action"
+                            ? "Prepared for review"
+                            : "Needs review";
+
+                          const cleanMessage = item?.success
+                            ? "Agent pipeline completed successfully."
+                            : item?.message === "Execution response received."
+                            ? "The agent returned a governed result and is ready for operator review."
+                            : item?.message || "Review the governed result before delivery.";
+
+                          return (
+                            <div className={item?.success ? "premiumResultCard success" : "premiumResultCard review"} key={index}>
+                              <div className="resultTopline">
+                                <span>{String(item?.agent_id || "agent").replaceAll("_", " ")}</span>
+                                <b>{cleanStatus}</b>
+                              </div>
+                              <p>{cleanMessage}</p>
+                              <div className="executionTimeline">
+                                <span>Received</span>
+                                <span>Governed</span>
+                                <span>{item?.success ? "Completed" : "Review"}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : null}
                   </div>
@@ -865,6 +894,27 @@ export default function AdminPage() {
         .admin-v2{height:100vh;overflow:hidden;background:#08091A;color:#B8C4D8;font-family:Inter,Arial,sans-serif}
         .topbar{height:54px;background:rgba(12,14,31,.95);border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;padding:0 20px;gap:16px}
         .brand{display:flex;align-items:center;gap:10px}.brand strong{display:block;color:#EEF2FF}.brand span{font-size:11px;color:#3E4A5C}.mark,.avatar{background:linear-gradient(135deg,#5B52F0,#7C74FF);color:white;display:grid;place-items:center;font-weight:900}.mark{width:32px;height:32px;border-radius:8px}.avatar{width:30px;height:30px;border-radius:50%;font-size:11px}
+        .premiumExecutionOutput{min-height:150px}
+        .emptyExecutionState{display:grid;gap:6px;color:#94a3b8}
+        .emptyExecutionState strong{color:#EEF2FF;font-size:16px}
+        .adminResultCard.premium{display:grid;gap:16px}
+        .executionHeader{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;padding:16px;border:1px solid rgba(255,255,255,.08);background:rgba(11,18,38,.74);border-radius:18px}
+        .executionHeader small{display:block;color:#8B9CB8;text-transform:uppercase;letter-spacing:.08em;font-size:10px;font-weight:900}
+        .executionHeader strong{display:block;color:#EEF2FF;font-size:18px;margin-top:4px}
+        .executionHeader p{margin:6px 0 0;color:#AAB7CF;font-size:13px;line-height:1.5}
+        .statusPill{border-radius:999px;padding:7px 10px;font-size:10px;font-weight:950;letter-spacing:.06em;white-space:nowrap}
+        .statusPill.success{background:rgba(20,184,166,.14);color:#5EEAD4;border:1px solid rgba(20,184,166,.28)}
+        .statusPill.review{background:rgba(245,158,11,.14);color:#FCD34D;border:1px solid rgba(245,158,11,.28)}
+        .premiumResultGrid{display:grid;gap:12px}
+        .premiumResultCard{border-radius:16px;padding:14px;border:1px solid rgba(255,255,255,.08);background:rgba(15,23,42,.76)}
+        .premiumResultCard.success{border-color:rgba(20,184,166,.22)}
+        .premiumResultCard.review{border-color:rgba(245,158,11,.22)}
+        .resultTopline{display:flex;justify-content:space-between;gap:12px;align-items:center}
+        .resultTopline span{text-transform:capitalize;color:#EEF2FF;font-weight:900}
+        .resultTopline b{font-size:10px;color:#C4B5FD;border:1px solid rgba(196,181,253,.2);border-radius:999px;padding:5px 8px}
+        .premiumResultCard p{margin:9px 0 0;color:#AAB7CF;font-size:13px;line-height:1.45}
+        .executionTimeline{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+        .executionTimeline span{font-size:10px;font-weight:900;color:#8B9CB8;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.07);border-radius:999px;padding:5px 8px}
         .topRight{margin-left:auto;display:flex;align-items:center;gap:12px}.runtime{display:flex;gap:6px;align-items:center;background:rgba(14,207,188,.1);border:1px solid rgba(14,207,188,.25);border-radius:20px;padding:4px 13px;font-size:11px;color:#0ECFBC;font-weight:800}.runtime i{width:6px;height:6px;background:#0ECFBC;border-radius:50%}.clock{font-family:monospace;color:#3E4A5C}
         .layout{display:flex;height:calc(100vh - 54px)}.sidebar{width:230px;background:#090A16;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column}.sideGroup{padding:18px 0 6px}.sideGroup p{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#3E4A5C;padding:0 18px 8px}.sideGroup button{width:100%;display:flex;align-items:center;gap:10px;padding:10px 18px;background:transparent;border:0;border-left:2px solid transparent;color:#7A8899;text-align:left;cursor:pointer;font-weight:700}.sideGroup button.active{color:#EEF2FF;background:rgba(91,82,240,.08);border-left-color:#5B52F0}.sideGroup em{margin-left:auto;background:rgba(245,197,24,.18);color:#F5C518;border-radius:9px;padding:2px 7px;font-style:normal;font-size:10px}.owner{margin-top:auto;border-top:1px solid rgba(255,255,255,.06);padding:16px;display:flex;gap:10px;align-items:center}.owner strong{display:block;color:#EEF2FF;font-size:12px}.owner small{color:#3E4A5C}
         .content{flex:1;overflow:auto;padding:28px;background:radial-gradient(ellipse at top,rgba(91,82,240,.07),transparent 320px),#08091A}.pageHead{margin-bottom:26px;scroll-margin-top:24px}.pageHead>span{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:#0ECFBC;font-weight:900}.pageHead h1{font-size:28px;color:#EEF2FF;margin:8px 0 6px}.pageHead p{color:#3E4A5C}.badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.badges b{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:20px;padding:5px 13px;font-size:11px;color:#7A8899}
