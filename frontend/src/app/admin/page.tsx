@@ -330,16 +330,19 @@ export default function AdminPage() {
             data?.status ||
             data?.error ||
             "completed",
-          provider: adapter?.provider_key || "openai",
-          live_external_call_executed: adapter?.live_external_call_executed === true,
-          latency_ms: adapter?.latency_ms || null,
-          credential_values_exposed: adapter?.credential_values_exposed === true,
-          customer_safe: adapter?.customer_safe === true,
+          provider: wrapper?.provider_key || adapter?.provider_key || "openai",
+          live_external_call_executed: wrapper?.live_external_call_executed === true || adapter?.live_external_call_executed === true,
+          latency_ms: wrapper?.latency_ms || adapter?.latency_ms || null,
+          credential_values_exposed: wrapper?.credential_values_exposed === true || adapter?.credential_values_exposed === true,
+          customer_safe: wrapper?.customer_safe === true || adapter?.customer_safe === true,
           output:
+            wrapper?.normalized_output ||
             safeOutput?.text ||
             data?.output?.generated_output ||
             data?.output?.output ||
             data?.output?.content ||
+            data?.generated_output ||
+            data?.result ||
             "",
           message:
             data?.message ||
@@ -633,7 +636,15 @@ export default function AdminPage() {
                                 <span>{String(item?.agent_id || "agent").replaceAll("_", " ")}</span>
                                 <b>{cleanStatus}</b>
                               </div>
-                              <p>{cleanMessage}</p>
+                              <div className="liveOutcomeBox">
+                                <strong>Live Outcome</strong>
+                                <pre>{cleanMessage}</pre>
+                              </div>
+                              <div className="executionMetaRow">
+                                <span>Provider: {item?.provider || "openai"}</span>
+                                <span>Live: {item?.live_external_call_executed ? "Yes" : "No"}</span>
+                                <span>Latency: {item?.latency_ms ? `${item.latency_ms}ms` : "—"}</span>
+                              </div>
                               <div className="executionTimeline">
                                 <span>Received</span>
                                 <span>Governed</span>

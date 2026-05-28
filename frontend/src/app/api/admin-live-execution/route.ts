@@ -54,9 +54,31 @@ export async function POST(req: NextRequest) {
 
   const data = await response.json();
 
+  const execution = data?.execution || {};
+  const adapter = execution?.adapter_result || {};
+  const normalised = adapter?.normalised_response || {};
+  const safeOutput = normalised?.safe_output || {};
+
+  const normalized_output =
+    safeOutput?.text ||
+    data?.output?.generated_output ||
+    data?.output?.output ||
+    data?.output?.content ||
+    data?.generated_output ||
+    data?.result ||
+    data?.message ||
+    "";
+
   return NextResponse.json({
-    success: response.ok,
+    success: response.ok && data?.success === true,
     backend_status: response.status,
+    normalized_output,
+    provider_key: adapter?.provider_key || "openai",
+    execution_status: execution?.execution_status || data?.execution_status || data?.status || "",
+    live_external_call_executed: adapter?.live_external_call_executed === true,
+    latency_ms: adapter?.latency_ms || null,
+    customer_safe: adapter?.customer_safe === true,
+    credential_values_exposed: adapter?.credential_values_exposed === true,
     data,
   });
 }
