@@ -614,8 +614,15 @@ export default function AdminPage() {
                             ? "Prepared for review"
                             : "Needs review";
 
+                          const liveOutput =
+                            item?.output ||
+                            item?.generated_output ||
+                            item?.response ||
+                            item?.provider_output ||
+                            item?.message;
+
                           const cleanMessage = item?.success
-                            ? "Agent pipeline completed successfully."
+                            ? liveOutput || "Agent pipeline completed successfully."
                             : item?.message === "Execution response received."
                             ? "The agent returned a live provider result and is ready for operator review."
                             : item?.message || "Review the governed result before delivery.";
