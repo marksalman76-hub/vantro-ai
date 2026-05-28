@@ -297,53 +297,55 @@ export default function AdminPage() {
       const results = [];
 
       for (const agentId of selectedRun) {
-        const payload = {
-          account_reference: "owner_admin",
-          requested_agent: agentId,
-          workflow_stage: "admin_internal_execution",
-          action_type: "admin_owner_execution",
-          actor_role: "owner",
-          owner_approved: true,
-          admin_execution: true,
-          bypass_client_credits: true,
-          task,
-        };
-
-        const response = await fetch("/api/admin-deployment-control", {
+        const response = await fetch("/api/admin-live-execution", {
           method: "POST",
           cache: "no-store",
           headers: {
             "Content-Type": "application/json",
-            "x-actor-role": "owner",
-            "x-tenant-id": "owner",
           },
           body: JSON.stringify({
-            path: "/run-agent",
-            method: "POST",
-            payload,
+            requested_agent: agentId,
+            task,
           }),
         });
 
-        const data = await response.json().catch(() => ({
+        const wrapper = await response.json().catch(() => ({
           success: false,
-          message: "Invalid admin execution response.",
+          message: "Invalid admin live execution response.",
         }));
+
+        const data = wrapper?.data || wrapper;
+        const execution = data?.execution || {};
+        const adapter = execution?.adapter_result || {};
+        const normalised = adapter?.normalised_response || {};
+        const safeOutput = normalised?.safe_output || {};
 
         results.push({
           agent_id: agentId,
           http_status: response.status,
           success: data?.success === true,
           status:
-            data?.workflow_status ||
+            execution?.execution_status ||
             data?.execution_status ||
             data?.status ||
             data?.error ||
             "completed",
+          provider: adapter?.provider_key || "openai",
+          live_external_call_executed: adapter?.live_external_call_executed === true,
+          latency_ms: adapter?.latency_ms || null,
+          credential_values_exposed: adapter?.credential_values_exposed === true,
+          customer_safe: adapter?.customer_safe === true,
+          output:
+            safeOutput?.text ||
+            data?.output?.generated_output ||
+            data?.output?.output ||
+            data?.output?.content ||
+            "",
           message:
             data?.message ||
             data?.summary ||
             data?.error ||
-            "Execution response received.",
+            "Live provider execution response received.",
         });
       }
 
@@ -352,13 +354,13 @@ export default function AdminPage() {
       setRunResult({
         success: allSucceeded,
         status: allSucceeded
-          ? "Admin execution completed"
-          : "Admin execution needs review",
+          ? "Live execution completed"
+          : "Live execution needs review",
         selected_agent_count: selectedRun.length,
         results,
       });
 
-      showToast(allSucceeded ? "Selected agents completed." : "Some agent runs need review.");
+      showToast(allSucceeded ? "Selected agents completed live execution." : "Some live agent runs need review.");
     } catch {
       setRunResult({ success: false, message: "Admin execution failed." });
       showToast("Admin execution failed.");
