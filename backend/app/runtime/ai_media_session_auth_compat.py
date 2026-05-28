@@ -16,6 +16,8 @@ from typing import Any, Dict
 
 AI_MEDIA_ADMIN_COMPAT_PATHS = {
     "/admin/ai-media-pipeline/run",
+    "/admin/provider-action-readiness",
+    "/admin/provider-action-readiness/evaluate",
 }
 
 
@@ -66,7 +68,13 @@ def validate_ai_media_admin_session_compatibility(request: Any) -> Dict[str, Any
             "security_profile": "priority5_session_auth_hardening_v1",
         }
 
-    if method not in {"POST", "OPTIONS"}:
+    allowed_methods = {
+        "/admin/ai-media-pipeline/run": {"POST", "OPTIONS"},
+        "/admin/provider-action-readiness": {"GET", "OPTIONS"},
+        "/admin/provider-action-readiness/evaluate": {"POST", "OPTIONS"},
+    }
+
+    if method not in allowed_methods.get(path, set()):
         return {
             "allowed": False,
             "success": False,
@@ -83,7 +91,7 @@ def validate_ai_media_admin_session_compatibility(request: Any) -> Dict[str, Any
         or ""
     ).strip().lower()
 
-    if actor_role not in {"owner", "admin", "platform_admin", "super_admin"}:
+    if actor_role not in {"owner", "admin", "owner_admin", "platform_admin", "super_admin"}:
         return {
             "allowed": False,
             "success": False,
