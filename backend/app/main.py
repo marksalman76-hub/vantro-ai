@@ -1,3 +1,4 @@
+from backend.app.runtime.outcome_action_execution_runtime import create_outcome_action_plan, mark_outcome_plan_decision
 from backend.app.core.integration_live_adapter_registry import (
     adapter_registry_summary,
     execute_integration_action,
@@ -2336,5 +2337,25 @@ async def admin_autonomous_workforce_orchestration_recovery(payload: dict):
         orchestration_id=str(payload.get("orchestration_id") or "unknown_orchestration"),
         failure_reason=str(payload.get("failure_reason") or "unknown"),
         attempt_count=int(payload.get("attempt_count") or 0),
+    )
+
+
+@app.post("/admin/outcome-action-plan")
+async def admin_outcome_action_plan(payload: dict):
+    return create_outcome_action_plan(
+        outcome_text=str(payload.get("outcome_text") or ""),
+        source_agent=str(payload.get("source_agent") or "unknown_agent"),
+        tenant_id=str(payload.get("tenant_id") or "owner_admin"),
+        project_id=str(payload.get("project_id") or "outcome_action_execution"),
+        owner_approved=bool(payload.get("owner_approved") or False),
+    )
+
+
+@app.post("/admin/outcome-action-decision")
+async def admin_outcome_action_decision(payload: dict):
+    return mark_outcome_plan_decision(
+        plan=dict(payload.get("plan") or {}),
+        decision=str(payload.get("decision") or "amendment_requested"),
+        amendment_note=str(payload.get("amendment_note") or ""),
     )
 
