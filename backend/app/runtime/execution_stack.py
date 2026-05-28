@@ -24,21 +24,6 @@ SUPPORTED_EXECUTION_ACTIONS = [
     "prepare_influencer_outreach",
     "prepare_customer_support_reply",
     "prepare_analytics_report",
-
-    "marketing_campaign_execution",
-    "strategy_generation",
-    "analysis_generation",
-    "content_generation",
-    "draft_generation",
-    "crm_recommendation",
-    "sales_follow_up_generation",
-    "seo_plan_generation",
-    "website_brief_generation",
-    "product_brief_generation",
-    "creative_brief_generation",
-    "analytics_report_generation",
-    "influencer_outreach_generation",
-    "support_response_generation",
 ]
 
 
@@ -112,45 +97,6 @@ class ExecutionStack:
                 execution_notes=[
                     "Add a controlled adapter before allowing this action."
                 ],
-            )
-
-
-        if request.action_type in {
-            "marketing_campaign_execution",
-            "strategy_generation",
-            "analysis_generation",
-            "content_generation",
-            "draft_generation",
-            "crm_recommendation",
-            "sales_follow_up_generation",
-            "seo_plan_generation",
-            "website_brief_generation",
-            "product_brief_generation",
-            "creative_brief_generation",
-            "analytics_report_generation",
-            "influencer_outreach_generation",
-            "support_response_generation",
-        }:
-            return ExecutionResult(
-                success=True,
-                execution_status="global_safe_generation_completed",
-                action_type=request.action_type,
-                message="Safe governed generation execution completed through the global execution adapter layer.",
-                execution_notes=[
-                    "Global safe-generation adapter executed.",
-                    "Premium quality gate passed.",
-                    "Client-safe delivery enforced.",
-                    "Owner approval restrictions preserved.",
-                    "No autonomous spend, scaling, or contract actions executed.",
-                ],
-                adapter="global_safe_generation_adapter",
-                adapter_result={
-                    "success": True,
-                    "adapter_mode": "safe_generation_runtime",
-                    "live_execution_enabled": True,
-                    "client_safe": True,
-                    "governance_preserved": True,
-                },
             )
 
         if request.action_type == "execute_live_integration_action":
@@ -245,78 +191,3 @@ def execution_summary(result: ExecutionResult) -> Dict[str, object]:
         "adapter": result.adapter,
         "adapter_result": result.adapter_result,
     }
-
-# --- Global governed provider bridge integration ---
-# Installed to route safe-generation runtime actions through the global provider
-# connector registry while preserving entitlement, billing, credit, approval,
-# and governance controls.
-
-try:
-    from backend.app.runtime.governed_provider_execution import (
-        execute_governed_provider_action as _execute_governed_provider_action,
-        is_safe_generation_action as _is_safe_generation_provider_action,
-    )
-except Exception:  # pragma: no cover - runtime-safe fallback
-    _execute_governed_provider_action = None
-
-    def _is_safe_generation_provider_action(action_type):
-        return False
-
-
-def execute_safe_generation_via_provider_bridge(
-    action_type,
-    payload=None,
-    tenant_id=None,
-    actor_role="system",
-    preferred_provider=None,
-    capability=None,
-):
-    """
-    Runtime-safe bridge for safe-generation provider actions.
-
-    This function is intentionally additive. Existing execution-stack behaviour
-    remains intact unless a caller explicitly routes through this function.
-    """
-
-    payload = payload or {}
-
-    if _execute_governed_provider_action is None:
-        return {
-            "success": False,
-            "status": "provider_bridge_unavailable",
-            "execution_status": "provider_bridge_not_loaded",
-            "provider_execution_attempted": False,
-            "action_type": action_type,
-            "tenant_id": tenant_id,
-            "actor_role": actor_role,
-            "governance_preserved": True,
-            "owner_approval_controls_preserved": True,
-        }
-
-    return _execute_governed_provider_action(
-        action_type=action_type,
-        payload=payload,
-        tenant_id=tenant_id,
-        actor_role=actor_role,
-        preferred_provider=preferred_provider,
-        capability=capability,
-    )
-
-
-def runtime_provider_bridge_readiness():
-    """
-    Lightweight readiness check used by tests/admin diagnostics.
-    """
-
-    return {
-        "success": True,
-        "status": "execution_stack_provider_bridge_ready",
-        "bridge_loaded": _execute_governed_provider_action is not None,
-        "safe_campaign_supported": _is_safe_generation_provider_action("marketing_campaign_execution"),
-        "safe_image_supported": _is_safe_generation_provider_action("image_generation"),
-        "safe_video_supported": _is_safe_generation_provider_action("video_generation"),
-        "spend_scaling_contracts_owner_gated": True,
-        "governance_preserved": True,
-        "owner_approval_controls_preserved": True,
-    }
-

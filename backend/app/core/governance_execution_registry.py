@@ -124,7 +124,6 @@ AGENT_DEFAULT_WORKFLOW_STAGE: Dict[str, str] = {
     "paid_ads_agent": "paid_ads_strategy",
     "analytics_optimisation_agent": "analytics_optimisation",
     "influencer_collaboration_agent": "influencer_outreach",
-    "operations_manager_agent": "store_optimisation",
     "orchestration_agent": "orchestration_review",
     "security_compliance_agent": "security_compliance_review",
     "integration_automation_agent": "integration_automation_review",

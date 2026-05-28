@@ -166,12 +166,6 @@ AGENT_CATALOGUE: Dict[str, Dict[str, object]] = {
         "visibility": "purchasable",
         "role": "Identifies creator-fit opportunities, prepares outreach, follow-ups, collaboration briefs, and influencer campaign tracking support.",
     },
-    "operations_manager_agent": {
-        "name": "Operations Manager Agent",
-        "category": "operations",
-        "visibility": "purchasable",
-        "role": "Coordinates operational workflows, process improvements, task planning, execution readiness, team handoffs, and day-to-day business efficiency recommendations.",
-    },
 
     # Internal-only backend/system agents
     "orchestration_agent": {

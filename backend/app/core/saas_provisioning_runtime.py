@@ -112,7 +112,7 @@ def _default_agents_for_package(package: str, requested_agents: List[str]) -> Li
 
 
 def provision_tenant(payload: Dict[str, Any]) -> Dict[str, Any]:
-    package = _normalise_package(payload.get("target_package") or payload.get("package") or payload.get("package_id") or payload.get("plan"))
+    package = _normalise_package(payload.get("package") or payload.get("package_id") or payload.get("plan"))
     requested_agents = payload.get("requested_agents") or payload.get("selected_agents") or payload.get("agents") or []
 
     if not isinstance(requested_agents, list):
@@ -132,7 +132,7 @@ def provision_tenant(payload: Dict[str, Any]) -> Dict[str, Any]:
         "created_at": _now_iso(),
         "profile": SAAS_PROVISIONING_PROFILE,
         "client_name": str(payload.get("client_name") or ""),
-        "client_email": str(payload.get("client_email") or payload.get("customer_email") or ""),
+        "client_email": str(payload.get("client_email") or ""),
         "package": package,
         "billing_status": str(payload.get("billing_status") or "pending_payment"),
         "subscription_status": str(payload.get("subscription_status") or "provisioning_pending"),

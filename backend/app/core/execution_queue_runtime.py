@@ -269,56 +269,6 @@ def mark_execution_failed(queue_id: int, error: str) -> Dict[str, Any]:
     }
 
 
-
-def mark_execution_completed(queue_id: int, result: Dict[str, Any] | None = None) -> Dict[str, Any]:
-    if not _db_available():
-        return {"success": False, "error": "DATABASE_URL_missing"}
-
-    _ensure_tables()
-
-    result_payload = result or {}
-
-    with _conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                UPDATE execution_queue
-                SET status = 'completed',
-                    completed_at = NOW(),
-                    last_error = NULL,
-                    updated_at = NOW(),
-                    payload = COALESCE(payload, '{}'::jsonb) || %s::jsonb
-                WHERE id = %s
-                RETURNING id, tenant_id, project_id, agent_id, action_type, status, completed_at
-                """,
-                (
-                    json.dumps({"worker_result": result_payload}),
-                    queue_id,
-                ),
-            )
-            row = cur.fetchone()
-
-        conn.commit()
-
-    if not row:
-        return {"success": False, "error": "queue_item_not_found", "queue_id": queue_id}
-
-    return {
-        "success": True,
-        "queue_id": row[0],
-        "tenant_id": row[1],
-        "project_id": row[2],
-        "agent_id": row[3],
-        "action_type": row[4],
-        "status": row[5],
-        "completed_at": row[6].isoformat() if row[6] else None,
-        "storage_mode": "postgres",
-    }
-
-
-def mark_execution_succeeded(queue_id: int, result: Dict[str, Any] | None = None) -> Dict[str, Any]:
-    return mark_execution_completed(queue_id, result)
-
 def queue_readiness() -> Dict[str, Any]:
     if not _db_available():
         return {
@@ -338,5 +288,3 @@ def queue_readiness() -> Dict[str, Any]:
         "dead_letter_support": True,
         "max_retries_default": 3,
     }
-
-# queue_completion_persistence_locked = True
