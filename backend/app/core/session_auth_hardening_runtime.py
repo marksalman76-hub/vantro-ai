@@ -25,7 +25,7 @@ ADMIN_PATH_PREFIXES = (
 
 STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
-SAFE_DEV_ADMIN_ROLES = {"owner", "admin", "system"}
+SAFE_DEV_ADMIN_ROLES = {"owner", "admin", "owner_admin", "system"}
 
 
 def _now() -> float:

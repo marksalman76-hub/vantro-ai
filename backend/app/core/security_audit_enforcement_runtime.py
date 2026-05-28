@@ -191,7 +191,7 @@ def assess_audit_enforcement(request: Request) -> Dict[str, Any]:
         }
 
     if _is_admin_path(path):
-        if role not in {"owner", "admin", "system"}:
+        if role not in {"owner", "admin", "owner_admin", "system"}:
             reasons.append("admin_route_invalid_actor")
             severity = "high"
 
