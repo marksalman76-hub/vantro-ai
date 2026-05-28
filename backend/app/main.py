@@ -72,6 +72,9 @@ behaviour optimisation, and execution stack routing.
 """
 
 from fastapi import FastAPI, Header
+from backend.app.runtime.real_provider_activation_registry import get_all_provider_activation_statuses, get_provider_activation_status, select_ready_provider_for_capability
+from backend.app.runtime.real_provider_http_execution_layer import controlled_openai_live_execution_status, real_provider_http_runtime_status, execute_controlled_openai_live_request
+from backend.app.runtime.provider_dispatch_policy_worker_foundation import provider_dispatch_policy_status, evaluate_provider_dispatch_policy, provider_worker_foundation_status
 from backend.app.runtime.safe_provider_action_adapters import evaluate_safe_provider_action, classify_provider_action
 from pydantic import BaseModel
 from typing import Dict, List
@@ -2150,5 +2153,110 @@ async def admin_provider_action_readiness_evaluate(payload: dict):
         "credential_values_exposed": False,
         "classification": classified,
         "decision": decision,
+    }
+
+
+@app.get("/admin/provider-activation-visibility")
+async def admin_provider_activation_visibility():
+    """
+    Admin-safe provider activation visibility.
+
+    This route exposes readiness and gating status only.
+    It never exposes credential values and never performs external provider calls.
+    """
+    providers = ["openai", "runway", "kling", "heygen", "elevenlabs", "replicate"]
+
+    provider_runtime_status = {
+        provider: real_provider_http_runtime_status(provider)
+        for provider in providers
+    }
+
+    provider_dispatch_evaluation = {
+        provider: evaluate_provider_dispatch_policy(
+            provider_key=provider,
+            payload={
+                "tenant_id": "owner_admin",
+                "request_id": f"provider_visibility_{provider}",
+                "task_type": "provider_activation_visibility",
+                "prompt": "Readiness check only. Do not execute externally.",
+                "live_execution_requested": True,
+                "owner_governed_execution_confirmed": True,
+            },
+        )
+        for provider in providers
+    }
+
+    return {
+        "success": True,
+        "profile": "controlled_provider_activation_visibility_v1",
+        "visibility_only": True,
+        "external_action_performed": False,
+        "live_external_call_executed": False,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+        "owner_admin_client_limits_applied": False,
+        "governance_enforced": True,
+        "registry_status": get_all_provider_activation_statuses(),
+        "dispatch_policy_status": provider_dispatch_policy_status(),
+        "worker_foundation_status": provider_worker_foundation_status(),
+        "controlled_openai_status": controlled_openai_live_execution_status(),
+        "provider_runtime_status": provider_runtime_status,
+        "provider_dispatch_evaluation": provider_dispatch_evaluation,
+        "next_safe_step": "enable provider-specific live dispatch only after credentials, owner approval policy, audit logging, and rollback controls are verified",
+    }
+
+
+@app.post("/admin/provider-activation-visibility/evaluate")
+async def admin_provider_activation_visibility_evaluate(payload: dict):
+    """
+    Admin-safe provider activation evaluator.
+
+    Evaluates provider readiness only.
+    It does not execute external provider calls.
+    """
+    provider_key = str(payload.get("provider_key") or payload.get("provider") or "openai").strip().lower()
+    capability = str(payload.get("capability") or "text_generation").strip()
+
+    readiness = get_provider_activation_status(provider_key)
+    selected = select_ready_provider_for_capability(capability)
+    runtime_status = real_provider_http_runtime_status(provider_key)
+    dispatch_policy = evaluate_provider_dispatch_policy(
+        provider_key=provider_key,
+        payload={
+            **payload,
+            "tenant_id": payload.get("tenant_id") or "owner_admin",
+            "request_id": payload.get("request_id") or "provider_activation_visibility_evaluate",
+            "live_execution_requested": bool(payload.get("live_execution_requested")),
+            "owner_governed_execution_confirmed": bool(payload.get("owner_governed_execution_confirmed")),
+        },
+    )
+
+    controlled_openai_probe = None
+    if provider_key == "openai":
+        controlled_openai_probe = execute_controlled_openai_live_request({
+            **payload,
+            "tenant_id": payload.get("tenant_id") or "owner_admin",
+            "request_id": payload.get("request_id") or "controlled_openai_visibility_probe",
+            "prompt": payload.get("prompt") or "Visibility probe only. Do not execute unless all gates are enabled.",
+            "live_execution_requested": bool(payload.get("live_execution_requested")),
+            "owner_governed_execution_confirmed": bool(payload.get("owner_governed_execution_confirmed")),
+        })
+
+    return {
+        "success": True,
+        "profile": "controlled_provider_activation_visibility_evaluator_v1",
+        "provider_key": provider_key,
+        "capability": capability,
+        "visibility_only": True,
+        "external_action_performed": False,
+        "live_external_call_executed": False,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+        "governance_enforced": True,
+        "readiness": readiness,
+        "selected_provider_for_capability": selected,
+        "runtime_status": runtime_status,
+        "dispatch_policy": dispatch_policy,
+        "controlled_openai_probe": controlled_openai_probe,
     }
 
