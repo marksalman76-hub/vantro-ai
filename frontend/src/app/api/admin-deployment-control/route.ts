@@ -16,8 +16,16 @@ const ADMIN_TOKEN =
 
 function safePath(path: string) {
   if (!path || typeof path !== "string") return "";
-  if (!path.startsWith("/admin/deployment-control/")) return "";
-  return path;
+
+  if (path === "/run-agent") {
+    return path;
+  }
+
+  if (path.startsWith("/admin/deployment-control/")) {
+    return path;
+  }
+
+  return "";
 }
 
 export async function POST(request: NextRequest) {
