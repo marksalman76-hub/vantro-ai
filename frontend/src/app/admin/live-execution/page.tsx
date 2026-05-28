@@ -177,13 +177,23 @@ export default function AdminLiveExecutionPage() {
 
             <div style={{ marginTop: 22 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 14 }}>
-                <h3 style={{ fontSize: 24, margin: 0 }}>{completed ? "Live admin execution deliverable" : "Ready for execution"}</h3>
-                <span style={{ color: "#a8b3cf" }}>{completed ? "Ready for review" : "Waiting"}</span>
+                <h3 style={{ fontSize: 24, margin: 0 }}>
+                  {completed
+                    ? `${AGENTS.find(([id]) => id === agent)?.[1] || agent} live output`
+                    : running
+                      ? "Execution running"
+                      : "Ready for execution"}
+                </h3>
+                <span style={{ color: "#a8b3cf" }}>
+                  {completed ? "Ready for review" : running ? "Generating" : "Waiting"}
+                </span>
               </div>
               <p style={{ color: "#cbd5e1", fontSize: 20, lineHeight: 1.45 }}>
-                {completed
-                  ? "A live governed admin deliverable has been generated from the selected AI agent."
-                  : "Run an agent to generate a live governed admin deliverable."}
+                {completed && outputText
+                  ? outputText.slice(0, 260) + (outputText.length > 260 ? "..." : "")
+                  : running
+                    ? "Live governed execution is running. The generated output will appear here as soon as the provider response completes."
+                    : "Run an agent to generate a live governed admin deliverable."}
               </p>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, margin: "14px 0 18px" }}>
@@ -198,15 +208,17 @@ export default function AdminLiveExecutionPage() {
               </div>
 
               <pre style={{ whiteSpace: "pre-wrap", maxHeight: 460, overflow: "auto", background: "#020617", border: "1px solid rgba(148,163,184,.2)", borderRadius: 22, padding: 20, color: "#e2e8f0", lineHeight: 1.6, fontSize: 14 }}>
-                {outputText || "Generated deliverable output will appear here after execution."}
+                {running
+                  ? "Generating live governed output..."
+                  : outputText || "Generated deliverable output will appear here after execution."}
               </pre>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginTop: 16 }}>
                 {[
-                  ["Provider", adapter?.provider_key || "—"],
-                  ["Latency", adapter?.latency_ms ? `${adapter.latency_ms}ms` : "—"],
-                  ["Memory", result?.memory?.memory_saved ? "Saved" : "—"],
-                  ["Safe", adapter?.customer_safe ? "True" : "—"],
+                  ["Provider", adapter?.provider_key || (running ? "Running" : "—")],
+                  ["Latency", adapter?.latency_ms ? `${adapter.latency_ms}ms` : running ? "Measuring" : "—"],
+                  ["Memory", result?.memory?.memory_saved ? "Saved" : running ? "Pending" : "—"],
+                  ["Safe", adapter?.customer_safe ? "True" : running ? "Pending" : "—"],
                 ].map(([label, value]) => (
                   <div key={label} style={{ border: "1px solid rgba(148,163,184,.22)", borderRadius: 16, padding: 12 }}>
                     <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 950, textTransform: "uppercase" }}>{label}</div>
