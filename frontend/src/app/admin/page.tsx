@@ -5,26 +5,26 @@ import { useEffect, useState } from "react";
 const ADMIN_AGENT_OPTIONS: [string, string][] = [
   ["head_agent", "Head Agent"],
   ["orchestration_agent", "Orchestration Agent"],
-  ["strategy_agent", "Strategy Agent"],
-  ["business_growth_agent", "Business Growth Agent"],
-  ["lead_generation_agent", "Lead Generation Agent"],
+  ["strategist_agent", "Strategist Agent"],
+  ["business_growth_partnerships_agent", "Business Growth Agent"],
+  ["lead_generator_appointment_setter_agent", "Lead Generation Agent"],
   ["sales_closer_agent", "Sales / Closer Agent"],
   ["marketing_specialist_agent", "Marketing Specialist Agent"],
-  ["social_media_manager_agent", "Social Media Manager Agent"],
-  ["content_creator_agent", "Content Creator Agent"],
-  ["ad_creative_agent", "Ad Creative Agent"],
+  ["social_media_manager_content_creator_agent", "Social Media Manager Agent"],
+  ["social_media_manager_content_creator_agent", "Content Creator Agent"],
+  ["paid_ads_agent", "Ad Creative Agent"],
   ["campaign_launch_agent", "Campaign Launch Agent"],
   ["creative_rotation_agent", "Creative Rotation Agent"],
   ["seo_agent", "SEO Agent"],
   ["ugc_creative_agent", "UGC Creative Agent"],
-  ["product_image_direction_agent", "Product Image Direction Agent"],
+  ["product_image_agent", "Product Image Direction Agent"],
   ["product_research_agent", "Product Research Agent"],
   ["competitor_intelligence_agent", "Competitor Intelligence Agent"],
   ["brand_strategy_agent", "Brand Strategy Agent"],
   ["product_copywriting_agent", "Product Copywriting Agent"],
   ["store_builder_agent", "Store Builder Agent"],
-  ["website_landing_page_agent", "Website / Landing Page Agent"],
-  ["crm_agent", "CRM Agent"],
+  ["website_landing_apps_agent", "Website / Landing Page Agent"],
+  ["crm_ai_agent", "CRM Agent"],
   ["email_marketing_agent", "Email Marketing Agent"],
   ["customer_support_agent", "Customer Support Agent"],
   ["fulfilment_agent", "Fulfilment Agent"],
@@ -62,7 +62,7 @@ function Panel({ title, subtitle, children }: { title: string; subtitle?: string
 export default function AdminPage() {
   const [activeNav, setActiveNav] = useState("Overview");
   const [runtime, setRuntime] = useState<RuntimePayload | null>(null);
-  const [selectedRun, setSelectedRun] = useState<string[]>(["strategy_agent"]);
+  const [selectedRun, setSelectedRun] = useState<string[]>(["marketing_specialist_agent"]);
   const [selectedDeploy, setSelectedDeploy] = useState<string[]>(ADMIN_AGENT_OPTIONS.map(([id]) => id));
   const [task, setTask] = useState("Analyse market positioning for a professional services firm entering the healthcare technology sector. Identify three strategic growth opportunities with supporting rationale.");
   const [running, setRunning] = useState(false);
@@ -349,7 +349,7 @@ export default function AdminPage() {
         });
       }
 
-      const allSucceeded = results.every((item) => item.success === true);
+      const allSucceeded = results.every((item) => item.success === true && item.live_external_call_executed === true);
 
       setRunResult({
         success: allSucceeded,
@@ -598,7 +598,7 @@ export default function AdminPage() {
                       <div>
                         <small>Governed execution</small>
                         <strong>{runResult?.status || "Execution processed"}</strong>
-                        <p>{runResult?.selected_agent_count || 0} selected agent run(s) processed through the owner/admin path.</p>
+                        <p>{runResult?.selected_agent_count || 0} selected agent run(s) processed through the governed live provider path.</p>
                       </div>
                       <b className={runResult?.success ? "statusPill success" : "statusPill review"}>
                         {runResult?.success ? "COMPLETED" : "NEEDS REVIEW"}
@@ -617,7 +617,7 @@ export default function AdminPage() {
                           const cleanMessage = item?.success
                             ? "Agent pipeline completed successfully."
                             : item?.message === "Execution response received."
-                            ? "The agent returned a governed result and is ready for operator review."
+                            ? "The agent returned a live provider result and is ready for operator review."
                             : item?.message || "Review the governed result before delivery.";
 
                           return (
