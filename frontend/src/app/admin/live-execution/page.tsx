@@ -55,7 +55,15 @@ export default function AdminLiveExecutionPage() {
   }
 
   const completed = result?.success === true;
+  const failed = result && result?.success !== true;
   const liveCall = adapter?.live_external_call_executed === true;
+
+  const progress = {
+    generated: completed ? 100 : running ? 65 : failed ? 35 : 0,
+    reviewed: completed ? 55 : running ? 15 : failed ? 10 : 0,
+    approved: completed ? 25 : 0,
+    pending: completed ? 0 : running ? 35 : failed ? 65 : 0,
+  };
 
   return (
     <main style={{ minHeight: "100vh", background: "#061226", color: "#f8fafc", padding: 36 }}>
@@ -108,10 +116,10 @@ export default function AdminLiveExecutionPage() {
             <div style={{ marginTop: 24, border: "1px solid rgba(99,102,241,.28)", borderRadius: 22, padding: 20 }}>
               <div style={{ fontWeight: 950, marginBottom: 10 }}>Execution snapshot</div>
               {[
-                ["Generated", completed ? 100 : running ? 65 : 20],
-                ["Reviewed", completed ? 55 : 15],
-                ["Approved", completed ? 25 : 0],
-                ["Pending", completed ? 65 : 35],
+                ["Generated", progress.generated],
+                ["Reviewed", progress.reviewed],
+                ["Approved", progress.approved],
+                ["Pending", progress.pending],
               ].map(([label, value]: any) => (
                 <div key={label} style={{ display: "grid", gridTemplateColumns: "110px 1fr 50px", gap: 14, alignItems: "center", marginTop: 12 }}>
                   <span style={{ fontWeight: 900 }}>{label}</span>
