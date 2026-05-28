@@ -622,7 +622,18 @@ useEffect(() => {
   });
 
   const selectedAsset = attachedAssets[selectedAssetIndex] || attachedAssets[0] || null;
-  const primaryAssetUrl =
+  const liveDeliverableAny = (liveDeliverable || {}) as any;
+  const visibleClientOutcomeText =
+    liveDeliverableAny?.output ||
+    liveDeliverableAny?.generated_output ||
+    liveDeliverableAny?.provider_output ||
+    liveDeliverableAny?.content ||
+    liveDeliverableAny?.summary ||
+    liveDeliverableAny?.message ||
+    "";
+
+const primaryAssetUrl =
+
     selectedAsset?.url ||
     selectedAsset?.image_url ||
     selectedAsset?.src ||
@@ -978,7 +989,7 @@ useEffect(() => {
               color: #f8fafc !important;
             }
 
-            main section:nth-of-type(n+4) [style*="No asset generated yet"],
+            main section:nth-of-type(n+4) [style*="No media asset generated yet"],
             main section:nth-of-type(n+4) [style*="Media preview"] {
               color: #f8fafc !important;
             }
@@ -2868,7 +2879,7 @@ useEffect(() => {
                               marginBottom: 8,
                             }}
                           >
-                            No asset generated yet
+                            No media asset generated yet
                           </div>
 
                           <div
@@ -2878,9 +2889,32 @@ useEffect(() => {
                               color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)",
                             }}
                           >
-                            Generated assets, uploaded brand files, previews, and deliverable media will appear here automatically.
+                            Generated images, files, previews, and deliverable media will appear here when included in the execution.
                           </div>
                         </div>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 14,
+                        borderRadius: 16,
+                        border: darkModeEnabled ? "1px solid rgba(99,102,241,.28)" : "1px solid #dbe4ee",
+                        background: darkModeEnabled ? "rgba(2,6,23,.72)" : "#ffffff",
+                        padding: 14,
+                      }}
+                    >
+                      <div style={{ fontSize: 11, fontWeight: 900, color: darkModeEnabled ? "#93c5fd" : "var(--color-brand)", textTransform: "uppercase", letterSpacing: ".08em", marginBottom: 8 }}>
+                        Generated outcome
+                      </div>
+                      <pre style={{ whiteSpace: "pre-wrap", margin: 0, maxHeight: 260, overflow: "auto", fontFamily: "inherit", fontSize: 13, lineHeight: 1.55, color: darkModeEnabled ? "#e5e7eb" : "var(--color-dark)" }}>
+                        {visibleClientOutcomeText || "No generated outcome is ready yet. Run an agent to create a client deliverable."}
+                      </pre>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                        <button onClick={() => setReviewStatus("approved")} style={{ border: 0, borderRadius: 999, padding: "9px 12px", background: "#dcfce7", color: "var(--color-teal)", fontWeight: 900 }}>Approve</button>
+                        <button onClick={() => setReviewStatus("rejected")} style={{ border: 0, borderRadius: 999, padding: "9px 12px", background: "#fee2e2", color: "var(--color-red)", fontWeight: 900 }}>Reject</button>
+                        <button onClick={() => setReviewStatus("rejected")} style={{ border: darkModeEnabled ? "1px solid rgba(148,163,184,.28)" : "1px solid #dbe4ee", borderRadius: 999, padding: "9px 12px", background: darkModeEnabled ? "rgba(15,23,42,.88)" : "#fff", color: darkModeEnabled ? "#bfdbfe" : "var(--color-brand)", fontWeight: 900 }}>Request amendment</button>
+                        <button onClick={() => navigator.clipboard?.writeText(visibleClientOutcomeText || "")} style={{ border: darkModeEnabled ? "1px solid rgba(148,163,184,.28)" : "1px solid #dbe4ee", borderRadius: 999, padding: "9px 12px", background: darkModeEnabled ? "rgba(15,23,42,.88)" : "#fff", color: darkModeEnabled ? "#bfdbfe" : "var(--color-brand)", fontWeight: 900 }}>Copy</button>
                       </div>
                     </div>
 
@@ -3053,7 +3087,7 @@ useEffect(() => {
                     disabled={!deliverableDownloadUrl}
                     onClick={() => {
                       if (!deliverableDownloadUrl) {
-                        setToastMessage("No asset generated yet.");
+                        setToastMessage("No media asset generated yet.");
                         return;
                       }
                       window.open(deliverableDownloadUrl, "_blank", "noopener,noreferrer");
@@ -3354,7 +3388,7 @@ useEffect(() => {
                 >
                   <div>
                     <div style={{ fontSize: 34, marginBottom: 10 }}>🖼️</div>
-                    <h4 style={{ margin: 0, fontSize: 16, color: "#0f172a" }}>No asset generated yet</h4>
+                    <h4 style={{ margin: 0, fontSize: 16, color: "#0f172a" }}>No media asset generated yet</h4>
                     <p style={{ margin: "8px auto 0", maxWidth: 420, color: "#64748b", fontSize: 13, lineHeight: 1.55 }}>
                       Real generated media, uploaded brand files, previews, and deliverable assets will appear here once attached to the runtime result.
                     </p>
@@ -3368,7 +3402,7 @@ useEffect(() => {
                   disabled={!deliverableDownloadUrl}
                   onClick={() => {
                     if (!deliverableDownloadUrl) {
-                      setToastMessage("No asset generated yet.");
+                      setToastMessage("No media asset generated yet.");
                       return;
                     }
                     window.open(deliverableDownloadUrl, "_blank", "noopener,noreferrer");
@@ -3518,7 +3552,7 @@ useEffect(() => {
                 >
                   <div>
                     <div style={{ fontSize: 36, marginBottom: 10 }}>🖼️</div>
-                    <h4 style={{ margin: 0, fontSize: 17, color: "#0f172a" }}>No asset generated yet</h4>
+                    <h4 style={{ margin: 0, fontSize: 17, color: "#0f172a" }}>No media asset generated yet</h4>
                     <p style={{ margin: "8px auto 0", maxWidth: 430, color: "#64748b", fontSize: 13, lineHeight: 1.55 }}>
                       Real generated media, uploaded brand files, previews, and deliverable assets will appear here once attached to the runtime result.
                     </p>
@@ -3674,7 +3708,7 @@ useEffect(() => {
               >
                 <div>
                   <div style={{ fontSize: 36, marginBottom: 10 }}>🖼️</div>
-                  <h4 style={{ margin: 0, fontSize: 17, color: "#0f172a" }}>No asset generated yet</h4>
+                  <h4 style={{ margin: 0, fontSize: 17, color: "#0f172a" }}>No media asset generated yet</h4>
                   <p style={{ margin: "8px auto 0", maxWidth: 430, color: "#64748b", fontSize: 13, lineHeight: 1.55 }}>
                     Real generated media, uploaded brand files, previews, and deliverable assets will appear here once attached to the runtime result.
                   </p>

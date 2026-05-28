@@ -645,10 +645,18 @@ export default function AdminPage() {
                                 <span>Live: {item?.live_external_call_executed ? "Yes" : "No"}</span>
                                 <span>Latency: {item?.latency_ms ? `${item.latency_ms}ms` : "—"}</span>
                               </div>
+
+                              <div className="visibleOutcomeActions">
+                                <button onClick={() => showToast("Outcome approved by admin.")}>Approve</button>
+                                <button onClick={() => showToast("Amendment requested. Add revision notes in the task box and rerun.")}>Request amendment</button>
+                                <button onClick={() => showToast("Outcome rejected by admin.")}>Reject</button>
+                                <button onClick={() => navigator.clipboard.writeText(cleanMessage || "")}>Copy outcome</button>
+                              </div>
+
                               <div className="executionTimeline">
-                                <span>Received</span>
-                                <span>Governed</span>
-                                <span>{item?.success ? "Completed" : "Review"}</span>
+                                <span>Generated</span>
+                                <span>Review ready</span>
+                                <span>{item?.success ? "Awaiting approval" : "Needs amendment"}</span>
                               </div>
                             </div>
                           );
