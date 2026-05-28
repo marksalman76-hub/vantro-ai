@@ -72,6 +72,7 @@ behaviour optimisation, and execution stack routing.
 """
 
 from fastapi import FastAPI, Header
+from backend.app.runtime.autonomous_workforce_orchestration_foundation import autonomous_workforce_orchestration_status, create_delegated_subtask_plan, create_orchestration_execution_graph, orchestration_replay_recovery_packet
 from backend.app.runtime.provider_workforce_runtime_hardening import provider_workforce_runtime_hardening_status, provider_runtime_health_summary, provider_recovery_readiness_summary
 from backend.app.runtime.real_provider_activation_registry import get_all_provider_activation_statuses, get_provider_activation_status, select_ready_provider_for_capability
 from backend.app.runtime.real_provider_http_execution_layer import controlled_openai_live_execution_status, real_provider_http_runtime_status, execute_controlled_openai_live_request
@@ -2287,4 +2288,53 @@ async def admin_provider_recovery_readiness():
     Admin-safe provider recovery/replay readiness visibility.
     """
     return provider_recovery_readiness_summary()
+
+
+@app.get("/admin/autonomous-workforce-orchestration/status")
+async def admin_autonomous_workforce_orchestration_status():
+    """
+    Admin-safe autonomous workforce orchestration foundation status.
+
+    This is visibility/readiness only. It does not execute live provider calls.
+    """
+    return autonomous_workforce_orchestration_status()
+
+
+@app.post("/admin/autonomous-workforce-orchestration/plan")
+async def admin_autonomous_workforce_orchestration_plan(payload: dict):
+    """
+    Create a governed delegated subtask plan without executing it.
+    """
+    plan = create_delegated_subtask_plan(
+        tenant_id=str(payload.get("tenant_id") or "owner_admin"),
+        project_id=str(payload.get("project_id") or "default_project"),
+        lead_agent=str(payload.get("lead_agent") or "head_agent"),
+        objective=str(payload.get("objective") or "Prepare governed workforce plan."),
+        requested_agents=list(payload.get("requested_agents") or []),
+    )
+    graph = create_orchestration_execution_graph(plan)
+    return {
+        "success": True,
+        "profile": "autonomous_workforce_orchestration_plan_response_v1",
+        "visibility_only": True,
+        "plan": plan,
+        "execution_graph": graph,
+        "live_external_call_executed": False,
+        "external_action_performed": False,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+        "governance_enforced": True,
+    }
+
+
+@app.post("/admin/autonomous-workforce-orchestration/recovery")
+async def admin_autonomous_workforce_orchestration_recovery(payload: dict):
+    """
+    Create a governed recovery/replay packet without executing it.
+    """
+    return orchestration_replay_recovery_packet(
+        orchestration_id=str(payload.get("orchestration_id") or "unknown_orchestration"),
+        failure_reason=str(payload.get("failure_reason") or "unknown"),
+        attempt_count=int(payload.get("attempt_count") or 0),
+    )
 
