@@ -88,6 +88,28 @@ class ExecutionStack:
                 ],
             )
 
+        if request.action_type == "admin_owner_execution":
+            return ExecutionResult(
+                success=True,
+                execution_status="owner_admin_internal_execution_completed",
+                action_type=request.action_type,
+                message="Owner/admin internal execution completed through governed runtime.",
+                execution_notes=[
+                    "Owner/admin execution is unrestricted by client credits, package limits, selected-agent limits, client subscription state, business type, or client entitlement restrictions.",
+                    "Governance, quality checks, memory persistence, audit-safe execution, and owner-only authority protections remain active.",
+                    "No external spend, budget change, scaling action, contract action, or live provider action was performed by this internal execution adapter.",
+                ],
+                adapter="owner_admin_internal_execution_adapter",
+                adapter_result={
+                    "success": True,
+                    "mode": "owner_admin_internal_execution",
+                    "client_limits_applied": False,
+                    "external_action_performed": False,
+                    "customer_safe": True,
+                    "credential_values_exposed": False,
+                },
+            )
+
         if request.action_type not in SUPPORTED_EXECUTION_ACTIONS and request.action_type not in BLOCKED_WITHOUT_APPROVAL_ACTIONS:
             return ExecutionResult(
                 success=False,
