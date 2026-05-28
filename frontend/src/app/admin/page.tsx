@@ -67,6 +67,8 @@ export default function AdminPage() {
   const [task, setTask] = useState("Analyse market positioning for a professional services firm entering the healthcare technology sector. Identify three strategic growth opportunities with supporting rationale.");
   const [running, setRunning] = useState(false);
   const [runResult, setRunResult] = useState<any>(null);
+  const [implementationPlans, setImplementationPlans] = useState<any[]>([]);
+  const [latestImplementationPlan, setLatestImplementationPlan] = useState<any>(null);
   const [deployTenant, setDeployTenant] = useState("client_manual_001");
   const [deployCompany, setDeployCompany] = useState("Acme Consulting Group");
   const [deployEmail, setDeployEmail] = useState("");
@@ -467,6 +469,52 @@ export default function AdminPage() {
     );
   }
 
+
+  async function approveOutcomeAndCreatePlan(item: any) {
+    const outcomeText =
+      item?.output ||
+      item?.generated_output ||
+      item?.response ||
+      item?.provider_output ||
+      item?.message ||
+      "";
+
+    if (!outcomeText.trim()) {
+      showToast("No outcome available to convert into an implementation plan.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/outcome-action-plan", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          outcome_text: outcomeText,
+          source_agent: item?.agent_id || "unknown_agent",
+          tenant_id: "owner_admin",
+          project_id: "admin_outcome_approval",
+          owner_approved: true,
+        }),
+      });
+
+      const wrapper = await response.json();
+      const plan = wrapper?.data || wrapper;
+
+      if (!plan?.success) {
+        showToast("Approval saved, but implementation plan creation failed.");
+        return;
+      }
+
+      setLatestImplementationPlan(plan);
+      setImplementationPlans((prev) => [plan, ...prev].slice(0, 20));
+      showToast(`Approved. ${plan.action_count || 0} implementation action packet(s) created.`);
+    } catch {
+      showToast("Approval failed before creating implementation action plan.");
+    }
+  }
+
+
   const navItems = ["Overview", "Run Agent", "Deploy Clients", "Client Registry", "Runtime Health", "Provider Governance", "Orchestration", "Recovery", "Billing"];
   const runtimeStatus = runtime?.runtime?.platform_status || "online";
   const registryTotal = clientRegistrySummary?.total || clientRegistrySummary?.tenant_count || clientRegistry.length || 0;
@@ -647,7 +695,7 @@ export default function AdminPage() {
                               </div>
 
                               <div className="visibleOutcomeActions">
-                                <button onClick={() => showToast("Outcome approved by admin.")}>Approve</button>
+                                <button onClick={() => approveOutcomeAndCreatePlan(item)}>Approve + create plan</button>
                                 <button onClick={() => showToast("Amendment requested. Add revision notes in the task box and rerun.")}>Request amendment</button>
                                 <button onClick={() => showToast("Outcome rejected by admin.")}>Reject</button>
                                 <button onClick={() => navigator.clipboard.writeText(cleanMessage || "")}>Copy outcome</button>
@@ -656,8 +704,22 @@ export default function AdminPage() {
                               <div className="executionTimeline">
                                 <span>Generated</span>
                                 <span>Review ready</span>
-                                <span>{item?.success ? "Awaiting approval" : "Needs amendment"}</span>
+                                <span>{latestImplementationPlan ? "Implementation planned" : item?.success ? "Awaiting approval" : "Needs amendment"}</span>
                               </div>
+
+                              {latestImplementationPlan ? (
+                                <div className="implementationPlanBox">
+                                  <strong>Implementation Action Plan</strong>
+                                  <p>{latestImplementationPlan.action_count || 0} action packet(s) created from approved outcome.</p>
+                                  {(latestImplementationPlan.action_packets || []).slice(0, 6).map((packet: any) => (
+                                    <div className="implementationPacket" key={packet.packet_id}>
+                                      <b>{String(packet.recommended_agent || "agent").replaceAll("_", " ")}</b>
+                                      <span>{packet.title}</span>
+                                      <em>{packet.execution_status}</em>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : null}
                             </div>
                           );
                         })}
@@ -830,8 +892,8 @@ export default function AdminPage() {
                 {!(orchestration?.manualReview?.manual_review_items || []).length ? (
                   <div className="reviewItem">
                     <strong>No pending manual reviews</strong>
-                    <span>Dead-letter/manual-review runtime is ready</span>
-                    <p>Items requiring owner/admin decisions will appear here.</p>
+                    <span>{implementationPlans.length ? `${latestImplementationPlan?.action_count || 0} action packets created from approved outcome.` : "Dead-letter/manual-review runtime is ready"}</span>
+                    <p>{implementationPlans.length ? "Review generated action packets and continue to implementation queue." : "Items requiring owner/admin decisions will appear here."}</p>
                   </div>
                 ) : null}
               </div>
