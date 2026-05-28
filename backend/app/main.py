@@ -72,6 +72,7 @@ behaviour optimisation, and execution stack routing.
 """
 
 from fastapi import FastAPI, Header
+from backend.app.runtime.safe_provider_action_adapters import evaluate_safe_provider_action, classify_provider_action
 from pydantic import BaseModel
 from typing import Dict, List
 
@@ -2051,4 +2052,103 @@ def webhooks_stripe_live(payload: dict):
 @app.get("/admin/final-deployment-readiness")
 def admin_final_deployment_readiness():
     return final_deployment_readiness()
+
+
+@app.get("/admin/provider-action-readiness")
+async def admin_provider_action_readiness():
+    """
+    Admin/operator visibility endpoint for Row 13 provider/action safety.
+
+    This endpoint is intentionally read-only and non-live:
+    - no external provider calls
+    - no credential values returned
+    - no client limits applied to owner/admin visibility
+    - governance and owner approval rules remain visible
+    """
+    scenarios = {
+        "admin_owner_execution": {
+            "action_type": "admin_owner_execution",
+            "owner_approved": True,
+        },
+        "live_provider_generation_missing_approval": {
+            "action_type": "live_provider_generation",
+            "provider": "openai",
+            "owner_approved": False,
+            "live_execution_enabled": True,
+        },
+        "live_provider_generation_disabled": {
+            "action_type": "live_provider_generation",
+            "provider": "openai",
+            "owner_approved": True,
+            "live_execution_enabled": False,
+        },
+        "live_provider_generation_ready": {
+            "action_type": "live_provider_generation",
+            "provider": "openai",
+            "owner_approved": True,
+            "live_execution_enabled": True,
+        },
+        "unknown_action": {
+            "action_type": "unknown_action",
+        },
+    }
+
+    checks = {
+        name: evaluate_safe_provider_action(payload)
+        for name, payload in scenarios.items()
+    }
+
+    return {
+        "success": True,
+        "row": 13,
+        "profile": "safe_provider_action_adapter_foundation",
+        "visibility_only": True,
+        "live_external_calls_enabled": False,
+        "external_action_performed": False,
+        "credential_values_exposed": False,
+        "owner_admin_client_limits_applied": False,
+        "governance_enforced": True,
+        "owner_approval_required_for_live_actions": True,
+        "supported_live_action_types": [
+            "live_provider_generation",
+            "live_provider_action",
+            "external_provider_execution",
+            "shopify_live_action",
+            "stripe_live_action",
+            "email_live_send",
+            "crm_live_write",
+            "ad_platform_live_action",
+        ],
+        "supported_safe_internal_action_types": [
+            "admin_owner_execution",
+            "internal_execution",
+            "preview_generation",
+            "draft_generation",
+            "safe_draft_action",
+        ],
+        "checks": checks,
+    }
+
+
+@app.post("/admin/provider-action-readiness/evaluate")
+async def admin_provider_action_readiness_evaluate(payload: dict):
+    """
+    Admin/operator evaluator for a proposed provider/action payload.
+
+    This endpoint classifies and evaluates readiness only.
+    It does not execute provider actions.
+    """
+    classified = classify_provider_action(payload)
+    decision = evaluate_safe_provider_action(payload)
+
+    return {
+        "success": True,
+        "row": 13,
+        "visibility_only": True,
+        "live_external_calls_enabled": False,
+        "external_action_performed": False,
+        "credential_values_exposed": False,
+        "classification": classified,
+        "decision": decision,
+    }
 
