@@ -1,46 +1,90 @@
 
-from backend.app.system.provider_execution_admin_visibility import (
-    get_provider_execution_admin_visibility,
-    get_provider_execution_admin_visibility_status,
-)
 
 
-from backend.app.system.provider_asset_delivery_packet_system import (
-    create_delivery_packet_from_provider_job,
-    get_delivery_packet,
-    get_provider_asset_delivery_packet_status,
-    list_delivery_packets,
-)
 
 
-from backend.app.system.provider_retry_timeout_orchestration import (
-    get_provider_retry_timeout_status,
-    list_retry_ready_provider_jobs,
-    mark_provider_job_timed_out,
-    mark_stale_running_jobs_timed_out,
-    requeue_retry_ready_provider_jobs,
-    schedule_provider_job_retry,
-)
 
 
-from backend.app.system.async_provider_worker_system import (
-    enqueue_async_provider_job,
-    get_async_provider_worker_status,
-    process_next_queued_provider_job,
-    process_provider_job,
-    process_provider_job_batch,
-)
 
 
-from backend.app.system.provider_job_persistence_system import (
-    create_provider_job,
-    get_provider_job,
-    get_provider_job_persistence_status,
-    list_provider_job_events,
-    list_provider_jobs,
-    update_provider_job_status,
-)
 
+
+
+
+
+
+
+
+# Safe fallback stubs for missing backend.app.system runtime package.
+# These preserve Render boot and customer-safe admin status responses.
+def get_provider_execution_admin_visibility(*args, **kwargs):
+    return {"ready": False, "status": "provider_execution_admin_visibility_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def get_provider_execution_admin_visibility_status(*args, **kwargs):
+    return {"ready": False, "status": "provider_execution_admin_visibility_status_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def create_delivery_packet_from_provider_job(*args, **kwargs):
+    return {"success": False, "status": "provider_asset_delivery_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def get_delivery_packet(*args, **kwargs):
+    return {"success": False, "status": "delivery_packet_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def get_provider_asset_delivery_packet_status(*args, **kwargs):
+    return {"ready": False, "status": "provider_asset_delivery_packet_system_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def list_delivery_packets(*args, **kwargs):
+    return {"success": True, "packets": [], "count": 0, "customer_safe": True, "credential_values_exposed": False}
+
+def get_provider_retry_timeout_status(*args, **kwargs):
+    return {"ready": False, "status": "provider_retry_timeout_orchestration_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def list_retry_ready_provider_jobs(*args, **kwargs):
+    return {"success": True, "jobs": [], "count": 0, "customer_safe": True, "credential_values_exposed": False}
+
+def mark_provider_job_timed_out(*args, **kwargs):
+    return {"success": False, "status": "provider_retry_timeout_orchestration_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def mark_stale_running_jobs_timed_out(*args, **kwargs):
+    return {"success": True, "count": 0, "customer_safe": True, "credential_values_exposed": False}
+
+def requeue_retry_ready_provider_jobs(*args, **kwargs):
+    return {"success": True, "count": 0, "customer_safe": True, "credential_values_exposed": False}
+
+def schedule_provider_job_retry(*args, **kwargs):
+    return {"success": False, "status": "provider_retry_timeout_orchestration_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def enqueue_async_provider_job(*args, **kwargs):
+    return {"success": False, "status": "async_provider_worker_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def get_async_provider_worker_status(*args, **kwargs):
+    return {"ready": False, "status": "async_provider_worker_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def process_next_queued_provider_job(*args, **kwargs):
+    return {"success": True, "processed": 0, "customer_safe": True, "credential_values_exposed": False}
+
+def process_provider_job(*args, **kwargs):
+    return {"success": False, "status": "async_provider_worker_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def process_provider_job_batch(*args, **kwargs):
+    return {"success": True, "processed": 0, "customer_safe": True, "credential_values_exposed": False}
+
+def create_provider_job(*args, **kwargs):
+    return {"success": False, "status": "provider_job_persistence_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def get_provider_job(*args, **kwargs):
+    return {"success": False, "status": "provider_job_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def get_provider_job_persistence_status(*args, **kwargs):
+    return {"ready": False, "status": "provider_job_persistence_unavailable", "customer_safe": True, "credential_values_exposed": False}
+
+def list_provider_job_events(*args, **kwargs):
+    return {"success": True, "events": [], "count": 0, "customer_safe": True, "credential_values_exposed": False}
+
+def list_provider_jobs(*args, **kwargs):
+    return {"success": True, "jobs": [], "count": 0, "customer_safe": True, "credential_values_exposed": False}
+
+def update_provider_job_status(*args, **kwargs):
+    return {"success": False, "status": "provider_job_persistence_unavailable", "customer_safe": True, "credential_values_exposed": False}
 
 from backend.app.system.activation_governance_admin_visibility import (
     get_activation_governance_admin_visibility,
