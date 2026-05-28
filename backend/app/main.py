@@ -72,6 +72,7 @@ behaviour optimisation, and execution stack routing.
 """
 
 from fastapi import FastAPI, Header
+from backend.app.runtime.provider_workforce_runtime_hardening import provider_workforce_runtime_hardening_status, provider_runtime_health_summary, provider_recovery_readiness_summary
 from backend.app.runtime.real_provider_activation_registry import get_all_provider_activation_statuses, get_provider_activation_status, select_ready_provider_for_capability
 from backend.app.runtime.real_provider_http_execution_layer import controlled_openai_live_execution_status, real_provider_http_runtime_status, execute_controlled_openai_live_request
 from backend.app.runtime.provider_dispatch_policy_worker_foundation import provider_dispatch_policy_status, evaluate_provider_dispatch_policy, provider_worker_foundation_status
@@ -2259,4 +2260,31 @@ async def admin_provider_activation_visibility_evaluate(payload: dict):
         "dispatch_policy": dispatch_policy,
         "controlled_openai_probe": controlled_openai_probe,
     }
+
+
+@app.get("/admin/provider-workforce-runtime-hardening")
+async def admin_provider_workforce_runtime_hardening():
+    """
+    Admin-safe provider workforce runtime hardening visibility.
+
+    No external provider calls are performed.
+    No credential values are exposed.
+    """
+    return provider_workforce_runtime_hardening_status()
+
+
+@app.get("/admin/provider-runtime-health")
+async def admin_provider_runtime_health():
+    """
+    Admin-safe provider health scoring visibility.
+    """
+    return provider_runtime_health_summary()
+
+
+@app.get("/admin/provider-recovery-readiness")
+async def admin_provider_recovery_readiness():
+    """
+    Admin-safe provider recovery/replay readiness visibility.
+    """
+    return provider_recovery_readiness_summary()
 
