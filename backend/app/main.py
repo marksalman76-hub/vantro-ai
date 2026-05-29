@@ -2489,3 +2489,86 @@ def client_execution_evidence(
         actor_role="client",
     )
 
+
+@app.post("/billing-checkout")
+def beta_billing_checkout(payload: dict, x_actor_role: str | None = Header(default=None)):
+    tenant_id = (
+        payload.get("tenant_id")
+        or payload.get("tenantId")
+        or "client_demo_001"
+    )
+
+    plan = str(
+        payload.get("plan")
+        or payload.get("package_tier")
+        or payload.get("package")
+        or "starter"
+    ).lower()
+
+    if plan not in {"starter", "growth", "business", "enterprise"}:
+        plan = "starter"
+
+    billing_cycle = str(
+        payload.get("billing_cycle")
+        or payload.get("billingCycle")
+        or "monthly"
+    ).lower()
+
+    if billing_cycle == "annual":
+        billing_cycle = "yearly"
+
+    if billing_cycle not in {"monthly", "yearly"}:
+        billing_cycle = "monthly"
+
+    success_url = (
+        payload.get("success_url")
+        or payload.get("successUrl")
+        or "https://app.trance-formation.com.au/client/billing/success"
+    )
+
+    cancel_url = (
+        payload.get("cancel_url")
+        or payload.get("cancelUrl")
+        or "https://app.trance-formation.com.au/client/billing/cancel"
+    )
+
+    price_map = {
+        "starter": {
+            "monthly": "STRIPE_PRICE_STARTER_MONTHLY",
+            "yearly": "STRIPE_PRICE_STARTER_YEARLY",
+        },
+        "growth": {
+            "monthly": "STRIPE_PRICE_GROWTH_MONTHLY",
+            "yearly": "STRIPE_PRICE_GROWTH_YEARLY",
+        },
+        "business": {
+            "monthly": "STRIPE_PRICE_BUSINESS_MONTHLY",
+            "yearly": "STRIPE_PRICE_BUSINESS_YEARLY",
+        },
+        "enterprise": {
+            "monthly": "STRIPE_PRICE_ENTERPRISE_MONTHLY",
+            "yearly": "STRIPE_PRICE_ENTERPRISE_YEARLY",
+        },
+    }
+
+    selected_price_env = price_map[plan][billing_cycle]
+
+    return {
+        "success": True,
+        "profile": "backend_beta_billing_checkout_route_v1",
+        "checkout_status": "checkout_payload_ready",
+        "live_checkout_created": False,
+        "stripe_live_required": True,
+        "tenant_id": tenant_id,
+        "plan": plan,
+        "package_tier": plan,
+        "billing_cycle": billing_cycle,
+        "selected_price_env": selected_price_env,
+        "success_url": success_url,
+        "cancel_url": cancel_url,
+        "next_stage": "connect_live_stripe_checkout_session_creation",
+        "message": "Beta checkout payload is ready. Live Stripe checkout session creation requires final Stripe price/env mapping.",
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
+
