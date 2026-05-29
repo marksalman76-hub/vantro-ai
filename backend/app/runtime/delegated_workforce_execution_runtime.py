@@ -69,9 +69,11 @@ def execute_delegated_workforce_plan(
     owner_approved: bool = False,
     client_owned_agents: List[str] | None = None,
     package_tier: str = "starter",
+    connected_integrations: List[str] | None = None,
 ) -> Dict[str, Any]:
 
     client_owned_agents = client_owned_agents or []
+    connected_integrations = connected_integrations or []
 
     implementation_plan = normalize_implementation_plan(
         implementation_plan or {"action_packets": []},
@@ -152,6 +154,7 @@ def execute_delegated_workforce_plan(
             actor_role="owner_admin" if enterprise_access else "client",
             tenant_id="owner_admin" if enterprise_access else "client",
             owner_approved=owner_approved,
+            connected_integrations=connected_integrations,
         )
 
         packet_result.update({
@@ -212,6 +215,8 @@ def execute_delegated_workforce_plan(
         "queued_results": queued_results,
         "blocked_results": blocked_results,
         "enterprise_access": enterprise_access,
+        "connected_integrations": connected_integrations,
+        "external_integration_count": len(connected_integrations),
         "customer_safe": True,
         "credential_values_exposed": False,
         "external_action_performed": False,

@@ -86,6 +86,7 @@ def execute_real_action_packet(
     actor_role: str = "owner_admin",
     owner_approved: bool = False,
     tenant_id: str = "owner-admin",
+    connected_integrations: List[str] | None = None,
 ) -> Dict[str, Any]:
     """
     Converts an approved implementation packet into a real executable action result.
@@ -135,6 +136,8 @@ def execute_real_action_packet(
             "action_type": action_type,
         },
         tenant_id=tenant_id,
+        connected_integrations=connected_integrations or [],
+        owner_approved=owner_approved,
     )
 
     if adapter_execution.get("owner_approval_required") and not owner_approved:

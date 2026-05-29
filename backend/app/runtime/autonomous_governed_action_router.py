@@ -139,6 +139,7 @@ def route_autonomous_governed_packet(
     actor_role: str = "client",
     tenant_id: str = "unknown",
     owner_approved: bool = False,
+    connected_integrations: List[str] | None = None,
 ) -> Dict[str, Any]:
     governance = classify_autonomous_governance(
         packet,
@@ -180,6 +181,7 @@ def route_autonomous_governed_packet(
             actor_role=actor_role,
             owner_approved=owner_approved,
             tenant_id=tenant_id,
+            connected_integrations=connected_integrations or [],
         )
 
         return {
