@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 from uuid import uuid4
 
+from backend.app.runtime.action_adapter_execution_layer import execute_action_adapter
+
 
 HIGH_RISK_ACTION_KEYWORDS = {
     "spend",
@@ -125,20 +127,52 @@ def execute_real_action_packet(
         or "Approved implementation task"
     )
 
+    adapter_execution = execute_action_adapter(
+        {
+            **packet,
+            "assigned_agent": assigned_agent,
+            "implementation_action": implementation_action,
+            "action_type": action_type,
+        },
+        tenant_id=tenant_id,
+    )
+
+    if adapter_execution.get("owner_approval_required") and not owner_approved:
+        return {
+            "success": True,
+            "execution_id": execution_id,
+            "tenant_id": tenant_id,
+            "source_packet_id": source_packet_id,
+            "assigned_agent": assigned_agent,
+            "action_type": action_type,
+            "adapter": adapter_execution.get("adapter", adapter),
+            "execution_status": "blocked_owner_approval_required",
+            "performed_actual_action": False,
+            "owner_approval_required": True,
+            "external_provider_called": False,
+            "credential_values_exposed": False,
+            "customer_safe_message": adapter_execution.get("output"),
+            "actions_performed": adapter_execution.get("actions_performed", []),
+            "created_at": _now(),
+        }
+
     deliverable = {
         "deliverable_id": f"deliverable_{uuid4().hex[:12]}",
         "type": action_type,
         "title": f"Executed: {str(implementation_action)[:90]}",
-        "summary": str(implementation_action),
+        "summary": adapter_execution.get("output") or str(implementation_action),
         "created_by_agent": assigned_agent,
         "customer_safe": True,
-        "asset_status": "created",
-        "download_ready": False,
-        "preview_ready": True,
+        "asset_status": adapter_execution.get("asset", {}).get("status", "created"),
+        "download_ready": adapter_execution.get("asset", {}).get("download_ready", False),
+        "preview_ready": adapter_execution.get("asset", {}).get("preview_ready", True),
+        "actions_performed": adapter_execution.get("actions_performed", []),
+        "adapter": adapter_execution.get("adapter"),
+        "asset": adapter_execution.get("asset"),
         "content": {
-            "headline": f"{assigned_agent} completed the approved task.",
-            "body": str(implementation_action),
-            "next_step": "Review the created output, then approve client delivery or request amendment.",
+            "headline": f"{assigned_agent} executed an operational adapter.",
+            "body": adapter_execution.get("output") or str(implementation_action),
+            "next_step": "Review the created operational actions, then approve client delivery or request amendment.",
         },
     }
 
@@ -149,13 +183,14 @@ def execute_real_action_packet(
         "source_packet_id": source_packet_id,
         "assigned_agent": assigned_agent,
         "action_type": action_type,
-        "adapter": adapter,
-        "execution_status": "executed_internal_action",
-        "performed_actual_action": True,
-        "owner_approval_required": False,
-        "external_provider_called": False,
+        "adapter": adapter_execution.get("adapter", adapter),
+        "execution_status": adapter_execution.get("execution_status", "adapter_action_executed"),
+        "performed_actual_action": adapter_execution.get("performed_actual_action", True),
+        "owner_approval_required": adapter_execution.get("owner_approval_required", False),
+        "external_provider_called": adapter_execution.get("external_provider_called", False),
         "credential_values_exposed": False,
-        "customer_safe_message": "Approved action executed and customer-safe deliverable created.",
+        "customer_safe_message": adapter_execution.get("output"),
+        "actions_performed": adapter_execution.get("actions_performed", []),
         "deliverable": deliverable,
         "created_at": _now(),
     }
