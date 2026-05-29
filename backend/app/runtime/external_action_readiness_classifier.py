@@ -66,3 +66,40 @@ def classify_external_action_readiness(
         "credential_values_exposed": False,
         "created_at": _now(),
     }
+
+
+# --- patched: stakeholder outreach adapter live external readiness ---
+_PREVIOUS_CLASSIFY_EXTERNAL_ACTION_READINESS = classify_external_action_readiness
+
+def classify_external_action_readiness(
+    *,
+    adapter: str,
+    connected_integrations: list[str] | None = None,
+    owner_approved: bool = False,
+):
+    connected = set(connected_integrations or [])
+
+    if adapter == "stakeholder_interview_outreach_adapter":
+        required = []
+        if "email" not in connected:
+            required.append("email")
+
+        return {
+            "success": True,
+            "profile": "external_action_readiness_classifier_v1",
+            "adapter": adapter,
+            "connected_integrations": list(connected),
+            "external_action_ready": "email" in connected,
+            "required_connections": ["email"],
+            "missing_connections": required,
+            "owner_approved": owner_approved,
+            "live_execution_allowed": "email" in connected and owner_approved is True,
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
+
+    return _PREVIOUS_CLASSIFY_EXTERNAL_ACTION_READINESS(
+        adapter=adapter,
+        connected_integrations=connected_integrations,
+        owner_approved=owner_approved,
+    )
