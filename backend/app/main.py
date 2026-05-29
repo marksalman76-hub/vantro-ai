@@ -2624,13 +2624,51 @@ def beta_billing_checkout(payload: dict, x_actor_role: str | None = Header(defau
             },
         )
 
+
+            session_id = None
+        checkout_url = None
+
+        try:
+            session_id = getattr(session, "id", None)
+        except Exception:
+            session_id = None
+
+        try:
+            checkout_url = getattr(session, "url", None)
+        except Exception:
+            checkout_url = None
+
+        if not session_id:
+            try:
+                session_id = session.get("id")
+            except Exception:
+                pass
+
+        if not checkout_url:
+            try:
+                checkout_url = session.get("url")
+            except Exception:
+                pass
+
+        if not session_id:
+            try:
+                session_id = session["id"]
+            except Exception:
+                pass
+
+        if not checkout_url:
+            try:
+                checkout_url = session["url"]
+            except Exception:
+                pass
+
         return {
             "success": True,
-            "profile": "real_stripe_checkout_session_bridge_v1",
+            "profile": "real_stripe_checkout_session_bridge_v2",
             "checkout_status": "live_checkout_session_created",
             "live_checkout_created": True,
-            "checkout_session_id": getattr(session, "id", None) or session.get("id") if hasattr(session, "get") else None,
-            "checkout_url": getattr(session, "url", None) or session.get("url") if hasattr(session, "get") else None,
+            "checkout_session_id": session_id,
+            "checkout_url": checkout_url,
             "stripe_price_env": selected_price_env,
             "stripe_price_id_present": True,
             "next_stage": "redirect_customer_to_checkout_url",
