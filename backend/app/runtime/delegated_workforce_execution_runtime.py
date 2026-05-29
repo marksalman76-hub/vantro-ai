@@ -4,6 +4,10 @@ import time
 import uuid
 from typing import Dict, Any, List
 
+from backend.app.runtime.real_action_execution_bridge import (
+    execute_real_action_packet,
+)
+
 
 def _now_ms() -> int:
     return int(time.time() * 1000)
@@ -116,12 +120,39 @@ def execute_delegated_workforce_plan(
             queued_results.append(packet_result)
             continue
 
+        real_execution_result = execute_real_action_packet(
+            {
+                "packet_id": packet.get("packet_id"),
+                "assigned_agent": assigned_agent,
+                "implementation_action": (
+                    packet.get("implementation_action")
+                    or packet.get("title")
+                    or specialist["completed_output"]
+                ),
+                "risk_level": packet.get("risk_level", "medium"),
+            },
+            actor_role="owner_admin",
+            owner_approved=owner_approved,
+            tenant_id="owner_admin",
+        )
+
         packet_result.update({
-            "execution_status": "completed",
-            "delegate_execution": "executed",
-            "completed_output": specialist["completed_output"],
-            "external_action_performed": False,
-            "live_external_call_executed": False,
+            "execution_status": real_execution_result.get("execution_status"),
+            "delegate_execution": (
+                "executed"
+                if real_execution_result.get("performed_actual_action")
+                else "blocked"
+            ),
+            "performed_actual_action": real_execution_result.get("performed_actual_action", False),
+            "real_execution": True,
+            "deliverable": real_execution_result.get("deliverable"),
+            "completed_output": (
+                real_execution_result.get("deliverable", {})
+                .get("content", {})
+                .get("body")
+            ),
+            "external_action_performed": real_execution_result.get("external_provider_called", False),
+            "live_external_call_executed": real_execution_result.get("external_provider_called", False),
         })
 
         execution_results.append(packet_result)
