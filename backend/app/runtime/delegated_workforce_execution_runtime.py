@@ -73,6 +73,7 @@ def execute_delegated_workforce_plan(
     client_owned_agents: List[str] | None = None,
     package_tier: str = "starter",
     connected_integrations: List[str] | None = None,
+    tenant_id: str = "owner_admin",
 ) -> Dict[str, Any]:
 
     client_owned_agents = client_owned_agents or []
@@ -155,7 +156,7 @@ def execute_delegated_workforce_plan(
             package_tier=package_tier,
             client_owned_agents=client_owned_agents,
             actor_role="owner_admin" if enterprise_access else "client",
-            tenant_id="owner_admin" if enterprise_access else "client",
+            tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
             owner_approved=owner_approved,
             connected_integrations=connected_integrations,
         )
@@ -197,7 +198,7 @@ def execute_delegated_workforce_plan(
             blocked_results.append(packet_result)
         else:
             history_record = record_action_execution(
-                tenant_id="owner_admin" if enterprise_access else "client",
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
                 packet_id=packet_result.get("packet_id"),
                 assigned_agent=assigned_agent,
                 execution_payload=packet_result,
@@ -206,7 +207,7 @@ def execute_delegated_workforce_plan(
             packet_result["history_persisted"] = True
 
             external_records = record_external_actions(
-                tenant_id="owner_admin" if enterprise_access else "client",
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
                 execution_id=packet_result.get("execution_id"),
                 packet_id=packet_result.get("packet_id"),
                 assigned_agent=assigned_agent,
