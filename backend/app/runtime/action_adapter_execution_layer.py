@@ -5,6 +5,10 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 from uuid import uuid4
 
+from backend.app.runtime.external_action_readiness_classifier import (
+    classify_external_action_readiness,
+)
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -51,8 +55,19 @@ def classify_action_adapter(packet: Dict[str, Any]) -> str:
     return "general_operational_task_adapter"
 
 
-def execute_action_adapter(packet: Dict[str, Any], *, tenant_id: str = "unknown") -> Dict[str, Any]:
+def execute_action_adapter(
+    packet: Dict[str, Any],
+    *,
+    tenant_id: str = "unknown",
+    connected_integrations: List[str] | None = None,
+    owner_approved: bool = False,
+) -> Dict[str, Any]:
     adapter = classify_action_adapter(packet)
+    external_readiness = classify_external_action_readiness(
+        adapter=adapter,
+        connected_integrations=connected_integrations or [],
+        owner_approved=owner_approved,
+    )
     action_text = (
         packet.get("implementation_action")
         or packet.get("action")
@@ -151,6 +166,9 @@ def execute_action_adapter(packet: Dict[str, Any], *, tenant_id: str = "unknown"
             "owner_approval_required": True,
             "customer_safe": True,
             "credential_values_exposed": False,
+            "external_readiness": external_readiness,
+            "external_action_ready": external_readiness.get("external_action_ready", False),
+            "internal_fallback_used": False,
             "actions_performed": [],
             "output": "Action requires owner approval before live campaign, send, publish, or spend execution.",
             "created_at": _now(),
@@ -177,8 +195,12 @@ def execute_action_adapter(packet: Dict[str, Any], *, tenant_id: str = "unknown"
         "owner_approval_required": False,
         "customer_safe": True,
         "credential_values_exposed": False,
-        "external_provider_called": False,
+        "external_provider_called": external_readiness.get("external_action_ready", False),
         "live_external_call_executed": False,
+        "external_readiness": external_readiness,
+        "external_action_ready": external_readiness.get("external_action_ready", False),
+        "internal_fallback_used": not external_readiness.get("external_action_ready", False),
+        "missing_connections": external_readiness.get("missing_connections", []),
         "actions_performed": actions,
         "output": output,
         "asset": {
