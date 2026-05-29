@@ -760,26 +760,53 @@ export default function AdminPage() {
                                 <div className="implementationPlanBox">
                                   <strong>Implementation Action Plan</strong>
                                   <p>{latestImplementationPlan.action_count || 0} action packet(s) created from approved outcome.</p>
-                                  {(latestImplementationPlan.action_packets || []).slice(0, 10).map((packet: any) => (
-                                    <div className="implementationPacket" key={packet.packet_id}>
-                                      <div>
-                                        <small>Assigned agent</small>
-                                        <b>{String(packet.recommended_agent || "agent").replaceAll("_", " ")}</b>
+                                  {(latestImplementationPlan.action_packets || []).slice(0, 10).map((packet: any) => {
+                                    const recommendedAgent = String(packet.recommended_agent || "agent");
+                                    const isAdminOrEnterprise = true;
+                                    const ownedAgents = selectedDeploy.length ? selectedDeploy : selectedRun;
+                                    const agentOwned = isAdminOrEnterprise || ownedAgents.includes(recommendedAgent);
+
+                                    return (
+                                      <div className={agentOwned ? "implementationPacket" : "implementationPacket locked"} key={packet.packet_id}>
+                                        <div>
+                                          <small>{agentOwned ? "Assigned agent" : "Recommended specialist agent"}</small>
+                                          <b>{recommendedAgent.replaceAll("_", " ")}</b>
+                                        </div>
+
+                                        <div>
+                                          <small>{agentOwned ? "Implementation action" : "Why recommended"}</small>
+                                          <span>
+                                            {agentOwned
+                                              ? packet.title
+                                              : "This specialist agent could unlock additional implementation capacity for this outcome."}
+                                          </span>
+                                        </div>
+
+                                        <div>
+                                          <small>{agentOwned ? "Risk / status" : "Package status"}</small>
+                                          <em>
+                                            {agentOwned
+                                              ? `${packet.risk_level || "medium"} · ${packet.execution_status}`
+                                              : "Upgrade required · task hidden"}
+                                          </em>
+                                        </div>
+
+                                        <div className="packetActions">
+                                          {agentOwned ? (
+                                            <>
+                                              <button onClick={() => showToast("Packet queued for governed execution review.")}>Queue</button>
+                                              <button onClick={() => showToast("Packet sent to client visibility queue.")}>Send to client</button>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <button onClick={() => showToast("Upgrade recommendation saved.")}>Recommend upgrade</button>
+                                              <button onClick={() => showToast("Implementation task is hidden until this agent is purchased.")}>Preview value</button>
+                                            </>
+                                          )}
+                                        </div>
                                       </div>
-                                      <div>
-                                        <small>Implementation action</small>
-                                        <span>{packet.title}</span>
-                                      </div>
-                                      <div>
-                                        <small>Risk / status</small>
-                                        <em>{packet.risk_level || "medium"} · {packet.execution_status}</em>
-                                      </div>
-                                      <div className="packetActions">
-                                        <button onClick={() => showToast("Packet queued for governed execution review.")}>Queue</button>
-                                        <button onClick={() => showToast("Packet sent to client visibility queue.")}>Send to client</button>
-                                      </div>
-                                    </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               ) : null}
                             </div>
