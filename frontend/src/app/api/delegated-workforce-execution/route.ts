@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       "Content-Type": "application/json",
       "x-admin-token": ADMIN_TOKEN,
       "x-actor-role": "owner_admin",
-      "x-tenant-id": "owner_admin",
+      "x-tenant-id": body.tenant_id || "owner_admin",
       "x-csrf-token": "delegated-workforce-execution",
       origin: process.env.NEXT_PUBLIC_FRONTEND_URL || "https://app.trance-formation.com.au",
     },
@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
       client_owned_agents: body.client_owned_agents || [],
       package_tier: body.package_tier || "enterprise",
       connected_integrations: body.connected_integrations || [],
+      tenant_id: body.tenant_id || "owner_admin",
     }),
   });
 
