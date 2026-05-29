@@ -72,6 +72,8 @@ export default function AdminPage() {
   const [queuedImplementationPackets, setQueuedImplementationPackets] = useState<any[]>([]);
   const [completedImplementationRuns, setCompletedImplementationRuns] = useState<any[]>([]);
   const [delegatedWorkforceResults, setDelegatedWorkforceResults] = useState<any[]>([]);
+  const [actionExecutionHistory, setActionExecutionHistory] = useState<any[]>([]);
+  const [actionHistorySummary, setActionHistorySummary] = useState<any>(null);
   const [deployTenant, setDeployTenant] = useState("client_manual_001");
   const [deployCompany, setDeployCompany] = useState("Acme Consulting Group");
   const [deployEmail, setDeployEmail] = useState("");
@@ -180,6 +182,7 @@ export default function AdminPage() {
     loadRuntime();
     loadClientRegistry();
     loadOrchestrationDashboard();
+    loadActionExecutionHistory();
   }, []);
 
 
@@ -195,6 +198,22 @@ export default function AdminPage() {
       body: JSON.stringify({ path, method, payload }),
     });
     return response.json();
+  }
+
+  async function loadActionExecutionHistory() {
+    try {
+      const response = await fetch("/api/action-execution-history?tenant_id=owner_admin&limit=10", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const wrapper = await response.json();
+      const data = wrapper?.data || wrapper;
+      setActionExecutionHistory(data?.records || []);
+      setActionHistorySummary(data);
+    } catch {
+      setActionExecutionHistory([]);
+      setActionHistorySummary(null);
+    }
   }
 
   async function loadOrchestrationDashboard() {
@@ -662,6 +681,7 @@ export default function AdminPage() {
       }
 
       setDelegatedWorkforceResults((prev) => [result, ...prev].slice(0, 10));
+      await loadActionExecutionHistory();
       showToast(`Delegated workforce completed ${result.completed_count || 0} packet(s), blocked ${result.blocked_count || 0}.`);
     } catch {
       showToast("Delegated workforce execution failed before reaching backend.");
@@ -1098,6 +1118,45 @@ export default function AdminPage() {
               <pre className={orchestrationResult ? "output has" : "output"}>
                 {orchestrationResult ? JSON.stringify(orchestrationResult, null, 2) : "Orchestration test result will appear here..."}
               </pre>
+            </Panel>
+
+            <Panel title="Persistent Action History" subtitle="Saved autonomous actions, adapter outputs, and customer-safe deliverables.">
+              <div className="reviewRows">
+                <div>
+                  <span>Saved actions</span>
+                  <b>{actionHistorySummary?.count ?? actionExecutionHistory.length}</b>
+                </div>
+                <div>
+                  <span>Latest adapter</span>
+                  <b>{actionExecutionHistory?.[0]?.adapter || "—"}</b>
+                </div>
+                <div>
+                  <span>Actual actions</span>
+                  <b>{actionExecutionHistory?.[0]?.performed_actual_action ? "Yes" : "—"}</b>
+                </div>
+              </div>
+
+              <div className="reviewList">
+                {actionExecutionHistory.length ? actionExecutionHistory.slice(0, 5).map((item: any, index: number) => (
+                  <div className="reviewItem" key={item.history_id || index}>
+                    <strong>{item.execution_status || "saved_action"}</strong>
+                    <span>{String(item.assigned_agent || "agent").replaceAll("_", " ")} · {item.adapter || "adapter"}</span>
+                    <p>
+                      {(item.actions_performed || []).map((action: any) => action.type || action.status).filter(Boolean).join(" · ")
+                        || item?.deliverable?.summary
+                        || "Autonomous action record saved."}
+                    </p>
+                  </div>
+                )) : (
+                  <div className="reviewItem">
+                    <strong>No action history loaded</strong>
+                    <span>Run delegated workforce after deployment</span>
+                    <p>Saved autonomous actions will appear here after execution.</p>
+                  </div>
+                )}
+              </div>
+
+              <button className="ghost full" onClick={loadActionExecutionHistory}>Refresh action history</button>
             </Panel>
           </section>
 
