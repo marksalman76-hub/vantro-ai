@@ -84,6 +84,7 @@ SQLite production persistence, learning recommendations,
 behaviour optimisation, and execution stack routing.
 """
 
+from backend.app.runtime.global_execution_evidence_layer import build_execution_evidence_packet
 from fastapi import FastAPI, Header
 from backend.app.runtime.autonomous_workforce_orchestration_foundation import autonomous_workforce_orchestration_status, create_delegated_subtask_plan, create_orchestration_execution_graph, orchestration_replay_recovery_packet
 from backend.app.runtime.provider_workforce_runtime_hardening import provider_workforce_runtime_hardening_status, provider_runtime_health_summary, provider_recovery_readiness_summary
@@ -2462,3 +2463,29 @@ def admin_external_action_records_readiness(
         }
 
     return external_action_records_readiness()
+
+
+@app.get("/admin/execution-evidence")
+def admin_execution_evidence(
+    tenant_id: str | None = None,
+    limit: int = 25,
+    x_actor_role: str | None = Header(default="owner_admin"),
+):
+    return build_execution_evidence_packet(
+        tenant_id=tenant_id,
+        limit=limit,
+        actor_role=x_actor_role or "owner_admin",
+    )
+
+
+@app.get("/client/execution-evidence")
+def client_execution_evidence(
+    tenant_id: str = "client_demo_001",
+    limit: int = 25,
+):
+    return build_execution_evidence_packet(
+        tenant_id=tenant_id,
+        limit=limit,
+        actor_role="client",
+    )
+
