@@ -8,6 +8,9 @@ from uuid import uuid4
 from backend.app.runtime.external_action_readiness_classifier import (
     classify_external_action_readiness,
 )
+from backend.app.runtime.real_external_integration_execution_bridge import (
+    execute_real_external_action,
+)
 
 
 def _now() -> str:
@@ -79,6 +82,16 @@ def execute_action_adapter(
     execution_id = f"adapter_exec_{uuid4().hex[:12]}"
     asset_id = f"asset_{uuid4().hex[:12]}"
     task_id = f"task_{uuid4().hex[:12]}"
+
+    real_external_result = None
+    if external_readiness.get("external_action_ready") is True:
+        real_external_result = execute_real_external_action(
+            adapter=adapter,
+            action_text=str(action_text),
+            tenant_id=tenant_id,
+            connected_integrations=connected_integrations or [],
+            owner_approved=owner_approved,
+        )
 
     if adapter == "stakeholder_interview_outreach_adapter":
         actions = [
@@ -195,14 +208,23 @@ def execute_action_adapter(
         "owner_approval_required": False,
         "customer_safe": True,
         "credential_values_exposed": False,
-        "external_provider_called": external_readiness.get("external_action_ready", False),
-        "live_external_call_executed": False,
+        "external_provider_called": bool(real_external_result and real_external_result.get("external_action_executed")),
+        "live_external_call_executed": bool(real_external_result and real_external_result.get("live_external_call_executed")),
         "external_readiness": external_readiness,
         "external_action_ready": external_readiness.get("external_action_ready", False),
-        "internal_fallback_used": not external_readiness.get("external_action_ready", False),
+        "real_external_execution": real_external_result,
+        "internal_fallback_used": not bool(real_external_result and real_external_result.get("external_action_executed")),
         "missing_connections": external_readiness.get("missing_connections", []),
-        "actions_performed": actions,
-        "output": output,
+        "actions_performed": (
+            real_external_result.get("actions_performed", [])
+            if real_external_result and real_external_result.get("external_action_executed")
+            else actions
+        ),
+        "output": (
+            "Real external integration actions executed."
+            if real_external_result and real_external_result.get("external_action_executed")
+            else output
+        ),
         "asset": {
             "asset_id": asset_id,
             "task_id": task_id,
