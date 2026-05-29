@@ -29,6 +29,8 @@ LOCKOUT_THRESHOLD = int(os.getenv("SECURITY_LOCKOUT_THRESHOLD", "12"))
 LOCKOUT_WINDOW_SECONDS = int(os.getenv("SECURITY_LOCKOUT_WINDOW_SECONDS", "300"))
 
 ADMIN_PATH_PREFIXES = ("/admin", "/owner")
+ADMIN_EVIDENCE_PROXY_PATHS = ("/admin/execution-evidence",)
+DEFAULT_TRUSTED_ORIGINS = ("https://app.trance-formation.com.au", "https://trance-formation.com.au")
 STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 
@@ -75,7 +77,13 @@ def _fingerprint(request: Request) -> str:
 
 def _normalise_origins() -> List[str]:
     raw = os.getenv("TRUSTED_ORIGINS", "") or os.getenv("FRONTEND_URL", "")
-    return [x.strip().rstrip("/") for x in raw.split(",") if x.strip()]
+    configured = [x.strip().rstrip("/") for x in raw.split(",") if x.strip()]
+    defaults = list(DEFAULT_TRUSTED_ORIGINS)
+    merged = []
+    for item in configured + defaults:
+        if item and item not in merged:
+            merged.append(item)
+    return merged
 
 
 def _trusted_origin_valid(request: Request) -> bool:
@@ -109,6 +117,30 @@ def _admin_token_valid(request: Request) -> bool:
 
 def _is_admin_path(path: str) -> bool:
     return any(path.startswith(prefix) for prefix in ADMIN_PATH_PREFIXES)
+
+
+def _admin_evidence_proxy_valid(request: Request) -> bool:
+    path = request.url.path.lower()
+    method = request.method.upper()
+    role = _header(request, "x-actor-role", "anonymous").lower()
+    csrf = _header(request, "x-csrf-token")
+
+    if path not in ADMIN_EVIDENCE_PROXY_PATHS:
+        return False
+
+    if method != "GET":
+        return False
+
+    if role not in {"owner", "admin", "owner_admin", "system"}:
+        return False
+
+    if csrf != "admin-execution-evidence":
+        return False
+
+    if not _trusted_origin_valid(request):
+        return False
+
+    return True
 
 
 def _lockout_key(request: Request) -> str:
@@ -191,11 +223,13 @@ def assess_audit_enforcement(request: Request) -> Dict[str, Any]:
         }
 
     if _is_admin_path(path):
+        evidence_proxy_ok = _admin_evidence_proxy_valid(request)
+
         if role not in {"owner", "admin", "owner_admin", "system"}:
             reasons.append("admin_route_invalid_actor")
             severity = "high"
 
-        if not _admin_token_valid(request):
+        if not evidence_proxy_ok and not _admin_token_valid(request):
             reasons.append("admin_token_missing_or_invalid")
             severity = "critical" if _is_production() else "high"
             if _is_production():

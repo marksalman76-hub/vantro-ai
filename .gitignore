@@ -23,3 +23,18 @@ full_system_backups/
 *.sqlite3-shm
 *.sqlite3-wal
 *.jsonl
+
+# Beta functional stabilisation scratch files
+current_*.txt
+admin_*_block.txt
+client_*_block.txt
+*_inspection.txt
+full_delegated_execution_path_inspection.txt
+downstream_tenant_override_inspection.txt
+row8_client_live.html
+live_client_page.html
+ExecutionResult
+None
+reports/
+runtime_data/*.jsonl
+
