@@ -3,6 +3,10 @@ from backend.app.runtime.outcome_action_execution_runtime import create_outcome_
 from backend.app.runtime.delegated_workforce_execution_runtime import (
     execute_delegated_workforce_plan,
 )
+from backend.app.runtime.persistent_action_execution_history import (
+    list_action_execution_history,
+    action_execution_history_readiness,
+)
 from backend.app.core.integration_live_adapter_registry import (
     adapter_registry_summary,
     execute_integration_action,
@@ -2378,3 +2382,40 @@ async def delegated_workforce_execution(payload: dict):
     )
 
     return result
+
+
+@app.get("/admin/action-execution-history")
+def admin_action_execution_history(
+    tenant_id: str | None = None,
+    limit: int = 50,
+    x_admin_token: str | None = Header(default=None),
+    x_actor_role: str | None = Header(default=None),
+):
+    if x_actor_role not in {"owner_admin", "admin"}:
+        return {
+            "success": False,
+            "error": "admin_only",
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
+
+    return list_action_execution_history(
+        tenant_id=tenant_id,
+        limit=limit,
+    )
+
+
+@app.get("/admin/action-execution-history/readiness")
+def admin_action_execution_history_readiness(
+    x_admin_token: str | None = Header(default=None),
+    x_actor_role: str | None = Header(default=None),
+):
+    if x_actor_role not in {"owner_admin", "admin"}:
+        return {
+            "success": False,
+            "error": "admin_only",
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
+
+    return action_execution_history_readiness()
