@@ -71,6 +71,7 @@ export default function AdminPage() {
   const [latestImplementationPlan, setLatestImplementationPlan] = useState<any>(null);
   const [queuedImplementationPackets, setQueuedImplementationPackets] = useState<any[]>([]);
   const [completedImplementationRuns, setCompletedImplementationRuns] = useState<any[]>([]);
+  const [delegatedWorkforceResults, setDelegatedWorkforceResults] = useState<any[]>([]);
   const [deployTenant, setDeployTenant] = useState("client_manual_001");
   const [deployCompany, setDeployCompany] = useState("Acme Consulting Group");
   const [deployEmail, setDeployEmail] = useState("");
@@ -630,6 +631,44 @@ export default function AdminPage() {
   }
 
 
+
+  async function runDelegatedWorkforcePlan() {
+    if (!latestImplementationPlan?.action_packets?.length) {
+      showToast("No implementation plan available for delegated workforce execution.");
+      return;
+    }
+
+    try {
+      showToast("Running delegated workforce execution...");
+
+      const response = await fetch("/api/delegated-workforce-execution", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          implementation_plan: latestImplementationPlan,
+          owner_approved: true,
+          client_owned_agents: ADMIN_AGENT_OPTIONS.map(([id]) => id),
+          package_tier: "enterprise",
+        }),
+      });
+
+      const wrapper = await response.json();
+      const result = wrapper?.data || wrapper;
+
+      if (!result?.success) {
+        showToast("Delegated workforce execution needs review.");
+        return;
+      }
+
+      setDelegatedWorkforceResults((prev) => [result, ...prev].slice(0, 10));
+      showToast(`Delegated workforce completed ${result.completed_count || 0} packet(s), blocked ${result.blocked_count || 0}.`);
+    } catch {
+      showToast("Delegated workforce execution failed before reaching backend.");
+    }
+  }
+
+
   const navItems = ["Overview", "Run Agent", "Deploy Clients", "Client Registry", "Runtime Health", "Provider Governance", "Orchestration", "Recovery", "Billing"];
   const runtimeStatus = runtime?.runtime?.platform_status || "online";
   const registryTotal = clientRegistrySummary?.total || clientRegistrySummary?.tenant_count || clientRegistry.length || 0;
@@ -826,6 +865,9 @@ export default function AdminPage() {
                                 <div className="implementationPlanBox">
                                   <strong>Implementation Action Plan</strong>
                                   <p>{latestImplementationPlan.action_count || 0} action packet(s) created from approved outcome.</p>
+                                  <div className="packetActions" style={{ marginBottom: 12 }}>
+                                    <button onClick={runDelegatedWorkforcePlan}>Run delegated workforce</button>
+                                  </div>
                                   {(latestImplementationPlan.action_packets || []).slice(0, 10).map((packet: any) => {
                                     const recommendedAgent = String(packet.recommended_agent || "agent");
                                     const isAdminOrEnterprise = true;
