@@ -2379,6 +2379,7 @@ async def delegated_workforce_execution(payload: dict):
         owner_approved=payload.get("owner_approved", False),
         client_owned_agents=payload.get("client_owned_agents", []),
         package_tier=payload.get("package_tier", "starter"),
+        connected_integrations=payload.get("connected_integrations", []),
     )
 
     return result
