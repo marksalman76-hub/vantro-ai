@@ -13,6 +13,9 @@ from backend.app.runtime.persistent_action_execution_history import (
 from backend.app.runtime.intelligent_action_packet_normalizer import (
     normalize_implementation_plan,
 )
+from backend.app.runtime.durable_external_action_records import (
+    record_external_actions,
+)
 
 
 def _now_ms() -> int:
@@ -201,6 +204,18 @@ def execute_delegated_workforce_plan(
             )
             packet_result["history_id"] = history_record.get("history_id")
             packet_result["history_persisted"] = True
+
+            external_records = record_external_actions(
+                tenant_id="owner_admin" if enterprise_access else "client",
+                execution_id=packet_result.get("execution_id"),
+                packet_id=packet_result.get("packet_id"),
+                assigned_agent=assigned_agent,
+                deliverable=packet_result.get("deliverable"),
+            )
+            packet_result["external_action_record_count"] = external_records.get("record_count", 0)
+            packet_result["external_action_records_persisted"] = external_records.get("record_count", 0) > 0
+            packet_result["external_action_records"] = external_records.get("records", [])
+
             execution_results.append(packet_result)
 
     return {
