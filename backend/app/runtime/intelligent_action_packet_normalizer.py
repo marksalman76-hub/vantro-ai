@@ -104,7 +104,16 @@ def _infer_agent(text: str, fallback: str = "marketing_specialist_agent") -> str
 def _adapter_target(text: str) -> str:
     lower = text.lower()
 
-    if "interview" in lower or "outreach" in lower or "pilot client" in lower:
+    if (
+        "send email" in lower
+        or "email draft" in lower
+        or "brevo" in lower
+        or "outreach" in lower
+        or "follow-up email" in lower
+        or "follow up email" in lower
+        or "interview" in lower
+        or "pilot client" in lower
+    ):
         return "stakeholder_interview_outreach_adapter"
     if "competitor" in lower or "market research" in lower or "white space" in lower:
         return "competitor_research_adapter"
@@ -170,6 +179,9 @@ def _rewrite_to_executable(text: str) -> str:
 
     if lower.startswith("commission targeted"):
         return "Create healthcare technology market research task, stakeholder interview outreach draft, and CRM follow-up task"
+
+    if "brevo" in lower or "send governed live" in lower or "send email" in lower:
+        return f"Send governed live email verification through connected email provider: {clean}"
 
     if not _has_safe_operational_verb(clean):
         return f"Create operational execution task for: {clean}"
