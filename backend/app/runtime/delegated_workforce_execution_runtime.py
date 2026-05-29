@@ -7,6 +7,9 @@ from typing import Dict, Any, List
 from backend.app.runtime.autonomous_governed_action_router import (
     route_autonomous_governed_packet,
 )
+from backend.app.runtime.persistent_action_execution_history import (
+    record_action_execution,
+)
 
 
 def _now_ms() -> int:
@@ -179,6 +182,14 @@ def execute_delegated_workforce_plan(
         elif autonomous_route_result.get("routing_status") == "recommendation_only":
             blocked_results.append(packet_result)
         else:
+            history_record = record_action_execution(
+                tenant_id="owner_admin" if enterprise_access else "client",
+                packet_id=packet_result.get("packet_id"),
+                assigned_agent=assigned_agent,
+                execution_payload=packet_result,
+            )
+            packet_result["history_id"] = history_record.get("history_id")
+            packet_result["history_persisted"] = True
             execution_results.append(packet_result)
 
     return {
