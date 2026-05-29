@@ -70,6 +70,7 @@ export default function AdminPage() {
   const [implementationPlans, setImplementationPlans] = useState<any[]>([]);
   const [latestImplementationPlan, setLatestImplementationPlan] = useState<any>(null);
   const [queuedImplementationPackets, setQueuedImplementationPackets] = useState<any[]>([]);
+  const [completedImplementationRuns, setCompletedImplementationRuns] = useState<any[]>([]);
   const [deployTenant, setDeployTenant] = useState("client_manual_001");
   const [deployCompany, setDeployCompany] = useState("Acme Consulting Group");
   const [deployEmail, setDeployEmail] = useState("");
@@ -575,6 +576,57 @@ export default function AdminPage() {
 
     setQueuedImplementationPackets((prev) => [queuedPacket, ...prev].slice(0, 30));
     showToast("Packet queued for governed implementation execution.");
+  }
+
+
+
+  async function runQueuedImplementationPacket(packet: any) {
+    try {
+      showToast("Running queued packet through governed live execution...");
+
+      const response = await fetch("/api/admin-live-execution", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requested_agent: packet?.recommended_agent || "orchestration_agent",
+          task: packet?.action || packet?.title || "Execute the approved implementation packet.",
+        }),
+      });
+
+      const wrapper = await response.json();
+      const data = wrapper?.data || wrapper;
+      const execution = data?.execution || {};
+      const adapter = execution?.adapter_result || {};
+      const normalised = adapter?.normalised_response || {};
+      const safeOutput = normalised?.safe_output || {};
+
+      const completedRun = {
+        packet_id: packet?.packet_id,
+        agent_id: packet?.recommended_agent || "orchestration_agent",
+        source_action: packet?.title,
+        status: data?.success === true ? "completed" : "needs_review",
+        provider: adapter?.provider_key || "openai",
+        live_external_call_executed: adapter?.live_external_call_executed === true,
+        latency_ms: adapter?.latency_ms || null,
+        output:
+          wrapper?.normalized_output ||
+          safeOutput?.text ||
+          data?.output?.generated_output ||
+          data?.output?.output ||
+          data?.output?.content ||
+          data?.generated_output ||
+          data?.result ||
+          data?.message ||
+          "No output returned.",
+        completed_at: new Date().toLocaleString(),
+      };
+
+      setCompletedImplementationRuns((prev) => [completedRun, ...prev].slice(0, 30));
+      showToast(data?.success === true ? "Implementation packet completed." : "Implementation packet needs review.");
+    } catch {
+      showToast("Queued packet execution failed before reaching live runtime.");
+    }
   }
 
 
