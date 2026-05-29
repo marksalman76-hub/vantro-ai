@@ -33,8 +33,63 @@ def _text(packet: Dict[str, Any]) -> str:
 
 def classify_action_adapter(packet: Dict[str, Any]) -> str:
     text = _text(packet)
+    connected = set(packet.get("connected_integrations") or [])
 
-    if any(x in text for x in ["stakeholder interview", "interviews", "interview healthcare", "schedule interview"]):
+    email_intent = any(x in text for x in [
+        "email",
+        "brevo",
+        "send message",
+        "send verification",
+        "connected email provider",
+        "email provider",
+        "outreach message",
+        "reply",
+        "follow up",
+        "follow-up",
+    ])
+
+    crm_intent = any(x in text for x in [
+        "crm",
+        "pipeline",
+        "lead",
+        "prospect",
+        "contact",
+        "deal",
+        "opportunity",
+        "follow-up task",
+        "follow up task",
+    ])
+
+    calendar_intent = any(x in text for x in [
+        "calendar",
+        "meeting",
+        "appointment",
+        "interview slot",
+        "book",
+        "schedule",
+    ])
+
+    stakeholder_intent = any(x in text for x in [
+        "stakeholder interview",
+        "stakeholder interviews",
+        "interviews",
+        "interview healthcare",
+        "schedule interview",
+        "client interview",
+        "market validation interview",
+        "pilot client",
+    ])
+
+    if email_intent and "email" in connected:
+        return "stakeholder_interview_outreach_adapter"
+
+    if stakeholder_intent:
+        return "stakeholder_interview_outreach_adapter"
+
+    if crm_intent and "crm" in connected:
+        return "stakeholder_interview_outreach_adapter"
+
+    if calendar_intent and "calendar" in connected:
         return "stakeholder_interview_outreach_adapter"
 
     if any(x in text for x in ["competitor", "white space", "positioning analysis", "landscape analysis"]):
@@ -46,14 +101,14 @@ def classify_action_adapter(packet: Dict[str, Any]) -> str:
     if any(x in text for x in ["messaging pillars", "positioning framework", "value proposition", "sales deck"]):
         return "sales_enablement_asset_adapter"
 
-    if any(x in text for x in ["crm", "pipeline", "lead", "prospect", "appointment"]):
+    if crm_intent:
         return "crm_task_creation_adapter"
 
     if any(x in text for x in ["launch campaign", "paid campaign", "increase budget", "ad budget", "go live"]):
         return "approval_gated_campaign_adapter"
 
-    if any(x in text for x in ["send email", "outreach email", "bulk", "mass email"]):
-        return "approval_gated_communication_adapter"
+    if email_intent:
+        return "stakeholder_interview_outreach_adapter"
 
     return "general_operational_task_adapter"
 
@@ -65,10 +120,14 @@ def execute_action_adapter(
     connected_integrations: List[str] | None = None,
     owner_approved: bool = False,
 ) -> Dict[str, Any]:
+    packet_for_classification = {
+        **packet,
+        "connected_integrations": connected_integrations or [],
+    }
     adapter = (
         packet.get("execution_adapter_target")
         or packet.get("adapter")
-        or classify_action_adapter(packet)
+        or classify_action_adapter(packet_for_classification)
     )
     external_readiness = classify_external_action_readiness(
         adapter=adapter,
