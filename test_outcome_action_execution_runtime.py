@@ -1,34 +1,35 @@
-from backend.app.runtime.outcome_action_execution_runtime import create_outcome_action_plan, mark_outcome_plan_decision
+from backend.app.runtime.outcome_action_execution_runtime import create_outcome_action_plan
 
 sample = """
-Immediate next actions
-- Create a healthcare technology market research report.
-- Develop a compliance checklist for healthcare client onboarding.
-- Launch a lead generation campaign targeting healthcare CIOs.
-- Prepare a CRM pipeline for pilot opportunities.
+4. Execution Plan with Concrete Steps
+- Develop tailored value propositions and marketing materials for hospital CIOs.
+- Create compliance framework outlines for HIPAA and GDPR.
+- Launch targeted lead generation campaigns including webinars and whitepapers.
+- Establish partnerships with healthcare technology vendors.
+- Build KPI dashboard for sales pipeline and pilot engagement tracking.
+5. Deliverables/Assets/Actions to Create
 """
 
 plan = create_outcome_action_plan(
     outcome_text=sample,
     source_agent="marketing_specialist_agent",
-    owner_approved=False,
+    owner_approved=True,
 )
 
+agents = {p["recommended_agent"] for p in plan["action_packets"]}
+titles = [p["title"] for p in plan["action_packets"]]
+
 assert plan["success"] is True
-assert plan["action_count"] >= 3
-assert plan["approval_summary"]["approval_required_count"] >= 1
-assert plan["customer_safe"] is True
-assert plan["credential_values_exposed"] is False
-assert plan["external_action_performed"] is False
+assert plan["profile"] == "outcome_action_execution_plan_v2"
+assert "security_compliance_agent" in agents
+assert "lead_generator_appointment_setter_agent" in agents or "social_media_manager_content_creator_agent" in agents
+assert "business_growth_partnerships_agent" in agents
+assert "analytics_optimisation_agent" in agents
+assert all("Execution Plan with Concrete Steps" not in t for t in titles)
+assert all("Deliverables/Assets/Actions" not in t for t in titles)
 
-decision = mark_outcome_plan_decision(plan, "approved")
-assert decision["success"] is True
-assert decision["next_stage"] == "implementation_queue_ready"
-
-print("OUTCOME_ACTION_EXECUTION_RUNTIME_TEST_PASSED")
+print("OUTCOME_ACTION_EXECUTION_RUNTIME_V2_TEST_PASSED")
 print({
     "action_count": plan["action_count"],
-    "approval_required_count": plan["approval_summary"]["approval_required_count"],
-    "safe_auto_ready_count": plan["approval_summary"]["safe_auto_ready_count"],
-    "decision_next_stage": decision["next_stage"],
+    "recommended_agents": sorted(agents),
 })

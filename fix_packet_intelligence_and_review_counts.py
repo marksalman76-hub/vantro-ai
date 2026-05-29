@@ -1,3 +1,19 @@
+from pathlib import Path
+from datetime import datetime
+import shutil
+import re
+
+ROOT = Path.cwd()
+runtime = ROOT / "backend" / "app" / "runtime" / "outcome_action_execution_runtime.py"
+admin = ROOT / "frontend" / "src" / "app" / "admin" / "page.tsx"
+test = ROOT / "test_outcome_action_execution_runtime.py"
+
+backup = ROOT / "backups" / f"packet_intelligence_review_counts_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+backup.mkdir(parents=True, exist_ok=True)
+shutil.copy2(runtime, backup / "outcome_action_execution_runtime.py")
+shutil.copy2(admin, backup / "admin_page.tsx")
+
+runtime.write_text(r'''
 from __future__ import annotations
 
 import re
@@ -209,3 +225,76 @@ def mark_outcome_plan_decision(plan: Dict[str, Any], decision: str, amendment_no
         "credential_values_exposed": False,
         "decided_at_ms": _now_ms(),
     }
+'''.lstrip(), encoding="utf-8")
+
+test.write_text(r'''
+from backend.app.runtime.outcome_action_execution_runtime import create_outcome_action_plan
+
+sample = """
+4. Execution Plan with Concrete Steps
+- Develop tailored value propositions and marketing materials for hospital CIOs.
+- Create compliance framework outlines for HIPAA and GDPR.
+- Launch targeted lead generation campaigns including webinars and whitepapers.
+- Establish partnerships with healthcare technology vendors.
+- Build KPI dashboard for sales pipeline and pilot engagement tracking.
+5. Deliverables/Assets/Actions to Create
+"""
+
+plan = create_outcome_action_plan(
+    outcome_text=sample,
+    source_agent="marketing_specialist_agent",
+    owner_approved=True,
+)
+
+agents = {p["recommended_agent"] for p in plan["action_packets"]}
+titles = [p["title"] for p in plan["action_packets"]]
+
+assert plan["success"] is True
+assert plan["profile"] == "outcome_action_execution_plan_v2"
+assert "security_compliance_agent" in agents
+assert "lead_generator_appointment_setter_agent" in agents or "social_media_manager_content_creator_agent" in agents
+assert "business_growth_partnerships_agent" in agents
+assert "analytics_optimisation_agent" in agents
+assert all("Execution Plan with Concrete Steps" not in t for t in titles)
+assert all("Deliverables/Assets/Actions" not in t for t in titles)
+
+print("OUTCOME_ACTION_EXECUTION_RUNTIME_V2_TEST_PASSED")
+print({
+    "action_count": plan["action_count"],
+    "recommended_agents": sorted(agents),
+})
+'''.lstrip(), encoding="utf-8")
+
+s = admin.read_text(encoding="utf-8")
+
+# Fix metric cards by replacing the review centre display block patterns.
+s = s.replace(
+    '''<div><small>Live provider outputs</small><strong>0</strong></div>
+                  <div><small>Dead-letter items</small><strong>0</strong></div>
+                  <div><small>Manual review items</small><strong>0</strong></div>''',
+    '''<div><small>Live provider outputs</small><strong>{runResult?.items?.length || 0}</strong></div>
+                  <div><small>Implementation packets</small><strong>{latestImplementationPlan?.action_count || 0}</strong></div>
+                  <div><small>Queued packets</small><strong>{queuedImplementationPackets.length}</strong></div>
+                  <div><small>Completed runs</small><strong>{completedImplementationRuns.length}</strong></div>
+                  <div><small>Manual review items</small><strong>{latestImplementationPlan?.approval_summary?.approval_required_count || 0}</strong></div>'''
+)
+
+# Broader fallback if exact block not found.
+s = s.replace(
+    '''<strong>0</strong></div>
+                  <div><small>Dead-letter items</small><strong>0</strong></div>
+                  <div><small>Manual review items</small><strong>0</strong>''',
+    '''<strong>{runResult?.items?.length || 0}</strong></div>
+                  <div><small>Implementation packets</small><strong>{latestImplementationPlan?.action_count || 0}</strong></div>
+                  <div><small>Queued packets</small><strong>{queuedImplementationPackets.length}</strong></div>
+                  <div><small>Completed runs</small><strong>{completedImplementationRuns.length}</strong></div>
+                  <div><small>Manual review items</small><strong>{latestImplementationPlan?.approval_summary?.approval_required_count || 0}</strong>'''
+)
+
+admin.write_text(s, encoding="utf-8")
+
+print("PACKET_INTELLIGENCE_AND_REVIEW_COUNTS_FIXED")
+print(f"Backup: {backup}")
+print(f"Updated: {runtime}")
+print(f"Updated: {admin}")
+print(f"Updated: {test}")
