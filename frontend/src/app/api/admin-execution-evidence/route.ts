@@ -30,9 +30,13 @@ export async function GET(req: NextRequest) {
     method: "GET",
     cache: "no-store",
     headers: {
+      "Content-Type": "application/json",
       "x-admin-token": ADMIN_TOKEN,
+      "Authorization": `Bearer ${ADMIN_TOKEN}`,
       "x-actor-role": "owner_admin",
       "x-tenant-id": tenantId || "owner_admin",
+      "x-csrf-token": "admin-execution-evidence",
+      "origin": process.env.NEXT_PUBLIC_FRONTEND_URL || "https://app.trance-formation.com.au",
     },
   });
 
