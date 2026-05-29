@@ -7,6 +7,10 @@ from backend.app.runtime.persistent_action_execution_history import (
     list_action_execution_history,
     action_execution_history_readiness,
 )
+from backend.app.runtime.durable_external_action_records import (
+    list_external_action_records,
+    external_action_records_readiness,
+)
 from backend.app.core.integration_live_adapter_registry import (
     adapter_registry_summary,
     execute_integration_action,
@@ -2420,3 +2424,40 @@ def admin_action_execution_history_readiness(
         }
 
     return action_execution_history_readiness()
+
+
+@app.get("/admin/external-action-records")
+def admin_external_action_records(
+    tenant_id: str | None = None,
+    limit: int = 50,
+    x_admin_token: str | None = Header(default=None),
+    x_actor_role: str | None = Header(default=None),
+):
+    if x_actor_role not in {"owner_admin", "admin"}:
+        return {
+            "success": False,
+            "error": "admin_only",
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
+
+    return list_external_action_records(
+        tenant_id=tenant_id,
+        limit=limit,
+    )
+
+
+@app.get("/admin/external-action-records/readiness")
+def admin_external_action_records_readiness(
+    x_admin_token: str | None = Header(default=None),
+    x_actor_role: str | None = Header(default=None),
+):
+    if x_actor_role not in {"owner_admin", "admin"}:
+        return {
+            "success": False,
+            "error": "admin_only",
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
+
+    return external_action_records_readiness()
