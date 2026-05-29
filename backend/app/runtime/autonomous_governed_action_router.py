@@ -21,6 +21,27 @@ AUTONOMOUS_SAFE_KEYWORDS = {
     "analyse", "analyze", "research", "outline", "checklist", "plan",
     "recommend", "preview", "framework", "document", "calendar",
     "strategy document", "email draft", "landing page draft",
+
+    # safe operational execution verbs
+    "conduct stakeholder interviews",
+    "stakeholder interviews",
+    "schedule interview",
+    "book interview",
+    "create outreach",
+    "prepare outreach",
+    "draft outreach",
+    "analyze competitor",
+    "analyse competitor",
+    "identify white space",
+    "develop messaging",
+    "develop core messaging",
+    "generate thought leadership",
+    "create thought leadership",
+    "develop content",
+    "create content",
+    "build content calendar",
+    "create crm task",
+    "create calendar placeholder",
 }
 
 
