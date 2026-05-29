@@ -2625,7 +2625,7 @@ def beta_billing_checkout(payload: dict, x_actor_role: str | None = Header(defau
         )
 
 
-            session_id = None
+        session_id = None
         checkout_url = None
 
         try:
