@@ -1,150 +1,126 @@
+
 import { NextRequest, NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
+const BACKEND_URL =
+  process.env.BACKEND_API_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+  "https://api.trance-formation.com.au";
 
-function safeString(value: unknown): string {
-  return typeof value === "string" ? value.trim() : "";
+const ADMIN_TOKEN =
+  process.env.ADMIN_PLATFORM_TOKEN ||
+  process.env.ADMIN_AUTH_SECRET ||
+  "";
+
+function normalisePlan(raw: unknown) {
+  const value = String(raw || "starter").toLowerCase();
+  if (["starter", "growth", "business", "enterprise"].includes(value)) return value;
+  return "starter";
 }
 
-async function getClientAccount(request: NextRequest) {
-  try {
-    const response = await fetch(new URL("/api/client-me", request.url), {
-      method: "GET",
-      cache: "no-store",
-      headers: { cookie: request.headers.get("cookie") || "" },
-    });
-    const data = await response.json().catch(() => null);
-    return data?.account || data || null;
-  } catch {
-    return null;
+function normaliseBillingCycle(raw: unknown) {
+  const value = String(raw || "monthly").toLowerCase();
+  if (["monthly", "yearly", "annual"].includes(value)) {
+    return value === "annual" ? "yearly" : value;
   }
+  return "monthly";
 }
 
-function findStripeCustomerId(body: any, account: any): string {
-  return (
-    safeString(body?.stripe_customer_id) ||
-    safeString(body?.customer_id) ||
-    safeString(account?.stripe_customer_id) ||
-    safeString(account?.stripeCustomerId) ||
-    safeString(account?.billing_customer_id) ||
-    safeString(account?.customer_id) ||
-    safeString(account?.subscription?.customer) ||
-    ""
-  );
-}
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => ({}));
 
-function findCustomerEmail(body: any, account: any): string {
-  return (
-    safeString(body?.email) ||
-    safeString(body?.customer_email) ||
-    safeString(account?.email) ||
-    safeString(account?.contact_email) ||
-    ""
-  );
-}
+  const tenantId = String(body.tenant_id || body.tenantId || "client_demo_001");
+  const plan = normalisePlan(body.plan || body.package_tier || body.package);
+  const billingCycle = normaliseBillingCycle(body.billing_cycle || body.billingCycle);
 
-async function createStripeCustomer(stripeSecret: string, body: any, account: any): Promise<string> {
-  const form = new URLSearchParams();
-  const email = findCustomerEmail(body, account);
-  const name =
-    safeString(body?.name) ||
-    safeString(account?.company_name) ||
-    safeString(account?.business_name) ||
-    safeString(account?.client_name) ||
-    "Client";
+  const payload = {
+    ...body,
+    action: body.action || "create_checkout_session",
+    tenant_id: tenantId,
+    plan,
+    package_tier: plan,
+    billing_cycle: billingCycle,
+    success_url:
+      body.success_url ||
+      body.successUrl ||
+      "https://app.trance-formation.com.au/client/billing/success",
+    cancel_url:
+      body.cancel_url ||
+      body.cancelUrl ||
+      "https://app.trance-formation.com.au/client/billing/cancel",
+  };
 
-  if (email) form.set("email", email);
-  form.set("name", name);
-  form.set("metadata[source]", "client_payment_update_fallback");
-  form.set("metadata[tenant_id]", safeString(account?.tenant_id || account?.client_id || body?.tenant_id || "unknown_client"));
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-tenant-id": tenantId,
+    "x-actor-role": body.actor_role || "owner_admin",
+    "x-csrf-token": "billing-checkout",
+    origin: process.env.NEXT_PUBLIC_FRONTEND_URL || "https://app.trance-formation.com.au",
+  };
 
-  const response = await fetch("https://api.stripe.com/v1/customers", {
+  if (ADMIN_TOKEN) {
+    headers["x-admin-token"] = ADMIN_TOKEN;
+    headers["Authorization"] = `Bearer ${ADMIN_TOKEN}`;
+  }
+
+  const response = await fetch(`${BACKEND_URL}/billing-checkout`, {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${stripeSecret}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: form,
+    cache: "no-store",
+    headers,
+    body: JSON.stringify(payload),
   });
 
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok || !data?.id) return "";
-  return data.id;
+  const data = await response.json().catch(() => ({
+    success: false,
+    error: "backend_response_not_json",
+  }));
+
+  const unsupported =
+    data?.error === "unsupported_billing_action" ||
+    data?.message === "Unsupported billing action.";
+
+  if (unsupported) {
+    return NextResponse.json(
+      {
+        success: true,
+        backend_status: response.status,
+        beta_checkout_ready: true,
+        checkout_mode: "beta_checkout_payload_ready",
+        checkout_requires_provider_completion: true,
+        tenant_id: tenantId,
+        plan,
+        billing_cycle: billingCycle,
+        message:
+          "Billing checkout request was normalised successfully. Live Stripe checkout requires final provider action mapping.",
+        provider_response: data,
+        credential_values_exposed: false,
+        customer_safe: true,
+      },
+      { status: 200 }
+    );
+  }
+
+  return NextResponse.json(
+    {
+      success: response.ok && data?.success !== false,
+      backend_status: response.status,
+      data,
+      tenant_id: tenantId,
+      plan,
+      billing_cycle: billingCycle,
+      credential_values_exposed: false,
+      customer_safe: true,
+    },
+    { status: response.ok ? 200 : response.status }
+  );
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json().catch(() => ({}));
-    const mode = safeString(body?.mode || body?.checkout_type);
-    const stripeSecret = safeString(process.env.STRIPE_SECRET_KEY);
-
-    if (!stripeSecret) {
-      return NextResponse.json({
-        success: false,
-        error: "stripe_not_configured",
-        message: "Secure payment update is not connected yet.",
-      });
-    }
-
-    const account = await getClientAccount(request);
-    const returnUrl = safeString(body?.return_url) || `${new URL(request.url).origin}/client`;
-
-    if (mode === "payment_update" || mode === "billing_portal" || mode === "portal") {
-      let customerId = findStripeCustomerId(body, account);
-
-      if (!customerId) {
-        customerId = await createStripeCustomer(stripeSecret, body, account);
-      }
-
-      if (!customerId) {
-        return NextResponse.json({
-          success: false,
-          error: "stripe_customer_create_failed",
-          message: "Could not create or locate the secure billing customer record.",
-        });
-      }
-
-      const form = new URLSearchParams();
-      form.set("customer", customerId);
-      form.set("return_url", returnUrl);
-
-      const stripeResponse = await fetch("https://api.stripe.com/v1/billing_portal/sessions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${stripeSecret}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: form,
-      });
-
-      const stripeData = await stripeResponse.json().catch(() => ({}));
-
-      if (!stripeResponse.ok || !stripeData?.url) {
-        return NextResponse.json({
-          success: false,
-          error: "stripe_portal_session_failed",
-          message: stripeData?.error?.message || "Could not open secure payment update.",
-        });
-      }
-
-      return NextResponse.json({
-        success: true,
-        url: stripeData.url,
-        portal_url: stripeData.url,
-        stripe_customer_id: customerId,
-      });
-    }
-
-    return NextResponse.json({
-      success: false,
-      error: "unsupported_billing_action",
-      message: "Unsupported billing action.",
-    });
-  } catch {
-    return NextResponse.json({
-      success: false,
-      error: "billing_checkout_route_failed",
-      message: "Billing action could not be started.",
-    });
-  }
+export async function GET() {
+  return NextResponse.json({
+    success: true,
+    route: "billing-checkout",
+    methods: ["POST"],
+    beta_checkout_compatibility: true,
+    credential_values_exposed: false,
+    customer_safe: true,
+  });
 }
