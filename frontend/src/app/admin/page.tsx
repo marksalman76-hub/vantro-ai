@@ -69,6 +69,7 @@ export default function AdminPage() {
   const [runResult, setRunResult] = useState<any>(null);
   const [implementationPlans, setImplementationPlans] = useState<any[]>([]);
   const [latestImplementationPlan, setLatestImplementationPlan] = useState<any>(null);
+  const [queuedImplementationPackets, setQueuedImplementationPackets] = useState<any[]>([]);
   const [deployTenant, setDeployTenant] = useState("client_manual_001");
   const [deployCompany, setDeployCompany] = useState("Acme Consulting Group");
   const [deployEmail, setDeployEmail] = useState("");
@@ -564,6 +565,19 @@ export default function AdminPage() {
     }
   }
 
+
+  function queueImplementationPacket(packet: any) {
+    const queuedPacket = {
+      ...packet,
+      queued_at: new Date().toLocaleString(),
+      queue_status: "queued_for_governed_execution",
+    };
+
+    setQueuedImplementationPackets((prev) => [queuedPacket, ...prev].slice(0, 30));
+    showToast("Packet queued for governed implementation execution.");
+  }
+
+
   const navItems = ["Overview", "Run Agent", "Deploy Clients", "Client Registry", "Runtime Health", "Provider Governance", "Orchestration", "Recovery", "Billing"];
   const runtimeStatus = runtime?.runtime?.platform_status || "online";
   const registryTotal = clientRegistrySummary?.total || clientRegistrySummary?.tenant_count || clientRegistry.length || 0;
@@ -794,7 +808,7 @@ export default function AdminPage() {
                                         <div className="packetActions">
                                           {agentOwned ? (
                                             <>
-                                              <button onClick={() => showToast("Packet queued for governed execution review.")}>Queue</button>
+                                              <button onClick={() => queueImplementationPacket(packet)}>Queue</button>
                                               <button onClick={() => showToast("Packet sent to client visibility queue.")}>Send to client</button>
                                             </>
                                           ) : (
@@ -982,7 +996,7 @@ export default function AdminPage() {
                   <div className="reviewItem">
                     <strong>No pending manual reviews</strong>
                     <span>{implementationPlans.length ? `${latestImplementationPlan?.action_count || 0} action packets created from approved outcome.` : "Dead-letter/manual-review runtime is ready"}</span>
-                    <p>{implementationPlans.length ? "Review generated action packets and continue to implementation queue." : "Items requiring owner/admin decisions will appear here."}</p>
+                    <p>{implementationPlans.length ? "Review generated action packets and continue to implementation queue. Queued packets will appear below." : "Items requiring owner/admin decisions will appear here."}</p>
                   </div>
                 ) : null}
               </div>
