@@ -65,7 +65,11 @@ def execute_action_adapter(
     connected_integrations: List[str] | None = None,
     owner_approved: bool = False,
 ) -> Dict[str, Any]:
-    adapter = classify_action_adapter(packet)
+    adapter = (
+        packet.get("execution_adapter_target")
+        or packet.get("adapter")
+        or classify_action_adapter(packet)
+    )
     external_readiness = classify_external_action_readiness(
         adapter=adapter,
         connected_integrations=connected_integrations or [],
