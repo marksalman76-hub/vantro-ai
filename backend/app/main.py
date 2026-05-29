@@ -2490,8 +2490,11 @@ def client_execution_evidence(
     )
 
 
+
 @app.post("/billing-checkout")
 def beta_billing_checkout(payload: dict, x_actor_role: str | None = Header(default=None)):
+    import os
+
     tenant_id = (
         payload.get("tenant_id")
         or payload.get("tenantId")
@@ -2532,7 +2535,7 @@ def beta_billing_checkout(payload: dict, x_actor_role: str | None = Header(defau
         or "https://app.trance-formation.com.au/client/billing/cancel"
     )
 
-    price_map = {
+    price_env_map = {
         "starter": {
             "monthly": "STRIPE_PRICE_STARTER_MONTHLY",
             "yearly": "STRIPE_PRICE_STARTER_YEARLY",
@@ -2551,14 +2554,11 @@ def beta_billing_checkout(payload: dict, x_actor_role: str | None = Header(defau
         },
     }
 
-    selected_price_env = price_map[plan][billing_cycle]
+    selected_price_env = price_env_map[plan][billing_cycle]
+    stripe_secret_key = os.getenv("STRIPE_SECRET_KEY", "").strip()
+    stripe_price_id = os.getenv(selected_price_env, "").strip()
 
-    return {
-        "success": True,
-        "profile": "backend_beta_billing_checkout_route_v1",
-        "checkout_status": "checkout_payload_ready",
-        "live_checkout_created": False,
-        "stripe_live_required": True,
+    base_payload = {
         "tenant_id": tenant_id,
         "plan": plan,
         "package_tier": plan,
@@ -2566,9 +2566,88 @@ def beta_billing_checkout(payload: dict, x_actor_role: str | None = Header(defau
         "selected_price_env": selected_price_env,
         "success_url": success_url,
         "cancel_url": cancel_url,
-        "next_stage": "connect_live_stripe_checkout_session_creation",
-        "message": "Beta checkout payload is ready. Live Stripe checkout session creation requires final Stripe price/env mapping.",
         "customer_safe": True,
         "credential_values_exposed": False,
     }
+
+    if not stripe_secret_key or not stripe_price_id:
+        return {
+            "success": True,
+            "profile": "real_stripe_checkout_session_bridge_v1",
+            "checkout_status": "checkout_payload_ready",
+            "live_checkout_created": False,
+            "stripe_live_required": True,
+            "missing_configuration": {
+                "stripe_secret_key_configured": bool(stripe_secret_key),
+                "stripe_price_id_configured": bool(stripe_price_id),
+                "missing_price_env": selected_price_env if not stripe_price_id else None,
+            },
+            "next_stage": "configure_stripe_secret_and_price_ids",
+            "message": "Checkout payload is ready. Configure Stripe secret key and selected price ID to create live checkout sessions.",
+            **base_payload,
+        }
+
+    try:
+        import stripe
+    except Exception:
+        return {
+            "success": True,
+            "profile": "real_stripe_checkout_session_bridge_v1",
+            "checkout_status": "stripe_library_missing",
+            "live_checkout_created": False,
+            "stripe_live_required": True,
+            "next_stage": "install_stripe_python_package",
+            "message": "Stripe credentials are configured, but the stripe Python package is not installed in the backend runtime.",
+            **base_payload,
+        }
+
+    try:
+        stripe.api_key = stripe_secret_key
+
+        session = stripe.checkout.Session.create(
+            mode="subscription",
+            line_items=[
+                {
+                    "price": stripe_price_id,
+                    "quantity": 1,
+                }
+            ],
+            success_url=success_url,
+            cancel_url=cancel_url,
+            client_reference_id=str(tenant_id),
+            metadata={
+                "tenant_id": str(tenant_id),
+                "plan": plan,
+                "package_tier": plan,
+                "billing_cycle": billing_cycle,
+                "source": "ecommerce_ai_agent_platform",
+            },
+        )
+
+        return {
+            "success": True,
+            "profile": "real_stripe_checkout_session_bridge_v1",
+            "checkout_status": "live_checkout_session_created",
+            "live_checkout_created": True,
+            "checkout_session_id": session.get("id"),
+            "checkout_url": session.get("url"),
+            "stripe_price_env": selected_price_env,
+            "stripe_price_id_present": True,
+            "next_stage": "redirect_customer_to_checkout_url",
+            **base_payload,
+        }
+
+    except Exception as exc:
+        return {
+            "success": False,
+            "profile": "real_stripe_checkout_session_bridge_v1",
+            "checkout_status": "stripe_checkout_creation_failed",
+            "live_checkout_created": False,
+            "error": str(exc)[:500],
+            "stripe_price_env": selected_price_env,
+            "stripe_price_id_present": True,
+            "customer_safe": True,
+            "credential_values_exposed": False,
+            **base_payload,
+        }
 
