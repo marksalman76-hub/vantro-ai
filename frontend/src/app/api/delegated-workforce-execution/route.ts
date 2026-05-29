@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
       owner_approved: body.owner_approved === true,
       client_owned_agents: body.client_owned_agents || [],
       package_tier: body.package_tier || "enterprise",
+      connected_integrations: body.connected_integrations || [],
     }),
   });
 
