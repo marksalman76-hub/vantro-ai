@@ -4,8 +4,8 @@ import time
 import uuid
 from typing import Dict, Any, List
 
-from backend.app.runtime.real_action_execution_bridge import (
-    execute_real_action_packet,
+from backend.app.runtime.autonomous_governed_action_router import (
+    route_autonomous_governed_packet,
 )
 
 
@@ -107,6 +107,10 @@ def execute_delegated_workforce_plan(
                 "execution_preview": "allowed",
                 "completed_output": None,
                 "upgrade_recommendation": assigned_agent,
+                "autonomous_governance": True,
+                "autonomous_route": "recommendation_only",
+                "performed_actual_action": False,
+                "real_execution": False,
             })
             blocked_results.append(packet_result)
             continue
@@ -120,10 +124,11 @@ def execute_delegated_workforce_plan(
             queued_results.append(packet_result)
             continue
 
-        real_execution_result = execute_real_action_packet(
+        autonomous_route_result = route_autonomous_governed_packet(
             {
                 "packet_id": packet.get("packet_id"),
                 "assigned_agent": assigned_agent,
+                "recommended_agent": assigned_agent,
                 "implementation_action": (
                     packet.get("implementation_action")
                     or packet.get("title")
@@ -131,31 +136,50 @@ def execute_delegated_workforce_plan(
                 ),
                 "risk_level": packet.get("risk_level", "medium"),
             },
-            actor_role="owner_admin",
+            package_tier=package_tier,
+            client_owned_agents=client_owned_agents,
+            actor_role="owner_admin" if enterprise_access else "client",
+            tenant_id="owner_admin" if enterprise_access else "client",
             owner_approved=owner_approved,
-            tenant_id="owner_admin",
         )
 
         packet_result.update({
-            "execution_status": real_execution_result.get("execution_status"),
+            "execution_status": autonomous_route_result.get("routing_status"),
             "delegate_execution": (
                 "executed"
-                if real_execution_result.get("performed_actual_action")
+                if autonomous_route_result.get("performed_actual_action")
                 else "blocked"
             ),
-            "performed_actual_action": real_execution_result.get("performed_actual_action", False),
+            "performed_actual_action": autonomous_route_result.get("performed_actual_action", False),
+            "autonomous_governance": True,
+            "autonomous_route": autonomous_route_result.get("routing_status"),
+            "governance": autonomous_route_result.get("governance"),
             "real_execution": True,
-            "deliverable": real_execution_result.get("deliverable"),
+            "deliverable": autonomous_route_result.get("deliverable"),
             "completed_output": (
-                real_execution_result.get("deliverable", {})
+                autonomous_route_result.get("deliverable", {})
                 .get("content", {})
                 .get("body")
             ),
-            "external_action_performed": real_execution_result.get("external_provider_called", False),
-            "live_external_call_executed": real_execution_result.get("external_provider_called", False),
+            "external_action_performed": (
+                autonomous_route_result.get("execution", {})
+                .get("external_provider_called", False)
+            ),
+            "live_external_call_executed": (
+                autonomous_route_result.get("execution", {})
+                .get("external_provider_called", False)
+            ),
         })
 
-        execution_results.append(packet_result)
+        if autonomous_route_result.get("routing_status") in {
+            "queued_for_owner_approval",
+            "manual_review_required",
+        }:
+            queued_results.append(packet_result)
+        elif autonomous_route_result.get("routing_status") == "recommendation_only":
+            blocked_results.append(packet_result)
+        else:
+            execution_results.append(packet_result)
 
     return {
         "success": True,
