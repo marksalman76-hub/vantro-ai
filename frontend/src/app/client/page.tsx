@@ -3719,6 +3719,32 @@ const primaryAssetUrl =
         </div>
       </div>
 
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Execution proof</p>
+            <h2 className="text-lg font-semibold text-slate-950">Completed action evidence</h2>
+            <p className="mt-1 text-sm text-slate-600">Customer-safe proof of completed actions without exposing internal routing or credentials.</p>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              const res = await fetch("/api/client-execution-evidence?tenant_id=client_demo_001&limit=10", { cache: "no-store" });
+              const json = await res.json();
+              alert(JSON.stringify(json?.data || json, null, 2));
+            }}
+            className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
+          >
+            View proof
+          </button>
+        </div>
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+          <p className="text-xs font-semibold uppercase text-emerald-700">Latest verified action</p>
+          <p className="mt-1 text-sm font-semibold text-emerald-950">Live email execution completed through connected provider.</p>
+        </div>
+      </section>
+
 </main>
   );
 }
