@@ -10,6 +10,9 @@ from backend.app.runtime.autonomous_governed_action_router import (
 from backend.app.runtime.persistent_action_execution_history import (
     record_action_execution,
 )
+from backend.app.runtime.intelligent_action_packet_normalizer import (
+    normalize_implementation_plan,
+)
 
 
 def _now_ms() -> int:
@@ -69,6 +72,11 @@ def execute_delegated_workforce_plan(
 ) -> Dict[str, Any]:
 
     client_owned_agents = client_owned_agents or []
+
+    implementation_plan = normalize_implementation_plan(
+        implementation_plan or {"action_packets": []},
+        fallback_agent="marketing_specialist_agent",
+    )
 
     package_tier = (package_tier or "starter").lower()
 
@@ -195,6 +203,7 @@ def execute_delegated_workforce_plan(
     return {
         "success": True,
         "profile": "delegated_workforce_execution_runtime_v1",
+        "normalization": implementation_plan.get("normalization"),
         "execution_id": f"delegated_exec_{uuid.uuid4().hex[:12]}",
         "completed_count": len(execution_results),
         "queued_count": len(queued_results),
