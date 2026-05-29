@@ -1,4 +1,8 @@
 from backend.app.runtime.outcome_action_execution_runtime import create_outcome_action_plan, mark_outcome_plan_decision
+
+from backend.app.runtime.delegated_workforce_execution_runtime import (
+    execute_delegated_workforce_plan,
+)
 from backend.app.core.integration_live_adapter_registry import (
     adapter_registry_summary,
     execute_integration_action,
@@ -2359,3 +2363,18 @@ async def admin_outcome_action_decision(payload: dict):
         amendment_note=str(payload.get("amendment_note") or ""),
     )
 
+
+
+@app.post("/delegated-workforce-execution")
+async def delegated_workforce_execution(payload: dict):
+
+    implementation_plan = payload.get("implementation_plan") or {}
+
+    result = execute_delegated_workforce_plan(
+        implementation_plan=implementation_plan,
+        owner_approved=payload.get("owner_approved", False),
+        client_owned_agents=payload.get("client_owned_agents", []),
+        package_tier=payload.get("package_tier", "starter"),
+    )
+
+    return result
