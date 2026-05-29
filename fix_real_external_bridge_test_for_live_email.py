@@ -1,4 +1,8 @@
+from pathlib import Path
 
+p = Path("test_real_external_integration_execution_bridge.py")
+
+p.write_text(r'''
 from backend.app.runtime.real_external_integration_execution_bridge import (
     execute_real_external_action,
 )
@@ -48,3 +52,6 @@ assert safe_no_integrations["success"] is True
 assert safe_no_integrations["external_action_executed"] is False
 
 print("REAL_EXTERNAL_INTEGRATION_EXECUTION_BRIDGE_TEST_PASSED")
+''', encoding="utf-8")
+
+print("REAL_EXTERNAL_BRIDGE_TEST_UPDATED_FOR_LIVE_EMAIL")

@@ -5,6 +5,8 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 from uuid import uuid4
 
+from backend.app.core.integration_live_adapter_registry import execute_integration_action
+
 
 REAL_EXTERNAL_EXECUTION_PROFILE = "real_external_integration_execution_bridge_v1"
 
@@ -60,16 +62,52 @@ def execute_real_external_action(
             "follow-up", "follow up", "interview",
             "partnership", "proposal"
         ]):
-            email_action = {
-                "type": "email_draft_created",
-                "status": "executed",
-                "provider": "governed_email_runtime",
-                "draft_id": f"email_draft_{uuid4().hex[:10]}",
-                "subject": action_text[:120],
-                "tenant_id": tenant_id,
+            email_payload = {
+                "recipient": "mark@trance-formation.com.au",
+                "sender_email": "noreply@trance-formation.com.au",
+                "sender_name": "AI Workforce Platform",
+                "subject": f"Live delegated workforce proof: {action_text[:80]}",
+                "html_content": (
+                    "<p>This is a governed live email execution proof from the delegated "
+                    "AI workforce runtime.</p>"
+                    f"<p><strong>Action:</strong> {action_text}</p>"
+                ),
             }
+
+            email_result = execute_integration_action(
+                tenant_id=tenant_id,
+                integration_key="email",
+                action="send_email",
+                payload=email_payload,
+                actor_role="owner",
+            )
+
+            if email_result.get("success"):
+                email_action = {
+                    "type": "email_sent",
+                    "status": "executed",
+                    "provider": email_result.get("provider") or "Brevo",
+                    "provider_mode": email_result.get("mode"),
+                    "provider_response": email_result.get("provider_response"),
+                    "recipient": email_result.get("recipient"),
+                    "subject": email_result.get("subject"),
+                    "tenant_id": tenant_id,
+                    "credential_exposed": False,
+                }
+            else:
+                email_action = {
+                    "type": "email_live_execution_failed",
+                    "status": "failed",
+                    "provider": email_result.get("provider") or "Brevo",
+                    "error": email_result.get("error"),
+                    "message": email_result.get("message"),
+                    "tenant_id": tenant_id,
+                    "credential_exposed": False,
+                }
+
             actions_performed.append(email_action)
-            external_calls.append("email")
+            if email_result.get("success"):
+                external_calls.append("email")
 
     #
     # CALENDAR ACTIONS
