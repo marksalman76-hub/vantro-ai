@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -24,6 +23,7 @@ def execute_real_external_action(
     owner_approved: bool = False,
 ) -> Dict[str, Any]:
 
+    tenant_id = str(tenant_id or "client_demo_001").strip()
     connected_integrations = connected_integrations or []
 
     execution_id = f"external_exec_{uuid4().hex[:12]}"
@@ -33,9 +33,6 @@ def execute_real_external_action(
 
     lower = action_text.lower()
 
-    #
-    # CRM ACTIONS
-    #
     if "crm" in connected_integrations:
         if any(term in lower for term in [
             "lead", "prospect", "pipeline", "crm",
@@ -53,9 +50,6 @@ def execute_real_external_action(
             actions_performed.append(crm_task)
             external_calls.append("crm")
 
-    #
-    # EMAIL ACTIONS
-    #
     if "email" in connected_integrations:
         if any(term in lower for term in [
             "email", "outreach", "contact",
@@ -94,6 +88,7 @@ def execute_real_external_action(
                     "tenant_id": tenant_id,
                     "credential_exposed": False,
                 }
+                external_calls.append("email")
             else:
                 email_action = {
                     "type": "email_live_execution_failed",
@@ -106,12 +101,7 @@ def execute_real_external_action(
                 }
 
             actions_performed.append(email_action)
-            if email_result.get("success"):
-                external_calls.append("email")
 
-    #
-    # CALENDAR ACTIONS
-    #
     if "calendar" in connected_integrations:
         if any(term in lower for term in [
             "meeting", "calendar", "interview",
@@ -128,9 +118,6 @@ def execute_real_external_action(
             actions_performed.append(calendar_action)
             external_calls.append("calendar")
 
-    #
-    # GOVERNANCE
-    #
     if any(term in lower for term in [
         "launch paid", "increase budget", "spend",
         "publish live", "charge", "payment"

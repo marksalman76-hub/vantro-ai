@@ -105,6 +105,7 @@ def execute_integration_action(
         return {"success": False, "error": "unsupported_integration"}
 
     if action not in adapter.get("supported_actions", []) and action not in adapter.get("approval_required_actions", []):
+
         return {
             "success": False,
             "error": "unsupported_action",
