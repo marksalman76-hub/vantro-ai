@@ -2807,17 +2807,26 @@ def signup_agent_selection_options(plan: str):
     else:
         selectable_agents = agents
 
+    max_selectable_agents = package_limits[clean_plan]
+    head_agent_available = clean_plan == "enterprise"
+    available_count = len(selectable_agents)
+
     return {
         "success": True,
         "plan": clean_plan,
         "package_tier": clean_plan,
-        "agent_limit": package_limits[clean_plan],
+        "agent_limit": max_selectable_agents,
+        "max_selectable_agents": max_selectable_agents,
+        "selection_required": True,
         "selection_locked_after_activation": True,
         "owner_approval_required_for_changes": True,
         "enterprise_only_agent_ids": sorted(list(reserved_enterprise_only)),
+        "head_agent_available": head_agent_available,
         "agents": selectable_agents,
-        "agent_count": len(selectable_agents),
+        "agent_count": available_count,
+        "available_count": available_count,
         "credential_values_exposed": False,
         "client_safe": True,
+        "customer_safe": True,
     }
 
