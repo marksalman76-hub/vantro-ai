@@ -115,6 +115,7 @@ from backend.app.runtime.behaviour_optimisation_memory import (
 )
 from backend.app.runtime.canonical_agent_identity_bridge import normalise_agent_identity
 from backend.app.runtime.autonomous_qa_regression_intelligence import autonomous_qa_regression_status, build_qa_regression_packet
+from backend.app.runtime.post_deploy_validation_readiness import post_deploy_validation_status
 from backend.app.runtime.execution_stack import (
     ExecutionRequest,
     ExecutionStack,
@@ -2742,4 +2743,10 @@ def admin_qa_regression_intelligence_evaluate(payload: dict):
         source=source,
         environment=environment,
     )
+
+
+# Post-Deploy Validation Readiness Admin Status Route
+@app.get("/admin/post-deploy-validation/status")
+def admin_post_deploy_validation_status():
+    return post_deploy_validation_status()
 
