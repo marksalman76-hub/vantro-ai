@@ -113,6 +113,7 @@ from backend.app.runtime.behaviour_optimisation_memory import (
     BehaviourOptimisationMemory,
     behaviour_optimisation_summary,
 )
+from backend.app.runtime.canonical_agent_identity_bridge import normalise_agent_identity
 from backend.app.runtime.execution_stack import (
     ExecutionRequest,
     ExecutionStack,
@@ -347,7 +348,7 @@ def client_execution_events(
 
 @app.post("/run-agent")
 def run_agent(request: RunAgentRequest) -> Dict[str, object]:
-    requested_agent = normalize_agent_id(request.requested_agent)
+    requested_agent = normalise_agent_identity(normalize_agent_id(request.requested_agent))
 
     credit_gate = pg_client_credit_gate({
         "actor_role": request.actor_role,
