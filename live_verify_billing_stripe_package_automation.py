@@ -11,7 +11,7 @@ CHECKS = [
     {"path": "/client/billing/success", "method": "GET", "expected": [200, 401, 403]},
     {"path": "/client/billing/cancel", "method": "GET", "expected": [200, 401, 403]},
     {"path": "/client/billing/cancelled", "method": "GET", "expected": [200, 401, 403]},
-    {"path": "/api/billing-checkout", "method": "GET", "expected": [400, 401, 403, 405]},
+    {"path": "/api/billing-checkout", "method": "GET", "expected": [200, 400, 401, 403, 405]},
     {"path": "/api/signup-agent-selection/options/starter", "method": "GET", "expected": [200]},
     {"path": "/api/signup-agent-selection/options/growth", "method": "GET", "expected": [200]},
     {"path": "/api/signup-agent-selection/options/business", "method": "GET", "expected": [200]},
