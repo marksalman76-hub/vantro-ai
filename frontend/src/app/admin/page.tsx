@@ -41,14 +41,6 @@ type RuntimePayload = {
 };
 
 function StatusRow({ label, status, tone }: { label: string; status: string; tone: "ready" | "warn" | "error" }) {
-
-  useEffect(() => {
-    fetch("/api/admin-post-deploy-validation-status", { cache: "no-store" })
-      .then((res) => res.json())
-      .then((data) => setPostDeployValidation(data))
-      .catch(() => setPostDeployValidation({ success: false, error: "post_deploy_validation_status_unavailable" }));
-  }, []);
-
   return (
     <div className="status">
       <span>{label}</span>
@@ -68,8 +60,6 @@ function Panel({ title, subtitle, children }: { title: string; subtitle?: string
 }
 
 export default function AdminPage() {
-  const [postDeployValidation, setPostDeployValidation] = useState<any>(null);
-
   const [activeNav, setActiveNav] = useState("Overview");
   const [runtime, setRuntime] = useState<RuntimePayload | null>(null);
   const [selectedRun, setSelectedRun] = useState<string[]>(["marketing_specialist_agent"]);
@@ -718,44 +708,7 @@ export default function AdminPage() {
   const registryTotal = clientRegistrySummary?.total || clientRegistrySummary?.tenant_count || clientRegistry.length || 0;
 
   return (
-    
-        <section className="rounded-2xl border border-slate-800 bg-slate-950/80 p-5 shadow-xl">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.24em] text-indigo-300">Release readiness</p>
-              <h2 className="mt-2 text-xl font-semibold text-white">Post-deploy validation</h2>
-              <p className="mt-2 text-sm text-slate-400">
-                QA-backed deployment checks, release scoring, and advisory rollback readiness.
-              </p>
-            </div>
-            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
-              postDeployValidation?.success ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"
-            }`}>
-              {postDeployValidation?.success ? "READY" : "CHECK"}
-            </span>
-          </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-              <p className="text-xs text-slate-500">Required checks</p>
-              <p className="mt-1 text-2xl font-semibold text-white">{postDeployValidation?.required_check_count ?? "—"}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-              <p className="text-xs text-slate-500">Release scoring</p>
-              <p className="mt-1 text-sm font-semibold text-white">{postDeployValidation?.release_readiness_scoring_enabled ? "Enabled" : "Pending"}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-              <p className="text-xs text-slate-500">QA agent</p>
-              <p className="mt-1 text-sm font-semibold text-white">{postDeployValidation?.qa_testing_agent_supported ? "Supported" : "Pending"}</p>
-            </div>
-            <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3">
-              <p className="text-xs text-slate-500">Credential exposure</p>
-              <p className="mt-1 text-sm font-semibold text-white">{postDeployValidation?.credential_values_exposed ? "Review" : "Protected"}</p>
-            </div>
-          </div>
-        </section>
-
-      <main className="admin-v2">
+    <main className="admin-v2">
       <div className="topbar">
         <div className="brand">
           <div className="mark">AI</div>
