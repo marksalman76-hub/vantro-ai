@@ -114,6 +114,7 @@ from backend.app.runtime.behaviour_optimisation_memory import (
     behaviour_optimisation_summary,
 )
 from backend.app.runtime.canonical_agent_identity_bridge import normalise_agent_identity
+from backend.app.runtime.autonomous_qa_regression_intelligence import autonomous_qa_regression_status, build_qa_regression_packet
 from backend.app.runtime.execution_stack import (
     ExecutionRequest,
     ExecutionStack,
@@ -2722,4 +2723,23 @@ def beta_billing_checkout(payload: dict, x_actor_role: str | None = Header(defau
             "credential_values_exposed": False,
             **base_payload,
         }
+
+
+# Autonomous QA Regression Intelligence Admin Routes
+@app.get("/admin/qa-regression-intelligence/status")
+def admin_qa_regression_intelligence_status():
+    return autonomous_qa_regression_status()
+
+
+@app.post("/admin/qa-regression-intelligence/evaluate")
+def admin_qa_regression_intelligence_evaluate(payload: dict):
+    checks = payload.get("checks") if isinstance(payload, dict) else []
+    environment = str(payload.get("environment") or "production") if isinstance(payload, dict) else "production"
+    source = str(payload.get("source") or "qa_testing_agent") if isinstance(payload, dict) else "qa_testing_agent"
+
+    return build_qa_regression_packet(
+        checks=checks if isinstance(checks, list) else [],
+        source=source,
+        environment=environment,
+    )
 
