@@ -2661,30 +2661,34 @@ def beta_billing_checkout(payload: dict, x_actor_role: str | None = Header(defau
         )
 
 
-        session_id = None
-        checkout_url = None
+        session_payload = {}
 
         try:
-            session_id = getattr(session, "id", None)
+            session_payload = dict(session)
         except Exception:
-            session_id = None
+            session_payload = {}
 
-        try:
-            checkout_url = getattr(session, "url", None)
-        except Exception:
-            checkout_url = None
-
-        if not session_id:
+        if not session_payload:
             try:
-                session_id = session.get("id")
+                session_payload = session.to_dict_recursive()
             except Exception:
-                pass
+                session_payload = {}
 
-        if not checkout_url:
+        if not session_payload:
             try:
-                checkout_url = session.get("url")
+                session_payload = session.to_dict()
             except Exception:
-                pass
+                session_payload = {}
+
+        session_id = (
+            session_payload.get("id")
+            or getattr(session, "id", None)
+        )
+
+        checkout_url = (
+            session_payload.get("url")
+            or getattr(session, "url", None)
+        )
 
         if not session_id:
             try:
