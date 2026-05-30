@@ -29,7 +29,7 @@ LOCKOUT_THRESHOLD = int(os.getenv("SECURITY_LOCKOUT_THRESHOLD", "12"))
 LOCKOUT_WINDOW_SECONDS = int(os.getenv("SECURITY_LOCKOUT_WINDOW_SECONDS", "300"))
 
 ADMIN_PATH_PREFIXES = ("/admin", "/owner")
-ADMIN_EVIDENCE_PROXY_PATHS = ("/admin/execution-evidence",)
+ADMIN_EVIDENCE_PROXY_PATHS = ("/admin/execution-evidence", "/admin/qa-regression-intelligence/evaluate")
 DEFAULT_TRUSTED_ORIGINS = ("https://app.trance-formation.com.au", "https://trance-formation.com.au")
 STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
