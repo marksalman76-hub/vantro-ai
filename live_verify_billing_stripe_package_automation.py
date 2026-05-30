@@ -48,12 +48,12 @@ PACKAGE_EXPECTATIONS = {
     },
     "/api/signup-agent-selection/options/growth": {
         "plan": "growth",
-        "max_selectable_agents": 6,
+        "max_selectable_agents": 7,
         "head_agent_available": False,
     },
     "/api/signup-agent-selection/options/business": {
         "plan": "business",
-        "max_selectable_agents": 12,
+        "max_selectable_agents": 10,
         "head_agent_available": False,
     },
     "/api/signup-agent-selection/options/enterprise": {
