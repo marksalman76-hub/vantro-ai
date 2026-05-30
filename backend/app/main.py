@@ -376,7 +376,16 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             "bypass_reason": "owner_admin_internal_execution",
         }
 
-    if not agent_exists(requested_agent):
+    owner_admin_system_agents = {
+        "qa_testing_agent",
+        "billing_optimisation_agent",
+        "training_learning_agent",
+    }
+
+    if not agent_exists(requested_agent) and not (
+        (request.actor_role or "").strip().lower() in {"owner", "admin", "owner_admin", "system"}
+        and requested_agent in owner_admin_system_agents
+    ):
         return {
             "success": False,
             "error": "unknown_agent",
