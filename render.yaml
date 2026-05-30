@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: ecommerce-ai-agent-platform-api
+    env: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT --workers ${WEB_CONCURRENCY:-2}
+    envVars:
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: OWNER_APPROVAL_REQUIRED
+        value: "true"
+      - key: LIVE_EXTERNAL_CALLS_ENABLED
+        value: "false"
+
+  - type: worker
+    name: ecommerce-ai-agent-platform-worker
+    env: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m backend.app.runtime.background_worker_loop
+    envVars:
+      - key: WORKER_CONCURRENCY
+        value: "2"
+      - key: OWNER_APPROVAL_REQUIRED
+        value: "true"
+      - key: LIVE_EXTERNAL_CALLS_ENABLED
+        value: "false"
