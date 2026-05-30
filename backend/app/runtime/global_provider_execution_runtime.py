@@ -93,7 +93,7 @@ CAPABILITY_PROVIDER_MAP = {
 
 
 def normalise_agent_id(agent_id: str) -> str:
-    return str(agent_id or "").strip().lower()
+    return normalise_agent_identity(agent_id)
 
 
 def get_agent_capabilities(agent_id: str) -> Dict[str, Any]:
@@ -155,6 +155,8 @@ def infer_capabilities_from_payload(payload: Dict[str, Any]) -> List[str]:
 
 
 def build_global_provider_chain(agent_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    payload = normalise_agent_payload(payload or {})
+    agent_id = normalise_agent_id(agent_id)
     agent = get_agent_capabilities(agent_id)
     agent_capabilities = agent.get("capabilities", [])
     inferred = infer_capabilities_from_payload(payload)
@@ -202,6 +204,7 @@ def build_global_provider_chain(agent_id: str, payload: Dict[str, Any]) -> Dict[
 
 
 def build_global_provider_execution_packet(payload: Dict[str, Any]) -> Dict[str, Any]:
+    payload = normalise_agent_payload(payload or {})
     agent_id = (
         payload.get("requested_agent")
         or payload.get("agent_id")
