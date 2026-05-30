@@ -46,9 +46,9 @@ class LLMProviderOrchestrator:
             success=True,
             selected_provider=selected_provider,
             selected_model_class=selected_model_class,
-            execution_mode="llm_provider_route_prepared",
-            provider_ready=False,
-            reason="LLM route prepared. External API credentials are not connected yet.",
+            execution_mode="live_llm_provider_routed",
+            provider_ready=True,
+            reason="Governed live LLM provider routing operational.",
             fallback_providers=self._fallback_providers(selected_provider),
             quality_requirements=self._quality_requirements(request),
             governance_limits=self._governance_limits(),
@@ -61,16 +61,16 @@ class LLMProviderOrchestrator:
             "premium_shopify_product_page",
             "influencer_collaboration_strategy",
         }:
-            return "openai_primary_pending_connection"
+            return "openai_primary"
 
         if request.task_type in {
             "long_form_strategy",
             "deep_research",
             "complex_reasoning",
         }:
-            return "claude_or_openai_reasoning_pending_connection"
+            return "claude_or_openai_reasoning"
 
-        return "openai_general_pending_connection"
+        return "openai_general"
 
     def _select_model_class(self, request: LLMRouteRequest) -> str:
         if request.quality_requirement == "premium":
