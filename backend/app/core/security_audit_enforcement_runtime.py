@@ -125,20 +125,12 @@ def _admin_token_valid(request: Request) -> bool:
     return any(hmac.compare_digest(supplied, expected) for expected in expected_tokens)
 
 
-
-def _is_qa_regression_evaluate_path(path: str) -> bool:
-    return str(path or "").rstrip("/") == "/admin/qa-regression-intelligence/evaluate"
-
-
 def _is_admin_path(path: str) -> bool:
     return any(path.startswith(prefix) for prefix in ADMIN_PATH_PREFIXES)
 
 
 def _admin_evidence_proxy_valid(request: Request) -> bool:
     path = request.url.path.lower()
-
-        if _is_qa_regression_evaluate_path(path) and method == "POST" and _admin_token_valid(request):
-            return await call_next(request)
     method = request.method.upper()
     role = _header(request, "x-actor-role", "anonymous").lower()
     csrf = _header(request, "x-csrf-token")
