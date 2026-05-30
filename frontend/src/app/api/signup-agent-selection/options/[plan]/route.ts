@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 function backendBase() {
-  return process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
+  return (
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.BACKEND_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_URL ||
+    "https://api.trance-formation.com.au"
+  );
 }
 
 export async function GET(
