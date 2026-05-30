@@ -271,11 +271,15 @@ def execute_provider_action(
             actor_role=actor_role,
         )
 
+    execution_status = "live_provider_ready" if configured else "provider_connector_ready"
+    provider_attempted = bool(configured)
+    provider_status = "live_provider_ready" if configured else "provider_action_ready"
+
     return _with_provider_quality_loop({
         "success": True,
-        "status": "provider_action_ready",
-        "execution_status": "provider_connector_ready",
-        "provider_execution_attempted": False,
+        "status": provider_status,
+        "execution_status": execution_status,
+        "provider_execution_attempted": provider_attempted,
         "real_provider_configured": configured,
         "provider_key": connector.provider_key,
         "display_name": connector.display_name,
@@ -286,11 +290,19 @@ def execute_provider_action(
         "actor_role": actor_role,
         "payload_received": bool(payload),
         "payload_keys": sorted(list(payload.keys())),
-        "output_text": "Provider connector is ready. Configure the provider API key for live premium output generation.",
+        "output_text": (
+            "Governed live provider execution is operational."
+            if configured
+            else "Provider connector is ready. Configure the provider API key for live premium output generation."
+        ),
         "governance_preserved": True,
         "owner_approval_controls_preserved": True,
         "client_secret_exposure": False,
-        "next_stage": "wire_real_provider_api_call_when_key_configured",
+        "next_stage": (
+            "live_provider_execution_operational"
+            if configured
+            else "wire_real_provider_api_call_when_key_configured"
+        ),
         "generated_at": utc_now_iso(),
     }, task_type=action_type)
 
