@@ -118,6 +118,7 @@ from backend.app.runtime.autonomous_qa_regression_intelligence import autonomous
 from backend.app.runtime.post_deploy_validation_readiness import post_deploy_validation_status
 from backend.app.runtime.global_beta_readiness_orchestration import global_beta_readiness_status
 from backend.app.runtime.global_production_audit_orchestrator import global_production_audit_status
+from backend.app.runtime.global_commercial_launch_orchestrator import global_commercial_launch_status
 from backend.app.runtime.execution_stack import (
     ExecutionRequest,
     ExecutionStack,
@@ -2843,4 +2844,10 @@ def admin_global_beta_readiness_status():
 @app.get("/admin/global-production-audit/status")
 def admin_global_production_audit_status():
     return global_production_audit_status()
+
+
+# Global Commercial Launch Admin Status Route
+@app.get("/admin/global-commercial-launch/status")
+def admin_global_commercial_launch_status():
+    return global_commercial_launch_status()
 
