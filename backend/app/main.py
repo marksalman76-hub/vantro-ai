@@ -238,6 +238,13 @@ ACTION_TO_EXECUTION_MAP: Dict[str, str] = {
     "large_supplier_order": "large_supplier_order",
     "large_refund_batch": "large_refund_batch",
     "major_strategy_change": "major_strategy_change",
+
+    # Remaining enterprise/system-safe execution mappings
+    "website_strategy_generation": "governed_live_provider_generation",
+    "analytics_intelligence_generation": "governed_live_provider_generation",
+    "qa_testing_generation": "governed_live_provider_generation",
+    "billing_optimisation_generation": "governed_live_provider_generation",
+    "training_learning_generation": "governed_live_provider_generation",
 }
 
 
