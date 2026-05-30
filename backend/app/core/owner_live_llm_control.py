@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict
 import json
+import os
 
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
@@ -70,6 +71,13 @@ class OwnerLiveLLMControl:
         }
 
     def is_enabled(self) -> bool:
+        env_enabled = str(os.getenv("OWNER_LIVE_EXECUTION_ENABLED", "")).strip().lower() in {"1", "true", "yes", "on", "enabled"}
+        real_provider_enabled = str(os.getenv("ENABLE_REAL_PROVIDER_EXECUTION", "")).strip().lower() in {"1", "true", "yes", "on", "enabled"}
+        live_llm_enabled = str(os.getenv("ENABLE_LIVE_LLM_CALLS", "")).strip().lower() in {"1", "true", "yes", "on", "enabled"}
+
+        if env_enabled or real_provider_enabled or live_llm_enabled:
+            return True
+
         return bool(self.get_state().get("live_llm_execution_enabled", False))
 
     def _read_state(self) -> Dict[str, object]:
