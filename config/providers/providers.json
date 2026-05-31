@@ -1,0 +1,27 @@
+{
+  "providers": [
+    {
+      "name": "openai",
+      "priority": 1,
+      "enabled": true,
+      "fallbacks": [
+        "anthropic",
+        "google"
+      ]
+    },
+    {
+      "name": "anthropic",
+      "priority": 2,
+      "enabled": true,
+      "fallbacks": [
+        "google"
+      ]
+    },
+    {
+      "name": "google",
+      "priority": 3,
+      "enabled": true,
+      "fallbacks": []
+    }
+  ]
+}

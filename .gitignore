@@ -38,3 +38,12 @@ None
 reports/
 runtime_data/*.jsonl
 
+# Production secret protection
+.env
+.env.*
+!.env.example
+!.env.template
+telemetry/security/*secret*
+telemetry/security/*audit-report*
+logs/*.log
+

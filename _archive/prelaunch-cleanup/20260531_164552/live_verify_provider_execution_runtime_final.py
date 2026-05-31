@@ -14,8 +14,7 @@ admin_token = os.getenv("ADMIN_PLATFORM_TOKEN", "").strip()
 
 if env_file.exists() and not admin_token:
     for line in env_file.read_text(encoding="utf-8", errors="ignore").splitlines():
-        if line.startswith("ADMIN_PLATFORM_TOKEN="):
-            admin_token = line.split("=", 1)[1].strip().strip('"').strip("'")
+        if line.startswith("ADMIN_PLATFORM_TOKEN = os.getenv('ADMIN_PLATFORM_TOKEN', '')=", 1)[1].strip().strip('"').strip("'")
             break
 
 if not admin_token:

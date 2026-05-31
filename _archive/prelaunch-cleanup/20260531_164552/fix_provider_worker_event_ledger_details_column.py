@@ -7,8 +7,7 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 env_file = Path(".env.local")
 if not DATABASE_URL and env_file.exists():
     for line in env_file.read_text(encoding="utf-8", errors="ignore").splitlines():
-        if line.startswith("DATABASE_URL="):
-            DATABASE_URL = line.split("=", 1)[1].strip().strip('"').strip("'")
+        if line.startswith("DATABASE_URL = os.getenv('DATABASE_URL', '')=", 1)[1].strip().strip('"').strip("'")
             break
 
 if not DATABASE_URL:

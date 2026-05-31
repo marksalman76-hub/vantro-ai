@@ -1,0 +1,24 @@
+{
+  "dry_run": "queue_execution",
+  "adapter": "in_memory",
+  "admission": {
+    "admitted": true,
+    "queue_target": "client_agent_execution_queue",
+    "blocked_reasons": [],
+    "reasons": [
+      "owner_admin_actor_detected",
+      "client_entitlement_bypass_allowed_for_owner_admin",
+      "agent_key_present",
+      "queue_admission_allowed"
+    ]
+  },
+  "message_created": true,
+  "message_id": "d4e7ede9-a96b-4590-a770-3f3c4a8d8d75",
+  "before_total_messages": 0,
+  "after_total_messages": 1,
+  "jobs_executed": false,
+  "external_provider_called": false,
+  "spend_performed": false,
+  "customer_safe": true,
+  "status": "QUEUE_EXECUTION_DRY_RUN_COMPLETE"
+}

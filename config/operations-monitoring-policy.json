@@ -1,0 +1,24 @@
+{
+  "phase": "Phase 2 - Monitoring & incident operations",
+  "tasks": {
+    "5": "Deploy monitoring & alerting infrastructure",
+    "6": "Build incident response runbooks",
+    "7": "Implement provider failover chains",
+    "8": "Finalise Postgres persistence, backup & restore"
+  },
+  "live_external_actions_enabled": false,
+  "owner_approval_required_for_production_failover": true,
+  "monitoring_targets": [
+    "/health",
+    "/run-agent",
+    "/admin/provider-activation-visibility",
+    "/admin/provider-action-readiness",
+    "/admin/provider-execution/summary"
+  ],
+  "severity_levels": [
+    "low",
+    "medium",
+    "high",
+    "critical"
+  ]
+}
