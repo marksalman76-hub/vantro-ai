@@ -3,7 +3,7 @@
   "mode": "controlled_openai_live_execution_enablement",
   "api_base": "https://api.trance-formation.com.au",
   "admin_token_present": true,
-  "owner_approved_live_activation": true,
+  "owner_approved_live_activation": false,
   "secret_values_exposed": false,
   "openai_configured": true,
   "openai_ready": false,
@@ -31,5 +31,5 @@
     }
   },
   "activation_result": "review_required",
-  "generated_at": "2026-05-30T13:52:09.545169"
+  "generated_at": "2026-05-31T07:56:33.350914"
 }
