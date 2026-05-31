@@ -243,14 +243,33 @@ class SessionAuthHardeningMiddleware(BaseHTTPMiddleware):
             )
 
         if assessment["blocked"]:
+            content = {
+                "success": False,
+                "error": "auth_security_policy_blocked",
+                "message": "Request blocked by authentication security policy.",
+                "security_profile": SESSION_AUTH_PROFILE,
+            }
+
+            if (
+                request.url.path.lower() in {"/run-agent", "/api/run-agent"}
+                and (
+                    request.headers.get("authorization")
+                    or request.headers.get("x-admin-token")
+                )
+            ):
+                content["debug_visibility"] = {
+                    "customer_safe": True,
+                    "secret_values_exposed": False,
+                    "path": request.url.path,
+                    "method": request.method,
+                    "severity": assessment.get("severity"),
+                    "blocked": assessment.get("blocked"),
+                    "reasons": assessment.get("reasons", []),
+                }
+
             return JSONResponse(
                 status_code=403,
-                content={
-                    "success": False,
-                    "error": "auth_security_policy_blocked",
-                    "message": "Request blocked by authentication security policy.",
-                    "security_profile": SESSION_AUTH_PROFILE,
-                },
+                content=content,
             )
 
         response = await call_next(request)
