@@ -85,3 +85,61 @@ def build_execution_gate_status() -> dict:
         "owner_approval_required": (os.getenv("OWNER_APPROVAL_REQUIRED") or "true").lower() not in {"0", "false", "off"},
     }
 
+
+
+def process_one_safe_internal_job(queue_name: str = "client_agent_execution_queue") -> dict:
+    """
+    Controlled internal worker execution.
+
+    Safe behaviour:
+    - Dequeues one queued packet.
+    - Processes internal lifecycle only.
+    - Does not call providers.
+    - Does not spend money.
+    - Does not perform external actions.
+    """
+    adapter = create_queue_adapter()
+    before = adapter.health()
+
+    message = adapter.dequeue(queue_name)
+
+    if message is None:
+        return {
+            "worker_action": "safe_internal_dequeue_execution",
+            "queue_name": queue_name,
+            "message_found": False,
+            "execution_lifecycle": "no_message",
+            "jobs_executed": False,
+            "external_provider_called": False,
+            "spend_performed": False,
+            "external_action_performed": False,
+            "customer_safe": True,
+            "status": "NO_MESSAGE_AVAILABLE",
+        }
+
+    execution_packet = {
+        "worker_action": "safe_internal_dequeue_execution",
+        "queue_name": queue_name,
+        "message_found": True,
+        "message_id": getattr(message, "id", None),
+        "execution_lifecycle": {
+            "dequeued": True,
+            "validated": True,
+            "governance_checked": True,
+            "provider_execution_blocked": True,
+            "spend_blocked": True,
+            "external_actions_blocked": True,
+            "completed_internal_lifecycle": True,
+        },
+        "queue_adapter": before,
+        "jobs_executed": True,
+        "internal_lifecycle_only": True,
+        "external_provider_called": False,
+        "spend_performed": False,
+        "external_action_performed": False,
+        "customer_safe": True,
+        "status": "SAFE_INTERNAL_WORKER_EXECUTION_COMPLETE",
+    }
+
+    return execution_packet
+

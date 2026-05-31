@@ -3323,3 +3323,58 @@ async def admin_runtime_dequeue_simulation():
             "status": "SAFE_DEQUEUE_SIMULATION_FAILED",
         }
 
+
+
+@app.get("/admin/runtime-safe-worker-execute-one")
+async def admin_runtime_safe_worker_execute_one():
+    """
+    Controlled worker-side internal execution.
+
+    Safe behaviour:
+    - Dequeues one queued packet.
+    - Completes internal lifecycle only.
+    - Does not call providers.
+    - Does not spend money.
+    - Does not perform external actions.
+    """
+
+    try:
+        from backend.app.runtime.background_worker_loop import process_one_safe_internal_job
+        from backend.app.runtime.queue_adapter import create_queue_adapter
+        from backend.app.runtime.queue_telemetry import build_queue_health_snapshot, export_queue_health_dict
+
+        adapter = create_queue_adapter()
+        before = export_queue_health_dict(build_queue_health_snapshot(adapter=adapter))
+
+        result = process_one_safe_internal_job("client_agent_execution_queue")
+
+        after = export_queue_health_dict(build_queue_health_snapshot(adapter=adapter))
+
+        return {
+            "success": True,
+            "runtime": "safe_worker_dequeue_execution",
+            "before_total_messages": before.get("total_messages"),
+            "after_total_messages": after.get("total_messages"),
+            "worker_result": result,
+            "provider_execution_allowed": False,
+            "spend_allowed": False,
+            "autonomous_execution_allowed": False,
+            "external_provider_called": False,
+            "spend_performed": False,
+            "external_action_performed": False,
+            "customer_safe": True,
+            "status": "SAFE_WORKER_DEQUEUE_EXECUTION_COMPLETE",
+        }
+
+    except Exception as exc:
+        return {
+            "success": False,
+            "runtime": "safe_worker_dequeue_execution",
+            "error": repr(exc),
+            "external_provider_called": False,
+            "spend_performed": False,
+            "external_action_performed": False,
+            "customer_safe": True,
+            "status": "SAFE_WORKER_DEQUEUE_EXECUTION_FAILED",
+        }
+
