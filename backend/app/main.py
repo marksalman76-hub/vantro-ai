@@ -166,11 +166,26 @@ from backend.app.core.billing_automation_runtime import create_checkout_session_
 from backend.app.core.stripe_production_hardening_runtime import stripe_production_env_readiness, verify_stripe_webhook_signature, route_stripe_webhook_event, schedule_failed_payment_recovery, transition_trial_to_paid, build_customer_billing_portal_payload, admin_billing_dashboard
 from backend.app.core.live_stripe_bridge_runtime import live_stripe_bridge_readiness, create_live_checkout_session, create_live_billing_portal_session, ingest_live_stripe_webhook
 from backend.app.core.final_deployment_readiness_runtime import final_deployment_readiness
+from backend.app.core.rate_shaping_middleware import RateShapingMiddleware
+
+
+# CONTROLLED_LIVE_EXECUTION_WHITELIST_V1
+CONTROLLED_OWNER_APPROVED_LIVE_EXECUTION_PATHS = {
+    "/admin/provider-activation-visibility/evaluate",
+}
+
+def _is_controlled_owner_approved_live_execution_path(path: str) -> bool:
+    return path in CONTROLLED_OWNER_APPROVED_LIVE_EXECUTION_PATHS
+
 
 app = FastAPI(
     title="Ecommerce AI Agent Platform",
     version="1.1.0",
 )
+
+# Production rate-shaping middleware is observe-mode by default.
+app.add_middleware(RateShapingMiddleware)
+
 
 
 install_security_hardening(app)

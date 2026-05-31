@@ -1,0 +1,23 @@
+{
+  "check": "redis_activation_readiness",
+  "redis_url_configured": false,
+  "redis_health": {
+    "adapter": "redis",
+    "available": false,
+    "redis_required": true,
+    "redis_url_configured": false,
+    "error": "REDIS_URL not configured"
+  },
+  "memory_fallback_health": {
+    "adapter": "in_memory",
+    "available": true,
+    "redis_required": false,
+    "queue_count": 0,
+    "total_messages": 0
+  },
+  "live_runtime_changed": false,
+  "jobs_executed": false,
+  "safe_to_activate_redis": false,
+  "status": "REDIS_NOT_CONFIGURED_OR_UNAVAILABLE",
+  "next_action": "Set REDIS_URL in Render/backend env before live worker activation"
+}
