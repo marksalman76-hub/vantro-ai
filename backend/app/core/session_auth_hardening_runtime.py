@@ -23,6 +23,11 @@ ADMIN_PATH_PREFIXES = (
     "/owner",
 )
 
+GOVERNED_EXECUTION_PATHS = (
+    "/run-agent",
+    "/api/run-agent",
+)
+
 STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 SAFE_DEV_ADMIN_ROLES = {"owner", "admin", "owner_admin", "system"}
@@ -77,6 +82,10 @@ def _record(event: Dict[str, Any]) -> None:
 
 def _is_admin_path(path: str) -> bool:
     return any(path.startswith(prefix) for prefix in ADMIN_PATH_PREFIXES)
+
+
+def _is_governed_execution_path(path: str) -> bool:
+    return any(path.startswith(prefix) for prefix in GOVERNED_EXECUTION_PATHS)
 
 
 def _csrf_risk(request: Request) -> bool:
@@ -143,8 +152,12 @@ def assess_session_auth_request(request: Request) -> Dict[str, Any]:
     severity = "none"
     blocked = False
 
-    if _is_admin_path(path):
-        if role not in SAFE_DEV_ADMIN_ROLES:
+    is_admin_path = _is_admin_path(path)
+    is_governed_execution_path = _is_governed_execution_path(path)
+    is_owner_admin_actor = role in SAFE_DEV_ADMIN_ROLES
+
+    if is_admin_path:
+        if not is_owner_admin_actor:
             reasons.append("admin_path_invalid_actor_role")
             severity = "high"
 
@@ -157,11 +170,31 @@ def assess_session_auth_request(request: Request) -> Dict[str, Any]:
             reasons.append("admin_path_missing_tenant")
             severity = "medium" if severity == "none" else severity
 
-    if _csrf_risk(request):
-        reasons.append("csrf_token_or_origin_missing_for_state_change")
-        severity = "high" if severity in {"none", "medium"} else severity
-        if production:
+    if is_governed_execution_path and is_owner_admin_actor:
+        if production and not auth and not admin_token:
+            reasons.append("owner_admin_governed_execution_missing_authorization")
+            severity = "critical"
             blocked = True
+
+    if is_governed_execution_path and not is_owner_admin_actor:
+        # Customer/client governed execution stays restricted by normal
+        # customer session, entitlement, package, credit, and tenant checks.
+        # This block intentionally does not grant admin bypass to customers.
+        if role in {"", "anonymous", "unknown", "none", "null"}:
+            reasons.append("customer_execution_missing_actor_role")
+            severity = "high" if severity in {"none", "medium"} else severity
+            if production:
+                blocked = True
+
+    if _csrf_risk(request):
+        if _is_governed_execution_path(path) and is_owner_admin_actor and (auth or admin_token):
+            reasons.append("owner_admin_governed_execution_csrf_bypass_applied")
+            severity = "medium" if severity == "none" else severity
+        else:
+            reasons.append("csrf_token_or_origin_missing_for_state_change")
+            severity = "high" if severity in {"none", "medium"} else severity
+            if production:
+                blocked = True
 
     if _check_replay(request):
         reasons.append("possible_replay_request_detected")
