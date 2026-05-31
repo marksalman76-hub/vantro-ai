@@ -1,4 +1,12 @@
 from pathlib import Path
+from datetime import datetime
+import json
+
+ROOT = Path(__file__).resolve().parent
+SLA_SCRIPT = ROOT / "scripts" / "monitoring" / "runtime-sla-scoring.py"
+BACKUP = ROOT / "backups" / f"runtime_sla_scoring_before_live_telemetry_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+NEW_SCRIPT = r'''from pathlib import Path
 import json
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -57,3 +65,16 @@ OUT.write_text(json.dumps(report, indent=2), encoding="utf-8")
 print("RUNTIME_SLA_SCORING_READY")
 print(f"OVERALL_PRE_LIVE_SCORE: {score}")
 print("TARGET_MET:", score >= 85)
+'''
+
+def main():
+    BACKUP.mkdir(parents=True, exist_ok=True)
+    if SLA_SCRIPT.exists():
+        (BACKUP / SLA_SCRIPT.name).write_text(SLA_SCRIPT.read_text(encoding="utf-8", errors="replace"), encoding="utf-8")
+    SLA_SCRIPT.write_text(NEW_SCRIPT, encoding="utf-8")
+    print("RUNTIME_SLA_SCORING_LIVE_TELEMETRY_UPGRADED")
+    print("Backup:", BACKUP)
+    print("Updated:", SLA_SCRIPT)
+
+if __name__ == "__main__":
+    main()

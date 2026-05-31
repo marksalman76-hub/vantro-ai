@@ -1,0 +1,78 @@
+{
+  "sla_score_target": {
+    "previous_score": 66,
+    "target_score": 85,
+    "improvements_verified": [
+      "live_backend_health_verified",
+      "redis_ready_verified",
+      "worker_runtime_ready_verified",
+      "monitoring_runtime_deployed",
+      "operational_telemetry_ready",
+      "governed_openai_live_execution_verified",
+      "crm_agent_live_provider_verified",
+      "email_agent_live_provider_verified",
+      "stripe_lifecycle_simulation_ready"
+    ],
+    "projected_score_after_closeout": 86,
+    "status": "SLA_TARGET_READY_FOR_RECHECK"
+  },
+  "cleanup": {
+    "temporary_scripts_archived": true,
+    "deleted": false,
+    "customer_safe": true,
+    "archive_path": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\_archive\\pre_path_b_cleanup\\20260531_201040",
+    "moved_count": 7,
+    "moved": [
+      {
+        "from": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\fix_quality_failure_payload_runtime.py",
+        "to": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\_archive\\pre_path_b_cleanup\\20260531_201040\\fix_quality_failure_payload_runtime.py"
+      },
+      {
+        "from": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\fix_quality_failure_payload_top_init.py",
+        "to": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\_archive\\pre_path_b_cleanup\\20260531_201040\\fix_quality_failure_payload_top_init.py"
+      },
+      {
+        "from": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\fix_quality_failure_payload_top_init_v2.py",
+        "to": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\_archive\\pre_path_b_cleanup\\20260531_201040\\fix_quality_failure_payload_top_init_v2.py"
+      },
+      {
+        "from": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\install_live_provider_readiness_route.py",
+        "to": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\_archive\\pre_path_b_cleanup\\20260531_201040\\install_live_provider_readiness_route.py"
+      },
+      {
+        "from": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\install_owner_admin_live_provider_test_rule.py",
+        "to": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\_archive\\pre_path_b_cleanup\\20260531_201040\\install_owner_admin_live_provider_test_rule.py"
+      },
+      {
+        "from": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\install_owner_admin_live_provider_test_rule_v2.py",
+        "to": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\_archive\\pre_path_b_cleanup\\20260531_201040\\install_owner_admin_live_provider_test_rule_v2.py"
+      },
+      {
+        "from": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\install_pre_path_b_readiness_closeout.py",
+        "to": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\_archive\\pre_path_b_cleanup\\20260531_201040\\install_pre_path_b_readiness_closeout.py"
+      }
+    ]
+  },
+  "provider_failover": {
+    "foundation_ready": true,
+    "automation_ready": true,
+    "live_failover_switch_enabled": false,
+    "status": "READY_NOT_AUTONOMOUS"
+  },
+  "autoscaling_workers": {
+    "foundation_ready": true,
+    "worker_live_execution_enabled": false,
+    "autoscaling_enabled": false,
+    "status": "READY_NOT_ENABLED"
+  },
+  "autonomous_orchestration": {
+    "foundation_ready": true,
+    "autonomous_execution_enabled": false,
+    "external_actions_enabled": false,
+    "status": "READY_NOT_ENABLED"
+  },
+  "path_b_gate": {
+    "can_move_to_path_b_after_owner_approval": true,
+    "must_keep_owner_approval_for_spend_scaling_contracts": true
+  }
+}
