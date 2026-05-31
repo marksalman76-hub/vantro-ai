@@ -3266,3 +3266,60 @@ async def admin_runtime_execution_dry_run_safe():
             "status": "CONTROLLED_RUNTIME_DRY_RUN_FAILED",
         }
 
+
+
+@app.get("/admin/runtime-dequeue-simulation")
+async def admin_runtime_dequeue_simulation():
+    """
+    Controlled dequeue simulation.
+
+    Safe behaviour:
+    - Reads/removes one dry-run packet only.
+    - Does not execute jobs.
+    - Does not call providers.
+    - Does not spend money.
+    - Confirms queue reduction.
+    """
+
+    try:
+        from backend.app.runtime.queue_adapter import create_queue_adapter
+        from backend.app.runtime.queue_telemetry import build_queue_health_snapshot, export_queue_health_dict
+
+        adapter = create_queue_adapter()
+        queue_name = "client_agent_execution_queue"
+
+        before = export_queue_health_dict(build_queue_health_snapshot(adapter=adapter))
+
+        message = adapter.dequeue(queue_name)
+
+        after = export_queue_health_dict(build_queue_health_snapshot(adapter=adapter))
+
+        return {
+            "success": True,
+            "simulation": "runtime_dequeue",
+            "queue_adapter": after.get("adapter"),
+            "queue_name": queue_name,
+            "message_found": message is not None,
+            "message_id": getattr(message, "id", None),
+            "before_total_messages": before.get("total_messages"),
+            "after_total_messages": after.get("total_messages"),
+            "jobs_executed": False,
+            "external_provider_called": False,
+            "spend_performed": False,
+            "execution_permitted": False,
+            "customer_safe": True,
+            "status": "SAFE_DEQUEUE_SIMULATION_COMPLETE",
+        }
+
+    except Exception as exc:
+        return {
+            "success": False,
+            "simulation": "runtime_dequeue",
+            "error": repr(exc),
+            "jobs_executed": False,
+            "external_provider_called": False,
+            "spend_performed": False,
+            "customer_safe": True,
+            "status": "SAFE_DEQUEUE_SIMULATION_FAILED",
+        }
+
