@@ -2929,3 +2929,42 @@ async def admin_redis_readiness():
             "status": "REDIS_READINESS_CHECK_FAILED",
         }
 
+
+
+
+
+@app.get("/admin/runtime-worker-health")
+async def admin_runtime_worker_health():
+    """
+    Distributed worker/runtime health visibility.
+    Safe visibility only.
+    """
+
+    try:
+        from backend.app.runtime.background_worker_loop import (
+            build_worker_status,
+            build_execution_gate_status,
+        )
+
+        worker = build_worker_status()
+        gates = build_execution_gate_status()
+
+        return {
+            "success": True,
+            "runtime": "distributed_worker_runtime",
+            "worker": worker,
+            "execution_gates": gates,
+            "queue_backend": worker.get("queue_adapter", {}),
+            "jobs_executed": False,
+            "external_provider_called": False,
+            "customer_safe": True,
+            "status": "WORKER_RUNTIME_READY",
+        }
+
+    except Exception as exc:
+        return {
+            "success": False,
+            "error": repr(exc),
+            "status": "WORKER_RUNTIME_CHECK_FAILED",
+        }
+

@@ -66,3 +66,22 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+
+
+def worker_execution_permitted() -> bool:
+    return (
+        worker_live_execution_enabled()
+        and (os.getenv("LIVE_EXTERNAL_CALLS_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}
+    )
+
+
+def build_execution_gate_status() -> dict:
+    return {
+        "worker_live_execution_enabled": worker_live_execution_enabled(),
+        "live_external_calls_enabled": (os.getenv("LIVE_EXTERNAL_CALLS_ENABLED") or "false").lower() in {"1", "true", "yes", "on"},
+        "execution_permitted": worker_execution_permitted(),
+        "owner_approval_required": (os.getenv("OWNER_APPROVAL_REQUIRED") or "true").lower() not in {"0", "false", "off"},
+    }
+
