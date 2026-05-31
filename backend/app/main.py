@@ -369,6 +369,14 @@ def client_execution_events(
 
 @app.post("/run-agent")
 def run_agent(request: RunAgentRequest) -> Dict[str, object]:
+    quality_failure_payload = {
+        "success": False,
+        "quality_gate_failed": False,
+        "provider_execution_attempted": False,
+        "external_action_performed": False,
+        "customer_safe": True,
+    }
+
     requested_agent = normalise_agent_identity(normalize_agent_id(request.requested_agent))
 
     credit_gate = pg_client_credit_gate({
