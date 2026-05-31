@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "restore_simulation_runtime_ready": true,
+  "mode": "dry_run",
+  "backup_executed": false,
+  "restore_executed": false,
+  "live_database_modified": false,
+  "checks": {
+    "snapshot_manifest_ready": true,
+    "restore_plan_ready": true,
+    "rollback_plan_ready": true,
+    "owner_approval_required_for_live_restore": true
+  },
+  "generated_at": "2026-05-30T13:27:18.973339"
+}

@@ -1,0 +1,11 @@
+{
+  "success": true,
+  "incident_response_runtime_ready": true,
+  "runbooks_generated": [
+    "provider_failure",
+    "database_failure",
+    "security_event"
+  ],
+  "owner_approval_required_for_sensitive_actions": true,
+  "generated_at": "2026-05-30T13:27:18.448733"
+}

@@ -1,0 +1,7 @@
+{
+  "success": true,
+  "incident_packet_runtime_ready": true,
+  "packet_created": "C:\\Users\\User\\Desktop\\ecommerce-ai-agent-platform\\telemetry\\operations\\incidents\\dryrun-1ef02064-5af5-4422-8286-7324fa9d813a.json",
+  "mode": "dry_run",
+  "live_external_action_executed": false
+}

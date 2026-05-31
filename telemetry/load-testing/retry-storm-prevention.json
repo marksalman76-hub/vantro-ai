@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "retry_storm_prevention_ready": true,
+  "controls": {
+    "exponential_backoff": true,
+    "max_retry_cap": true,
+    "dead_letter_after_exhaustion": true,
+    "provider_circuit_breaker_linked": true,
+    "owner_alert_on_retry_spike": true
+  },
+  "live_retry_mutation_executed": false,
+  "generated_at": "2026-05-30T13:30:25.319446"
+}

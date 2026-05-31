@@ -1,0 +1,102 @@
+{
+  "success": false,
+  "mode": "live_production_provisioning_verifier",
+  "secret_values_exposed": false,
+  "all_required_values_present": false,
+  "missing_count": 13,
+  "sections": {
+    "render_backend": {
+      "ready": false,
+      "missing": [
+        "ADMIN_PLATFORM_TOKEN",
+        "SESSION_SECRET",
+        "DATABASE_URL",
+        "OPENAI_API_KEY",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "SMTP_PASSWORD",
+        "BREVO_API_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY"
+      ],
+      "inventory": {
+        "ADMIN_PLATFORM_TOKEN": {
+          "present": false,
+          "masked": ""
+        },
+        "JWT_SECRET": {
+          "present": true,
+          "masked": "loc...ion"
+        },
+        "SESSION_SECRET": {
+          "present": false,
+          "masked": ""
+        },
+        "DATABASE_URL": {
+          "present": false,
+          "masked": ""
+        },
+        "OPENAI_API_KEY": {
+          "present": false,
+          "masked": ""
+        },
+        "STRIPE_SECRET_KEY": {
+          "present": false,
+          "masked": ""
+        },
+        "STRIPE_WEBHOOK_SECRET": {
+          "present": false,
+          "masked": ""
+        },
+        "SMTP_PASSWORD": {
+          "present": false,
+          "masked": ""
+        },
+        "BREVO_API_KEY": {
+          "present": false,
+          "masked": ""
+        },
+        "SUPABASE_SERVICE_ROLE_KEY": {
+          "present": false,
+          "masked": ""
+        }
+      }
+    },
+    "vercel_frontend": {
+      "ready": false,
+      "missing": [
+        "ADMIN_PLATFORM_TOKEN",
+        "SESSION_SECRET"
+      ],
+      "inventory": {
+        "ADMIN_PLATFORM_TOKEN": {
+          "present": false,
+          "masked": ""
+        },
+        "SESSION_SECRET": {
+          "present": false,
+          "masked": ""
+        }
+      }
+    },
+    "supabase": {
+      "ready": false,
+      "missing": [
+        "DATABASE_URL",
+        "SUPABASE_SERVICE_ROLE_KEY"
+      ],
+      "inventory": {
+        "DATABASE_URL": {
+          "present": false,
+          "masked": ""
+        },
+        "SUPABASE_SERVICE_ROLE_KEY": {
+          "present": false,
+          "masked": ""
+        }
+      }
+    }
+  },
+  "owner_approval_required_before_live_execution": true,
+  "live_external_actions_enabled": false,
+  "generated_at": "2026-05-30T13:37:57.080282"
+}

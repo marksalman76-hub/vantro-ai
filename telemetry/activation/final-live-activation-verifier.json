@@ -1,0 +1,12 @@
+{
+  "success": false,
+  "mode": "final_live_activation_verifier",
+  "provisioning_ready": false,
+  "owner_approved_live_activation": true,
+  "owner_approved_live_load_test": false,
+  "live_provider_execution_allowed": false,
+  "high_volume_load_allowed": false,
+  "secret_values_exposed": false,
+  "activation_state": "blocked_pending_provisioning_or_owner_approval",
+  "generated_at": "2026-05-30T13:37:57.124038"
+}

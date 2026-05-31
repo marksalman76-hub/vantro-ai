@@ -1,0 +1,16 @@
+{
+  "script": "deploy-monitoring",
+  "status": "MONITORING_INFRASTRUCTURE_READY",
+  "uptime": true,
+  "error_rates": true,
+  "latency": true,
+  "live_runtime_changed": false,
+  "external_alerts_enabled": false,
+  "customer_safe": true,
+  "checks": {
+    "uptime_probe_defined": true,
+    "error_rate_tracking_defined": true,
+    "latency_tracking_defined": true,
+    "owner_alerting_required_before_live_notifications": true
+  }
+}

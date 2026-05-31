@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "runtime_sla_scoring_ready": true,
+  "mode": "pre_live_scoring",
+  "scores": {
+    "monitoring": 100,
+    "incident_response": 100,
+    "failover_foundation": 100,
+    "backup_restore_foundation": 100,
+    "live_provider_configuration": 0,
+    "live_database_backup_execution": 0
+  },
+  "overall_pre_live_score": 66,
+  "generated_at": "2026-05-30T13:27:19.343915"
+}

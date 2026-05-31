@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "queue_degradation_detection_ready": true,
+  "checks": {
+    "queue_depth_monitoring": true,
+    "retry_age_monitoring": true,
+    "dead_letter_detection": true,
+    "worker_heartbeat_monitoring": true,
+    "stalled_execution_detection": true
+  },
+  "live_queue_mutation_executed": false,
+  "generated_at": "2026-05-30T13:27:18.741524"
+}

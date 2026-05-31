@@ -1,0 +1,15 @@
+{
+  "success": true,
+  "backup_manifest_ready": true,
+  "database_url_present": false,
+  "backup_executed": false,
+  "restore_executed": false,
+  "live_database_modified": false,
+  "required_before_live_restore": [
+    "owner approval",
+    "current backup snapshot confirmed",
+    "restore target confirmed",
+    "rollback plan confirmed"
+  ],
+  "generated_at": "2026-05-30T13:27:19.210964"
+}

@@ -1,0 +1,70 @@
+{
+  "success": false,
+  "mode": "production_env_validator",
+  "secret_values_exposed": false,
+  "missing": [
+    "ADMIN_PLATFORM_TOKEN",
+    "SESSION_SECRET",
+    "DATABASE_URL",
+    "OPENAI_API_KEY",
+    "STRIPE_SECRET_KEY",
+    "STRIPE_WEBHOOK_SECRET",
+    "SMTP_PASSWORD",
+    "BREVO_API_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY"
+  ],
+  "present_count": 1,
+  "required_count": 10,
+  "inventory": {
+    "ADMIN_PLATFORM_TOKEN": {
+      "present": false,
+      "masked": "",
+      "source": "environment"
+    },
+    "JWT_SECRET": {
+      "present": true,
+      "masked": "loc...ion",
+      "source": "environment"
+    },
+    "SESSION_SECRET": {
+      "present": false,
+      "masked": "",
+      "source": "environment"
+    },
+    "DATABASE_URL": {
+      "present": false,
+      "masked": "",
+      "source": "environment"
+    },
+    "OPENAI_API_KEY": {
+      "present": false,
+      "masked": "",
+      "source": "environment"
+    },
+    "STRIPE_SECRET_KEY": {
+      "present": false,
+      "masked": "",
+      "source": "environment"
+    },
+    "STRIPE_WEBHOOK_SECRET": {
+      "present": false,
+      "masked": "",
+      "source": "environment"
+    },
+    "SMTP_PASSWORD": {
+      "present": false,
+      "masked": "",
+      "source": "environment"
+    },
+    "BREVO_API_KEY": {
+      "present": false,
+      "masked": "",
+      "source": "environment"
+    },
+    "SUPABASE_SERVICE_ROLE_KEY": {
+      "present": false,
+      "masked": "",
+      "source": "environment"
+    }
+  }
+}

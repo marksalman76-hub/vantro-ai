@@ -1,0 +1,7 @@
+{
+  "security_runtime": true,
+  "provider_failover": true,
+  "monitoring_runtime": true,
+  "telemetry_enabled": true,
+  "load_testing_ready": true
+}

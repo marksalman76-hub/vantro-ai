@@ -1,0 +1,51 @@
+{
+  "success": true,
+  "operational_persistence_ready": true,
+  "records_persisted": 7,
+  "records": [
+    {
+      "source": "live-operational-telemetry.json",
+      "success": true,
+      "captured_at": "2026-05-30T13:27:19.027348",
+      "mode": "runtime_report"
+    },
+    {
+      "source": "provider-health-scoring.json",
+      "success": true,
+      "captured_at": "2026-05-30T13:27:19.027348",
+      "mode": "runtime_report"
+    },
+    {
+      "source": "queue-degradation-detection.json",
+      "success": true,
+      "captured_at": "2026-05-30T13:27:19.027348",
+      "mode": "runtime_report"
+    },
+    {
+      "source": "incident-packet-runtime.json",
+      "success": true,
+      "captured_at": "2026-05-30T13:27:19.027348",
+      "mode": "dry_run"
+    },
+    {
+      "source": "alert-escalation-pipeline.json",
+      "success": true,
+      "captured_at": "2026-05-30T13:27:19.027348",
+      "mode": "runtime_report"
+    },
+    {
+      "source": "circuit-breaker-runtime.json",
+      "success": true,
+      "captured_at": "2026-05-30T13:27:19.027348",
+      "mode": "runtime_report"
+    },
+    {
+      "source": "restore-simulation-runtime.json",
+      "success": true,
+      "captured_at": "2026-05-30T13:27:19.027348",
+      "mode": "dry_run"
+    }
+  ],
+  "live_external_actions_enabled": false,
+  "generated_at": "2026-05-30T13:27:19.027348"
+}

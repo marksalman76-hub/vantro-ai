@@ -1,0 +1,45 @@
+{
+  "success": true,
+  "live_provider_activation_gate_ready": true,
+  "live_provider_execution_enabled": false,
+  "providers": {
+    "openai": {
+      "ready": false,
+      "missing": [
+        "OPENAI_API_KEY"
+      ],
+      "live_execution_allowed": false
+    },
+    "stripe": {
+      "ready": false,
+      "missing": [
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET"
+      ],
+      "live_execution_allowed": false
+    },
+    "email": {
+      "ready": false,
+      "missing": [
+        "SMTP_PASSWORD",
+        "BREVO_API_KEY"
+      ],
+      "live_execution_allowed": false
+    },
+    "database": {
+      "ready": false,
+      "missing": [
+        "DATABASE_URL"
+      ],
+      "live_execution_allowed": false
+    },
+    "supabase": {
+      "ready": false,
+      "missing": [
+        "SUPABASE_SERVICE_ROLE_KEY"
+      ],
+      "live_execution_allowed": false
+    }
+  },
+  "generated_at": "2026-05-30T13:32:49.113696"
+}

@@ -1,0 +1,13 @@
+{
+  "script": "backup-restore",
+  "status": "BACKUP_RESTORE_VERIFICATION_READY",
+  "env": "production",
+  "verify": true,
+  "snapshot_rotation": true,
+  "restore_validation": true,
+  "backup_integrity": true,
+  "destructive_restore_performed": false,
+  "owner_approval_required_for_restore": true,
+  "live_runtime_changed": false,
+  "customer_safe": true
+}

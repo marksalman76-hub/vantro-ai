@@ -1,0 +1,35 @@
+{
+  "success": true,
+  "provider_health_scoring_ready": true,
+  "live_provider_calls_executed": false,
+  "providers": {
+    "openai": {
+      "configured": false,
+      "health_score": 0,
+      "status": "blocked_missing_secret"
+    },
+    "stripe": {
+      "configured": false,
+      "health_score": 0,
+      "status": "blocked_missing_secret"
+    },
+    "brevo": {
+      "configured": false,
+      "health_score": 0,
+      "status": "blocked_missing_secret"
+    },
+    "postgres": {
+      "configured": false,
+      "health_score": 0,
+      "status": "blocked_missing_database_url"
+    },
+    "supabase": {
+      "configured": false,
+      "health_score": 0,
+      "status": "blocked_missing_secret"
+    }
+  },
+  "failover_allowed": false,
+  "reason": "provider credentials not provisioned yet",
+  "generated_at": "2026-05-30T13:27:18.677126"
+}
