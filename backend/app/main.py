@@ -2875,7 +2875,7 @@ def admin_global_scale_operations_status():
 
 
 @app.get("/admin/redis-readiness")
-async def admin_redis_readiness(request: Request):
+async def admin_redis_readiness():
     """
     Owner/admin Redis readiness check.
 
