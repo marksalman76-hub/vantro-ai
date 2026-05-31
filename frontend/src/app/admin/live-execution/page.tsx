@@ -42,6 +42,118 @@ function safeString(value: unknown, fallback = "—") {
   return String(value);
 }
 
+
+function extractSellableDeliverable(value: any): string {
+  const raw =
+    typeof value === "string"
+      ? value
+      : value?.safe_output?.text ||
+        value?.normalized_output ||
+        value?.output_text ||
+        value?.generated_output ||
+        value?.output?.generated_output ||
+        value?.output?.output ||
+        value?.output?.content ||
+        value?.content ||
+        "";
+
+  let text = String(raw || "").trim();
+  if (!text) return "";
+
+  const markers = [
+    "**Final Premium Product Description",
+    "Final Premium Product Description",
+    "**Final Product Description",
+    "Final Product Description",
+    "**Final Deliverable",
+    "Final Deliverable",
+    "**Final Output",
+    "Final Output",
+    "**Headline:**",
+    "Headline:"
+  ];
+
+  for (const marker of markers) {
+    const index = text.indexOf(marker);
+    if (index >= 0) {
+      text = text.slice(index).trim();
+      break;
+    }
+  }
+
+  const internalStart = [
+    "1. Executive Summary",
+    "2. Business/Industry Context Assumptions",
+    "3. Specific Opportunity or Problem Diagnosis",
+    "4. Execution Plan with Concrete Steps",
+    "5. Deliverables/Assets/Actions to Create",
+    "6. KPIs or Measurable Success Criteria",
+    "7. Risks, Constraints, and Mitigations",
+    "8. Owner/Admin Review Points",
+    "9. Immediate Next Actions"
+  ];
+
+  for (const heading of internalStart) {
+    const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    text = text.replace(new RegExp(`(^|\\n)${escaped}[\\s\\S]*?(?=\\n\\s*(\\*\\*Final|Final|\\*\\*Headline|Headline:)|$)`, "i"), "").trim();
+  }
+
+  text = text.replace(/^---+\s*/gm, "").trim();
+
+  if (text.startsWith("{") || text.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(text);
+      return extractSellableDeliverable(parsed);
+    } catch {
+      return "Technical packet returned. Open technical details for raw output.";
+    }
+  }
+
+  return text;
+}
+
+function buildPortalDeliverableTask(task: string): string {
+  return `${task}
+
+OUTPUT RULES:
+Return only the finished customer-facing deliverable.
+Do not include executive summaries, assumptions, diagnosis, execution plans, KPIs, risks, admin review points, JSON, metadata, or internal reasoning.
+For product copy, return only headline, description, and call-to-action.`;
+}
+
+
+function clampMetric(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function dynamicExecutionMetrics(result: any, running: boolean, outputText: string, liveCall: boolean) {
+  const qualityScore =
+    Number(result?.quality?.quality_score) ||
+    Number(result?.quality_score) ||
+    Number(result?.execution?.quality?.quality_score) ||
+    0;
+
+  const latencyMs =
+    Number(result?.execution?.adapter_result?.latency_ms) ||
+    Number(result?.latency_ms) ||
+    0;
+
+  const providerScore = liveCall ? 100 : running ? 45 : result ? 20 : 0;
+  const generationScore = running ? 55 : outputText ? 100 : result ? 35 : 0;
+  const qualityDisplay = qualityScore ? qualityScore : result?.quality_gate_passed === true ? 100 : result?.quality_gate_passed === false ? 45 : running ? 30 : 0;
+  const deliveryScore = outputText && result?.success === true ? 100 : outputText ? 70 : running ? 35 : 0;
+  const latencyScore = latencyMs ? Math.max(10, 100 - Math.min(90, Math.round(latencyMs / 120))) : running ? 40 : 0;
+
+  return [
+    ["Generated", clampMetric(generationScore)],
+    ["Provider", clampMetric(providerScore)],
+    ["Quality", clampMetric(qualityDisplay)],
+    ["Delivery", clampMetric(deliveryScore)],
+    ["Speed", clampMetric(latencyScore)],
+  ];
+}
+
 export default function AdminLiveExecutionPage() {
   const [agent, setAgent] = useState("marketing_specialist_agent");
   const [task, setTask] = useState("Create a premium ecommerce launch campaign deliverable for a luxury skincare brand targeting women aged 30–50 in Australia.");
@@ -83,12 +195,7 @@ export default function AdminLiveExecutionPage() {
   const failed = result && result?.success !== true;
   const liveCall = adapter?.live_external_call_executed === true;
 
-  const progress = {
-    generated: completed ? 100 : running ? 65 : failed ? 35 : 0,
-    reviewed: completed ? 55 : running ? 15 : failed ? 10 : 0,
-    approved: completed ? 25 : 0,
-    pending: completed ? 0 : running ? 35 : failed ? 65 : 0,
-  };
+  const executionMetrics = dynamicExecutionMetrics(result, running, outputText, liveCall);
 
   const stats = useMemo(() => {
     const total = history.length;
@@ -111,7 +218,7 @@ export default function AdminLiveExecutionPage() {
       const response = await fetch("/api/admin-live-execution", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requested_agent: agent, task }),
+        body: JSON.stringify({ requested_agent: agent, task: buildPortalDeliverableTask(task) }),
       });
 
       const data = await response.json();
@@ -194,7 +301,7 @@ export default function AdminLiveExecutionPage() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <span style={{ width: 36, height: 36, borderRadius: 999, background: "#e0e7ff", color: "#6366f1", display: "grid", placeItems: "center", fontWeight: 950 }}>06</span>
-              <span style={{ fontSize: 13, fontWeight: 950, color: "#bfdbfe", textTransform: "uppercase", letterSpacing: ".08em" }}>Execution Output Viewer</span>
+              <span style={{ fontSize: 13, fontWeight: 950, color: "#bfdbfe", textTransform: "uppercase", letterSpacing: ".08em" }}>Live Deliverable Viewer</span>
             </div>
             <h1 style={{ fontSize: 38, margin: "14px 0 4px", fontWeight: 950 }}>Admin execution centre</h1>
             <p style={{ color: "#a8b3cf", fontSize: 17 }}>Run live agents, inspect outputs, review media, and keep local operator history.</p>
@@ -251,18 +358,15 @@ export default function AdminLiveExecutionPage() {
 
             <div style={{ marginTop: 20, border: "1px solid rgba(99,102,241,.28)", borderRadius: 22, padding: 18 }}>
               <div style={{ fontWeight: 950, marginBottom: 10 }}>Execution snapshot</div>
-              {[
-                ["Generated", progress.generated],
-                ["Reviewed", progress.reviewed],
-                ["Approved", progress.approved],
-                ["Pending", progress.pending],
-              ].map(([label, value]: any) => (
-                <div key={label} style={{ display: "grid", gridTemplateColumns: "100px 1fr 46px", gap: 12, alignItems: "center", marginTop: 12 }}>
-                  <span style={{ fontWeight: 900 }}>{label}</span>
-                  <div style={{ height: 10, borderRadius: 999, background: "#e2e8f0", overflow: "hidden" }}>
-                    <div style={{ height: "100%", width: `${value}%`, background: label === "Generated" ? "#22c55e" : label === "Reviewed" ? "#6366f1" : label === "Approved" ? "#14b8a6" : "#f59e0b" }} />
+              {executionMetrics.map(([label, value]: any) => (
+                <div key={label} style={{ marginTop: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#cbd5e1", fontWeight: 900 }}>
+                    <span>{label}</span>
+                    <span>{value}%</span>
                   </div>
-                  <span style={{ color: "#a8b3cf", fontWeight: 950 }}>{value}%</span>
+                  <div style={{ height: 10, background: "rgba(226,232,240,.16)", borderRadius: 99, overflow: "hidden", marginTop: 7 }}>
+                    <div style={{ height: "100%", width: `${value}%`, background: value >= 80 ? "#22c55e" : value >= 50 ? "#38bdf8" : value > 0 ? "#f59e0b" : "#334155", transition: "width .35s ease" }} />
+                  </div>
                 </div>
               ))}
             </div>
@@ -284,7 +388,7 @@ export default function AdminLiveExecutionPage() {
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <span style={{ width: 36, height: 36, borderRadius: 999, background: "#e0e7ff", color: "#6366f1", display: "grid", placeItems: "center", fontWeight: 950 }}>06</span>
-                  <span style={{ fontSize: 13, fontWeight: 950, color: "#bfdbfe", textTransform: "uppercase", letterSpacing: ".08em", background: "#1d4ed8" }}>Execution Output Viewer</span>
+                  <span style={{ fontSize: 13, fontWeight: 950, color: "#bfdbfe", textTransform: "uppercase", letterSpacing: ".08em", background: "#1d4ed8" }}>Live Deliverable Viewer</span>
                 </div>
                 <h2 style={{ fontSize: 28, margin: "14px 0 4px", fontWeight: 950 }}>Admin deliverables</h2>
               </div>
@@ -350,8 +454,8 @@ export default function AdminLiveExecutionPage() {
               </pre>
 
               <div style={{ display: "flex", gap: 10, marginTop: 14 }}>
-                <button onClick={() => navigator.clipboard?.writeText(outputText || "")} style={{ padding: "10px 14px", borderRadius: 14, border: "1px solid rgba(148,163,184,.3)", background: "#020617", color: "#bfdbfe", fontWeight: 900 }}>Copy output</button>
-                <button onClick={exportResult} style={{ padding: "10px 14px", borderRadius: 14, border: "1px solid rgba(148,163,184,.3)", background: "#020617", color: "#bfdbfe", fontWeight: 900 }}>Export JSON</button>
+                <button onClick={() => navigator.clipboard?.writeText(outputText || "")} style={{ padding: "10px 14px", borderRadius: 14, border: "1px solid rgba(148,163,184,.3)", background: "#020617", color: "#bfdbfe", fontWeight: 900 }}>Copy deliverable</button>
+                <button onClick={exportResult} style={{ padding: "10px 14px", borderRadius: 14, border: "1px solid rgba(148,163,184,.3)", background: "#020617", color: "#bfdbfe", fontWeight: 900 }}>Export technical details</button>
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginTop: 16 }}>

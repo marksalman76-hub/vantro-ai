@@ -336,6 +336,54 @@ function getAgentDisplayName(agentId: string) {
 // client_portal_bottom_cards_aligned_locked
 // client_portal_activity_premium_polish_locked
 // client_portal_responsive_motion_locked
+
+function clampExecutionMetric(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function clientDynamicExecutionMetrics(params: {
+  executionState: string;
+  liveDeliverable: any;
+  latestDeliverable: any;
+  reviewStatus: string;
+}) {
+  const source = params.liveDeliverable || params.latestDeliverable || {};
+  const outputText =
+    source?.output_text ||
+    source?.output ||
+    source?.generated_output ||
+    source?.deliverable ||
+    source?.content ||
+    "";
+
+  const qualityScore =
+    Number(source?.quality?.quality_score) ||
+    Number(source?.quality_score) ||
+    Number(source?.execution?.quality?.quality_score) ||
+    0;
+
+  const providerLive =
+    source?.provider_execution_attempted === true ||
+    source?.raw?.provider_execution_attempted === true ||
+    source?.external_action_performed === true ||
+    source?.performed_actual_action === true;
+
+  const generatedScore = params.executionState === "running" ? 55 : outputText ? 100 : params.executionState === "completed" ? 85 : 0;
+  const providerScore = providerLive ? 100 : params.executionState === "running" ? 45 : params.executionState === "completed" ? 70 : 0;
+  const qualityDisplay = qualityScore ? qualityScore : source?.quality_gate_passed === true ? 100 : source?.quality_gate_passed === false ? 45 : params.executionState === "running" ? 30 : 0;
+  const reviewScore = params.reviewStatus === "approved" ? 100 : params.reviewStatus === "rejected" ? 35 : params.executionState === "completed" ? 75 : params.executionState === "running" ? 25 : 0;
+  const deliveryScore = params.executionState === "completed" && outputText ? 100 : outputText ? 80 : params.executionState === "running" ? 35 : 0;
+
+  return [
+    ["Generated", clampExecutionMetric(generatedScore)],
+    ["Provider", clampExecutionMetric(providerScore)],
+    ["Quality", clampExecutionMetric(qualityDisplay)],
+    ["Review", clampExecutionMetric(reviewScore)],
+    ["Delivery", clampExecutionMetric(deliveryScore)],
+  ];
+}
+
 export default function ClientPage() {
   const [account, setAccount] = useState<Account | null>(null);
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
