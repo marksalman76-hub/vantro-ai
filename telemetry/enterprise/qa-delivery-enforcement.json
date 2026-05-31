@@ -1,0 +1,21 @@
+{
+  "script": "qa/automate",
+  "status": "QA_DELIVERY_ENFORCEMENT_READY",
+  "env": "production",
+  "hallucination_scoring": true,
+  "compliance_pipelines": true,
+  "live_runtime_changed": false,
+  "customer_safe": true,
+  "enforcement": {
+    "hallucination_scoring_required": true,
+    "compliance_pipeline_required": true,
+    "customer_safe_output_required": true,
+    "premium_quality_required": true,
+    "owner_review_for_high_risk_outputs": true,
+    "audit_trail_required": true
+  },
+  "result": {
+    "qa_enforcement_foundation_ready": true,
+    "live_blocking_enforcement_required_later": true
+  }
+}

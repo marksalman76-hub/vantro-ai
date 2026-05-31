@@ -1,0 +1,22 @@
+{
+  "script": "onboarding/enterprise",
+  "status": "ENTERPRISE_ONBOARDING_REFINEMENT_READY",
+  "polish": true,
+  "activation_governance": true,
+  "integrations_ui": true,
+  "live_runtime_changed": false,
+  "customer_safe": true,
+  "checks": {
+    "enterprise_agent_selection_required": true,
+    "head_agent_enterprise_only": true,
+    "orchestration_agent_enterprise_only": true,
+    "activation_governance_required": true,
+    "integrations_ui_required": true,
+    "owner_approval_required_for_multi_business": true,
+    "one_workspace_one_business_preserved_by_default": true
+  },
+  "result": {
+    "enterprise_onboarding_foundation_ready": true,
+    "final_visual_polish_required_before_launch": true
+  }
+}
