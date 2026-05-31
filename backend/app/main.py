@@ -531,7 +531,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             (request.actor_role or "").strip().lower() in {"owner", "admin", "owner_admin", "system"}
             and (request.workflow_stage or "").strip().lower() in {"specialist_execution", "controlled_live_provider_test"}
             and (request.action_type or "").strip().lower() in {"run_agent", "provider_verification"}
-            and requested_agent in {"marketing_specialist_agent", "crm_ai_agent"}
+            and requested_agent in {"marketing_specialist_agent", "crm_ai_agent", "email_reply_agent"}
         )
 
         if not owner_admin_live_provider_test_allowed:
