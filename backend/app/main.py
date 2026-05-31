@@ -270,6 +270,33 @@ ACTION_TO_EXECUTION_MAP: Dict[str, str] = {
 }
 
 
+APPROVED_GOVERNED_EXECUTION_AGENTS = {
+    "marketing_specialist_agent",
+    "crm_ai_agent",
+    "email_reply_agent",
+    "strategist_agent",
+    "business_growth_partnerships_agent",
+    "lead_generator_appointment_setter_agent",
+    "social_media_manager_content_creator_agent",
+    "seo_agent",
+    "sales_closer_agent",
+    "receptionist_agent",
+    "customer_support_agent",
+    "ecommerce_agent",
+    "product_research_agent",
+    "competitor_intelligence_agent",
+    "brand_strategy_agent",
+    "store_builder_agent",
+    "website_landing_page_apps_agent",
+    "product_development_agent",
+    "product_copywriting_agent",
+    "ugc_creative_agent",
+    "product_image_agent",
+    "paid_ads_agent",
+    "analytics_optimisation_agent",
+    "influencer_collaboration_agent",
+}
+
 class HealthResponse(BaseModel):
     success: bool
     system: str
