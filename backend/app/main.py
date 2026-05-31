@@ -2873,3 +2873,59 @@ def admin_global_commercial_launch_status():
 def admin_global_scale_operations_status():
     return global_scale_operations_status()
 
+
+@app.get("/admin/redis-readiness")
+async def admin_redis_readiness(request: Request):
+    """
+    Owner/admin Redis readiness check.
+
+    Safe behaviour:
+    - Does not enqueue jobs.
+    - Does not execute workers.
+    - Does not call providers.
+    - Does not expose REDIS_URL.
+    """
+    try:
+        from backend.app.runtime.queue_adapter import RedisQueueAdapter, create_queue_adapter
+
+        redis_probe = RedisQueueAdapter()
+        redis_health = redis_probe.health()
+
+        selected_adapter = create_queue_adapter()
+        selected_health = selected_adapter.health()
+
+        return {
+            "success": True,
+            "check": "admin_redis_readiness",
+            "redis_configured": bool(redis_health.get("redis_url_configured")),
+            "redis_available": bool(redis_health.get("available")),
+            "redis_health": {
+                "adapter": redis_health.get("adapter"),
+                "available": redis_health.get("available"),
+                "redis_required": redis_health.get("redis_required"),
+                "redis_url_configured": redis_health.get("redis_url_configured"),
+                "error": redis_health.get("error"),
+            },
+            "selected_queue_adapter": {
+                "adapter": selected_health.get("adapter"),
+                "available": selected_health.get("available"),
+                "redis_required": selected_health.get("redis_required"),
+            },
+            "live_runtime_changed": False,
+            "jobs_executed": False,
+            "external_provider_called": False,
+            "customer_safe": True,
+            "status": "REDIS_READY" if redis_health.get("available") else "REDIS_NOT_READY",
+        }
+    except Exception as exc:
+        return {
+            "success": False,
+            "check": "admin_redis_readiness",
+            "error": repr(exc),
+            "live_runtime_changed": False,
+            "jobs_executed": False,
+            "external_provider_called": False,
+            "customer_safe": True,
+            "status": "REDIS_READINESS_CHECK_FAILED",
+        }
+
