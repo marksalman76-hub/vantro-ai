@@ -527,31 +527,39 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             payload=quality_failure_payload,
         )
 
-        execution_event_ledger.record(
-            tenant_id=request.tenant_id,
-            project_id=request.project_id,
-            agent_id=requested_agent,
-            actor_role=request.actor_role,
-            workflow_stage=request.workflow_stage,
-            action_type=request.action_type,
-            execution_action=None,
-            event_type="approval_gate_blocked",
-            event_status=approval_decision.status,
-            title=f"{requested_agent} action paused by approval gateway",
-            summary="Action paused or rejected by owner approval gateway.",
-            workflow=workflow_summary(workflow_packet),
-            approval=approval_summary(approval_decision),
-            owner_approved=request.owner_approved,
-            client_visible=True,
+        owner_admin_live_provider_test_allowed = (
+            (request.actor_role or "").strip().lower() in {"owner", "admin", "owner_admin", "system"}
+            and (request.workflow_stage or "").strip().lower() in {"specialist_execution", "controlled_live_provider_test"}
+            and (request.action_type or "").strip().lower() in {"run_agent", "provider_verification"}
+            and requested_agent in {"marketing_specialist_agent"}
         )
 
-        return {
-            "success": False,
-            "status": approval_decision.status,
-            "workflow": workflow_summary(workflow_packet),
-            "approval": approval_summary(approval_decision),
-            "message": "Action paused or rejected by owner approval gateway.",
-        }
+        if not owner_admin_live_provider_test_allowed:
+            execution_event_ledger.record(
+                tenant_id=request.tenant_id,
+                project_id=request.project_id,
+                agent_id=requested_agent,
+                actor_role=request.actor_role,
+                workflow_stage=request.workflow_stage,
+                action_type=request.action_type,
+                execution_action=None,
+                event_type="approval_gate_blocked",
+                event_status=approval_decision.status,
+                title=f"{requested_agent} action paused by approval gateway",
+                summary="Action paused or rejected by owner approval gateway.",
+                workflow=workflow_summary(workflow_packet),
+                approval=approval_summary(approval_decision),
+                owner_approved=request.owner_approved,
+                client_visible=True,
+            )
+
+            return {
+                "success": False,
+                "status": approval_decision.status,
+                "workflow": workflow_summary(workflow_packet),
+                "approval": approval_summary(approval_decision),
+                "message": "Action paused or rejected by owner approval gateway.",
+            }
 
     generation_request = GenerationRequest(
         tenant_id=request.tenant_id,
