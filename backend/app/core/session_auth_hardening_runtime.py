@@ -197,10 +197,18 @@ def assess_session_auth_request(request: Request) -> Dict[str, Any]:
                 blocked = True
 
     if _check_replay(request):
-        reasons.append("possible_replay_request_detected")
-        severity = "high" if severity in {"none", "medium"} else severity
-        if production:
-            blocked = True
+        if (
+            is_governed_execution_path
+            and is_owner_admin_actor
+            and (auth or admin_token)
+        ):
+            reasons.append("owner_admin_governed_execution_replay_bypass_applied")
+            severity = "medium" if severity == "none" else severity
+        else:
+            reasons.append("possible_replay_request_detected")
+            severity = "high" if severity in {"none", "medium"} else severity
+            if production:
+                blocked = True
 
     if reasons:
         return {
