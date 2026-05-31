@@ -1,0 +1,50 @@
+ALL_AGENT_LIVE_READINESS_SWEEP_V2_STARTED
+==================== marketing_specialist_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== crm_ai_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== email_reply_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== strategist_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== business_growth_partnerships_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== lead_generator_appointment_setter_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== social_media_manager_content_creator_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== seo_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== sales_closer_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== receptionist_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== customer_support_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== ecommerce_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== product_research_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== competitor_intelligence_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== brand_strategy_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== store_builder_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== website_landing_page_apps_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== product_development_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== product_copywriting_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== ugc_creative_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== product_image_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== paid_ads_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== analytics_optimisation_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+==================== influencer_collaboration_agent ====================
+{"success":false,"error":"auth_security_policy_blocked","message":"Request blocked by authentication security policy.","security_profile":"priority5_session_auth_hardening_v1"}
+ALL_AGENT_LIVE_READINESS_SWEEP_V2_COMPLETE
