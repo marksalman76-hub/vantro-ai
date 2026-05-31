@@ -3378,3 +3378,40 @@ async def admin_runtime_safe_worker_execute_one():
             "status": "SAFE_WORKER_DEQUEUE_EXECUTION_FAILED",
         }
 
+
+
+@app.get("/admin/live-provider-readiness")
+async def admin_live_provider_readiness():
+    """
+    Hosted provider readiness visibility.
+
+    Safe:
+    - No provider call
+    - No spend
+    - No external action
+    - Does not expose secret values
+    """
+    import os
+
+    openai_configured = bool(os.getenv("OPENAI_API_KEY"))
+    live_external_calls_enabled = (os.getenv("LIVE_EXTERNAL_CALLS_ENABLED") or "false").lower() in {"1", "true", "yes", "on"}
+    owner_approved_live_activation = (os.getenv("OWNER_APPROVED_LIVE_ACTIVATION") or "false").lower() in {"1", "true", "yes", "on"}
+    owner_approval_required = (os.getenv("OWNER_APPROVAL_REQUIRED") or "true").lower() not in {"0", "false", "off"}
+
+    return {
+        "success": True,
+        "check": "live_provider_readiness",
+        "openai_configured": openai_configured,
+        "live_external_calls_enabled": live_external_calls_enabled,
+        "owner_approved_live_activation": owner_approved_live_activation,
+        "owner_approval_required": owner_approval_required,
+        "provider_execution_ready": bool(openai_configured and live_external_calls_enabled and owner_approved_live_activation),
+        "worker_live_execution_enabled": (os.getenv("WORKER_LIVE_EXECUTION_ENABLED") or "false").lower() in {"1", "true", "yes", "on"},
+        "secret_values_exposed": False,
+        "provider_called": False,
+        "spend_performed": False,
+        "external_action_performed": False,
+        "customer_safe": True,
+        "status": "LIVE_PROVIDER_READY" if openai_configured and live_external_calls_enabled and owner_approved_live_activation else "LIVE_PROVIDER_NOT_READY",
+    }
+
