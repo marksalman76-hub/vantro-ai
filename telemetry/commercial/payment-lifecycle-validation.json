@@ -9,7 +9,7 @@
   "real_subscription_created": false,
   "customer_safe": true,
   "owner_approval_required_before_real_charge": true,
-  "tested_cards": "all",
+  "tested_cards": "owner-approved",
   "lifecycle_checks": {
     "checkout_session_creation": true,
     "payment_success_path": true,
