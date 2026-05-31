@@ -1,0 +1,27 @@
+{
+  "script": "stripe/subscription-flows",
+  "status": "SUBSCRIPTION_FLOW_VALIDATION_COMPLETE",
+  "env": "production",
+  "flows": {
+    "upgrade": true,
+    "downgrade": true,
+    "cancel": true,
+    "recover": true
+  },
+  "real_subscription_mutated": false,
+  "real_invoice_created": false,
+  "live_runtime_changed": false,
+  "customer_safe": true,
+  "governance": {
+    "owner_approval_required_for_plan_override": true,
+    "entitlement_recalculation_required": true,
+    "agent_selection_lock_preserved": true,
+    "cancellation_retention_flow_required": true
+  },
+  "result": {
+    "upgrade_flow_ready": true,
+    "downgrade_flow_ready": true,
+    "cancellation_flow_ready": true,
+    "recovery_flow_ready": true
+  }
+}
