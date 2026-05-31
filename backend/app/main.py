@@ -2968,3 +2968,93 @@ async def admin_runtime_worker_health():
             "status": "WORKER_RUNTIME_CHECK_FAILED",
         }
 
+
+@app.post("/admin/queue-dry-run")
+async def admin_queue_dry_run():
+    """
+    Admin-only production Redis queue dry run.
+
+    Safe behaviour:
+    - Enqueues a dry-run packet only.
+    - Does not execute jobs.
+    - Does not call providers.
+    - Does not spend money.
+    - Does not expose secrets.
+    """
+
+    try:
+        from backend.app.runtime.queue_adapter import create_queue_adapter
+        from backend.app.runtime.queue_admission_validator import QueueAdmissionRequest, evaluate_queue_admission
+        from backend.app.runtime.queue_telemetry import build_queue_health_snapshot, export_queue_health_dict
+
+        adapter = create_queue_adapter()
+
+        before = export_queue_health_dict(build_queue_health_snapshot(adapter=adapter))
+
+        admission = evaluate_queue_admission(
+            QueueAdmissionRequest(
+                action_type="run_agent",
+                tenant_id="admin_queue_dry_run_tenant",
+                agent_key="qa_agent",
+                actor_role="owner_admin",
+                client_has_entitlement=False,
+                customer_safe=True,
+            )
+        )
+
+        message = None
+
+        if admission.admitted:
+            message = adapter.enqueue(
+                admission.queue_target,
+                {
+                    "type": "admin_queue_dry_run",
+                    "action_type": "run_agent",
+                    "tenant_id": "admin_queue_dry_run_tenant",
+                    "agent_key": "qa_agent",
+                    "execute": False,
+                    "provider_call_allowed": False,
+                    "spend_allowed": False,
+                    "customer_safe": True,
+                },
+                {
+                    "source": "admin_queue_dry_run_route",
+                    "customer_safe": True,
+                },
+            )
+
+        after = export_queue_health_dict(build_queue_health_snapshot(adapter=adapter))
+
+        return {
+            "success": True,
+            "dry_run": "admin_queue_dry_run",
+            "queue_adapter": after.get("adapter"),
+            "admission": {
+                "admitted": admission.admitted,
+                "queue_target": admission.queue_target,
+                "blocked_reasons": admission.blocked_reasons,
+                "reasons": admission.reasons,
+            },
+            "message_created": message is not None,
+            "message_id": getattr(message, "id", None),
+            "before_total_messages": before.get("total_messages"),
+            "after_total_messages": after.get("total_messages"),
+            "jobs_executed": False,
+            "external_provider_called": False,
+            "spend_performed": False,
+            "customer_safe": True,
+            "status": "ADMIN_QUEUE_DRY_RUN_COMPLETE",
+        }
+
+    except Exception as exc:
+        return {
+            "success": False,
+            "dry_run": "admin_queue_dry_run",
+            "error": repr(exc),
+            "jobs_executed": False,
+            "external_provider_called": False,
+            "spend_performed": False,
+            "customer_safe": True,
+            "status": "ADMIN_QUEUE_DRY_RUN_FAILED",
+        }
+
