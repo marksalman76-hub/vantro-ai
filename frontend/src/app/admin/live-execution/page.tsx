@@ -374,7 +374,7 @@ function autonomousSafeLabel(result: any): string {
 export default function AdminLiveExecutionPage() {
   const [agent, setAgent] = useState("marketing_specialist_agent");
   const [selectedAgents, setSelectedAgents] = useState<string[]>(["marketing_specialist_agent"]);
-  const [task, setTask] = useState("Create a premium ecommerce launch campaign deliverable for a luxury skincare brand targeting women aged 30–50 in Australia.");
+  const [task, setTask] = useState("Create a custom premium React/Next.js landing page for a luxury Australian skincare brand targeting women aged 30–50. Use advanced glassmorphism, 3D motion visuals, premium animation, cinematic layout, proof sections, offer section, FAQ, sticky CTA, and generate a real previewable React route. Do not return generic copy. Generate the website project.");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [toast, setToast] = useState("");
@@ -448,7 +448,7 @@ export default function AdminLiveExecutionPage() {
           owner_approved: true,
           client_owned_agents: selectedAgents,
           package_tier: "enterprise",
-          connected_integrations: uniqueValues(selectedAgents.flatMap(integrationsForAutonomousAgent)),
+          connected_integrations: uniqueValues([...selectedAgents.flatMap(integrationsForAutonomousAgent), "task_store"]),
           tenant_id: "owner_admin",
         }),
       });
