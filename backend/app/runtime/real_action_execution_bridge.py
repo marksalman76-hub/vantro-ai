@@ -34,6 +34,11 @@ SAFE_ACTION_ADAPTERS = {
     "create_client_deliverable": "client_deliverable_adapter",
     "prepare_outreach_draft": "outreach_draft_adapter",
     "prepare_implementation_checklist": "implementation_checklist_adapter",
+    "website_draft_page": "website_draft_page_adapter",
+    "ads_campaign_draft": "ads_campaign_draft_adapter",
+    "seo_content_plan": "seo_deliverable_adapter",
+    "store_draft_update": "store_draft_update_adapter",
+    "product_copywriting": "product_copywriting_adapter",
 }
 
 
@@ -60,8 +65,34 @@ def _contains_high_risk_action(packet: Dict[str, Any]) -> bool:
 def _normalise_action_type(packet: Dict[str, Any]) -> str:
     raw = " ".join(
         str(packet.get(k, ""))
-        for k in ["action_type", "implementation_action", "action", "title", "description"]
-    ).lower()
+        for k in [
+            "action_type",
+            "implementation_action",
+            "action",
+            "title",
+            "description",
+            "user_requested_task",
+            "recommended_agent",
+            "assigned_agent",
+        ]
+    ).lower().replace("_", " ")
+
+    assigned_agent = str(packet.get("assigned_agent") or packet.get("recommended_agent") or "").strip().lower()
+
+    if "website draft page" in raw or "landing page" in raw or assigned_agent == "website_landing_apps_agent":
+        return "website_draft_page"
+
+    if "ads campaign draft" in raw or "meta ads" in raw or "google ads" in raw or assigned_agent == "paid_ads_agent":
+        return "ads_campaign_draft"
+
+    if "seo content plan" in raw or "seo title" in raw or "meta description" in raw or assigned_agent == "seo_agent":
+        return "seo_content_plan"
+
+    if "store draft update" in raw or "shopify" in raw or assigned_agent in {"store_builder_agent", "ecommerce_agent"}:
+        return "store_draft_update"
+
+    if "product description" in raw or "product copy" in raw or assigned_agent == "product_copywriting_agent":
+        return "product_copywriting"
 
     if "email" in raw:
         return "create_email_draft"
@@ -121,7 +152,8 @@ def execute_real_action_packet(
     adapter = SAFE_ACTION_ADAPTERS.get(action_type, "client_deliverable_adapter")
 
     implementation_action = (
-        packet.get("implementation_action")
+        packet.get("user_requested_task")
+        or packet.get("implementation_action")
         or packet.get("action")
         or packet.get("description")
         or packet.get("title")
@@ -134,6 +166,7 @@ def execute_real_action_packet(
             "assigned_agent": assigned_agent,
             "implementation_action": implementation_action,
             "action_type": action_type,
+            "execution_adapter_target": adapter,
         },
         tenant_id=tenant_id,
         connected_integrations=connected_integrations or [],

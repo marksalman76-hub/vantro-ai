@@ -140,12 +140,15 @@ def _rewrite_heading_to_operational(text: str) -> str:
         return "Create pilot project scope and case study capture checklist for healthcare technology clients"
     if "deliverables" in lower or "assets" in lower:
         return "Create healthcare technology sales enablement asset checklist and production queue"
-    if "marketing" in lower or "thought" in lower or "content" in lower:
-        return "Create healthcare technology thought leadership content calendar and first asset briefs"
+    if "seo" in lower or "search" in lower or "meta description" in lower or "organic" in lower:
+        return "Create SEO optimisation deliverables and metadata"
+
+    if "marketing" in lower or "thought leadership" in lower or "content calendar" in lower:
+        return "Create marketing campaign content deliverables"
     if "review" in lower:
         return "Create owner review checklist for healthcare technology service launch readiness"
 
-    return "Create executable implementation checklist from approved healthcare technology strategy"
+    return "Create executable implementation deliverable from approved autonomous task request"
 
 
 def _rewrite_to_executable(text: str) -> str:
