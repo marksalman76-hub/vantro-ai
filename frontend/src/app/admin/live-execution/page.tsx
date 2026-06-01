@@ -242,6 +242,37 @@ Completion Evidence:
 ${evidence.map((line) => `- ${line}`).join("\n")}`;
 }
 
+
+function getAutonomousFirstResult(result: any): any {
+  const data = result?.data || result || {};
+  const completed = Array.isArray(data?.completed_results) ? data.completed_results : [];
+  const queued = Array.isArray(data?.queued_results) ? data.queued_results : [];
+  const blocked = Array.isArray(data?.blocked_results) ? data.blocked_results : [];
+  return completed[0] || queued[0] || blocked[0] || {};
+}
+
+function autonomousProviderLabel(result: any): string {
+  const data = result?.data || result || {};
+  const first = getAutonomousFirstResult(data);
+  if (first?.performed_actual_action === true || first?.delegate_execution === "executed") return "autonomous";
+  if (first?.execution_status) return "governed";
+  return "—";
+}
+
+function autonomousLatencyLabel(result: any): string {
+  const data = result?.data || result || {};
+  const created = Number(data?.created_at_ms || 0);
+  const first = getAutonomousFirstResult(data);
+  const actionCreated = Number(first?.created_at_ms || 0);
+  if (created && actionCreated) return `${Math.max(1, Math.abs(created - actionCreated))}ms`;
+  return "—";
+}
+
+function autonomousSafeLabel(result: any): string {
+  const data = result?.data || result || {};
+  return data?.customer_safe === false ? "False" : "True";
+}
+
 export default function AdminLiveExecutionPage() {
   const [agent, setAgent] = useState("marketing_specialist_agent");
   const [task, setTask] = useState("Create a premium ecommerce launch campaign deliverable for a luxury skincare brand targeting women aged 30–50 in Australia.");
@@ -323,6 +354,8 @@ export default function AdminLiveExecutionPage() {
       const liveExecution = liveResult?.execution || {};
       const liveAdapter = liveExecution?.adapter_result || {};
       const liveOutput = extractAutonomousDeliverable(liveResult);
+      const autonomousProvider = autonomousProviderLabel(liveResult);
+      const autonomousLatency = autonomousLatencyLabel(liveResult);
 
       const item: HistoryItem = {
         id: `${Date.now()}-${agent}`,
@@ -331,8 +364,8 @@ export default function AdminLiveExecutionPage() {
         task,
         createdAt: new Date().toLocaleString(),
         success: liveResult?.success === true,
-        provider: safeString(liveAdapter?.provider_key),
-        latency: liveAdapter?.latency_ms ? `${liveAdapter.latency_ms}ms` : "—",
+        provider: autonomousProvider,
+        latency: autonomousLatency,
         output: liveOutput,
         raw: liveResult,
       };
