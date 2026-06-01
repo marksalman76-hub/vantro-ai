@@ -513,6 +513,7 @@ export default function AdminLiveExecutionPage() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
   const normalizedResult = normalizeExecutionPacket(result);
+  const [selectedPreviewCard, setSelectedPreviewCard] = useState<any>(null);
   const visualDeliverableCards = buildVisualDeliverableCards(normalizedResult?.output || "", selectedAgents.length > 1 ? `${selectedAgents.length} agents` : agentName(agent));
   const [toast, setToast] = useState("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -811,11 +812,11 @@ export default function AdminLiveExecutionPage() {
                 ) : visualDeliverableCards.length ? (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12, width: "100%", textAlign: "left" }}>
                     {visualDeliverableCards.map((card, idx) => (
-                      <div key={`${card.title}-${idx}`} style={{ border: "1px solid rgba(125,211,252,.28)", background: "rgba(14,165,233,.08)", borderRadius: 18, padding: 14 }}>
+                      <button key={`${card.title}-${idx}`} onClick={() => setSelectedPreviewCard(card)} style={{ cursor: "pointer", textAlign: "left", border: "1px solid rgba(125,211,252,.28)", background: "rgba(14,165,233,.08)", borderRadius: 18, padding: 14 }}>
                         <div style={{ fontSize: 12, color: "#67e8f9", fontWeight: 950, marginBottom: 6 }}>PREVIEW {idx + 1}</div>
                         <div style={{ fontWeight: 950, color: "#fff", marginBottom: 6 }}>{card.title}</div>
                         <div style={{ color: "#c7d2fe", fontSize: 13, lineHeight: 1.35 }}>{card.detail}</div>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 ) : (
@@ -848,6 +849,19 @@ export default function AdminLiveExecutionPage() {
                   <span key={tag} style={{ border: "1px solid rgba(148,163,184,.34)", borderRadius: 999, padding: "9px 13px", fontWeight: 900, color: "#e0e7ff" }}>{tag}</span>
                 ))}
               </div>
+
+              {selectedPreviewCard ? (
+                <div style={{ marginBottom: 14, border: "1px solid rgba(34,211,238,.35)", background: "rgba(8,47,73,.45)", borderRadius: 22, padding: 18 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", marginBottom: 8 }}>
+                    <div style={{ color: "#67e8f9", fontWeight: 950 }}>{selectedPreviewCard.title}</div>
+                    <button onClick={() => setSelectedPreviewCard(null)} style={{ border: "1px solid rgba(148,163,184,.35)", background: "rgba(15,23,42,.8)", color: "#fff", borderRadius: 999, padding: "7px 10px", cursor: "pointer" }}>Close</button>
+                  </div>
+                  <div style={{ color: "#dbeafe", lineHeight: 1.5 }}>{selectedPreviewCard.detail}</div>
+                  <div style={{ marginTop: 12, color: "#cbd5e1", fontSize: 13 }}>
+                    Full matching deliverable details are available in the live output panel below.
+                  </div>
+                </div>
+              ) : null}
 
               <pre style={{ whiteSpace: "pre-wrap", maxHeight: 430, overflow: "auto", background: "#020617", border: "1px solid rgba(148,163,184,.2)", borderRadius: 22, padding: 20, color: "#e2e8f0", lineHeight: 1.6, fontSize: 14 }}>
                 {running ? "Generating live governed output..." : outputText || "Run an agent from the left panel. The real live execution output will appear here."}
