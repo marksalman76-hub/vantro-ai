@@ -384,6 +384,94 @@ function clientDynamicExecutionMetrics(params: {
   ];
 }
 
+
+function buildStrictTaskExecutionContract(task: string, agentName?: string): string {
+  return `${task}
+
+STRICT TASK EXECUTION CONTRACT:
+You are acting as a task executor, not a consultant.
+Fulfil the user's exact requested task only.
+Do not expand the task into a campaign, strategy, report, audit, plan, or multi-channel bundle unless the user explicitly asks for that.
+
+OUTPUT REQUIREMENTS:
+- Return only the finished deliverable.
+- Do not include executive summary, assumptions, diagnosis, execution plan, KPIs, risks, admin review points, next steps, metadata, JSON, or internal reasoning.
+- If the user asks for a product description, return only: Headline, Description, Call-to-action.
+- If the user asks for an email, return only: Subject and Email body.
+- If the user asks for ad copy, return only the requested ad copy variations.
+- If the user asks for social captions, return only captions.
+- If the task requires a real external action and the integration is not connected or approval is required, clearly state the exact blocker and the required next action.
+- Do not invent completed external actions.
+
+QUALITY BAR:
+Make the deliverable commercially usable, specific, premium, concise, and ready to copy into the relevant business tool.`;
+}
+
+
+function buildAutonomousImplementationPlan(task: string, selectedAgent: string) {
+  const cleanTask = String(task || "").trim();
+
+  return {
+    plan_id: `portal_plan_${Date.now()}`,
+    source: "portal_autonomous_execution",
+    action_packets: [
+      {
+        packet_id: `portal_packet_${Date.now()}`,
+        title: cleanTask,
+        implementation_action: cleanTask,
+        recommended_agent: selectedAgent || "marketing_specialist_agent",
+        risk_level: "low",
+        approval_required: false,
+        execution_mode: "autonomous_governed",
+        expected_output: "completed_action_evidence",
+      },
+    ],
+  };
+}
+
+function extractAutonomousDeliverable(result: any): string {
+  const data = result?.data || result || {};
+  const completed = Array.isArray(data?.completed_results) ? data.completed_results : [];
+  const queued = Array.isArray(data?.queued_results) ? data.queued_results : [];
+  const blocked = Array.isArray(data?.blocked_results) ? data.blocked_results : [];
+  const first = completed[0] || queued[0] || blocked[0] || {};
+
+  const performed = first?.performed_actual_action === true || first?.delegate_execution === "executed";
+  const status = first?.execution_status || first?.autonomous_route || data?.profile || "autonomous_execution_processed";
+  const output =
+    first?.completed_output ||
+    first?.deliverable?.content?.body ||
+    first?.deliverable?.summary ||
+    first?.execution_preview ||
+    first?.upgrade_recommendation ||
+    "";
+
+  const evidence = [];
+  evidence.push(`Execution status: ${status}`);
+  evidence.push(`Performed actual action: ${performed ? "Yes" : "No"}`);
+
+  if (first?.external_action_record_count !== undefined) {
+    evidence.push(`External action records: ${first.external_action_record_count}`);
+  }
+
+  if (first?.history_persisted !== undefined) {
+    evidence.push(`Execution history saved: ${first.history_persisted ? "Yes" : "No"}`);
+  }
+
+  if (Array.isArray(data?.connected_integrations)) {
+    evidence.push(`Connected integrations: ${data.connected_integrations.length ? data.connected_integrations.join(", ") : "None"}`);
+  }
+
+  if (!performed && !output) {
+    evidence.push("Result: Autonomous route completed, but no external tool action was performed. Connect the required integration or owner-approve the action if required.");
+  }
+
+  return `${output || "Autonomous execution processed. Review evidence below."}
+
+Completion Evidence:
+${evidence.map((line) => `- ${line}`).join("\n")}`;
+}
+
 export default function ClientPage() {
   const [account, setAccount] = useState<Account | null>(null);
   const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
@@ -2325,18 +2413,23 @@ const primaryAssetUrl =
                     setToastMessage("Execution started. Generating client deliverables...");
 
                     try {
-                      const response = await fetch("/api/run-agent", {
+                      const response = await fetch("/api/delegated-workforce-execution", {
                         method: "POST",
                         headers: { "Content-Type": "application/json", "x-tenant-id": tenantId, "x-actor-role": "customer" },
                         credentials: "include",
                         body: JSON.stringify({
-                          selected_agents: selectedAgents,
-                          task: "Create a client-specific client deliverable using the saved business profile, selected active agents, current offer, target audience, goals, and execution requirements.",
-                          business_profile: {
-                            niche: businessProfile.business_niche || "Saved client business profile",
-                            target_audience: businessProfile.target_audience || "Saved target audience and customer context",
-                            positioning: businessProfile.notes || "Client-specific commercial positioning and execution requirements",
-                          },
+                          implementation_plan: buildAutonomousImplementationPlan(
+                            buildStrictTaskExecutionContract(
+                              `Create a client-specific deliverable using the saved business profile. Business niche: ${businessProfile.business_niche || "saved business profile"}. Target audience: ${businessProfile.target_audience || "saved target audience"}. Positioning: ${businessProfile.notes || "client-specific positioning"}. Fulfil the selected agent task only and provide completion evidence.`,
+                              selectedAgents[0] || "marketing_specialist_agent"
+                            ),
+                            selectedAgents[0] || "marketing_specialist_agent"
+                          ),
+                          owner_approved: false,
+                          client_owned_agents: selectedAgents,
+                          package_tier: "starter",
+                          connected_integrations: ["email", "crm", "calendar"],
+                          tenant_id: tenantId || "client_demo_001",
                         }),
                       });
 
@@ -2581,7 +2674,7 @@ const primaryAssetUrl =
                   icon: liveDeliverable ? "✓" : "→",
                 },
                 {
-                  title: executionState === "completed" ? "Execution completed" : executionState === "running" ? "Execution running" : "Execution prepared",
+                  title: executionState === "completed" ? "Autonomous execution completed" : executionState === "running" ? "Execution running" : "Execution prepared",
                   detail: executionState === "running"
                     ? "Agent workflow is processing the current request."
                     : "Governed execution is prepared for the selected agents.",

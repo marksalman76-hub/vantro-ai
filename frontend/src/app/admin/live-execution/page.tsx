@@ -154,6 +154,94 @@ function dynamicExecutionMetrics(result: any, running: boolean, outputText: stri
   ];
 }
 
+
+function buildStrictTaskExecutionContract(task: string, agentName?: string): string {
+  return `${task}
+
+STRICT TASK EXECUTION CONTRACT:
+You are acting as a task executor, not a consultant.
+Fulfil the user's exact requested task only.
+Do not expand the task into a campaign, strategy, report, audit, plan, or multi-channel bundle unless the user explicitly asks for that.
+
+OUTPUT REQUIREMENTS:
+- Return only the finished deliverable.
+- Do not include executive summary, assumptions, diagnosis, execution plan, KPIs, risks, admin review points, next steps, metadata, JSON, or internal reasoning.
+- If the user asks for a product description, return only: Headline, Description, Call-to-action.
+- If the user asks for an email, return only: Subject and Email body.
+- If the user asks for ad copy, return only the requested ad copy variations.
+- If the user asks for social captions, return only captions.
+- If the task requires a real external action and the integration is not connected or approval is required, clearly state the exact blocker and the required next action.
+- Do not invent completed external actions.
+
+QUALITY BAR:
+Make the deliverable commercially usable, specific, premium, concise, and ready to copy into the relevant business tool.`;
+}
+
+
+function buildAutonomousImplementationPlan(task: string, selectedAgent: string) {
+  const cleanTask = String(task || "").trim();
+
+  return {
+    plan_id: `portal_plan_${Date.now()}`,
+    source: "portal_autonomous_execution",
+    action_packets: [
+      {
+        packet_id: `portal_packet_${Date.now()}`,
+        title: cleanTask,
+        implementation_action: cleanTask,
+        recommended_agent: selectedAgent || "marketing_specialist_agent",
+        risk_level: "low",
+        approval_required: false,
+        execution_mode: "autonomous_governed",
+        expected_output: "completed_action_evidence",
+      },
+    ],
+  };
+}
+
+function extractAutonomousDeliverable(result: any): string {
+  const data = result?.data || result || {};
+  const completed = Array.isArray(data?.completed_results) ? data.completed_results : [];
+  const queued = Array.isArray(data?.queued_results) ? data.queued_results : [];
+  const blocked = Array.isArray(data?.blocked_results) ? data.blocked_results : [];
+  const first = completed[0] || queued[0] || blocked[0] || {};
+
+  const performed = first?.performed_actual_action === true || first?.delegate_execution === "executed";
+  const status = first?.execution_status || first?.autonomous_route || data?.profile || "autonomous_execution_processed";
+  const output =
+    first?.completed_output ||
+    first?.deliverable?.content?.body ||
+    first?.deliverable?.summary ||
+    first?.execution_preview ||
+    first?.upgrade_recommendation ||
+    "";
+
+  const evidence = [];
+  evidence.push(`Execution status: ${status}`);
+  evidence.push(`Performed actual action: ${performed ? "Yes" : "No"}`);
+
+  if (first?.external_action_record_count !== undefined) {
+    evidence.push(`External action records: ${first.external_action_record_count}`);
+  }
+
+  if (first?.history_persisted !== undefined) {
+    evidence.push(`Execution history saved: ${first.history_persisted ? "Yes" : "No"}`);
+  }
+
+  if (Array.isArray(data?.connected_integrations)) {
+    evidence.push(`Connected integrations: ${data.connected_integrations.length ? data.connected_integrations.join(", ") : "None"}`);
+  }
+
+  if (!performed && !output) {
+    evidence.push("Result: Autonomous route completed, but no external tool action was performed. Connect the required integration or owner-approve the action if required.");
+  }
+
+  return `${output || "Autonomous execution processed. Review evidence below."}
+
+Completion Evidence:
+${evidence.map((line) => `- ${line}`).join("\n")}`;
+}
+
 export default function AdminLiveExecutionPage() {
   const [agent, setAgent] = useState("marketing_specialist_agent");
   const [task, setTask] = useState("Create a premium ecommerce launch campaign deliverable for a luxury skincare brand targeting women aged 30–50 in Australia.");
@@ -210,15 +298,22 @@ export default function AdminLiveExecutionPage() {
 
   async function runLiveExecution() {
     setRunning(true);
-    setToast("Execution started. Generating live admin deliverable...");
+    setToast("Execution started. Routing through autonomous workforce runtime...");
     setResult(null);
     setSelectedHistoryId("");
 
     try {
-      const response = await fetch("/api/admin-live-execution", {
+      const response = await fetch("/api/delegated-workforce-execution", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ requested_agent: agent, task: buildPortalDeliverableTask(task) }),
+        body: JSON.stringify({
+          implementation_plan: buildAutonomousImplementationPlan(buildStrictTaskExecutionContract(task, agentName(agent)), agent),
+          owner_approved: true,
+          client_owned_agents: [agent],
+          package_tier: "enterprise",
+          connected_integrations: ["email", "crm", "calendar"],
+          tenant_id: "owner_admin",
+        }),
       });
 
       const data = await response.json();
@@ -227,14 +322,7 @@ export default function AdminLiveExecutionPage() {
 
       const liveExecution = liveResult?.execution || {};
       const liveAdapter = liveExecution?.adapter_result || {};
-      const liveNormalised = liveAdapter?.normalised_response || {};
-      const liveSafeOutput = liveNormalised?.safe_output || {};
-      const liveOutput =
-        liveSafeOutput?.text ||
-        liveResult?.output?.generated_output ||
-        liveResult?.output?.output ||
-        liveResult?.output?.content ||
-        "";
+      const liveOutput = extractAutonomousDeliverable(liveResult);
 
       const item: HistoryItem = {
         id: `${Date.now()}-${agent}`,
@@ -251,7 +339,7 @@ export default function AdminLiveExecutionPage() {
 
       persistHistory([item, ...history].slice(0, 25));
       setSelectedHistoryId(item.id);
-      setToast(liveResult?.success ? "Live deliverable generated and saved to execution history." : "Execution completed with a warning.");
+      setToast(liveResult?.success ? "Autonomous workforce execution completed and saved to history." : "Autonomous execution completed with a warning.");
     } catch {
       setToast("Execution failed before reaching the backend.");
     } finally {
