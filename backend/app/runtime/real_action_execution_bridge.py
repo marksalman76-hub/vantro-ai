@@ -42,6 +42,48 @@ SAFE_ACTION_ADAPTERS = {
 }
 
 
+
+def _extract_primary_creative_deliverable(packet: dict, result: dict) -> str:
+    """
+    Prefer the actual agent deliverable over generic operational proof text.
+    This is for text/creative agents where the client/admin needs the finished work,
+    not only an execution receipt.
+    """
+    candidates = [
+        result.get("completed_output"),
+        result.get("generated_output"),
+        result.get("output"),
+        result.get("deliverable"),
+        result.get("content"),
+        result.get("body"),
+        packet.get("completed_output"),
+        packet.get("generated_output"),
+        packet.get("output"),
+        packet.get("deliverable"),
+        packet.get("content"),
+        packet.get("body"),
+        packet.get("user_requested_task"),
+    ]
+
+    for value in candidates:
+        if isinstance(value, dict):
+            for key in ("body", "content", "summary", "text", "output"):
+                nested = value.get(key)
+                if isinstance(nested, str) and nested.strip():
+                    return nested.strip()
+
+        if isinstance(value, str) and value.strip():
+            text = value.strip()
+            if text.lower() not in {
+                "created operational execution task.",
+                "operational task created",
+                "autonomous execution processed.",
+            }:
+                return text
+
+    return ""
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
