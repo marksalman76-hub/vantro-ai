@@ -373,7 +373,7 @@ function autonomousSafeLabel(result: any): string {
 
 export default function AdminLiveExecutionPage() {
   const [agent, setAgent] = useState("marketing_specialist_agent");
-  const [selectedAgents, setSelectedAgents] = useState<string[]>(["marketing_specialist_agent"]);
+  const [selectedAgents, setSelectedAgents] = useState<string[]>(["website_landing_apps_agent"]);
   const [task, setTask] = useState("Create a custom premium React/Next.js landing page for a luxury Australian skincare brand targeting women aged 30–50. Use advanced glassmorphism, 3D motion visuals, premium animation, cinematic layout, proof sections, offer section, FAQ, sticky CTA, and generate a real previewable React route. Do not return generic copy. Generate the website project.");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
