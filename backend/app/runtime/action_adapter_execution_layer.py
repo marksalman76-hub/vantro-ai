@@ -1,6 +1,24 @@
 from __future__ import annotations
+
+
+
+from datetime import datetime, timezone
+from typing import Any, Dict, List
+from uuid import uuid4
+
+from backend.app.runtime.external_action_readiness_classifier import (
+    classify_external_action_readiness,
+)
+from backend.app.runtime.real_external_integration_execution_bridge import (
+    execute_real_external_action,
+)
+from backend.app.runtime.react_website_generation_runtime import generate_react_website_project
+from backend.app.runtime.media_generation_orchestrator import create_media_generation_plan
+
+
+
 def _generate_ugc_creative_deliverable(task: str) -> str:
-    return f"""Premium UGC Campaign Deliverable
+    return """Premium UGC Campaign Deliverable
 
 Campaign: Luxury Anti-Aging Skincare Launch
 Audience: Affluent Australian women aged 35–55
@@ -158,10 +176,13 @@ Minimal, stable, luxury pacing.
 CTA:
 Shop the launch collection.
 
-Paid Ad Variations:
-1. Hook-led: “Your skin doesn’t need more noise. It needs a ritual.”
-2. Proof-led: “Glow, hydration, and firmness in one elevated daily system.”
-3. Offer-led: “15% off your first Aurelise order today.”
+Media Generation Plan:
+- ElevenLabs: premium voiceover script preparation.
+- HeyGen: avatar/presenter prompt preparation.
+- Runway: cinematic video generation prompt preparation.
+- Kling: alternate cinematic motion prompt preparation.
+- OpenAI: script, image prompt and creative reasoning support.
+- Replicate: fallback visual/video model routing.
 
 Production Notes:
 - Keep pacing premium, not frantic.
@@ -169,21 +190,6 @@ Production Notes:
 - Use compliance-safe wording: “helps skin appear”, “supports hydration”, “visible glow”.
 - Prioritise believable creator intimacy over overly polished commercial acting.
 """
-
-
-
-
-from datetime import datetime, timezone
-from typing import Any, Dict, List
-from uuid import uuid4
-
-from backend.app.runtime.external_action_readiness_classifier import (
-    classify_external_action_readiness,
-)
-from backend.app.runtime.real_external_integration_execution_bridge import (
-    execute_real_external_action,
-)
-from backend.app.runtime.react_website_generation_runtime import generate_react_website_project
 
 
 def _now() -> str:
@@ -207,6 +213,10 @@ def _text(packet: Dict[str, Any]) -> str:
 def classify_action_adapter(packet: Dict[str, Any]) -> str:
     text = _text(packet)
     connected = set(packet.get("connected_integrations") or [])
+    assigned_agent = str(packet.get("assigned_agent") or packet.get("recommended_agent") or "").strip()
+
+    if assigned_agent == "ugc_creative_agent" or "ugc" in text or "shot-by-shot" in text or "creator casting" in text or "video concept" in text or "voiceover" in text:
+        return "ugc_creative_deliverable_adapter"
     assigned_agent = str(packet.get("assigned_agent") or packet.get("recommended_agent") or "").strip()
 
     if assigned_agent == "ugc_creative_agent" or "ugc" in text or "shot-by-shot" in text or "creator casting" in text or "video concept" in text:
@@ -338,7 +348,122 @@ def execute_action_adapter(
     asset_id = f"asset_{uuid4().hex[:12]}"
     task_id = f"task_{uuid4().hex[:12]}"
 
+
+    if adapter == "ugc_creative_deliverable_adapter":
+        media_plan = create_media_generation_plan(
+            "ugc_creative_agent",
+            str(packet.get("user_requested_task") or action_text),
+            tenant_id=tenant_id,
+        )
+        ugc_output = _generate_ugc_creative_deliverable(str(packet.get("user_requested_task") or action_text))
+
+        return {
+            "success": True,
+            "execution_id": execution_id,
+            "adapter": "ugc_creative_deliverable_adapter",
+            "tenant_id": tenant_id,
+            "performed_actual_action": True,
+            "execution_status": "creative_deliverable_generated",
+            "owner_approval_required": False,
+            "customer_safe": True,
+            "credential_values_exposed": False,
+            "external_provider_called": False,
+            "live_external_call_executed": False,
+            "external_readiness": external_readiness,
+            "external_action_ready": external_readiness.get("external_action_ready") is True,
+            "real_external_execution": None,
+            "internal_fallback_used": True,
+            "missing_connections": external_readiness.get("missing_connections", []),
+            "actions_performed": [
+                {
+                    "type": "ugc_campaign_deliverable_created",
+                    "status": "created",
+                    "target_system": "creative_deliverable_runtime",
+                    "record_id": f"ugc_{uuid4().hex[:10]}",
+                    "deliverable_sections": [
+                        "storyboard",
+                        "shot_list",
+                        "creator_brief",
+                        "voiceover_script",
+                        "video_generation_prompt",
+                        "avatar_video_prompt",
+                        "paid_social_variants",
+                    ],
+                }
+            ],
+            "media_generation_plan": media_plan,
+            "output": ugc_output,
+            "asset": {
+                "asset_id": asset_id,
+                "task_id": task_id,
+                "status": "created",
+                "preview_ready": True,
+                "download_ready": False,
+                "customer_safe": True,
+            },
+            "created_at": _now(),
+        }
+
+
+
+    if adapter == "ugc_creative_deliverable_adapter":
+        media_plan = create_media_generation_plan(
+            "ugc_creative_agent",
+            str(packet.get("user_requested_task") or action_text),
+            tenant_id=tenant_id,
+        )
+        ugc_output = _generate_ugc_creative_deliverable(str(packet.get("user_requested_task") or action_text))
+
+        return {
+            "success": True,
+            "execution_id": execution_id,
+            "adapter": "ugc_creative_deliverable_adapter",
+            "tenant_id": tenant_id,
+            "performed_actual_action": True,
+            "execution_status": "creative_deliverable_generated",
+            "owner_approval_required": False,
+            "customer_safe": True,
+            "credential_values_exposed": False,
+            "external_provider_called": False,
+            "live_external_call_executed": False,
+            "external_readiness": external_readiness,
+            "external_action_ready": external_readiness.get("external_action_ready") is True,
+            "real_external_execution": None,
+            "internal_fallback_used": True,
+            "missing_connections": external_readiness.get("missing_connections", []),
+            "actions_performed": [
+                {
+                    "type": "ugc_campaign_deliverable_created",
+                    "status": "created",
+                    "target_system": "creative_deliverable_runtime",
+                    "record_id": f"ugc_{uuid4().hex[:10]}",
+                    "deliverable_sections": [
+                        "storyboard",
+                        "shot_list",
+                        "creator_brief",
+                        "voiceover_script",
+                        "video_generation_prompt",
+                        "avatar_video_prompt",
+                        "paid_social_variants",
+                    ],
+                }
+            ],
+            "media_generation_plan": media_plan,
+            "output": ugc_output,
+            "asset": {
+                "asset_id": asset_id,
+                "task_id": task_id,
+                "status": "created",
+                "preview_ready": True,
+                "download_ready": False,
+                "customer_safe": True,
+            },
+            "created_at": _now(),
+        }
+
+
     real_external_result = None
+    media_plan = None
     if external_readiness.get("external_action_ready") is True:
         real_external_result = execute_real_external_action(
             adapter=adapter,
@@ -412,28 +537,6 @@ def execute_action_adapter(
         ]
         output = "Created sales enablement messaging framework asset."
 
-
-    elif adapter == "ugc_creative_deliverable_adapter":
-        actions = [
-            {
-                "type": "ugc_campaign_deliverable_created",
-                "status": "created",
-                "target_system": "creative_deliverable_runtime",
-                "record_id": f"ugc_{uuid4().hex[:10]}",
-                "deliverable_sections": [
-                    "5 UGC concepts",
-                    "shot-by-shot breakdowns",
-                    "creator casting",
-                    "wardrobe direction",
-                    "lighting direction",
-                    "camera movement",
-                    "retention hooks",
-                    "CTA structure",
-                    "paid ad variations",
-                ],
-            }
-        ]
-        output = _generate_ugc_creative_deliverable(str(packet.get("user_requested_task") or action_text))
 
     elif adapter == "crm_task_creation_adapter":
         actions = [
