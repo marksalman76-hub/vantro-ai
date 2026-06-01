@@ -11,7 +11,7 @@ from backend.app.runtime.external_action_readiness_classifier import (
 from backend.app.runtime.real_external_integration_execution_bridge import (
     execute_real_external_action,
 )
-from backend.app.runtime.custom_website_generation_runtime import generate_custom_website_project
+from backend.app.runtime.react_website_generation_runtime import generate_react_website_project
 
 
 def _now() -> str:
@@ -249,7 +249,7 @@ def execute_action_adapter(
 
 
     elif adapter == "website_draft_page_adapter":
-        generated_site = generate_custom_website_project(
+        generated_site = generate_react_website_project(
             task=str(packet.get("user_requested_task") or packet.get("implementation_action") or action_text),
             tenant_id=tenant_id,
             agent_id=str(packet.get("assigned_agent") or "website_landing_apps_agent"),
