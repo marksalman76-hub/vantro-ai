@@ -141,7 +141,7 @@ function dynamicExecutionMetrics(result: any, running: boolean, outputText: stri
 
   const providerScore = liveCall ? 100 : running ? 45 : result ? 20 : 0;
   const generationScore = running ? 55 : outputText ? 100 : result ? 35 : 0;
-  const qualityDisplay = qualityScore ? qualityScore : result?.quality_gate_passed === true ? 100 : result?.quality_gate_passed === false ? 45 : running ? 30 : 0;
+  const qualityDisplay = qualityScore ? qualityScore : autonomousQualityScore(result) || (result?.quality_gate_passed === true ? 100 : result?.quality_gate_passed === false ? 45 : running ? 30 : 0);
   const deliveryScore = outputText && result?.success === true ? 100 : outputText ? 70 : running ? 35 : 0;
   const latencyScore = latencyMs ? Math.max(10, 100 - Math.min(90, Math.round(latencyMs / 120))) : running ? 40 : 0;
 
@@ -266,6 +266,27 @@ function autonomousLatencyLabel(result: any): string {
   const actionCreated = Number(first?.created_at_ms || 0);
   if (created && actionCreated) return `${Math.max(1, Math.abs(created - actionCreated))}ms`;
   return "—";
+}
+
+
+function autonomousQualityScore(result: any): number {
+  const data = result?.data || result || {};
+  const first = getAutonomousFirstResult(data);
+
+  if (!result) return 0;
+
+  let score = 0;
+
+  if (data?.success === true || result?.success === true) score += 20;
+  if (first?.performed_actual_action === true || first?.delegate_execution === "executed") score += 35;
+  if (Number(first?.external_action_record_count || 0) > 0) score += 20;
+  if (first?.history_persisted === true) score += 15;
+  if (data?.customer_safe !== false) score += 10;
+
+  if (first?.execution_status === "awaiting_owner_approval") score = Math.min(score, 45);
+  if (first?.execution_status === "agent_not_owned") score = Math.min(score, 35);
+
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
 
 function autonomousSafeLabel(result: any): string {
