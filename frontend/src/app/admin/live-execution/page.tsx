@@ -808,6 +808,16 @@ export default function AdminLiveExecutionPage() {
                       </a>
                     ))}
                   </div>
+                ) : visualDeliverableCards.length ? (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 12, width: "100%", textAlign: "left" }}>
+                    {visualDeliverableCards.map((card, idx) => (
+                      <div key={`${card.title}-${idx}`} style={{ border: "1px solid rgba(125,211,252,.28)", background: "rgba(14,165,233,.08)", borderRadius: 18, padding: 14 }}>
+                        <div style={{ fontSize: 12, color: "#67e8f9", fontWeight: 950, marginBottom: 6 }}>PREVIEW {idx + 1}</div>
+                        <div style={{ fontWeight: 950, color: "#fff", marginBottom: 6 }}>{card.title}</div>
+                        <div style={{ color: "#c7d2fe", fontSize: 13, lineHeight: 1.35 }}>{card.detail}</div>
+                      </div>
+                    ))}
+                  </div>
                 ) : (
                   <div>
                     <div style={{ fontSize: 34 }}>🖼️</div>
