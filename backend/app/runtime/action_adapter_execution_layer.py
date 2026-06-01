@@ -13,6 +13,7 @@ from backend.app.runtime.real_external_integration_execution_bridge import (
     execute_real_external_action,
 )
 from backend.app.runtime.ugc_visual_generation_runtime import generate_ugc_visual_asset
+from backend.app.runtime.shared_creative_visual_generation_runtime import generate_creative_visual_asset
 from backend.app.runtime.media_generation_orchestrator import create_media_generation_plan
 
 
@@ -222,6 +223,21 @@ def classify_action_adapter(packet: Dict[str, Any]) -> str:
     if assigned_agent == "ugc_creative_agent" or "ugc" in text or "shot-by-shot" in text or "creator casting" in text or "video concept" in text:
         return "ugc_creative_deliverable_adapter"
 
+    if assigned_agent == "paid_ads_agent":
+        return "ads_campaign_draft_adapter"
+
+    if assigned_agent == "product_image_agent":
+        return "product_image_adapter"
+
+    if assigned_agent == "brand_strategy_agent":
+        return "strategy_document_adapter"
+
+    if assigned_agent == "marketing_specialist_agent":
+        return "marketing_asset_adapter"
+
+    if assigned_agent == "social_media_manager_content_creator_agent":
+        return "marketing_asset_adapter"
+
     email_intent = any(x in text for x in [
         "email",
         "brevo",
@@ -413,6 +429,32 @@ def execute_action_adapter(
             "created_at": _now(),
         }
 
+
+    assigned_agent = str(packet.get("assigned_agent") or packet.get("agent") or packet.get("recommended_agent") or "").strip()
+
+    creative_visual_adapter_agents = {
+        "product_image_agent",
+        "paid_ads_agent",
+        "brand_strategy_agent",
+        "marketing_specialist_agent",
+        "social_media_manager_content_creator_agent",
+    }
+
+    if assigned_agent in creative_visual_adapter_agents and adapter in {
+        "marketing_asset_adapter",
+        "ads_campaign_draft_adapter",
+        "client_deliverable_adapter",
+        "product_image_adapter",
+        "strategy_document_adapter",
+    }:
+        visual_asset = generate_creative_visual_asset(
+            prompt=str(packet.get("user_requested_task") or action_text),
+            agent_id=assigned_agent,
+            tenant_id=tenant_id,
+            asset_kind=f"{assigned_agent}_visual_asset",
+        )
+    else:
+        visual_asset = None
 
     real_external_result = None
     media_plan = None
@@ -702,6 +744,19 @@ Shop the Collection"""
         ]
         output = "Created operational execution task."
 
+    visual_preview_url = visual_asset.get("preview_url") if visual_asset else ""
+    visual_asset_url = visual_asset.get("asset_url") if visual_asset else ""
+    visual_media_url = visual_asset.get("media_url") if visual_asset else ""
+    visual_generated_files = visual_asset.get("generated_files", []) if visual_asset else []
+
+    visual_preview_url = visual_asset.get("preview_url") if visual_asset else ""
+    visual_asset_url = visual_asset.get("asset_url") if visual_asset else ""
+    visual_media_url = visual_asset.get("media_url") if visual_asset else ""
+    visual_generated_files = visual_asset.get("generated_files", []) if visual_asset else []
+    visual_provider = visual_asset.get("provider") if visual_asset else None
+    visual_provider_live_generation = visual_asset.get("provider_live_generation") if visual_asset else False
+    visual_fallback_used = visual_asset.get("fallback_used") if visual_asset else False
+
     return {
         "success": True,
         "execution_id": execution_id,
@@ -713,7 +768,14 @@ Shop the Collection"""
         "customer_safe": True,
         "credential_values_exposed": False,
         "external_provider_called": bool(real_external_result and real_external_result.get("external_action_executed")),
-        "live_external_call_executed": bool(real_external_result and real_external_result.get("live_external_call_executed")),
+        "live_external_call_executed": bool(real_external_result and real_external_result.get("live_external_call_executed")) or bool(visual_provider_live_generation),
+        "preview_url": visual_preview_url,
+        "asset_url": visual_asset_url,
+        "media_url": visual_media_url,
+        "generated_files": visual_generated_files,
+        "provider": visual_provider,
+        "provider_live_generation": visual_provider_live_generation,
+        "fallback_used": visual_fallback_used,
         "external_readiness": external_readiness,
         "external_action_ready": external_readiness.get("external_action_ready", False),
         "real_external_execution": real_external_result,
