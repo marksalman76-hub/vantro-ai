@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "site_id": "lexora-0c04b812",
+  "preview_url": "/generated-sites/lexora-0c04b812",
+  "generated_files": [
+    "frontend/src/app/generated-sites/lexora-0c04b812/page.tsx"
+  ],
+  "framework": "Next.js React",
+  "visual_system": [
+    "glassmorphism",
+    "3d_motion",
+    "animated_layout",
+    "premium_ui",
+    "legal-trust-conversion",
+    "legal_trust",
+    "trust-led-consultation",
+    "calm"
+  ],
+  "layout_blueprint": "legal-trust-conversion",
+  "blueprint_theme": "legal_trust",
+  "hero_shape": "trust-led-consultation",
+  "created_at": "2026-06-01T05:08:51.580414+00:00"
+}

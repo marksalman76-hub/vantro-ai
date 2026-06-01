@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "site_id": "aurelise-a1f6b4db",
+  "preview_url": "/generated-sites/aurelise-a1f6b4db",
+  "generated_files": [
+    "frontend/src/app/generated-sites/aurelise-a1f6b4db/page.tsx"
+  ],
+  "framework": "Next.js React",
+  "visual_system": [
+    "glassmorphism",
+    "3d_motion",
+    "animated_layout",
+    "premium_ui",
+    "beauty-editorial-commerce",
+    "beauty_editorial",
+    "cinematic-product-ritual",
+    "luxury"
+  ],
+  "layout_blueprint": "beauty-editorial-commerce",
+  "blueprint_theme": "beauty_editorial",
+  "hero_shape": "cinematic-product-ritual",
+  "created_at": "2026-06-01T05:08:51.574305+00:00"
+}
