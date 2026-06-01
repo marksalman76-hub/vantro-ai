@@ -39,6 +39,7 @@ SAFE_ACTION_ADAPTERS = {
     "seo_content_plan": "seo_deliverable_adapter",
     "store_draft_update": "store_draft_update_adapter",
     "product_copywriting": "product_copywriting_adapter",
+    "ugc_creative_deliverable": "ugc_creative_deliverable_adapter",
 }
 
 
@@ -132,6 +133,17 @@ def _normalise_action_type(packet: Dict[str, Any]) -> str:
 
     if "store draft update" in raw or "shopify" in raw or assigned_agent in {"store_builder_agent", "ecommerce_agent"}:
         return "store_draft_update"
+
+    if (
+        assigned_agent == "ugc_creative_agent"
+        or "ugc" in raw
+        or "creator" in raw
+        or "shot-by-shot" in raw
+        or "video concept" in raw
+        or "media generation" in raw
+        or "ugc script" in raw
+    ):
+        return "ugc_creative_deliverable"
 
     if "product description" in raw or "product copy" in raw or assigned_agent == "product_copywriting_agent":
         return "product_copywriting"
