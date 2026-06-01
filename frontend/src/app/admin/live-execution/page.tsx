@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-const AGENTS = [
+const AGENTS: [string, string][] = [
   ["marketing_specialist_agent", "Marketing Specialist Agent"],
   ["product_copywriting_agent", "Product Copywriting Agent"],
   ["ugc_creative_agent", "UGC Creative Agent"],
@@ -14,10 +14,24 @@ const AGENTS = [
   ["influencer_collaboration_agent", "Influencer Collaboration Agent"],
   ["head_agent", "Head Agent"],
   ["strategist_agent", "Strategist Agent"],
-  ["ecommerce_agent", "Ecommerce Agent"],
+  ["business_growth_partnerships_agent", "Business Growth & Partnerships Agent"],
+  ["lead_generator_appointment_setter_agent", "Lead Generator / Appointment Setter Agent"],
+  ["sales_closer_agent", "Sales / Closer Agent"],
+  ["receptionist_agent", "Receptionist Agent"],
   ["customer_support_agent", "Customer Support Agent"],
-  ["store_builder_agent", "Store Builder Agent"],
+  ["ecommerce_agent", "Ecommerce Agent"],
+  ["product_research_agent", "Product Research Agent"],
+  ["competitor_intelligence_agent", "Competitor Intelligence Agent"],
   ["brand_strategy_agent", "Brand Strategy Agent"],
+  ["store_builder_agent", "Store Builder Agent"],
+  ["website_landing_apps_agent", "Website / Landing Page / Apps Agent"],
+  ["product_development_agent", "Product Development Agent"],
+  ["analytics_optimisation_agent", "Analytics Optimisation Agent"],
+  ["orchestration_agent", "Orchestration Agent"],
+  ["security_compliance_agent", "Security & Compliance Agent"],
+  ["integration_automation_agent", "Integration / Automation Agent"],
+  ["billing_optimisation_agent", "Billing Optimisation Agent"],
+  ["training_learning_agent", "Training / Learning Agent"],
 ];
 
 type HistoryItem = {
@@ -178,24 +192,69 @@ Make the deliverable commercially usable, specific, premium, concise, and ready 
 }
 
 
-function buildAutonomousImplementationPlan(task: string, selectedAgent: string) {
+
+function inferAutonomousActionType(task: string, selectedAgent: string): string {
+  const t = `${selectedAgent} ${task}`.toLowerCase();
+  if (selectedAgent === "website_landing_apps_agent" || t.includes("landing page") || t.includes("website") || t.includes("web page")) return "website_draft_page";
+  if (selectedAgent === "store_builder_agent" || selectedAgent === "ecommerce_agent" || t.includes("shopify") || t.includes("product page") || t.includes("store")) return "store_draft_update";
+  if (selectedAgent === "paid_ads_agent" || t.includes("meta ads") || t.includes("google ads") || t.includes("ad campaign") || t.includes("campaign draft")) return "ads_campaign_draft";
+  if (selectedAgent === "email_reply_agent" || t.includes("email")) return "email_draft";
+  if (selectedAgent === "crm_ai_agent" || t.includes("crm")) return "crm_follow_up";
+  if (selectedAgent === "seo_agent" || t.includes("seo")) return "seo_content_plan";
+  if (selectedAgent === "product_image_agent" || t.includes("image")) return "product_image_generation";
+  if (selectedAgent === "ugc_creative_agent" || t.includes("ugc")) return "ugc_script_draft";
+  if (selectedAgent === "customer_support_agent") return "support_response_draft";
+  if (selectedAgent === "receptionist_agent") return "reception_response_draft";
+  if (selectedAgent === "lead_generator_appointment_setter_agent") return "lead_outreach_sequence";
+  if (selectedAgent === "sales_closer_agent") return "sales_follow_up_sequence";
+  return "client_deliverable";
+}
+
+function integrationsForAutonomousAgent(selectedAgent: string): string[] {
+  const map: Record<string, string[]> = {
+    website_landing_apps_agent: ["website", "cms"],
+    store_builder_agent: ["store", "website", "cms"],
+    ecommerce_agent: ["store", "website", "cms"],
+    paid_ads_agent: ["ads"],
+    email_reply_agent: ["email"],
+    crm_ai_agent: ["crm"],
+    seo_agent: ["website", "cms", "analytics"],
+    product_image_agent: ["media", "asset_storage"],
+    ugc_creative_agent: ["media", "asset_storage"],
+    influencer_collaboration_agent: ["email", "crm"],
+    lead_generator_appointment_setter_agent: ["email", "crm", "calendar"],
+    sales_closer_agent: ["email", "crm"],
+    receptionist_agent: ["calendar", "email"],
+    customer_support_agent: ["email", "support"],
+    analytics_optimisation_agent: ["analytics"],
+    integration_automation_agent: ["automation"],
+    billing_optimisation_agent: ["billing"],
+  };
+  return map[selectedAgent] || [];
+}
+
+function uniqueValues(values: string[]): string[] {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function buildAutonomousImplementationPlan(task: string, selectedAgents: string[] | string) {
   const cleanTask = String(task || "").trim();
+  const agents = Array.isArray(selectedAgents) && selectedAgents.length ? selectedAgents : [String(selectedAgents || "marketing_specialist_agent")];
 
   return {
     plan_id: `portal_plan_${Date.now()}`,
     source: "portal_autonomous_execution",
-    action_packets: [
-      {
-        packet_id: `portal_packet_${Date.now()}`,
-        title: cleanTask,
-        implementation_action: cleanTask,
-        recommended_agent: selectedAgent || "marketing_specialist_agent",
-        risk_level: "low",
-        approval_required: false,
-        execution_mode: "autonomous_governed",
-        expected_output: "completed_action_evidence",
-      },
-    ],
+    action_packets: agents.map((selectedAgent, index) => ({
+      packet_id: `portal_packet_${Date.now()}_${index}`,
+      title: cleanTask,
+      implementation_action: inferAutonomousActionType(cleanTask, selectedAgent),
+      user_requested_task: cleanTask,
+      recommended_agent: selectedAgent || "marketing_specialist_agent",
+      risk_level: "low",
+      approval_required: false,
+      execution_mode: "autonomous_governed",
+      expected_output: "completed_action_evidence",
+    })),
   };
 }
 
@@ -314,6 +373,7 @@ function autonomousSafeLabel(result: any): string {
 
 export default function AdminLiveExecutionPage() {
   const [agent, setAgent] = useState("marketing_specialist_agent");
+  const [selectedAgents, setSelectedAgents] = useState<string[]>(["marketing_specialist_agent"]);
   const [task, setTask] = useState("Create a premium ecommerce launch campaign deliverable for a luxury skincare brand targeting women aged 30–50 in Australia.");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
@@ -362,6 +422,17 @@ export default function AdminLiveExecutionPage() {
     return { total, successful, live, avgLatency };
   }, [history]);
 
+  function toggleSelectedAgent(agentId: string) {
+    setAgent(agentId);
+    setSelectedAgents((prev) => {
+      if (prev.includes(agentId)) {
+        const next = prev.filter((id) => id !== agentId);
+        return next.length ? next : [agentId];
+      }
+      return [...prev, agentId];
+    });
+  }
+
   async function runLiveExecution() {
     setRunning(true);
     setToast("Execution started. Routing through autonomous workforce runtime...");
@@ -373,11 +444,11 @@ export default function AdminLiveExecutionPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          implementation_plan: buildAutonomousImplementationPlan(buildStrictTaskExecutionContract(task, agentName(agent)), agent),
+          implementation_plan: buildAutonomousImplementationPlan(buildStrictTaskExecutionContract(task, selectedAgents.map(agentName).join(", ")), selectedAgents),
           owner_approved: true,
-          client_owned_agents: [agent],
+          client_owned_agents: selectedAgents,
           package_tier: "enterprise",
-          connected_integrations: ["email", "crm", "calendar"],
+          connected_integrations: uniqueValues(selectedAgents.flatMap(integrationsForAutonomousAgent)),
           tenant_id: "owner_admin",
         }),
       });
@@ -395,7 +466,7 @@ export default function AdminLiveExecutionPage() {
       const item: HistoryItem = {
         id: `${Date.now()}-${agent}`,
         agent,
-        agentName: agentName(agent),
+        agentName: (selectedAgents.length > 1 ? `${selectedAgents.length} agents` : agentName(agent)),
         task,
         createdAt: new Date().toLocaleString(),
         success: liveResult?.success === true,
@@ -528,9 +599,34 @@ export default function AdminLiveExecutionPage() {
             </div>
 
             <div style={{ marginTop: 20 }}>
-              <select value={agent} onChange={(e) => setAgent(e.target.value)} style={{ width: "100%", padding: 14, borderRadius: 16, background: "#020617", color: "#fff", border: "1px solid rgba(148,163,184,.35)", marginBottom: 12 }}>
-                {AGENTS.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-              </select>
+              <div style={{ border: "1px solid rgba(148,163,184,.35)", borderRadius: 16, background: "#020617", padding: 12, marginBottom: 12, maxHeight: 220, overflow: "auto" }}>
+                <div style={{ color: "#bfdbfe", fontSize: 12, fontWeight: 950, marginBottom: 10 }}>Select one or more agents</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(2,minmax(0,1fr))", gap: 8 }}>
+                  {AGENTS.map(([id, name]) => {
+                    const active = selectedAgents.includes(id);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => toggleSelectedAgent(id)}
+                        style={{
+                          textAlign: "left",
+                          border: active ? "1px solid #38bdf8" : "1px solid rgba(148,163,184,.22)",
+                          background: active ? "rgba(14,165,233,.18)" : "rgba(15,23,42,.55)",
+                          color: "#fff",
+                          borderRadius: 12,
+                          padding: "9px 10px",
+                          fontWeight: 850,
+                          cursor: "pointer",
+                          fontSize: 12,
+                        }}
+                      >
+                        {active ? "✓ " : "+ "}{name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <textarea value={task} onChange={(e) => setTask(e.target.value)} rows={5} style={{ width: "100%", padding: 14, borderRadius: 16, background: "#020617", color: "#fff", border: "1px solid rgba(148,163,184,.35)", resize: "vertical" }} />
               <button onClick={runLiveExecution} disabled={running} style={{ width: "100%", marginTop: 14, padding: 16, border: 0, borderRadius: 18, background: running ? "#475569" : "linear-gradient(135deg,#2563eb,#06b6d4)", color: "#fff", fontWeight: 950, cursor: running ? "not-allowed" : "pointer" }}>
                 {running ? "Generating..." : "✨ Run Agent"}
@@ -587,7 +683,7 @@ export default function AdminLiveExecutionPage() {
             <div style={{ marginTop: 20 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 14 }}>
                 <h3 style={{ fontSize: 24, margin: 0 }}>
-                  {completed ? `${agentName(agent)} live output` : running ? "Execution running" : "Ready for execution"}
+                  {completed ? `${(selectedAgents.length > 1 ? `${selectedAgents.length} agents` : agentName(agent))} live output` : running ? "Execution running" : "Ready for execution"}
                 </h3>
                 <span style={{ color: "#a8b3cf" }}>{completed ? "Ready for review" : running ? "Generating" : "Waiting"}</span>
               </div>
@@ -600,7 +696,7 @@ export default function AdminLiveExecutionPage() {
               </p>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, margin: "14px 0 18px" }}>
-                {["Autonomous output", agentName(agent), liveCall ? "Autonomous route verified" : "Route pending", "Admin-ready"].map((tag) => (
+                {["Autonomous output", (selectedAgents.length > 1 ? `${selectedAgents.length} agents` : agentName(agent)), liveCall ? "Autonomous route verified" : "Route pending", "Admin-ready"].map((tag) => (
                   <span key={tag} style={{ border: "1px solid rgba(148,163,184,.34)", borderRadius: 999, padding: "9px 13px", fontWeight: 900, color: "#e0e7ff" }}>{tag}</span>
                 ))}
               </div>
