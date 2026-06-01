@@ -51,6 +51,94 @@ function agentName(agent: string) {
   return AGENTS.find(([id]) => id === agent)?.[1] || agent;
 }
 
+
+function normalizeExecutionPacket(raw: any) {
+  const data = raw?.data || raw || {};
+  const execution = data?.execution || data?.result?.execution || {};
+  const adapter = execution?.adapter_result || data?.adapter_result || data?.result || data || {};
+  const completed = Array.isArray(data?.completed_results) ? data.completed_results : [];
+  const queued = Array.isArray(data?.queued_results) ? data.queued_results : [];
+  const blocked = Array.isArray(data?.blocked_results) ? data.blocked_results : [];
+  const first = completed[0] || queued[0] || blocked[0] || adapter || {};
+
+  const performed =
+    data?.performed_actual_action === true ||
+    adapter?.performed_actual_action === true ||
+    first?.performed_actual_action === true ||
+    first?.delegate_execution === "executed" ||
+    adapter?.execution_status === "adapter_action_executed" ||
+    adapter?.execution_status === "website_project_generated";
+
+  const previewUrl =
+    data?.preview_url ||
+    adapter?.preview_url ||
+    adapter?.result?.preview_url ||
+    first?.preview_url ||
+    first?.deliverable?.preview_url ||
+    "";
+
+  const generatedFiles =
+    data?.generated_files ||
+    adapter?.generated_files ||
+    adapter?.result?.generated_files ||
+    first?.generated_files ||
+    first?.deliverable?.generated_files ||
+    [];
+
+  const provider =
+    adapter?.provider ||
+    adapter?.provider_key ||
+    data?.provider ||
+    (performed ? "autonomous" : "");
+
+  const latency =
+    adapter?.latency_ms ||
+    data?.latency_ms ||
+    data?.latency ||
+    "";
+
+  const agentId =
+    first?.assigned_agent ||
+    first?.agent ||
+    data?.assigned_agent ||
+    data?.agent ||
+    adapter?.agent_id ||
+    "";
+
+  const output =
+    adapter?.output ||
+    adapter?.result?.output ||
+    data?.output ||
+    data?.generated_output ||
+    first?.completed_output ||
+    first?.deliverable?.content?.body ||
+    first?.deliverable?.summary ||
+    "";
+
+  const status =
+    adapter?.execution_status ||
+    first?.execution_status ||
+    data?.execution_status ||
+    data?.status ||
+    (performed ? "autonomously_executed" : "autonomous_execution_processed");
+
+  return {
+    raw: data,
+    performed,
+    autonomous: performed || data?.success === true,
+    provider,
+    latency,
+    agentId,
+    status,
+    previewUrl,
+    generatedFiles,
+    output,
+    safe: data?.safe ?? adapter?.customer_safe ?? true,
+    memory: data?.memory_saved || data?.history_persisted || adapter?.history_persisted || false,
+  };
+}
+
+
 function safeString(value: unknown, fallback = "—") {
   if (value === null || value === undefined || value === "") return fallback;
   return String(value);
@@ -377,6 +465,7 @@ export default function AdminLiveExecutionPage() {
   const [task, setTask] = useState("Create a custom premium React/Next.js landing page for a luxury Australian skincare brand targeting women aged 30–50. Use advanced glassmorphism, 3D motion visuals, premium animation, cinematic layout, proof sections, offer section, FAQ, sticky CTA, and generate a real previewable React route. Do not return generic copy. Generate the website project.");
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const normalizedResult = normalizeExecutionPacket(result);
   const [toast, setToast] = useState("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedHistoryId, setSelectedHistoryId] = useState("");
@@ -455,6 +544,7 @@ export default function AdminLiveExecutionPage() {
 
       const data = await response.json();
       const liveResult = data?.data || data;
+      const normalizedExecution = normalizeExecutionPacket(liveResult);
       setResult(liveResult);
 
       const liveExecution = liveResult?.execution || {};
@@ -469,10 +559,10 @@ export default function AdminLiveExecutionPage() {
         agentName: (selectedAgents.length > 1 ? `${selectedAgents.length} agents` : agentName(agent)),
         task,
         createdAt: new Date().toLocaleString(),
-        success: liveResult?.success === true,
+        success: liveResult?.success === true || normalizedResult.performed,
         provider: autonomousProvider,
         latency: autonomousLatency,
-        output: liveOutput,
+        output: normalizedExecution.output || liveOutput,
         raw: liveResult,
       };
 
@@ -696,7 +786,7 @@ export default function AdminLiveExecutionPage() {
               </p>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, margin: "14px 0 18px" }}>
-                {["Autonomous output", (selectedAgents.length > 1 ? `${selectedAgents.length} agents` : agentName(agent)), liveCall ? "Autonomous route verified" : "Route pending", "Admin-ready"].map((tag) => (
+                {["Autonomous output", (selectedAgents.length > 1 ? `${selectedAgents.length} agents` : agentName(agent)), normalizedResult?.performed ? "Autonomous route verified" : (liveCall ? "Autonomous route verified" : "Route pending"), "Admin-ready"].map((tag) => (
                   <span key={tag} style={{ border: "1px solid rgba(148,163,184,.34)", borderRadius: 999, padding: "9px 13px", fontWeight: 900, color: "#e0e7ff" }}>{tag}</span>
                 ))}
               </div>
