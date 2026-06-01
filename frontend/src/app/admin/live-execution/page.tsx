@@ -811,9 +811,20 @@ export default function AdminLiveExecutionPage() {
                     {assetCandidates.map((asset: string) => (
                       <div key={asset} style={{ marginBottom: 14 }}>
                         <img src={asset} alt="Generated UGC visual asset" style={{ width: "100%", maxHeight: 360, objectFit: "contain", borderRadius: 16, border: "1px solid rgba(125,211,252,.25)", background: "#020617" }} />
-                        <a href={asset} download={`ugc-visual-asset-${Date.now()}.svg`} style={{ display: "block", color: "#bfdbfe", fontWeight: 900, marginTop: 8, wordBreak: "break-all" }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const a = document.createElement("a");
+                            a.href = asset;
+                            a.download = `ugc-visual-asset-${Date.now()}.svg`;
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+                          }}
+                          style={{ display: "block", width: "100%", border: "1px solid rgba(125,211,252,.3)", background: "#020617", color: "#bfdbfe", fontWeight: 900, marginTop: 8, padding: "10px 12px", borderRadius: 12, cursor: "pointer" }}
+                        >
                           Download generated asset
-                        </a>
+                        </button>
                       </div>
                     ))}
                   </div>
