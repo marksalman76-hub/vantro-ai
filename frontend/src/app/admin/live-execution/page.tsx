@@ -52,6 +52,53 @@ function agentName(agent: string) {
 }
 
 
+
+function buildVisualDeliverableCards(output: string, agentLabel: string) {
+  const text = String(output || "").trim();
+  if (!text) return [];
+
+  const lower = `${agentLabel} ${text}`.toLowerCase();
+
+  if (lower.includes("paid ads") || lower.includes("meta ads") || lower.includes("google search") || lower.includes("ad variation")) {
+    return [
+      { title: "Campaign Board", detail: "Paid ad concepts, hooks, audiences and CTA variants generated." },
+      { title: "Meta Ad Preview", detail: "Primary text, headline and CTA structure ready for review." },
+      { title: "Google Search Pack", detail: "Search headlines and descriptions prepared for campaign build." },
+      { title: "Short-Form Scripts", detail: "TikTok/Reels scripts and hook structure prepared." },
+    ];
+  }
+
+  if (lower.includes("ugc") || lower.includes("video concept") || lower.includes("shot-by-shot") || lower.includes("creator")) {
+    return [
+      { title: "UGC Storyboard", detail: "Shot-by-shot video concepts generated for creator production." },
+      { title: "Creator Direction", detail: "Casting, wardrobe, lighting and camera guidance prepared." },
+      { title: "Retention Map", detail: "Hooks and pacing beats prepared for short-form performance." },
+      { title: "Paid Social Variants", detail: "Ad-ready UGC concepts prepared for campaign testing." },
+    ];
+  }
+
+  if (lower.includes("seo") || lower.includes("meta description") || lower.includes("keyword")) {
+    return [
+      { title: "SEO Brief", detail: "Title, meta description and keyword structure generated." },
+      { title: "Search Intent Map", detail: "Primary and secondary optimisation angles prepared." },
+      { title: "Content Blocks", detail: "Page optimisation and content guidance ready for review." },
+    ];
+  }
+
+  if (lower.includes("email") || lower.includes("subject")) {
+    return [
+      { title: "Email Draft", detail: "Subject line and email body generated." },
+      { title: "Reply Preview", detail: "Client-safe message ready for review or send workflow." },
+    ];
+  }
+
+  return [
+    { title: "Deliverable Preview", detail: "Generated output is ready for review in the live output panel." },
+    { title: "Execution Packet", detail: "Autonomous run completed and saved to history." },
+  ];
+}
+
+
 function normalizeExecutionPacket(raw: any) {
   const data = raw?.data || raw || {};
   const execution = data?.execution || data?.result?.execution || {};
@@ -466,6 +513,7 @@ export default function AdminLiveExecutionPage() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<any>(null);
   const normalizedResult = normalizeExecutionPacket(result);
+  const visualDeliverableCards = buildVisualDeliverableCards(normalizedResult?.output || "", selectedAgents.length > 1 ? `${selectedAgents.length} agents` : agentName(agent));
   const [toast, setToast] = useState("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedHistoryId, setSelectedHistoryId] = useState("");
