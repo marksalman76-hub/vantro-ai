@@ -246,6 +246,12 @@ def execute_real_action_packet(
             "created_at": _now(),
         }
 
+    adapter_asset = adapter_execution.get("asset") or {}
+    preview_url = adapter_execution.get("preview_url") or adapter_execution.get("asset_url") or adapter_execution.get("media_url") or adapter_asset.get("preview_url") or adapter_asset.get("asset_url") or ""
+    asset_url = adapter_execution.get("asset_url") or adapter_execution.get("media_url") or adapter_asset.get("asset_url") or preview_url
+    media_url = adapter_execution.get("media_url") or asset_url
+    generated_files = adapter_execution.get("generated_files") or adapter_asset.get("generated_files") or []
+
     deliverable = {
         "deliverable_id": f"deliverable_{uuid4().hex[:12]}",
         "type": action_type,
@@ -253,12 +259,22 @@ def execute_real_action_packet(
         "summary": adapter_execution.get("output") or str(implementation_action),
         "created_by_agent": assigned_agent,
         "customer_safe": True,
-        "asset_status": adapter_execution.get("asset", {}).get("status", "created"),
-        "download_ready": adapter_execution.get("asset", {}).get("download_ready", False),
-        "preview_ready": adapter_execution.get("asset", {}).get("preview_ready", True),
+        "asset_status": adapter_asset.get("status", "created"),
+        "download_ready": adapter_asset.get("download_ready", False),
+        "preview_ready": adapter_asset.get("preview_ready", True),
+        "preview_url": preview_url,
+        "asset_url": asset_url,
+        "media_url": media_url,
+        "generated_files": generated_files,
         "actions_performed": adapter_execution.get("actions_performed", []),
         "adapter": adapter_execution.get("adapter"),
-        "asset": adapter_execution.get("asset"),
+        "asset": {
+            **adapter_asset,
+            "preview_url": preview_url,
+            "asset_url": asset_url,
+            "media_url": media_url,
+            "generated_files": generated_files,
+        },
         "content": {
             "headline": f"{assigned_agent} executed an operational adapter.",
             "body": adapter_execution.get("output") or str(implementation_action),
@@ -280,6 +296,10 @@ def execute_real_action_packet(
         "external_provider_called": adapter_execution.get("external_provider_called", False),
         "credential_values_exposed": False,
         "customer_safe_message": adapter_execution.get("output"),
+        "preview_url": preview_url,
+        "asset_url": asset_url,
+        "media_url": media_url,
+        "generated_files": generated_files,
         "actions_performed": adapter_execution.get("actions_performed", []),
         "deliverable": deliverable,
         "created_at": _now(),
