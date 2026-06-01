@@ -262,26 +262,26 @@ def execute_action_adapter(
                 "status": "draft_created",
                 "target_system": "generated_site_runtime",
                 "page_type": "landing_page",
-                "record_id": generated_site["site_id"],
-                "preview_url": generated_site["preview_url"],
-                "generated_files": generated_site["generated_files"],
-                "publish_status": generated_site["publish_status"],
-                "publish_blocker": generated_site["publish_blocker"],
+                "record_id": generated_site.get("site_id", "generated-react-site"),
+                "preview_url": generated_site.get("preview_url", ""),
+                "generated_files": generated_site.get("generated_files", []),
+                "publish_status": generated_site.get("publish_status", "not_published"),
+                "publish_blocker": generated_site.get("publish_blocker", "Publishing requires owner approval and deploy/CMS integration."),
             }
         ]
         output = f"""Custom Landing Page Generated
 
 Preview URL:
-{generated_site["preview_url"]}
+{generated_site.get("preview_url", "")}
 
 Generated Files:
-{", ".join(generated_site["generated_files"])}
+{", ".join(generated_site.get("generated_files", []))}
 
 Publish Status:
-{generated_site["publish_status"]}
+{generated_site.get("publish_status", "not_published")}
 
 Publish Blocker:
-{generated_site["publish_blocker"]}
+{generated_site.get("publish_blocker", "Publishing requires owner approval and deploy/CMS integration.")}
 
 Landing Page Draft Created
 

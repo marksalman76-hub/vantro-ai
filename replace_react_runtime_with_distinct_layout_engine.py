@@ -1,4 +1,14 @@
+from pathlib import Path
+from datetime import datetime
+import shutil
 
+ROOT = Path.cwd()
+TARGET = ROOT / "backend" / "app" / "runtime" / "react_website_generation_runtime.py"
+BACKUP = ROOT / "backups" / f"distinct_layout_engine_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+BACKUP.mkdir(parents=True, exist_ok=True)
+shutil.copy2(TARGET, BACKUP / "react_website_generation_runtime.py")
+
+code = r'''
 from pathlib import Path
 from uuid import uuid4
 from datetime import datetime, timezone
@@ -313,3 +323,8 @@ def generate_react_website_project(
 
     (site_dir / "site.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
     return metadata
+'''
+
+TARGET.write_text(code, encoding="utf-8")
+print("DISTINCT_LAYOUT_ENGINE_REPLACED")
+print("Backup:", BACKUP)
