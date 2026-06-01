@@ -12,7 +12,7 @@ from backend.app.runtime.external_action_readiness_classifier import (
 from backend.app.runtime.real_external_integration_execution_bridge import (
     execute_real_external_action,
 )
-from backend.app.runtime.ugc_visual_generation_runtime import generate_ugc_visual_asset_project
+from backend.app.runtime.ugc_visual_generation_runtime import generate_ugc_visual_asset
 from backend.app.runtime.media_generation_orchestrator import create_media_generation_plan
 
 
