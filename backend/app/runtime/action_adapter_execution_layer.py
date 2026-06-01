@@ -11,6 +11,7 @@ from backend.app.runtime.external_action_readiness_classifier import (
 from backend.app.runtime.real_external_integration_execution_bridge import (
     execute_real_external_action,
 )
+from backend.app.runtime.custom_website_generation_runtime import generate_custom_website_project
 
 
 def _now() -> str:
@@ -248,17 +249,41 @@ def execute_action_adapter(
 
 
     elif adapter == "website_draft_page_adapter":
+        generated_site = generate_custom_website_project(
+            task=str(packet.get("user_requested_task") or packet.get("implementation_action") or action_text),
+            tenant_id=tenant_id,
+            agent_id=str(packet.get("assigned_agent") or "website_landing_apps_agent"),
+            connected_integrations=connected_integrations or [],
+            owner_approved=owner_approved,
+        )
         actions = [
             {
-                "type": "website_draft_page_created",
+                "type": "custom_website_project_created",
                 "status": "draft_created",
-                "target_system": "website_cms",
+                "target_system": "generated_site_runtime",
                 "page_type": "landing_page",
-                "record_id": f"web_draft_{uuid4().hex[:10]}",
-                "sections": ["hero", "benefits", "product proof", "offer", "faq", "final_cta"],
+                "record_id": generated_site["site_id"],
+                "preview_url": generated_site["preview_url"],
+                "generated_files": generated_site["generated_files"],
+                "publish_status": generated_site["publish_status"],
+                "publish_blocker": generated_site["publish_blocker"],
             }
         ]
-        output = """Landing Page Draft Created
+        output = f"""Custom Landing Page Generated
+
+Preview URL:
+{generated_site["preview_url"]}
+
+Generated Files:
+{", ".join(generated_site["generated_files"])}
+
+Publish Status:
+{generated_site["publish_status"]}
+
+Publish Blocker:
+{generated_site["publish_blocker"]}
+
+Landing Page Draft Created
 
 Hero Headline:
 Luxury Skincare, Crafted for Timeless Radiance
