@@ -1,4 +1,14 @@
+from pathlib import Path
+from datetime import datetime
+import shutil
 
+ROOT = Path.cwd()
+TARGET = ROOT / "backend" / "app" / "runtime" / "custom_website_generation_runtime.py"
+BACKUP = ROOT / "backups" / f"custom_website_quality_upgrade_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+BACKUP.mkdir(parents=True, exist_ok=True)
+shutil.copy2(TARGET, BACKUP / "custom_website_generation_runtime.py")
+
+code = r'''
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -388,3 +398,10 @@ def generate_custom_website_project(
     (site_dir / "site.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
     return {"success": True, **metadata}
+'''
+
+TARGET.write_text(code, encoding="utf-8")
+
+print("CUSTOM_WEBSITE_GENERATION_QUALITY_UPGRADED")
+print("Backup:", BACKUP)
+print("Updated:", TARGET)

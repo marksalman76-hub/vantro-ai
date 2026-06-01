@@ -1,94 +1,10 @@
-
-from __future__ import annotations
-
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict
-from uuid import uuid4
-import html
-import json
-import re
-
-ROOT = Path(__file__).resolve().parents[3]
-PUBLIC_GENERATED = ROOT / "frontend" / "public" / "generated-sites"
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _slug(value: str) -> str:
-    cleaned = re.sub(r"[^a-zA-Z0-9]+", "-", value.lower()).strip("-")
-    return cleaned[:48] or "generated-site"
-
-
-def _brand(task: str) -> str:
-    lower = task.lower()
-    if "skincare" in lower:
-        return "Aurelise"
-    if "fitness" in lower:
-        return "PeakForm"
-    if "real estate" in lower:
-        return "PrimeNest"
-    if "restaurant" in lower or "cafe" in lower:
-        return "Maison Table"
-    return "Premium Brand"
-
-
-def _site_strategy(task: str) -> Dict[str, Any]:
-    lower = task.lower()
-    if "skincare" in lower:
-        return {
-            "industry": "luxury skincare",
-            "audience": "Australian women aged 30–50",
-            "headline": "Clinical Radiance, Reimagined as Luxury Ritual",
-            "subheadline": "A premium skincare launch experience for women ready to hydrate, firm, and restore luminous confidence through an elevated daily ritual.",
-            "primary_cta": "Shop the Launch Collection",
-            "secondary_cta": "Explore the Ritual",
-            "offer": "Launch offer: 15% off your first order, complimentary sample ritual over $150, and free express shipping Australia-wide.",
-            "product": "Radiance Renewal System",
-            "proof": ["Hydration-led positioning", "Premium ingredient story", "Visible glow ritual", "Australian launch offer"],
-            "keywords": ["luxury skincare Australia", "premium skincare", "radiant skin ritual"],
-        }
-    return {
-        "industry": "premium ecommerce",
-        "audience": "high-intent premium buyers",
-        "headline": "A Premium Digital Experience Built to Convert",
-        "subheadline": "A custom generated landing page with conversion structure, brand positioning, offer architecture, and publish-ready draft assets.",
-        "primary_cta": "Start Now",
-        "secondary_cta": "View Details",
-        "offer": "Launch offer prepared for conversion testing.",
-        "product": "Premium Offer",
-        "proof": ["Premium positioning", "Conversion hierarchy", "Trust framework", "Responsive layout"],
-        "keywords": ["premium ecommerce", "conversion landing page"],
-    }
-
-
-def generate_custom_website_project(
-    *,
-    task: str,
-    tenant_id: str = "owner_admin",
-    agent_id: str = "website_landing_apps_agent",
-    connected_integrations: list[str] | None = None,
-    owner_approved: bool = False,
-) -> Dict[str, Any]:
-    connected_integrations = connected_integrations or []
-    strategy = _site_strategy(task)
-    brand = _brand(task)
-    site_id = f"{_slug(brand)}-{uuid4().hex[:8]}"
-    site_dir = PUBLIC_GENERATED / site_id
-    site_dir.mkdir(parents=True, exist_ok=True)
-
-    headline = strategy["headline"]
-    subheadline = strategy["subheadline"]
-
-    html_doc = """<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>__TITLE__</title>
-  <meta name="description" content="__DESCRIPTION__" />
+  <title>Clinical Radiance, Reimagined as Luxury Ritual</title>
+  <meta name="description" content="A premium skincare launch experience for women ready to hydrate, firm, and restore luminous confidence through an elevated daily ritual." />
   <style>
     :root {
       --ink:#090d18;
@@ -233,7 +149,7 @@ def generate_custom_website_project(
 <body>
   <nav class="nav">
     <div class="nav-inner">
-      <div class="brand"><span class="mark"></span>__BRAND__</div>
+      <div class="brand"><span class="mark"></span>Aurelise</div>
       <div class="nav-links"><a href="#ritual">Ritual</a><a href="#offer">Offer</a><a href="#proof">Proof</a><a href="#faq">FAQ</a></div>
       <a class="nav-cta" href="#offer">Shop Launch</a>
     </div>
@@ -243,11 +159,11 @@ def generate_custom_website_project(
     <section class="shell hero">
       <div>
         <span class="eyebrow"><span class="dot"></span> Custom generated premium landing page</span>
-        <h1>__HEADLINE__</h1>
-        <p class="lead">__SUBHEADLINE__</p>
+        <h1>Clinical Radiance, Reimagined as Luxury Ritual</h1>
+        <p class="lead">A premium skincare launch experience for women ready to hydrate, firm, and restore luminous confidence through an elevated daily ritual.</p>
         <div class="cta-row">
-          <a class="btn btn-primary" href="#offer">__PRIMARY_CTA__ →</a>
-          <a class="btn btn-secondary" href="#ritual">__SECONDARY_CTA__</a>
+          <a class="btn btn-primary" href="#offer">Shop the Launch Collection →</a>
+          <a class="btn btn-secondary" href="#ritual">Explore the Ritual</a>
         </div>
         <div class="stats">
           <div class="stat"><strong>30–50</strong><span>Core audience</span></div>
@@ -258,8 +174,8 @@ def generate_custom_website_project(
       <div class="visual">
         <div class="bottle">
           <div>
-            <div class="bottle-title">__BRAND__</div>
-            <div class="bottle-name">__PRODUCT__</div>
+            <div class="bottle-title">Aurelise</div>
+            <div class="bottle-name">Radiance Renewal System</div>
           </div>
         </div>
         <div class="float-card one"><strong>Hydration-led ritual</strong><p>Built for glow, trust, and premium daily use.</p></div>
@@ -301,7 +217,7 @@ def generate_custom_website_project(
         <div>
           <span class="eyebrow"><span class="dot"></span> Launch offer</span>
           <h2>Begin the radiance ritual with an exclusive launch bundle</h2>
-          <p class="lead">__OFFER__</p>
+          <p class="lead">Launch offer: 15% off your first order, complimentary sample ritual over $150, and free express shipping Australia-wide.</p>
           <div class="cta-row"><a class="btn btn-primary" href="#faq">Claim Launch Offer →</a></div>
         </div>
         <div class="price-box">
@@ -342,49 +258,6 @@ def generate_custom_website_project(
     <a href="#offer">Review Offer</a>
   </div>
 
-  <footer>Generated by Website / Landing Page / Apps Agent · Draft ID __SITE_ID__</footer>
+  <footer>Generated by Website / Landing Page / Apps Agent · Draft ID aurelise-f4395611</footer>
 </body>
-</html>"""
-    replacements = {
-        "__TITLE__": headline,
-        "__DESCRIPTION__": subheadline,
-        "__BRAND__": brand,
-        "__HEADLINE__": headline,
-        "__SUBHEADLINE__": subheadline,
-        "__PRIMARY_CTA__": strategy["primary_cta"],
-        "__SECONDARY_CTA__": strategy["secondary_cta"],
-        "__PRODUCT__": strategy["product"],
-        "__OFFER__": strategy["offer"],
-        "__SITE_ID__": site_id,
-    }
-
-    for key, value in replacements.items():
-        html_doc = html_doc.replace(key, html.escape(str(value)))
-
-    (site_dir / "index.html").write_text(html_doc, encoding="utf-8")
-
-    metadata = {
-        "site_id": site_id,
-        "tenant_id": tenant_id,
-        "agent_id": agent_id,
-        "brand": brand,
-        "industry": strategy["industry"],
-        "audience": strategy["audience"],
-        "task": task,
-        "status": "draft_created",
-        "preview_url": f"/generated-sites/{site_id}/index.html",
-        "generated_files": [f"frontend/public/generated-sites/{site_id}/index.html"],
-        "publish_status": "not_published",
-        "publish_blocker": "Publishing requires owner approval and a live CMS/deploy integration.",
-        "design_system": {
-            "style": "premium ecommerce editorial",
-            "layout": "responsive long-form landing page",
-            "sections": ["sticky nav", "hero", "benefits", "ritual architecture", "offer", "proof", "faq", "sticky cta"],
-            "quality_level": "premium_generated_draft",
-        },
-        "created_at": _now(),
-    }
-
-    (site_dir / "site.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
-
-    return {"success": True, **metadata}
+</html>
