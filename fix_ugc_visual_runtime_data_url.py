@@ -1,4 +1,8 @@
+from pathlib import Path
 
+p = Path("backend/app/runtime/ugc_visual_generation_runtime.py")
+
+p.write_text(r'''
 from datetime import datetime
 import base64
 import html
@@ -61,3 +65,6 @@ def generate_ugc_visual_asset(prompt: str, tenant_id: str = "owner_admin"):
         "generation_type": "ugc_visual_asset",
         "created_at": timestamp,
     }
+''', encoding="utf-8")
+
+print("UGC_VISUAL_RUNTIME_NOW_RETURNS_DATA_URL")
