@@ -303,16 +303,12 @@ export default function AdminLiveExecutionPage() {
   const normalised = adapter?.normalised_response || {};
   const safeOutput = normalised?.safe_output || {};
   const audit = adapter?.audit_asset || {};
-  const outputText =
-    safeOutput?.text ||
-    result?.output?.generated_output ||
-    result?.output?.output ||
-    result?.output?.content ||
-    "";
+  const outputText = result ? extractAutonomousDeliverable(result) : "";
 
   const completed = result?.success === true;
   const failed = result && result?.success !== true;
-  const liveCall = adapter?.live_external_call_executed === true;
+  const firstAutonomousResult = getAutonomousFirstResult(result);
+  const liveCall = Boolean(result?.completed_results?.length || firstAutonomousResult?.performed_actual_action || firstAutonomousResult?.delegate_execution === "executed");
 
   const executionMetrics = dynamicExecutionMetrics(result, running, outputText, liveCall);
 
@@ -565,7 +561,7 @@ export default function AdminLiveExecutionPage() {
               </p>
 
               <div style={{ display: "flex", flexWrap: "wrap", gap: 10, margin: "14px 0 18px" }}>
-                {["Live output", agentName(agent), liveCall ? "OpenAI verified" : "Provider pending", "Admin-ready"].map((tag) => (
+                {["Autonomous output", agentName(agent), liveCall ? "Autonomous route verified" : "Route pending", "Admin-ready"].map((tag) => (
                   <span key={tag} style={{ border: "1px solid rgba(148,163,184,.34)", borderRadius: 999, padding: "9px 13px", fontWeight: 900, color: "#e0e7ff" }}>{tag}</span>
                 ))}
               </div>
@@ -581,10 +577,10 @@ export default function AdminLiveExecutionPage() {
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginTop: 16 }}>
                 {[
-                  ["Provider", adapter?.provider_key || (running ? "Running" : "—")],
-                  ["Latency", adapter?.latency_ms ? `${adapter.latency_ms}ms` : running ? "Measuring" : "—"],
-                  ["Memory", result?.memory?.memory_saved ? "Saved" : running ? "Pending" : "—"],
-                  ["Safe", adapter?.customer_safe ? "True" : running ? "Pending" : "—"],
+                  ["Provider", result ? autonomousProviderLabel(result) : running ? "Running" : "—"],
+                  ["Latency", result ? autonomousLatencyLabel(result) : running ? "Measuring" : "—"],
+                  ["Memory", result?.completed_results?.length || result?.queued_results?.length || result?.blocked_results?.length ? "Saved" : running ? "Pending" : "—"],
+                  ["Safe", result ? autonomousSafeLabel(result) : running ? "Pending" : "—"],
                 ].map(([label, value]) => (
                   <div key={label} style={{ border: "1px solid rgba(148,163,184,.22)", borderRadius: 16, padding: 12 }}>
                     <div style={{ color: "#94a3b8", fontSize: 11, fontWeight: 950, textTransform: "uppercase" }}>{label}</div>
