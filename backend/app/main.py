@@ -440,7 +440,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
     owner_admin_credit_bypass = actor_role in {"owner", "admin", "owner_admin", "system"}
 
     owner_managed_client_credit_bypass = (
-        tenant_id_clean in {"client_demo_001", "owner_managed_demo", "manual_deployment_client"}
+        tenant_id_clean in {"client_demo_001", "owner_managed_demo", "owner_managed_demo_client", "manual_deployment_client"}
 
     )
 
