@@ -4,6 +4,8 @@ from typing import Dict
 
 
 SAFE_GENERATION_WORKFLOW_STAGES = {
+    "client_live_execution",
+
     "marketing_campaign",
     "content_generation",
     "sales_follow_up",
