@@ -599,25 +599,8 @@ export default function ClientPage() {
   const [reviewActionLoading, setReviewActionLoading] = useState(false);
   const [liveDeliverable, setLiveDeliverable] = useState<LiveDeliverable | null>(null);
   const [executionState, setExecutionState] = useState<"idle" | "running" | "completed" | "rejected">("idle");
-  const [businessProfile, setBusinessProfile] = useState<Record<string, string>>(() => {
-    if (typeof window === "undefined") return {};
-    try {
-      const saved = window.localStorage.getItem("client_business_profile");
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-  const [businessProfileSaved, setBusinessProfileSaved] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      const saved = window.localStorage.getItem("client_business_profile");
-      const parsed = saved ? JSON.parse(saved) : null;
-      return Boolean(parsed?.business_name);
-    } catch {
-      return false;
-    }
-  });
+  const [businessProfile, setBusinessProfile] = useState<Record<string, string>>({});
+  const [businessProfileSaved, setBusinessProfileSaved] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [showDeliverableModal, setShowDeliverableModal] = useState(false);
   const [showMediaPreviewOverlay, setShowMediaPreviewOverlay] = useState(false);
@@ -628,10 +611,7 @@ export default function ClientPage() {
   const [timelineLoading, setTimelineLoading] = useState(false);
   const [integrationMessage, setIntegrationMessage] = useState("");
   const [activeAccountPanel, setActiveAccountPanel] = useState("");
-  const [darkModeEnabled, setDarkModeEnabled] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem("client_workspace_dark_mode") === "dark";
-  });
+  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const setAndPersistDarkMode = (nextValue: boolean) => {
     setDarkModeEnabled(nextValue);
     try {
