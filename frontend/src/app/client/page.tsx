@@ -77,15 +77,19 @@ function normalizeExecutionPacket(raw: any) {
     adapter?.agent_id ||
     "";
 
-  const output =
+  const output = customerPortalSafeText(
     adapter?.output ||
-    adapter?.result?.output ||
-    data?.output ||
-    data?.generated_output ||
-    first?.completed_output ||
-    first?.deliverable?.content?.body ||
-    first?.deliverable?.summary ||
-    "";
+      adapter?.result?.output ||
+      data?.output ||
+      data?.generated_output ||
+      first?.completed_output ||
+      first?.deliverable?.content?.body ||
+      first?.deliverable?.content ||
+      first?.deliverable?.output ||
+      first?.deliverable?.generated_output ||
+      first?.deliverable?.summary ||
+      ""
+  );
 
   const status =
     adapter?.execution_status ||
