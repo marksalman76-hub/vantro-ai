@@ -1,4 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+from pathlib import Path
+
+p = Path("frontend/src/app/api/client-latest-deliverable/route.ts")
+
+p.write_text("""import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -84,3 +88,6 @@ export async function GET(req: NextRequest) {
     });
   }
 }
+""", encoding="utf-8")
+
+print("CLIENT_LATEST_DELIVERABLE_ROUTE_COMPILE_FIXED")
