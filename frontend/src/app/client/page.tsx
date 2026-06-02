@@ -857,8 +857,28 @@ useEffect(() => {
       : null,
   ].filter(Boolean) as DeliverableAsset[];
 
+  const mediaPackAny = (liveDeliverable as any)?.media_pack || {};
+  const mediaPackImageAssets = Array.isArray(mediaPackAny?.image_assets) ? mediaPackAny.image_assets : [];
+  const mediaPackGeneratedJobs = Array.isArray((liveDeliverable as any)?.generation_jobs)
+    ? (liveDeliverable as any).generation_jobs
+    : Array.isArray(mediaPackAny?.generation_jobs)
+      ? mediaPackAny.generation_jobs
+      : [];
+
+  const mediaPackAssets = mediaPackImageAssets
+    .map((asset: any) => ({
+      url: asset?.preview_url || asset?.asset_url || asset?.media_url || "",
+      image_url: asset?.preview_url || asset?.asset_url || asset?.media_url || "",
+      title: "Generated creative media asset",
+      name: "Generated creative media asset",
+      type: asset?.generation_type || "image",
+      source: asset?.provider || "creative_media_pack",
+    }))
+    .filter((asset: any) => asset.url || asset.image_url);
+
   const attachedAssets = [
     ...directMediaAssets,
+    ...mediaPackAssets,
     ...(liveDeliverable?.assets || []),
     ...(liveDeliverable?.images || []),
   ].filter((asset, index, list) => {
@@ -872,7 +892,19 @@ useEffect(() => {
 
   const selectedAsset = attachedAssets[selectedAssetIndex] || attachedAssets[0] || null;
   const liveDeliverableAny = (liveDeliverable || {}) as any;
+  const mediaPackSummaryText = [
+    liveDeliverableAny?.supports_audio ? "Audio: voiceover-ready" : "",
+    liveDeliverableAny?.supports_video ? "Video: prompt/job-ready" : "",
+    liveDeliverableAny?.supports_avatar_video ? "Avatar: presenter-ready" : "",
+    mediaPackGeneratedJobs.length ? `Generation jobs: ${mediaPackGeneratedJobs.length}` : "",
+    liveDeliverableAny?.client_safe_learning_summary?.message ? `Learning: ${liveDeliverableAny.client_safe_learning_summary.message}` : "",
+    liveDeliverableAny?.voiceover_script ? `Voiceover script:\n${String(liveDeliverableAny.voiceover_script).slice(0, 700)}` : "",
+    liveDeliverableAny?.video_prompt ? `Video prompt:\n${String(liveDeliverableAny.video_prompt).slice(0, 700)}` : "",
+    liveDeliverableAny?.avatar_prompt ? `Avatar prompt:\n${String(liveDeliverableAny.avatar_prompt).slice(0, 700)}` : "",
+  ].filter(Boolean).join("\n\n");
+
   const visibleClientOutcomeText =
+    mediaPackSummaryText ||
     liveDeliverableAny?.output ||
     liveDeliverableAny?.generated_output ||
     liveDeliverableAny?.provider_output ||
@@ -3093,7 +3125,7 @@ const primaryAssetUrl =
                             
                           }}
                         >
-                          Pending media
+                          {attachedAssets.length ? "Assets detected" : "Pending media"}
                         </div>
                       </div>
 
