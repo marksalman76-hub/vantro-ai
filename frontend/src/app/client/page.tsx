@@ -2563,6 +2563,14 @@ const primaryAssetUrl =
                         headers: { "Content-Type": "application/json", "x-tenant-id": tenantId, "x-actor-role": "customer" },
                         credentials: "include",
                         body: JSON.stringify({
+                          
+                          requested_agent: selectedAgents[0] || "paid_ads_agent",
+                          workflow_stage: "client_live_execution",
+                          task:
+                            taskValue ||
+                            "Create premium client deliverable",
+                          action_type: "creative_generation",
+
                           implementation_plan: buildAutonomousImplementationPlan(
                             buildStrictTaskExecutionContract(
                               `Create a client-specific deliverable using the saved business profile. Business niche: ${businessProfile.business_niche || "saved business profile"}. Target audience: ${businessProfile.target_audience || "saved target audience"}. Positioning: ${businessProfile.notes || "client-specific positioning"}. Fulfil the selected agent task only and provide completion evidence.`,
