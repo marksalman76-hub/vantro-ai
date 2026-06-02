@@ -441,7 +441,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
 
     owner_managed_client_credit_bypass = (
         tenant_id_clean in {"client_demo_001", "owner_managed_demo", "manual_deployment_client"}
-        or package_tier_clean in {"owner_managed", "manual_deployment", "demo", "internal"}
+
     )
 
     if not credit_gate.get("credit_gate_passed") and owner_managed_client_credit_bypass:
