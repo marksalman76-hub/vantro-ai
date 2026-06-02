@@ -3279,7 +3279,10 @@ const primaryAssetUrl =
                 </p>
 
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
-                  {(liveDeliverable?.tags || ["Deliverable", "Assets", "Execution", "Workflow"]).map((tag: string) => (
+                  {(Array.isArray(liveDeliverable?.tags)
+                    ? liveDeliverable.tags.filter((tag: any) => typeof tag === "string")
+                    : ["Deliverable", "Assets", "Execution", "Workflow"]
+                  ).map((tag: string) => (
                     <span
                       key={tag}
                       style={{
