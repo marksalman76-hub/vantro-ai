@@ -35,6 +35,8 @@ SAFE_GENERATION_WORKFLOW_STAGES = {
 }
 
 SAFE_GENERATION_ACTION_TYPES = {
+    "creative_generation",
+
     "content_generation",
     "marketing_campaign_execution",
     "strategy_generation",
