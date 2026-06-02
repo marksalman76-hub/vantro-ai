@@ -640,7 +640,49 @@ export default function ClientPage() {
     } catch {}
   };
   const [showEnterpriseCatalogueModal, setShowEnterpriseCatalogueModal] = useState(false);
+  const [clientMounted, setClientMounted] = useState(false);
   const profileMenuRef = useRef<HTMLDetailsElement | null>(null);
+
+  useEffect(() => {
+    setClientMounted(true);
+  }, []);
+
+  if (!clientMounted) {
+    return (
+      <main
+        style={{
+          minHeight: "100vh",
+          background: "#020617",
+          color: "#e5e7eb",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontFamily: "var(--font-sans, Arial, sans-serif)",
+          padding: 24,
+        }}
+      >
+        <div
+          style={{
+            border: "1px solid rgba(129,140,248,.25)",
+            borderRadius: 24,
+            background: "rgba(15,23,42,.92)",
+            padding: 28,
+            maxWidth: 520,
+            textAlign: "center",
+            boxShadow: "0 24px 80px rgba(0,0,0,.45)",
+          }}
+        >
+          <div style={{ fontSize: 13, letterSpacing: ".16em", textTransform: "uppercase", color: "#818cf8", fontWeight: 900, marginBottom: 10 }}>
+            Client workspace
+          </div>
+          <h1 style={{ margin: 0, fontSize: 28, color: "#fff" }}>Loading governed workspace...</h1>
+          <p style={{ margin: "12px 0 0", color: "#94a3b8", lineHeight: 1.6 }}>
+            Preparing your client-safe execution environment.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   useEffect(() => {
     try {
