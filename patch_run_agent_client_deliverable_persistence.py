@@ -1,15 +1,27 @@
-import { NextRequest, NextResponse } from "next/server";
-import { mkdir, readFile, writeFile } from "fs/promises";
-import path from "path";
+from pathlib import Path
 
-export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
+p = Path("frontend/src/app/api/run-agent/route.ts")
+text = p.read_text(encoding="utf-8")
 
-const BACKEND_URL =
+text = text.replace(
+    'import { NextRequest, NextResponse } from "next/server";',
+    'import { NextRequest, NextResponse } from "next/server";\nimport { mkdir, readFile, writeFile } from "fs/promises";\nimport path from "path";',
+    1,
+)
+
+text = text.replace(
+    'export const dynamic = "force-dynamic";',
+    'export const dynamic = "force-dynamic";\nexport const runtime = "nodejs";',
+    1,
+)
+
+anchor = '''const BACKEND_URL =
   process.env.BACKEND_URL ||
   process.env.NEXT_PUBLIC_BACKEND_URL ||
   "https://api.trance-formation.com.au";
+'''
 
+insert = '''
 const DATA_DIR = path.join(process.cwd(), ".runtime-data");
 const DATA_FILE = path.join(DATA_DIR, "client-executions.json");
 
@@ -71,73 +83,24 @@ async function persistClientExecution(bodyText: string) {
   }
 }
 
+'''
 
-function getBearer(req: NextRequest): string {
-  const auth = req.headers.get("authorization") || "";
-  if (auth.toLowerCase().startsWith("bearer ")) return auth;
+if "persistClientExecution" not in text:
+    text = text.replace(anchor, anchor + insert, 1)
 
-  const cookieToken =
-    req.cookies.get("client_token")?.value ||
-    req.cookies.get("token")?.value ||
-    req.cookies.get("auth_token")?.value ||
-    "";
+text = text.replace(
+    '''  const body = await res.text();
 
-  return cookieToken ? `Bearer ${cookieToken}` : "";
-}
-
-async function proxy(req: NextRequest, path: string) {
-  const bearer = getBearer(req);
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-actor-role": req.headers.get("x-actor-role") || "client",
-    "x-tenant-id": req.headers.get("x-tenant-id") || req.cookies.get("tenant_id")?.value || "tenant_unknown",
-    "origin": req.headers.get("origin") || "",
-    "referer": req.headers.get("referer") || "",
-  };
-
-  if (bearer) headers.Authorization = bearer;
-
-  const init: RequestInit = {
-    method: req.method,
-    headers,
-    cache: "no-store",
-  };
-
-  if (!["GET", "HEAD"].includes(req.method)) {
-    const text = await req.text();
-    if (text) init.body = text;
-  }
-
-  const res = await fetch(`${BACKEND_URL}${path}`, init);
-  const contentType = res.headers.get("content-type") || "application/json";
-  const body = await res.text();
+  return new NextResponse(body, {''',
+    '''  const body = await res.text();
 
   if (req.method === "POST" && path === "/run-agent") {
     await persistClientExecution(body);
   }
 
-  return new NextResponse(body, {
-    status: res.status,
-    headers: {
-      "Content-Type": contentType,
-      "Cache-Control": "no-store",
-    },
-  });
-}
+  return new NextResponse(body, {''',
+    1,
+)
 
-export async function GET(req: NextRequest) {
-  return proxy(req, "/run-agent");
-}
-
-export async function POST(req: NextRequest) {
-  return proxy(req, "/run-agent");
-}
-
-export async function PUT(req: NextRequest) {
-  return proxy(req, "/run-agent");
-}
-
-export async function PATCH(req: NextRequest) {
-  return proxy(req, "/run-agent");
-}
+p.write_text(text, encoding="utf-8")
+print("RUN_AGENT_CLIENT_DELIVERABLE_PERSISTENCE_PATCHED")
