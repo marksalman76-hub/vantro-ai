@@ -2567,8 +2567,7 @@ const primaryAssetUrl =
                           requested_agent: selectedAgents[0] || "paid_ads_agent",
                           workflow_stage: "client_live_execution",
                           task:
-                            taskValue ||
-                            "Create premium client deliverable",
+                            ((document.querySelector("textarea") as HTMLTextAreaElement)?.value || "Create premium client deliverable"),
                           action_type: "creative_generation",
 
                           implementation_plan: buildAutonomousImplementationPlan(
