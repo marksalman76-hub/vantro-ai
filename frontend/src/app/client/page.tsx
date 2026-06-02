@@ -904,13 +904,13 @@ useEffect(() => {
   ].filter(Boolean).join("\n\n");
 
   const visibleClientOutcomeText =
+    customerPortalSafeText(liveDeliverableAny?.output) ||
+    customerPortalSafeText(liveDeliverableAny?.generated_output) ||
+    customerPortalSafeText(liveDeliverableAny?.content) ||
+    customerPortalSafeText(liveDeliverableAny?.provider_output) ||
     mediaPackSummaryText ||
-    liveDeliverableAny?.output ||
-    liveDeliverableAny?.generated_output ||
-    liveDeliverableAny?.provider_output ||
-    liveDeliverableAny?.content ||
-    liveDeliverableAny?.summary ||
-    liveDeliverableAny?.message ||
+    customerPortalSafeText(liveDeliverableAny?.summary) ||
+    customerPortalSafeText(liveDeliverableAny?.message) ||
     "";
 
 const primaryAssetUrl =
@@ -3201,7 +3201,10 @@ const primaryAssetUrl =
                         Generated outcome
                       </div>
                       <pre style={{ whiteSpace: "pre-wrap", margin: 0, maxHeight: 260, overflow: "auto", fontFamily: "inherit", fontSize: 13, lineHeight: 1.55, color: darkModeEnabled ? "#e5e7eb" : "var(--color-dark)" }}>
-                        {visibleClientOutcomeText || "No generated outcome is ready yet. Run an agent to create a client deliverable."}
+                        {customerPortalSafeText(
+                          visibleClientOutcomeText,
+                          "No generated outcome is ready yet. Run an agent to create a client deliverable."
+                        )}
                       </pre>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
                         <button onClick={() => setReviewStatus("approved")} style={{ border: 0, borderRadius: 999, padding: "9px 12px", background: "#dcfce7", color: "var(--color-teal)", fontWeight: 900 }}>Approve</button>
@@ -3285,8 +3288,10 @@ const primaryAssetUrl =
                 </div>
 
                 <p style={{ color: darkModeEnabled ? "#cbd5e1" : "var(--color-mid)", lineHeight: 1.45 }}>
-                  {liveDeliverable?.summary ||
-                    "Client-specific deliverable generated from the latest execution, business profile, selected agents, and review requirements."}
+                  {customerPortalSafeText(
+                    liveDeliverable?.summary,
+                    "Client-specific deliverable generated from the latest execution, business profile, selected agents, and review requirements."
+                  )}
                 </p>
 
                 <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 10 }}>
