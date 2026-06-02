@@ -492,7 +492,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
     tenant_account = pg_lookup_client_account(request.tenant_id)
 
     if not tenant_account.get("success"):
-        if not owner_admin_internal_execution:
+        if not owner_admin_internal_execution and not owner_managed_client_credit_bypass:
             return {
                 "success": False,
                 "error": "tenant_not_found_or_not_active",
@@ -504,7 +504,8 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             "account": {
                 "tenant_id": request.tenant_id,
                 "active_agents": [requested_agent],
-                "owner_admin_internal_bypass": True,
+                "owner_admin_internal_bypass": owner_admin_internal_execution,
+                "owner_managed_client_bypass": owner_managed_client_credit_bypass,
             },
         }
 
