@@ -3946,13 +3946,24 @@ const primaryAssetUrl =
               }}
             >
               {visibleAgentCatalogue.map((agentId) => (
-                <div
+                <button
+                  type="button"
                   key={agentId}
+                  onClick={() => {
+                    setSelectedAgents([agentId]);
+                    setShowEnterpriseCatalogueModal(false);
+                    setToastMessage(`${getAgentDisplayName(agentId)} selected.`);
+                  }}
                   style={{
+                    width: "100%",
+                    textAlign: "left",
                     border: "1px solid rgba(129,140,248,.22)",
                     borderRadius: 18,
                     padding: 18,
-                    background: "rgba(15,23,42,.92)",
+                    background: selectedAgents.includes(agentId)
+                      ? "rgba(79,70,229,.42)"
+                      : "rgba(15,23,42,.92)",
+                    cursor: "pointer",
                   }}
                 >
                   <div
@@ -3975,7 +3986,7 @@ const primaryAssetUrl =
                   >
                     Enterprise-grade governed execution agent available in your active workspace deployment.
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>
