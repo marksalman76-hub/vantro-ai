@@ -1,5 +1,29 @@
 "use client";
 
+function renderMediaPackSummary(result: any) {
+  const mediaPack = result?.media_pack || result?.deliverable?.media_pack || {};
+  const jobs = result?.generation_jobs || mediaPack?.generation_jobs || [];
+  const voiceover = result?.voiceover_script || mediaPack?.voiceover_script || "";
+  const videoPrompt = result?.video_prompt || mediaPack?.video_prompt || "";
+  const avatarPrompt = result?.avatar_prompt || mediaPack?.avatar_prompt || "";
+  const learning = result?.client_safe_learning_summary || {};
+
+  if (!jobs.length && !voiceover && !videoPrompt && !avatarPrompt) return "";
+
+  return [
+    "Creative media pack ready",
+    result?.supports_audio ? "Audio: voiceover-ready" : "",
+    result?.supports_video ? "Video: prompt/job-ready" : "",
+    result?.supports_avatar_video ? "Avatar: presenter-ready" : "",
+    jobs.length ? `Generation jobs: ${jobs.length}` : "",
+    learning?.message ? `Learning: ${learning.message}` : "",
+    voiceover ? `Voiceover script: ${voiceover.slice(0, 240)}...` : "",
+    videoPrompt ? `Video prompt: ${videoPrompt.slice(0, 240)}...` : "",
+    avatarPrompt ? `Avatar prompt: ${avatarPrompt.slice(0, 240)}...` : "",
+  ].filter(Boolean).join("\n\n");
+}
+
+
 import { useEffect, useMemo, useState } from "react";
 
 const AGENTS: [string, string][] = [
