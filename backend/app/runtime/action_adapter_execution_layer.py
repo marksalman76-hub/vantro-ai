@@ -14,6 +14,9 @@ from backend.app.runtime.real_external_integration_execution_bridge import (
 )
 from backend.app.runtime.ugc_visual_generation_runtime import generate_ugc_visual_asset
 from backend.app.runtime.shared_creative_visual_generation_runtime import generate_creative_visual_asset
+from backend.app.runtime.react_website_generation_runtime import generate_react_website_project
+from backend.app.runtime.shared_creative_media_generation_runtime import generate_creative_media_pack
+from backend.app.runtime.shared_agent_learning_runtime import load_agent_learning_context, save_agent_learning, hide_proprietary_learning_fields
 from backend.app.runtime.media_generation_orchestrator import create_media_generation_plan
 
 
@@ -216,13 +219,6 @@ def classify_action_adapter(packet: Dict[str, Any]) -> str:
     connected = set(packet.get("connected_integrations") or [])
     assigned_agent = str(packet.get("assigned_agent") or packet.get("recommended_agent") or "").strip()
 
-    if assigned_agent == "ugc_creative_agent" or "ugc" in text or "shot-by-shot" in text or "creator casting" in text or "video concept" in text or "voiceover" in text:
-        return "ugc_creative_deliverable_adapter"
-    assigned_agent = str(packet.get("assigned_agent") or packet.get("recommended_agent") or "").strip()
-
-    if assigned_agent == "ugc_creative_agent" or "ugc" in text or "shot-by-shot" in text or "creator casting" in text or "video concept" in text:
-        return "ugc_creative_deliverable_adapter"
-
     if assigned_agent == "paid_ads_agent":
         return "ads_campaign_draft_adapter"
 
@@ -237,6 +233,15 @@ def classify_action_adapter(packet: Dict[str, Any]) -> str:
 
     if assigned_agent == "social_media_manager_content_creator_agent":
         return "marketing_asset_adapter"
+
+    if assigned_agent == "website_landing_apps_agent":
+        return "website_draft_page_adapter"
+
+    if assigned_agent == "influencer_collaboration_agent":
+        return "marketing_asset_adapter"
+
+    if assigned_agent == "ugc_creative_agent" or "ugc" in text or "shot-by-shot" in text or "creator casting" in text or "video concept" in text:
+        return "ugc_creative_deliverable_adapter"
 
     email_intent = any(x in text for x in [
         "email",
@@ -360,6 +365,12 @@ def execute_action_adapter(
         or "Approved operational task"
     )
 
+    learning_context = load_agent_learning_context(
+        tenant_id=tenant_id,
+        agent_id=str(packet.get("assigned_agent") or packet.get("agent") or packet.get("recommended_agent") or "unknown_agent"),
+        task=str(packet.get("user_requested_task") or action_text),
+    )
+
     execution_id = f"adapter_exec_{uuid4().hex[:12]}"
     asset_id = f"asset_{uuid4().hex[:12]}"
     task_id = f"task_{uuid4().hex[:12]}"
@@ -438,6 +449,7 @@ def execute_action_adapter(
         "brand_strategy_agent",
         "marketing_specialist_agent",
         "social_media_manager_content_creator_agent",
+        "influencer_collaboration_agent",
     }
 
     if assigned_agent in creative_visual_adapter_agents and adapter in {
@@ -447,13 +459,18 @@ def execute_action_adapter(
         "product_image_adapter",
         "strategy_document_adapter",
     }:
-        visual_asset = generate_creative_visual_asset(
-            prompt=str(packet.get("user_requested_task") or action_text),
+        media_pack = generate_creative_media_pack(
+            task=str(packet.get("user_requested_task") or action_text),
             agent_id=assigned_agent,
             tenant_id=tenant_id,
-            asset_kind=f"{assigned_agent}_visual_asset",
+            include_image=True,
+            include_audio=True,
+            include_video=True,
+            include_avatar=True,
         )
+        visual_asset = (media_pack.get("image_assets") or [None])[0]
     else:
+        media_pack = None
         visual_asset = None
 
     real_external_result = None
@@ -756,6 +773,19 @@ Shop the Collection"""
     visual_provider = visual_asset.get("provider") if visual_asset else None
     visual_provider_live_generation = visual_asset.get("provider_live_generation") if visual_asset else False
     visual_fallback_used = visual_asset.get("fallback_used") if visual_asset else False
+    media_pack_payload = media_pack or {}
+
+    learning_saved_packet = save_agent_learning(
+        tenant_id=tenant_id,
+        agent_id=str(packet.get("assigned_agent") or packet.get("agent") or packet.get("recommended_agent") or "unknown_agent"),
+        task=str(packet.get("user_requested_task") or action_text),
+        output_summary=str(output)[:1200],
+        quality_score=85 if output else 60,
+        approved=None,
+        provider=str(visual_provider or ""),
+        media_type="creative_media_pack" if media_pack_payload else "text_output",
+        source="action_adapter_execution",
+    )
 
     return {
         "success": True,
@@ -776,6 +806,24 @@ Shop the Collection"""
         "provider": visual_provider,
         "provider_live_generation": visual_provider_live_generation,
         "fallback_used": visual_fallback_used,
+        "media_pack": media_pack_payload,
+        "voiceover_script": media_pack_payload.get("voiceover_script", ""),
+        "video_prompt": media_pack_payload.get("video_prompt", ""),
+        "avatar_prompt": media_pack_payload.get("avatar_prompt", ""),
+        "generation_jobs": media_pack_payload.get("generation_jobs", []),
+        "provider_stack": media_pack_payload.get("provider_stack", {}),
+        "provider_chain": media_pack_payload.get("provider_chain", []),
+        "supports_audio": media_pack_payload.get("supports_audio", False),
+        "supports_video": media_pack_payload.get("supports_video", False),
+        "supports_avatar_video": media_pack_payload.get("supports_avatar_video", False),
+        "learning_saved": learning_saved_packet.get("learning_saved", False),
+        "memory_used": learning_context.get("memory_used", False),
+        "previous_pattern_applied": learning_context.get("previous_pattern_applied", False),
+        "improvement_applied": learning_context.get("improvement_applied", ""),
+        "quality_delta": learning_context.get("quality_delta", ""),
+        "next_refinement": learning_context.get("next_refinement", ""),
+        "client_safe_learning_summary": learning_context.get("client_safe_learning_summary", {}),
+        "proprietary_logic_hidden": True,
         "external_readiness": external_readiness,
         "external_action_ready": external_readiness.get("external_action_ready", False),
         "real_external_execution": real_external_result,
