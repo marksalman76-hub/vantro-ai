@@ -3695,3 +3695,44 @@ except Exception as creative_agent_premium_plugin_routing_error:
             "error": str(creative_agent_premium_plugin_routing_error),
         }
 # CREATIVE_AGENT_PREMIUM_PLUGIN_ROUTING_END
+
+# CREATIVE_PROVIDER_CREDENTIAL_ACTIVATION_CHECKS_START
+try:
+    from backend.app.runtime.creative_provider_credential_activation_checks import (
+        get_client_safe_creative_provider_credential_activation_checks,
+        get_creative_provider_credential_activation_checks,
+    )
+
+    @app.get("/creative/provider-credential-activation-checks")
+    async def creative_provider_credential_activation_checks():
+        return get_client_safe_creative_provider_credential_activation_checks()
+
+    @app.get("/admin/creative/provider-credential-activation-checks")
+    async def admin_creative_provider_credential_activation_checks():
+        return get_creative_provider_credential_activation_checks()
+
+except Exception as creative_provider_credential_activation_checks_error:
+    @app.get("/creative/provider-credential-activation-checks")
+    async def creative_provider_credential_activation_checks_unavailable():
+        return {
+            "success": False,
+            "layer": "provider_credential_activation_checks",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "error": str(creative_provider_credential_activation_checks_error),
+        }
+
+    @app.get("/admin/creative/provider-credential-activation-checks")
+    async def admin_creative_provider_credential_activation_checks_unavailable():
+        return {
+            "success": False,
+            "layer": "provider_credential_activation_checks",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "error": str(creative_provider_credential_activation_checks_error),
+        }
+# CREATIVE_PROVIDER_CREDENTIAL_ACTIVATION_CHECKS_END
