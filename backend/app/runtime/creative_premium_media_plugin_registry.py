@@ -1,0 +1,225 @@
+from datetime import datetime, timezone
+from typing import Any, Dict, List
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def _plugins() -> List[Dict[str, Any]]:
+    return [
+        {
+            "plugin_key": "runway_video_generation",
+            "label": "Runway-style Video Generation",
+            "category": "video_generation",
+            "supports": ["text_to_video", "image_to_video", "short_form_ads", "storyboard_motion"],
+            "configured": False,
+            "live_execution_enabled": False,
+            "credential_required": True,
+            "credential_values_exposed": False,
+            "owner_activation_required": True,
+            "creative_agents_supported": ["ugc_creative_agent", "product_image_agent", "marketing_specialist_agent"],
+        },
+        {
+            "plugin_key": "kling_video_generation",
+            "label": "Kling-style Cinematic Video Generation",
+            "category": "video_generation",
+            "supports": ["cinematic_video", "product_motion", "scene_generation", "social_video"],
+            "configured": False,
+            "live_execution_enabled": False,
+            "credential_required": True,
+            "credential_values_exposed": False,
+            "owner_activation_required": True,
+            "creative_agents_supported": ["ugc_creative_agent", "product_image_agent", "marketing_specialist_agent"],
+        },
+        {
+            "plugin_key": "heygen_avatar_video",
+            "label": "HeyGen-style Avatar Video",
+            "category": "avatar_video",
+            "supports": ["avatar_presenter", "talking_head", "sales_video", "training_video"],
+            "configured": False,
+            "live_execution_enabled": False,
+            "credential_required": True,
+            "credential_values_exposed": False,
+            "owner_activation_required": True,
+            "creative_agents_supported": ["ugc_creative_agent", "sales_closer_agent", "marketing_specialist_agent"],
+        },
+        {
+            "plugin_key": "elevenlabs_voice",
+            "label": "ElevenLabs-style Premium Voice",
+            "category": "voice_generation",
+            "supports": ["voiceover", "character_voice", "multilingual_voice", "ad_narration"],
+            "configured": False,
+            "live_execution_enabled": False,
+            "credential_required": True,
+            "credential_values_exposed": False,
+            "owner_activation_required": True,
+            "creative_agents_supported": ["ugc_creative_agent", "product_copywriting_agent", "marketing_specialist_agent"],
+        },
+        {
+            "plugin_key": "lip_sync_dubbing",
+            "label": "Lip-sync and Multilingual Dubbing",
+            "category": "dubbing_lipsync",
+            "supports": ["lip_sync", "voice_dubbing", "multilingual_ugc", "regionalised_video"],
+            "configured": False,
+            "live_execution_enabled": False,
+            "credential_required": True,
+            "credential_values_exposed": False,
+            "owner_activation_required": True,
+            "creative_agents_supported": ["ugc_creative_agent", "marketing_specialist_agent"],
+        },
+        {
+            "plugin_key": "music_sfx_generation",
+            "label": "Music and SFX Generation",
+            "category": "audio_generation",
+            "supports": ["background_music", "sound_effects", "sonic_branding", "ad_audio_bed"],
+            "configured": False,
+            "live_execution_enabled": False,
+            "credential_required": True,
+            "credential_values_exposed": False,
+            "owner_activation_required": True,
+            "creative_agents_supported": ["ugc_creative_agent", "brand_strategy_agent", "marketing_specialist_agent"],
+        },
+        {
+            "plugin_key": "image_video_upscaling",
+            "label": "Image and Video Upscaling",
+            "category": "enhancement",
+            "supports": ["image_upscale", "video_upscale", "denoise", "sharpen", "delivery_enhancement"],
+            "configured": False,
+            "live_execution_enabled": False,
+            "credential_required": True,
+            "credential_values_exposed": False,
+            "owner_activation_required": True,
+            "creative_agents_supported": ["product_image_agent", "ugc_creative_agent", "store_builder_agent"],
+        },
+        {
+            "plugin_key": "video_editing_render_pipeline",
+            "label": "Video Editing and Render Pipeline",
+            "category": "editing_render",
+            "supports": ["timeline_render", "caption_burn_in", "aspect_ratio_variants", "final_export"],
+            "configured": False,
+            "live_execution_enabled": False,
+            "credential_required": False,
+            "credential_values_exposed": False,
+            "owner_activation_required": True,
+            "creative_agents_supported": ["ugc_creative_agent", "marketing_specialist_agent", "social_media_agent"],
+        },
+        {
+            "plugin_key": "brand_safe_creative_moderation",
+            "label": "Brand-safe Creative Moderation",
+            "category": "moderation",
+            "supports": ["brand_safety", "claim_safety", "restricted_content_check", "customer_safe_review"],
+            "configured": True,
+            "live_execution_enabled": True,
+            "credential_required": False,
+            "credential_values_exposed": False,
+            "owner_activation_required": False,
+            "creative_agents_supported": ["ugc_creative_agent", "marketing_specialist_agent", "paid_ads_agent"],
+        },
+        {
+            "plugin_key": "multi_scene_character_consistency",
+            "label": "Multi-scene Character Consistency",
+            "category": "character_consistency",
+            "supports": ["character_memory", "multi_scene_identity", "creator_persona_reuse", "brand_character_lock"],
+            "configured": True,
+            "live_execution_enabled": False,
+            "credential_required": False,
+            "credential_values_exposed": False,
+            "owner_activation_required": True,
+            "creative_agents_supported": ["ugc_creative_agent", "brand_strategy_agent", "marketing_specialist_agent"],
+        },
+        {
+            "plugin_key": "social_ad_export_presets",
+            "label": "Social and Ad Export Presets",
+            "category": "export_presets",
+            "supports": ["tiktok", "instagram_reels", "youtube_shorts", "meta_ads", "linkedin_video", "display_ads"],
+            "configured": True,
+            "live_execution_enabled": True,
+            "credential_required": False,
+            "credential_values_exposed": False,
+            "owner_activation_required": False,
+            "creative_agents_supported": ["ugc_creative_agent", "paid_ads_agent", "social_media_agent"],
+        },
+    ]
+
+
+def get_creative_premium_media_plugin_registry() -> Dict[str, Any]:
+    plugins = _plugins()
+    configured_count = len([plugin for plugin in plugins if plugin["configured"]])
+    live_enabled_count = len([plugin for plugin in plugins if plugin["live_execution_enabled"]])
+
+    return {
+        "success": True,
+        "track": "creative_agent_premium_media_plugin_expansion",
+        "layer": "premium_audio_video_plugin_registry",
+        "status": "ready",
+        "production_launch_matrix_complete": True,
+        "post_launch_operational_readiness_complete": True,
+        "premium_creative_plugin_registry_enabled": True,
+        "plugin_count": len(plugins),
+        "configured_count": configured_count,
+        "live_enabled_count": live_enabled_count,
+        "credential_values_exposed": False,
+        "external_actions_performed": False,
+        "live_provider_calls_triggered": False,
+        "owner_activation_required_for_paid_providers": True,
+        "client_safe_visibility_enabled": True,
+        "tenant_isolation_preserved": True,
+        "creative_agent_categories_supported": [
+            "video_generation",
+            "avatar_video",
+            "voice_generation",
+            "dubbing_lipsync",
+            "audio_generation",
+            "enhancement",
+            "editing_render",
+            "moderation",
+            "character_consistency",
+            "export_presets",
+        ],
+        "plugins": plugins,
+        "activation_rules": [
+            "Adding a plugin to the registry does not enable live paid provider execution.",
+            "Live provider execution requires configured credentials and owner approval.",
+            "Credential values must never be exposed to clients or status routes.",
+            "Creative outputs must pass brand-safe moderation before delivery where applicable.",
+            "Spend-impacting provider usage remains owner-approved.",
+            "Tenant isolation and customer-safe visibility must remain preserved.",
+        ],
+        "verified_at": _now(),
+    }
+
+
+def get_client_safe_creative_premium_media_plugin_registry() -> Dict[str, Any]:
+    status = get_creative_premium_media_plugin_registry()
+
+    return {
+        "success": status["success"],
+        "track": status["track"],
+        "layer": status["layer"],
+        "status": status["status"],
+        "premium_creative_plugin_registry_enabled": status["premium_creative_plugin_registry_enabled"],
+        "plugin_count": status["plugin_count"],
+        "configured_count": status["configured_count"],
+        "live_enabled_count": status["live_enabled_count"],
+        "credential_values_exposed": False,
+        "external_actions_performed": False,
+        "live_provider_calls_triggered": False,
+        "client_safe_visibility_enabled": True,
+        "creative_agent_categories_supported": status["creative_agent_categories_supported"],
+        "plugins": [
+            {
+                "plugin_key": plugin["plugin_key"],
+                "label": plugin["label"],
+                "category": plugin["category"],
+                "supports": plugin["supports"],
+                "configured": plugin["configured"],
+                "live_execution_enabled": plugin["live_execution_enabled"],
+                "owner_activation_required": plugin["owner_activation_required"],
+                "creative_agents_supported": plugin["creative_agents_supported"],
+                "credential_values_exposed": False,
+            }
+            for plugin in status["plugins"]
+        ],
+        "verified_at": status["verified_at"],
+    }

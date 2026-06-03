@@ -3613,3 +3613,44 @@ except Exception as post_launch_final_operational_readiness_lock_error:
             "error": str(post_launch_final_operational_readiness_lock_error),
         }
 # POST_LAUNCH_FINAL_OPERATIONAL_READINESS_LOCK_END
+
+# CREATIVE_PREMIUM_MEDIA_PLUGIN_REGISTRY_START
+try:
+    from backend.app.runtime.creative_premium_media_plugin_registry import (
+        get_client_safe_creative_premium_media_plugin_registry,
+        get_creative_premium_media_plugin_registry,
+    )
+
+    @app.get("/creative/premium-media-plugin-registry")
+    async def creative_premium_media_plugin_registry():
+        return get_client_safe_creative_premium_media_plugin_registry()
+
+    @app.get("/admin/creative/premium-media-plugin-registry")
+    async def admin_creative_premium_media_plugin_registry():
+        return get_creative_premium_media_plugin_registry()
+
+except Exception as creative_premium_media_plugin_registry_error:
+    @app.get("/creative/premium-media-plugin-registry")
+    async def creative_premium_media_plugin_registry_unavailable():
+        return {
+            "success": False,
+            "layer": "premium_audio_video_plugin_registry",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "error": str(creative_premium_media_plugin_registry_error),
+        }
+
+    @app.get("/admin/creative/premium-media-plugin-registry")
+    async def admin_creative_premium_media_plugin_registry_unavailable():
+        return {
+            "success": False,
+            "layer": "premium_audio_video_plugin_registry",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "error": str(creative_premium_media_plugin_registry_error),
+        }
+# CREATIVE_PREMIUM_MEDIA_PLUGIN_REGISTRY_END
