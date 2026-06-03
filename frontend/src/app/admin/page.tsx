@@ -169,6 +169,10 @@ const [activeNav, setActiveNav] = useState("Overview");
       "Run Agent": "admin-run",
       "Deploy Clients": "admin-deploy",
       "Client Registry": "admin-registry",
+            <a href="/admin/creative-assets" className="navLink">
+              Creative Media Assets
+            </a>
+
       "Runtime Health": "admin-health",
       "Provider Governance": "admin-governance",
       "Orchestration": "admin-orchestration",
