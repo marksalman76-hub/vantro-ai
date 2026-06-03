@@ -86,6 +86,10 @@ behaviour optimisation, and execution stack routing.
 
 from backend.app.runtime.global_execution_evidence_layer import build_execution_evidence_packet
 from fastapi import FastAPI, Header
+
+from backend.app.runtime.creative_asset_persistence_bridge import (
+    get_persisted_creative_assets,
+)
 from backend.app.runtime.autonomous_workforce_orchestration_foundation import autonomous_workforce_orchestration_status, create_delegated_subtask_plan, create_orchestration_execution_graph, orchestration_replay_recovery_packet
 from backend.app.runtime.provider_workforce_runtime_hardening import provider_workforce_runtime_hardening_status, provider_runtime_health_summary, provider_recovery_readiness_summary
 from backend.app.runtime.real_provider_activation_registry import get_all_provider_activation_statuses, get_provider_activation_status, select_ready_provider_for_capability
@@ -328,6 +332,23 @@ class RunAgentRequest(BaseModel):
     actor_role: str = "client"
     requested_credits: int = 1
 
+
+
+
+# PRODUCTION_CREATIVE_ASSET_PERSISTENCE_BRIDGE_START
+@app.get("/admin/persisted-creative-assets")
+async def admin_persisted_creative_assets():
+    try:
+        return get_persisted_creative_assets()
+    except Exception as exc:
+        return {
+            "success": False,
+            "layer": "creative_asset_persistence_bridge",
+            "status": "unavailable",
+            "error": str(exc),
+            "credential_values_exposed": False,
+        }
+# PRODUCTION_CREATIVE_ASSET_PERSISTENCE_BRIDGE_END
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> Dict[str, object]:
