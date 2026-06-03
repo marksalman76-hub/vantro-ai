@@ -3736,3 +3736,44 @@ except Exception as creative_provider_credential_activation_checks_error:
             "error": str(creative_provider_credential_activation_checks_error),
         }
 # CREATIVE_PROVIDER_CREDENTIAL_ACTIVATION_CHECKS_END
+
+# FINAL_CREATIVE_MEDIA_PLUGIN_LOCK_START
+try:
+    from backend.app.runtime.final_creative_media_plugin_lock import (
+        get_client_safe_final_creative_media_plugin_lock,
+        get_final_creative_media_plugin_lock,
+    )
+
+    @app.get("/creative/final-media-plugin-lock")
+    async def creative_final_media_plugin_lock():
+        return get_client_safe_final_creative_media_plugin_lock()
+
+    @app.get("/admin/creative/final-media-plugin-lock")
+    async def admin_creative_final_media_plugin_lock():
+        return get_final_creative_media_plugin_lock()
+
+except Exception as final_creative_media_plugin_lock_error:
+    @app.get("/creative/final-media-plugin-lock")
+    async def creative_final_media_plugin_lock_unavailable():
+        return {
+            "success": False,
+            "layer": "final_creative_media_plugin_lock",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "error": str(final_creative_media_plugin_lock_error),
+        }
+
+    @app.get("/admin/creative/final-media-plugin-lock")
+    async def admin_creative_final_media_plugin_lock_unavailable():
+        return {
+            "success": False,
+            "layer": "final_creative_media_plugin_lock",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "error": str(final_creative_media_plugin_lock_error),
+        }
+# FINAL_CREATIVE_MEDIA_PLUGIN_LOCK_END
