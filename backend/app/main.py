@@ -3777,3 +3777,42 @@ except Exception as final_creative_media_plugin_lock_error:
             "error": str(final_creative_media_plugin_lock_error),
         }
 # FINAL_CREATIVE_MEDIA_PLUGIN_LOCK_END
+
+# DYNAMIC_AGENT_LEARNING_VERIFICATION_START
+try:
+    from backend.app.runtime.dynamic_agent_learning_verification import (
+        get_client_safe_dynamic_agent_learning_verification,
+        get_dynamic_agent_learning_verification,
+    )
+
+    @app.get("/dynamic-agent-learning-verification")
+    async def dynamic_agent_learning_verification():
+        return get_client_safe_dynamic_agent_learning_verification()
+
+    @app.get("/admin/dynamic-agent-learning-verification")
+    async def admin_dynamic_agent_learning_verification():
+        return get_dynamic_agent_learning_verification()
+
+except Exception as dynamic_agent_learning_verification_error:
+    @app.get("/dynamic-agent-learning-verification")
+    async def dynamic_agent_learning_verification_unavailable():
+        return {
+            "success": False,
+            "layer": "governed_dynamic_learning",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "error": str(dynamic_agent_learning_verification_error),
+        }
+
+    @app.get("/admin/dynamic-agent-learning-verification")
+    async def admin_dynamic_agent_learning_verification_unavailable():
+        return {
+            "success": False,
+            "layer": "governed_dynamic_learning",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "error": str(dynamic_agent_learning_verification_error),
+        }
+# DYNAMIC_AGENT_LEARNING_VERIFICATION_END
