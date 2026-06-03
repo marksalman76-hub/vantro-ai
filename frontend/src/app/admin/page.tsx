@@ -1,5 +1,30 @@
 "use client";
 
+type CreativeMediaAsset = {
+  provider?: string;
+  asset_type?: string;
+  file_name?: string;
+  local_path?: string;
+  metadata_path?: string | null;
+  size_bytes?: number;
+  test_label?: string | null;
+  task_id?: string | null;
+  status?: string | null;
+  preview_ready?: boolean;
+  download_ready?: boolean;
+  customer_safe?: boolean;
+};
+
+type CreativeMediaAssetsResponse = {
+  success?: boolean;
+  status?: string;
+  asset_count?: number;
+  total_asset_count?: number;
+  assets?: CreativeMediaAsset[];
+  credential_values_exposed?: boolean;
+};
+
+
 import { useEffect, useState } from "react";
 
 const ADMIN_AGENT_OPTIONS: [string, string][] = [
@@ -60,7 +85,36 @@ function Panel({ title, subtitle, children }: { title: string; subtitle?: string
 }
 
 export default function AdminPage() {
-  const [activeNav, setActiveNav] = useState("Overview");
+  
+  const [creativeMediaAssets, setCreativeMediaAssets] = useState<CreativeMediaAsset[]>([]);
+  const [creativeMediaAssetsLoading, setCreativeMediaAssetsLoading] = useState(false);
+  const [creativeMediaAssetsError, setCreativeMediaAssetsError] = useState<string | null>(null);
+
+  async function refreshCreativeMediaAssets() {
+    setCreativeMediaAssetsLoading(true);
+    setCreativeMediaAssetsError(null);
+
+    try {
+      const response = await fetch("/api/admin-creative-media-assets", {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const data: CreativeMediaAssetsResponse = await response.json();
+
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.status || "Unable to load creative media assets");
+      }
+
+      setCreativeMediaAssets(Array.isArray(data.assets) ? data.assets : []);
+    } catch (error) {
+      setCreativeMediaAssetsError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setCreativeMediaAssetsLoading(false);
+    }
+  }
+
+const [activeNav, setActiveNav] = useState("Overview");
   const [runtime, setRuntime] = useState<RuntimePayload | null>(null);
   const [selectedRun, setSelectedRun] = useState<string[]>(["marketing_specialist_agent"]);
   const [selectedDeploy, setSelectedDeploy] = useState<string[]>(ADMIN_AGENT_OPTIONS.map(([id]) => id));
@@ -100,7 +154,8 @@ export default function AdminPage() {
     updateClock();
     const timer = window.setInterval(updateClock, 1000);
     return () => window.clearInterval(timer);
-  }, []);
+      refreshCreativeMediaAssets();
+}, []);
 
   function showToast(message: string) {
     setToast(message);
@@ -1327,6 +1382,84 @@ export default function AdminPage() {
           </div>
         </div>
       </section>
+
+
+        <section className="rounded-2xl border border-cyan-400/20 bg-slate-950/70 p-5 shadow-lg">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">Creative Media Assets</p>
+              <h2 className="mt-1 text-xl font-bold text-white">Generated audio and video outputs</h2>
+              <p className="mt-1 text-sm text-slate-400">
+                Latest governed provider assets from ElevenLabs, Runway, Kling, HeyGen and Sync.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={refreshCreativeMediaAssets}
+              className="rounded-xl border border-cyan-400/30 px-4 py-2 text-sm font-semibold text-cyan-200 hover:bg-cyan-400/10"
+            >
+              {creativeMediaAssetsLoading ? "Refreshing..." : "Refresh assets"}
+            </button>
+          </div>
+
+          {creativeMediaAssetsError ? (
+            <div className="rounded-xl border border-red-400/30 bg-red-950/40 p-3 text-sm text-red-200">
+              {creativeMediaAssetsError}
+            </div>
+          ) : null}
+
+          {creativeMediaAssets.length === 0 ? (
+            <div className="rounded-xl border border-slate-700 bg-slate-900/70 p-4 text-sm text-slate-400">
+              No generated media assets found yet. Run a governed creative media execution to populate this panel.
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {creativeMediaAssets.map((asset, index) => (
+                <article
+                  key={`${asset.provider}-${asset.file_name}-${index}`}
+                  className="rounded-2xl border border-slate-700 bg-slate-900/80 p-4"
+                >
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <span className="rounded-full border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-cyan-200">
+                      {asset.provider || "provider"}
+                    </span>
+                    <span className="rounded-full border border-purple-400/30 bg-purple-400/10 px-3 py-1 text-xs font-semibold text-purple-200">
+                      {asset.asset_type || "asset"}
+                    </span>
+                  </div>
+
+                  <h3 className="break-words text-sm font-semibold text-white">
+                    {asset.test_label || asset.file_name || "Creative media asset"}
+                  </h3>
+
+                  <div className="mt-3 space-y-2 text-xs text-slate-400">
+                    <p>Status: <span className="text-slate-200">{asset.status || "ready"}</span></p>
+                    <p>Preview ready: <span className="text-slate-200">{asset.preview_ready ? "Yes" : "No"}</span></p>
+                    <p>Download ready: <span className="text-slate-200">{asset.download_ready ? "Yes" : "No"}</span></p>
+                    <p>Size: <span className="text-slate-200">{asset.size_bytes ? `${Math.round(asset.size_bytes / 1024)} KB` : "Unknown"}</span></p>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950/80 p-3">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Local file path</p>
+                    <p className="break-all text-xs text-slate-300">{asset.local_path || "Not available"}</p>
+                  </div>
+
+                  {asset.asset_type === "video" ? (
+                    <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-3 text-xs text-emerald-200">
+                      Video generated. Use the local path above to open the MP4 until browser-safe streaming is wired.
+                    </div>
+                  ) : null}
+
+                  {asset.asset_type === "audio" ? (
+                    <div className="mt-4 rounded-xl border border-indigo-400/20 bg-indigo-400/5 p-3 text-xs text-indigo-200">
+                      Audio generated. Use the local path above to open the MP3 until browser-safe streaming is wired.
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
 </main>
   );
