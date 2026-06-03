@@ -9,7 +9,7 @@ const BACKEND_BASE_URL =
 
 export async function GET() {
   try {
-    const response = await fetch(`${BACKEND_BASE_URL}/admin/creative/media-assets?limit=20`, {
+    const response = await fetch(`${BACKEND_BASE_URL}/admin/creative/media-assets?limit=50`, {
       method: "GET",
       cache: "no-store",
       headers: {
