@@ -3654,3 +3654,44 @@ except Exception as creative_premium_media_plugin_registry_error:
             "error": str(creative_premium_media_plugin_registry_error),
         }
 # CREATIVE_PREMIUM_MEDIA_PLUGIN_REGISTRY_END
+
+# CREATIVE_AGENT_PREMIUM_PLUGIN_ROUTING_START
+try:
+    from backend.app.runtime.creative_agent_premium_plugin_routing import (
+        get_client_safe_creative_agent_premium_plugin_routing,
+        get_creative_agent_premium_plugin_routing,
+    )
+
+    @app.get("/creative/agent-premium-plugin-routing")
+    async def creative_agent_premium_plugin_routing():
+        return get_client_safe_creative_agent_premium_plugin_routing()
+
+    @app.get("/admin/creative/agent-premium-plugin-routing")
+    async def admin_creative_agent_premium_plugin_routing():
+        return get_creative_agent_premium_plugin_routing()
+
+except Exception as creative_agent_premium_plugin_routing_error:
+    @app.get("/creative/agent-premium-plugin-routing")
+    async def creative_agent_premium_plugin_routing_unavailable():
+        return {
+            "success": False,
+            "layer": "creative_agent_premium_plugin_routing",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "error": str(creative_agent_premium_plugin_routing_error),
+        }
+
+    @app.get("/admin/creative/agent-premium-plugin-routing")
+    async def admin_creative_agent_premium_plugin_routing_unavailable():
+        return {
+            "success": False,
+            "layer": "creative_agent_premium_plugin_routing",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "error": str(creative_agent_premium_plugin_routing_error),
+        }
+# CREATIVE_AGENT_PREMIUM_PLUGIN_ROUTING_END
