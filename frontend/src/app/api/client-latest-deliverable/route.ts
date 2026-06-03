@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getLatestDeliverable, resolveTenantKey } from "@/lib/deliverablePersistence";
 
 export const dynamic = "force-dynamic";
 
@@ -93,7 +94,33 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }, { status: response.status });
   }
 
-  return NextResponse.json(normalise(payload as Record<string, unknown>), {
+  const normalised = normalise(payload as Record<string, unknown>);
+
+  if (normalised.has_real_output === false) {
+    const tenantKey = resolveTenantKey(req.headers, normalised);
+    const persisted = getLatestDeliverable(tenantKey);
+    if (persisted) {
+      return NextResponse.json({
+        ...persisted,
+        success: true,
+        has_real_output: true,
+        client_output_truth_checked: true,
+        client_safe_status: "Completed",
+        display_status: "Completed",
+        deliverable_persisted: true,
+        persistence_source: "latest_deliverable_store",
+      }, {
+        status: 200,
+        headers: { "cache-control": "no-store, no-cache, must-revalidate" },
+      });
+    }
+  }
+
+  return NextResponse.json({
+    ...normalised,
+    deliverable_persisted: false,
+    persistence_source: "backend_latest_deliverable_route",
+  }, {
     status: response.status,
     headers: { "cache-control": "no-store, no-cache, must-revalidate" },
   });

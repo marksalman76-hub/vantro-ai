@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { persistLatestDeliverable, resolveTenantKey } from "@/lib/deliverablePersistence";
 
 export const dynamic = "force-dynamic";
 
@@ -136,7 +137,19 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
     return new NextResponse(text, { status: response.status });
   }
 
-  return NextResponse.json(normaliseClientExecutionTruth(payload), {
+  const normalised = normaliseClientExecutionTruth(payload) as Record<string, unknown>;
+
+  if (normalised.has_real_output === true) {
+    const tenantKey = resolveTenantKey(req.headers, normalised);
+    const persisted = persistLatestDeliverable(tenantKey, normalised, "delegated_workforce_execution");
+    normalised.deliverable_persisted = Boolean(persisted);
+    normalised.persisted_deliverable_id = persisted?.id || null;
+  } else {
+    normalised.deliverable_persisted = false;
+    normalised.persisted_deliverable_id = null;
+  }
+
+  return NextResponse.json(normalised, {
     status: response.status,
     headers: {
       "cache-control": "no-store, no-cache, must-revalidate",
