@@ -1,4 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path.cwd()
+stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+backup = ROOT / "backups" / f"row4_client_review_action_scope_fix_before_{stamp}"
+backup.mkdir(parents=True, exist_ok=True)
+
+route = ROOT / "frontend" / "src" / "app" / "api" / "client-review-action" / "route.ts"
+
+if not route.exists():
+    raise SystemExit("client-review-action route not found")
+
+shutil.copy2(route, backup / "route.ts")
+
+route.write_text(r'''import { NextRequest, NextResponse } from "next/server";
 import { persistApprovalRevisionEvent } from "@/lib/approvalRevisionHistory";
 import { resolveTenantKey } from "@/lib/deliverablePersistence";
 
@@ -134,3 +150,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     );
   }
 }
+''', encoding="utf-8")
+
+print("ROW4_CLIENT_REVIEW_ACTION_SCOPE_FIXED")
+print(f"Backup: {backup}")
+print(f"Updated: {route}")

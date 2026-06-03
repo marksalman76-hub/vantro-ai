@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLatestDeliverable, resolveTenantKey } from "@/lib/deliverablePersistence";
+import { getApprovalRevisionHistory } from "@/lib/approvalRevisionHistory";
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +95,11 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }, { status: response.status });
   }
 
-  const normalised = normalise(payload as Record<string, unknown>);
+  
+  const tenantKey = resolveTenantKey(req.headers, payload as Record<string, unknown>);
+  const approvalHistory = getApprovalRevisionHistory(tenantKey);
+
+const normalised = normalise(payload as Record<string, unknown>);
 
   if (normalised.has_real_output === false) {
     const tenantKey = resolveTenantKey(req.headers, normalised);
@@ -118,6 +123,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   return NextResponse.json({
     ...normalised,
+    approval_revision_history: approvalHistory,
+    latest_review_action: approvalHistory[0] || null,
     deliverable_persisted: false,
     persistence_source: "backend_latest_deliverable_route",
   }, {
