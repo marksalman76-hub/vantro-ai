@@ -1,4 +1,15 @@
-from datetime import datetime, timezone
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path.cwd()
+STAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
+BACKUP = ROOT / "backups" / f"runway_adapter_download_mp4_patch_before_{STAMP}"
+
+TARGET = ROOT / "backend" / "app" / "runtime" / "runway_live_video_quality_adapter.py"
+TEST = ROOT / "test_runway_live_video_quality_adapter.py"
+
+NEW_CONTENT = r'''from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional, List
 import json
@@ -322,3 +333,27 @@ def run_runway_text_to_video_quality_test(
             "video_saved": False,
             "verified_at": _now(),
         }
+'''
+
+def backup(path: Path) -> None:
+    if path.exists():
+        destination = BACKUP / path.relative_to(ROOT)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, destination)
+
+def main() -> None:
+    if not TARGET.exists():
+        raise FileNotFoundError(f"Missing target file: {TARGET}")
+
+    BACKUP.mkdir(parents=True, exist_ok=True)
+    backup(TARGET)
+
+    TARGET.write_text(NEW_CONTENT, encoding="utf-8", newline="\n")
+
+    print("RUNWAY_ADAPTER_LOCAL_MP4_DOWNLOAD_PATCHED")
+    print(f"Backup folder: {BACKUP}")
+    print(f"Updated: {TARGET}")
+    print(f"Existing test preserved: {TEST}")
+
+if __name__ == "__main__":
+    main()
