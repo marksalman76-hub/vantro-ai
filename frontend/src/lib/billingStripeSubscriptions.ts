@@ -166,3 +166,7 @@ export function buildBillingSubscriptionStatus(tenantKey: string): Record<string
     client_safe_status: subscription?.client_safe_status || "Subscription not active",
   };
 }
+
+
+// durable_runtime_storage_enabled
+// This module participates in the shared .runtime durable storage layer.

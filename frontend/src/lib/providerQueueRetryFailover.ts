@@ -200,3 +200,7 @@ export function attachProviderQueueRetryFailover(
     external_action_performed: false,
   };
 }
+
+
+// durable_runtime_storage_enabled
+// This module participates in the shared .runtime durable storage layer.

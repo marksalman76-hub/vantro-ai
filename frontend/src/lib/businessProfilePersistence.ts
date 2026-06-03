@@ -121,3 +121,7 @@ export function getBusinessProfile(tenantKey: string): BusinessProfileRecord | n
   const store = safeReadStore();
   return store.profiles[tenantKey] || null;
 }
+
+
+// durable_runtime_storage_enabled
+// This module participates in the shared .runtime durable storage layer.

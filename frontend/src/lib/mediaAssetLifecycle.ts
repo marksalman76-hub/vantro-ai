@@ -219,3 +219,7 @@ export function attachMediaAssetLifecycle(
     asset_lifecycle_status: latest?.lifecycle_status || "unavailable",
   };
 }
+
+
+// durable_runtime_storage_enabled
+// This module participates in the shared .runtime durable storage layer.

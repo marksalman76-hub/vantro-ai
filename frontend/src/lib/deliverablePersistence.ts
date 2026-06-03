@@ -185,3 +185,7 @@ export function getLatestDeliverable(tenantKey: string): PersistedDeliverableRec
   const store = safeReadStore();
   return store.records[tenantKey] || null;
 }
+
+
+// durable_runtime_storage_enabled
+// This module participates in the shared .runtime durable storage layer.

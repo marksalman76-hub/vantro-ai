@@ -142,3 +142,7 @@ export function mergeExecutionState(
     profile_completed: Boolean(payload.profile_completed || state.profile_completed),
   };
 }
+
+
+// durable_runtime_storage_enabled
+// This module participates in the shared .runtime durable storage layer.

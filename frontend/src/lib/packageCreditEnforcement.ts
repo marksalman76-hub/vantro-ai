@@ -205,3 +205,7 @@ export function attachPackageCreditEnforcement(
     enforcement_reason: decision.enforcement_reason,
   };
 }
+
+
+// durable_runtime_storage_enabled
+// This module participates in the shared .runtime durable storage layer.

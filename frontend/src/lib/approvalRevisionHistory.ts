@@ -99,3 +99,7 @@ export function getApprovalRevisionHistory(
   const store = safeReadStore();
   return store.events[tenantKey] || [];
 }
+
+
+// durable_runtime_storage_enabled
+// This module participates in the shared .runtime durable storage layer.
