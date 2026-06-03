@@ -1,4 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path.cwd()
+stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+backup = ROOT / "backups" / f"row1_client_execution_output_truth_before_{stamp}"
+backup.mkdir(parents=True, exist_ok=True)
+
+route = ROOT / "frontend" / "src" / "app" / "api" / "delegated-workforce-execution" / "route.ts"
+route.parent.mkdir(parents=True, exist_ok=True)
+
+if route.exists():
+    shutil.copy2(route, backup / "route.ts")
+
+route.write_text(r'''import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -147,3 +162,32 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
 export async function POST(req: NextRequest): Promise<NextResponse> {
   return proxyToBackend(req);
 }
+''', encoding="utf-8")
+
+test = ROOT / "test_row1_client_execution_output_truth.py"
+test.write_text(r'''from pathlib import Path
+
+route = Path("frontend/src/app/api/delegated-workforce-execution/route.ts")
+text = route.read_text(encoding="utf-8")
+
+required = [
+    "hasRealClientOutput",
+    "normaliseClientExecutionTruth",
+    "client_output_truth_checked",
+    "No real deliverable, output, or generated asset was returned.",
+    "Output pending",
+    "Completed",
+    "cache: \"no-store\"",
+]
+
+missing = [item for item in required if item not in text]
+if missing:
+    raise SystemExit(f"ROW1_CLIENT_EXECUTION_OUTPUT_TRUTH_FAILED missing={missing}")
+
+print("ROW1_CLIENT_EXECUTION_OUTPUT_TRUTH_PASSED")
+''', encoding="utf-8")
+
+print("ROW1_CLIENT_EXECUTION_OUTPUT_TRUTH_INSTALLED")
+print(f"Backup: {backup}")
+print(f"Updated: {route}")
+print(f"Created: {test}")
