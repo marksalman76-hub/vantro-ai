@@ -2,238 +2,99 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const BACKEND_URL =
-  process.env.BACKEND_URL ||
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  "https://api.trance-formation.com.au";
-
-function getBearer(req: NextRequest): string {
-  const auth = req.headers.get("authorization") || "";
-
-  if (auth.toLowerCase().startsWith("bearer ")) {
-    return auth;
-  }
-
-  const cookieToken =
-    req.cookies.get("client_token")?.value ||
-    req.cookies.get("token")?.value ||
-    req.cookies.get("auth_token")?.value ||
-    "";
-
-  return cookieToken ? "Bearer " + cookieToken : "";
-}
-
-function safeText(value: unknown, fallback = ""): string {
-  if (typeof value === "string") return value;
-  if (value === null || value === undefined) return fallback;
-
-  if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
-  }
-
-  if (typeof value === "object") {
-    const item = value as any;
-
-    const preferred =
-      item?.provider_execution?.generated_content ||
-      item?.provider_connector?.generated_content ||
-      item?.provider_connector?.safe_client_message ||
-      item?.live_execution_gate?.client_safe_message ||
-      item?.generated_content ||
-      item?.safe_client_message ||
-      item?.message ||
-      item?.summary ||
-      item?.title ||
-      "";
-
-    if (typeof preferred === "string" && preferred.trim()) {
-      return preferred;
-    }
-
-    if (typeof item?.content === "string" && item.content.trim()) {
-      return item.content;
-    }
-
-    try {
-      return JSON.stringify(value, null, 2);
-    } catch {
-      return fallback;
-    }
-  }
-
-  return String(value);
-}
-
-function firstString(...values: unknown[]): string {
-  for (const value of values) {
-    const text = safeText(value).trim();
-    if (text) return text;
-  }
-
-  return "";
-}
-
-function extractGeneratedContent(source: any): string {
-  return firstString(
-    source?.provider_execution?.generated_content,
-    source?.provider_execution?.metadata?.governed_live_call?.generated_content,
-    source?.provider_execution?.provider_connector?.generated_content,
-    source?.provider_connector?.generated_content,
-    source?.output?.provider_execution?.generated_content,
-    source?.output?.provider_execution?.metadata?.governed_live_call?.generated_content,
-    source?.output?.provider_execution?.provider_connector?.generated_content,
-    source?.output?.provider_connector?.generated_content,
-    source?.output?.generated_content,
-    source?.generated_content,
-    source?.content
-  );
-}
-
-function getRawDeliverable(latest: any) {
+function backendBaseUrl(): string {
   return (
-    latest?.deliverable ||
-    latest?.result ||
-    latest?.execution_result ||
-    latest?.payload ||
-    latest?.output ||
-    {}
-  );
+    process.env.BACKEND_API_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "https://api.trance-formation.com.au"
+  ).replace(/\/$/, "");
 }
 
-function flattenDeliverable(latest: any) {
-  const raw = getRawDeliverable(latest);
-  const generatedContent =
-    extractGeneratedContent(raw) ||
-    extractGeneratedContent(latest) ||
-    safeText(raw);
+function isMeaningfulValue(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    return !["completed", "complete", "success", "successful", "done", "pending", "null", "undefined"].includes(trimmed.toLowerCase());
+  }
+  if (Array.isArray(value)) return value.some(isMeaningfulValue);
+  if (typeof value === "object") return Object.values(value as Record<string, unknown>).some(isMeaningfulValue);
+  return true;
+}
 
-  const outputText =
-    generatedContent ||
-    safeText(raw?.content) ||
-    safeText(raw?.output) ||
-    safeText(raw?.summary) ||
-    "Client-safe governed deliverable generated from the latest execution.";
+function normalise(payload: Record<string, unknown>): Record<string, unknown> {
+  const result = (payload.result || {}) as Record<string, unknown>;
+  const data = (payload.data || {}) as Record<string, unknown>;
+  const asset = (payload.asset || result.asset || data.asset || {}) as Record<string, unknown>;
 
-  const mediaPack =
-    raw?.media_pack && typeof raw.media_pack === "object" && !Array.isArray(raw.media_pack)
-      ? raw.media_pack
-      : {};
+  const candidates = [
+    payload.output, payload.deliverable, payload.latest_deliverable, payload.generated_output, payload.final_output,
+    result.output, result.deliverable, result.latest_deliverable, result.generated_output, result.final_output,
+    data.output, data.deliverable, data.latest_deliverable, data.generated_output, data.final_output,
+    payload.asset, payload.assets, result.asset, result.assets, data.asset, data.assets,
+    asset.preview_url, asset.download_url, asset.url, asset.public_url, asset.signed_preview_url, asset.signed_download_url,
+  ];
 
-  const generationJobs = Array.isArray(raw?.generation_jobs)
-    ? raw.generation_jobs.map((job: any) => ({
-        job_type: safeText(job?.job_type || job?.type || "generation"),
-        status: safeText(job?.status || "queued"),
-        provider: safeText(job?.provider || ""),
-        asset_url: safeText(job?.asset_url || job?.url || ""),
-      }))
-    : [];
-
-  const tags = Array.isArray(raw?.tags)
-    ? raw.tags.map((tag: unknown) => safeText(tag)).filter(Boolean)
-    : ["Live execution", "Client-safe", "Generated output"];
+  const hasRealOutput = candidates.some(isMeaningfulValue);
 
   return {
-    title:
-      firstString(raw?.title, latest?.title) ||
-      "Latest client deliverable",
-
-    summary:
-      firstString(raw?.summary, latest?.summary, raw?.safe_client_message, latest?.safe_client_message) ||
-      "Client-safe governed deliverable generated from the latest execution.",
-
-    output: outputText,
-    generated_output: outputText,
-    content: outputText,
-
-    image_url: safeText(raw?.image_url),
-    asset_url: safeText(raw?.asset_url),
-    preview_url: safeText(raw?.preview_url),
-
-    media_pack: mediaPack,
-    generation_jobs: generationJobs,
-
-    voiceover_script: safeText(raw?.voiceover_script),
-    video_prompt: safeText(raw?.video_prompt),
-    avatar_prompt: safeText(raw?.avatar_prompt),
-
-    supports_audio: Boolean(raw?.supports_audio),
-    supports_video: Boolean(raw?.supports_video),
-    supports_avatar_video: Boolean(raw?.supports_avatar_video),
-
-    tags,
-    created_at: firstString(raw?.created_at, latest?.created_at, latest?.created_at_iso),
+    ...payload,
+    has_real_output: hasRealOutput,
+    client_output_truth_checked: true,
+    client_safe_status: hasRealOutput ? "Completed" : "Output pending",
+    display_status: hasRealOutput ? "Completed" : "Output pending",
+    output_truth_reason: hasRealOutput
+      ? "A real deliverable, output, or generated asset was returned."
+      : "No real deliverable, output, or generated asset was returned.",
   };
 }
 
-function flattenExecution(latest: any) {
-  if (!latest || typeof latest !== "object") return null;
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const headers: Record<string, string> = {};
+  const auth = req.headers.get("authorization");
+  const adminToken = req.headers.get("x-admin-token");
+  const cookie = req.headers.get("cookie");
 
-  return {
-    id: safeText(latest?.id || latest?.execution_id || ""),
-    status: safeText(latest?.status || latest?.execution_status || "completed"),
-    task: safeText(latest?.task || latest?.workflow?.task || ""),
-    created_at: firstString(latest?.created_at, latest?.created_at_iso),
-    tenant_id: safeText(latest?.tenant_id || latest?.workflow?.tenant_id || ""),
-    requested_agent: safeText(latest?.requested_agent || latest?.workflow?.requested_agent || ""),
-    deliverable: flattenDeliverable(latest),
-  };
-}
+  if (auth) headers.authorization = auth;
+  if (adminToken) headers["x-admin-token"] = adminToken;
+  if (cookie) headers.cookie = cookie;
 
-export async function GET(req: NextRequest) {
+  const response = await fetch(`${backendBaseUrl()}/client-latest-deliverable`, {
+    method: "GET",
+    headers,
+    cache: "no-store",
+  });
+
+  const text = await response.text();
+
+  let payload: unknown;
   try {
-    const bearer = getBearer(req);
-
-    const tenantId =
-      req.headers.get("x-tenant-id") ||
-      req.cookies.get("tenant_id")?.value ||
-      "owner_managed_demo_client";
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-      "x-actor-role": req.headers.get("x-actor-role") || "client",
-      "x-tenant-id": tenantId,
-    };
-
-    if (bearer) {
-      headers.Authorization = bearer;
-    }
-
-    const url =
-      BACKEND_URL +
-      "/client/execution-events?tenant_id=" +
-      encodeURIComponent(tenantId) +
-      "&project_id=default_project&limit=20";
-
-    const response = await fetch(url, {
-      method: "GET",
-      headers,
-      cache: "no-store",
-    });
-
-    const data = await response.json();
-
-    const latest =
-      data?.events?.[0] ||
-      data?.executions?.[0] ||
-      data?.records?.[0] ||
-      null;
-
-    const execution = flattenExecution(latest);
-    const deliverable = execution?.deliverable || null;
-
-    return NextResponse.json({
-      success: true,
-      source: "backend_runtime_fully_flattened",
-      execution,
-      deliverable,
-    });
-  } catch (error) {
+    payload = JSON.parse(text);
+  } catch {
     return NextResponse.json({
       success: false,
-      error: "client_latest_deliverable_proxy_failed",
-      detail: String(error),
-      execution: null,
-      deliverable: null,
-    });
+      has_real_output: false,
+      client_output_truth_checked: true,
+      client_safe_status: "Output pending",
+      display_status: "Output pending",
+      output_truth_reason: "Latest deliverable route did not return JSON.",
+    }, { status: response.status });
   }
+
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return NextResponse.json({
+      success: false,
+      has_real_output: false,
+      client_output_truth_checked: true,
+      client_safe_status: "Output pending",
+      display_status: "Output pending",
+      output_truth_reason: "Latest deliverable response was empty.",
+    }, { status: response.status });
+  }
+
+  return NextResponse.json(normalise(payload as Record<string, unknown>), {
+    status: response.status,
+    headers: { "cache-control": "no-store, no-cache, must-revalidate" },
+  });
 }

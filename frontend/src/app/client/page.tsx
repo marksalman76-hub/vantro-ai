@@ -118,6 +118,7 @@ function normalizeExecutionPacket(raw: any) {
 
 
 import React, { useEffect, useRef, useState } from "react";
+import LatestDeliverableViewer from "./LatestDeliverableViewer";
 
 
 function CustomerAgentStatusBadge({ active }: { active: boolean }) {
@@ -4163,7 +4164,9 @@ const primaryAssetUrl =
         </div>
       </section>
 
-</main>
+
+      <LatestDeliverableViewer />
+    </main>
   );
 }
 
