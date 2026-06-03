@@ -3857,3 +3857,32 @@ except Exception as admin_ugc_live_media_execution_bridge_error:
             "live_provider_calls_triggered": False,
         }
 # ADMIN_UGC_LIVE_MEDIA_EXECUTION_BRIDGE_END
+
+# ADMIN_CREATIVE_MEDIA_ASSET_VIEWER_START
+try:
+    from backend.app.runtime.admin_creative_media_asset_viewer import (
+        get_admin_creative_media_asset_viewer_status,
+        get_admin_creative_media_assets,
+    )
+
+    @app.get("/admin/creative/media-assets/status")
+    async def admin_creative_media_assets_status():
+        return get_admin_creative_media_asset_viewer_status()
+
+    @app.get("/admin/creative/media-assets")
+    async def admin_creative_media_assets(limit: int = 50):
+        return get_admin_creative_media_assets(limit=limit)
+
+except Exception as admin_creative_media_asset_viewer_error:
+    @app.get("/admin/creative/media-assets/status")
+    async def admin_creative_media_assets_status_unavailable():
+        return {
+            "success": False,
+            "layer": "admin_creative_media_asset_viewer",
+            "status": "unavailable",
+            "error": str(admin_creative_media_asset_viewer_error),
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+        }
+# ADMIN_CREATIVE_MEDIA_ASSET_VIEWER_END
