@@ -1,25 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getCatalogueForPackage } from "@/lib/agentCatalogueProductionUx";
 
-function backendBase() {
-  return (
-    process.env.NEXT_PUBLIC_API_BASE_URL ||
-    process.env.BACKEND_URL ||
-    process.env.NEXT_PUBLIC_BACKEND_URL ||
-    "https://api.trance-formation.com.au"
-  );
-}
+export const dynamic = "force-dynamic";
 
 export async function GET(
-  _request: NextRequest,
+  _req: NextRequest,
   context: { params: Promise<{ plan: string }> }
-) {
+): Promise<NextResponse> {
   const { plan } = await context.params;
 
-  const res = await fetch(`${backendBase()}/signup-agent-selection/options/${encodeURIComponent(plan)}`, {
-    method: "GET",
-    cache: "no-store",
+  return NextResponse.json(getCatalogueForPackage(plan), {
+    status: 200,
+    headers: { "cache-control": "no-store, no-cache, must-revalidate" },
   });
-
-  const data = await res.json();
-  return NextResponse.json(data, { status: res.status });
 }
