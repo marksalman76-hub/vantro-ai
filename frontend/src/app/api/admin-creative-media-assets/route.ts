@@ -22,9 +22,10 @@ export async function GET() {
     if (ADMIN_TOKEN) {
       headers.Authorization = `Bearer ${ADMIN_TOKEN}`;
       headers["x-admin-token"] = ADMIN_TOKEN;
+      headers["x-actor-role"] = "owner_admin";
     }
 
-    const response = await fetch(`${BACKEND_BASE_URL}/admin/creative/media-assets?limit=50`, {
+    const response = await fetch(`${BACKEND_BASE_URL}/admin/persisted-creative-assets`, {
       method: "GET",
       cache: "no-store",
       headers,

@@ -17,6 +17,12 @@ except Exception:
     run_runway_text_to_video_quality_test = None
 
 
+try:
+    from backend.app.runtime.creative_asset_persistence_bridge import persist_creative_asset
+except Exception:
+    persist_creative_asset = None
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -141,6 +147,39 @@ def run_admin_ugc_live_media_execution(
         voice_result.get("audio_saved") or video_result.get("video_saved")
     )
 
+    persisted_asset_records = []
+
+    if persist_creative_asset is not None:
+        if voice_result.get("audio_saved"):
+            persisted_asset_records.append(
+                persist_creative_asset(
+                    {
+                        "provider": "elevenlabs",
+                        "asset_type": "audio",
+                        "test_label": voice_result.get("test_label") or f"{test_label}_voiceover",
+                        "provider_asset_id": voice_result.get("generation_id") or voice_result.get("task_id"),
+                        "provider_asset_url": voice_result.get("audio_url") or voice_result.get("audio_path"),
+                        "preview_url": voice_result.get("audio_url") or voice_result.get("audio_path"),
+                        "download_url": voice_result.get("audio_url") or voice_result.get("audio_path"),
+                    }
+                )
+            )
+
+        if video_result.get("video_saved") or video_result.get("video_url_preview") or video_result.get("video_url"):
+            persisted_asset_records.append(
+                persist_creative_asset(
+                    {
+                        "provider": "runway",
+                        "asset_type": "video",
+                        "test_label": video_result.get("test_label") or f"{test_label}_runway_video",
+                        "provider_asset_id": video_result.get("task_id") or video_result.get("video_id") or video_result.get("generation_id"),
+                        "provider_asset_url": video_result.get("video_url") or video_result.get("video_url_preview") or video_result.get("video_path"),
+                        "preview_url": video_result.get("video_url_preview") or video_result.get("video_url") or video_result.get("video_path"),
+                        "download_url": video_result.get("video_url") or video_result.get("video_path"),
+                    }
+                )
+            )
+
     return {
         "success": True,
         "provider_runtime": "admin_ugc_live_media_execution_bridge",
@@ -156,6 +195,8 @@ def run_admin_ugc_live_media_execution(
         "audio_path": voice_result.get("audio_path"),
         "video_path": video_result.get("video_path"),
         "video_url_preview": video_result.get("video_url_preview"),
+        "persisted_asset_records": persisted_asset_records,
+        "persisted_asset_count": len(persisted_asset_records),
         "credential_values_exposed": False,
         "external_actions_performed": bool(
             voice_result.get("external_action_performed")
