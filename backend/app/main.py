@@ -3497,3 +3497,41 @@ async def admin_live_provider_readiness():
         "status": "LIVE_PROVIDER_READY" if openai_configured and live_external_calls_enabled and owner_approved_live_activation else "LIVE_PROVIDER_NOT_READY",
     }
 
+# POST_LAUNCH_INFRASTRUCTURE_SCALING_READINESS_START
+try:
+    from backend.app.runtime.post_launch_infrastructure_scaling_readiness import (
+        get_client_safe_post_launch_infrastructure_scaling_readiness,
+        get_post_launch_infrastructure_scaling_readiness,
+    )
+
+    @app.get("/post-launch/infrastructure-scaling-readiness")
+    async def post_launch_infrastructure_scaling_readiness():
+        return get_client_safe_post_launch_infrastructure_scaling_readiness()
+
+    @app.get("/admin/post-launch/infrastructure-scaling-readiness")
+    async def admin_post_launch_infrastructure_scaling_readiness():
+        return get_post_launch_infrastructure_scaling_readiness()
+
+except Exception as post_launch_infrastructure_scaling_readiness_error:
+    @app.get("/post-launch/infrastructure-scaling-readiness")
+    async def post_launch_infrastructure_scaling_readiness_unavailable():
+        return {
+            "success": False,
+            "layer": "infrastructure_scaling_validation",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "error": str(post_launch_infrastructure_scaling_readiness_error),
+        }
+
+    @app.get("/admin/post-launch/infrastructure-scaling-readiness")
+    async def admin_post_launch_infrastructure_scaling_readiness_unavailable():
+        return {
+            "success": False,
+            "layer": "infrastructure_scaling_validation",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "error": str(post_launch_infrastructure_scaling_readiness_error),
+        }
+# POST_LAUNCH_INFRASTRUCTURE_SCALING_READINESS_END
