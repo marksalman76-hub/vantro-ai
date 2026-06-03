@@ -1,4 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path.cwd()
+stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+backup = ROOT / "backups" / f"row5_client_me_parse_fix_before_{stamp}"
+backup.mkdir(parents=True, exist_ok=True)
+
+route = ROOT / "frontend" / "src" / "app" / "api" / "client-me" / "route.ts"
+
+if not route.exists():
+    raise SystemExit("client-me route not found")
+
+shutil.copy2(route, backup / "route.ts")
+
+route.write_text(r'''import { NextRequest, NextResponse } from "next/server";
 import { getBusinessProfile } from "@/lib/businessProfilePersistence";
 import { resolveTenantKey } from "@/lib/deliverablePersistence";
 
@@ -78,3 +94,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }
   );
 }
+''', encoding="utf-8")
+
+print("ROW5_CLIENT_ME_ROUTE_PARSE_FIXED")
+print(f"Backup: {backup}")
+print(f"Updated: {route}")

@@ -1,94 +1,144 @@
 import { NextRequest, NextResponse } from "next/server";
+import { persistBusinessProfile, getBusinessProfile } from "@/lib/businessProfilePersistence";
+import { resolveTenantKey } from "@/lib/deliverablePersistence";
 
 export const dynamic = "force-dynamic";
 
-const BACKEND_URL =
-  process.env.BACKEND_URL ||
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  "https://api.trance-formation.com.au";
-
-function getSessionToken(req: NextRequest): string {
-  const auth = req.headers.get("authorization") || "";
-  if (auth.toLowerCase().startsWith("bearer ")) return auth.slice(7).trim();
-
+function backendBaseUrl(): string {
   return (
-    req.cookies.get("client_token")?.value ||
-    req.cookies.get("token")?.value ||
-    req.cookies.get("auth_token")?.value ||
-    ""
-  );
+    process.env.BACKEND_API_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "https://api.trance-formation.com.au"
+  ).replace(/\/$/, "");
 }
 
-function getBearer(req: NextRequest): string {
-  const auth = req.headers.get("authorization") || "";
-  if (auth.toLowerCase().startsWith("bearer ")) return auth;
-
-  const cookieToken =
-    req.cookies.get("client_token")?.value ||
-    req.cookies.get("token")?.value ||
-    req.cookies.get("auth_token")?.value ||
-    "";
-
-  return cookieToken ? `Bearer ${cookieToken}` : "";
-}
-
-async function proxy(req: NextRequest, path: string) {
-  const bearer = getBearer(req);
-
+function buildForwardHeaders(req: NextRequest): Record<string, string> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-actor-role": req.headers.get("x-actor-role") || "client",
-    "x-tenant-id": req.headers.get("x-tenant-id") || req.cookies.get("tenant_id")?.value || "tenant_unknown",
-    "origin": req.headers.get("origin") || "",
-    "referer": req.headers.get("referer") || "",
+    "content-type": "application/json",
   };
 
-  if (bearer) headers.Authorization = bearer;
+  const auth = req.headers.get("authorization");
+  const adminToken = req.headers.get("x-admin-token");
+  const cookie = req.headers.get("cookie");
 
-  const init: RequestInit = {
-    method: req.method,
-    headers,
-    cache: "no-store",
-  };
+  if (auth) headers.authorization = auth;
+  if (adminToken) headers["x-admin-token"] = adminToken;
+  if (cookie) headers.cookie = cookie;
 
-  if (!["GET", "HEAD"].includes(req.method)) {
-    const text = await req.text();
-    if (text) init.body = text;
+  return headers;
+}
+
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const tenantKey = resolveTenantKey(req.headers, {});
+  const persisted = getBusinessProfile(tenantKey);
+
+  if (persisted) {
+    return NextResponse.json({
+      success: true,
+      business_profile_persisted: true,
+      persistence_source: "business_profile_store",
+      profile: persisted,
+      business_profile: persisted,
+      display_name: persisted.display_name,
+      profile_completed: persisted.profile_completed,
+    }, {
+      status: 200,
+      headers: { "cache-control": "no-store, no-cache, must-revalidate" },
+    });
   }
 
-  const sessionToken = getSessionToken(req);
-  let backendPath = path;
+  try {
+    const response = await fetch(`${backendBaseUrl()}/client-business-profile`, {
+      method: "GET",
+      headers: buildForwardHeaders(req),
+      cache: "no-store",
+    });
 
-  if (sessionToken && (path === "/client/me" || path === "/client/business-profile")) {
-    const joiner = backendPath.includes("?") ? "&" : "?";
-    backendPath = `${backendPath}${joiner}session_token=${encodeURIComponent(sessionToken)}`;
+    const text = await response.text();
+    let payload: Record<string, unknown> = {};
+
+    try {
+      payload = JSON.parse(text);
+    } catch {
+      payload = { backend_response_text: text };
+    }
+
+    return NextResponse.json({
+      ...payload,
+      business_profile_persisted: false,
+      persistence_source: "backend_client_business_profile_route",
+    }, {
+      status: response.status,
+      headers: { "cache-control": "no-store, no-cache, must-revalidate" },
+    });
+  } catch {
+    return NextResponse.json({
+      success: true,
+      business_profile_persisted: false,
+      persistence_source: "empty_profile_fallback",
+      profile: null,
+      business_profile: null,
+      display_name: "Your business",
+      profile_completed: false,
+    }, {
+      status: 200,
+      headers: { "cache-control": "no-store, no-cache, must-revalidate" },
+    });
+  }
+}
+
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  let body: Record<string, unknown> = {};
+
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
   }
 
-  const res = await fetch(`${BACKEND_URL}${backendPath}`, init);
-  const contentType = res.headers.get("content-type") || "application/json";
-  const body = await res.text();
+  const tenantKey = resolveTenantKey(req.headers, body);
+  const persisted = persistBusinessProfile(tenantKey, body);
 
-  return new NextResponse(body, {
-    status: res.status,
-    headers: {
-      "Content-Type": contentType,
-      "Cache-Control": "no-store",
-    },
+  let backendPayload: Record<string, unknown> = {};
+  let backendStatus = 200;
+
+  try {
+    const response = await fetch(`${backendBaseUrl()}/client-business-profile`, {
+      method: "POST",
+      headers: buildForwardHeaders(req),
+      body: JSON.stringify({
+        ...body,
+        display_name: persisted.display_name,
+        business_name: persisted.business_name,
+      }),
+      cache: "no-store",
+    });
+
+    backendStatus = response.status;
+    const text = await response.text();
+
+    try {
+      backendPayload = JSON.parse(text);
+    } catch {
+      backendPayload = { backend_response_text: text };
+    }
+  } catch {
+    backendPayload = { backend_sync_status: "pending" };
+  }
+
+  return NextResponse.json({
+    ...backendPayload,
+    success: true,
+    business_profile_saved: true,
+    business_profile_persisted: true,
+    persistence_source: "business_profile_store",
+    profile: persisted,
+    business_profile: persisted,
+    display_name: persisted.display_name,
+    profile_completed: persisted.profile_completed,
+  }, {
+    status: backendStatus >= 500 ? 200 : backendStatus,
+    headers: { "cache-control": "no-store, no-cache, must-revalidate" },
   });
-}
-
-export async function GET(req: NextRequest) {
-  return proxy(req, "/client/business-profile");
-}
-
-export async function POST(req: NextRequest) {
-  return proxy(req, "/client/business-profile");
-}
-
-export async function PUT(req: NextRequest) {
-  return proxy(req, "/client/business-profile");
-}
-
-export async function PATCH(req: NextRequest) {
-  return proxy(req, "/client/business-profile");
 }
