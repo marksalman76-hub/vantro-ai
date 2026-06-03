@@ -4,6 +4,7 @@ import { persistExecutionState } from "@/lib/executionStateSync";
 import { persistMediaAssets, attachMediaAssetLifecycle } from "@/lib/mediaAssetLifecycle";
 import { attachRealMediaProviderDecision } from "@/lib/realMediaGenerationProviders";
 import { attachProviderQueueRetryFailover } from "@/lib/providerQueueRetryFailover";
+import { attachAgentOutputContract } from "@/lib/allAgentOutputContracts";
 
 export const dynamic = "force-dynamic";
 
@@ -154,6 +155,7 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   }
 
   const stateTenantKey = resolveTenantKey(req.headers, normalised);
+  Object.assign(normalised, attachAgentOutputContract(normalised));
   Object.assign(normalised, attachRealMediaProviderDecision(stateTenantKey, normalised));
   Object.assign(normalised, attachProviderQueueRetryFailover(stateTenantKey, normalised));
   const persistedMediaAssets = persistMediaAssets(stateTenantKey, normalised, "delegated_workforce_execution");

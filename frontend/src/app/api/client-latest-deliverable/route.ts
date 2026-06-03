@@ -3,6 +3,7 @@ import { getLatestDeliverable, resolveTenantKey } from "@/lib/deliverablePersist
 import { getApprovalRevisionHistory } from "@/lib/approvalRevisionHistory";
 import { mergeExecutionState, persistExecutionState } from "@/lib/executionStateSync";
 import { attachMediaAssetLifecycle } from "@/lib/mediaAssetLifecycle";
+import { attachAgentOutputContract } from "@/lib/allAgentOutputContracts";
 
 // media_asset_lifecycle_enabled
 
@@ -131,13 +132,13 @@ const normalised = normalise(payload as Record<string, unknown>);
     }
   }
 
-  const latestPayload = mergeExecutionState(tenantKey, {
+  const latestPayload = attachAgentOutputContract(mergeExecutionState(tenantKey, {
     ...normalised,
     approval_revision_history: approvalHistory,
     latest_review_action: approvalHistory[0] || null,
     deliverable_persisted: false,
     persistence_source: "backend_latest_deliverable_route",
-  });
+  }));
 
   return NextResponse.json(attachMediaAssetLifecycle(tenantKey, latestPayload), {
     status: response.status,
