@@ -241,6 +241,7 @@ export function attachRealMediaProviderDecision(
   return {
     ...payload,
     real_media_generation_providers_enabled: true,
+    provider_queue_retry_failover_ready: true,
     real_media_provider_decision: decision,
     provider_selected: decision.provider_selected,
     provider_label: decision.provider_label,

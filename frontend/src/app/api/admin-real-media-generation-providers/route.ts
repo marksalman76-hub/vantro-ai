@@ -29,6 +29,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     admin_safe: true,
     credential_values_exposed: false,
     real_media_generation_providers_enabled: true,
+    provider_queue_retry_failover_enabled: true,
     live_external_call_executed: false,
     external_action_performed: false,
     providers: getRealMediaProviderRegistry(),
