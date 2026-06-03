@@ -3816,3 +3816,44 @@ except Exception as dynamic_agent_learning_verification_error:
             "error": str(dynamic_agent_learning_verification_error),
         }
 # DYNAMIC_AGENT_LEARNING_VERIFICATION_END
+
+# ADMIN_UGC_LIVE_MEDIA_EXECUTION_BRIDGE_START
+try:
+    from pydantic import BaseModel
+    from backend.app.runtime.admin_ugc_live_media_execution_bridge import (
+        get_admin_ugc_live_media_execution_bridge_status,
+        run_admin_ugc_live_media_execution,
+    )
+
+    class AdminUGCLiveMediaExecutionRequest(BaseModel):
+        task: str
+        agent_key: str = "ugc_creative_agent"
+        owner_approved_live_execution: bool = False
+        test_label: str = "admin_ugc_live_media_execution"
+
+    @app.get("/admin/creative/ugc-live-media-execution/status")
+    async def admin_ugc_live_media_execution_status():
+        return get_admin_ugc_live_media_execution_bridge_status()
+
+    @app.post("/admin/creative/ugc-live-media-execution")
+    async def admin_ugc_live_media_execution(request: AdminUGCLiveMediaExecutionRequest):
+        return run_admin_ugc_live_media_execution(
+            task=request.task,
+            agent_key=request.agent_key,
+            owner_approved_live_execution=request.owner_approved_live_execution,
+            test_label=request.test_label,
+        )
+
+except Exception as admin_ugc_live_media_execution_bridge_error:
+    @app.get("/admin/creative/ugc-live-media-execution/status")
+    async def admin_ugc_live_media_execution_status_unavailable():
+        return {
+            "success": False,
+            "provider_runtime": "admin_ugc_live_media_execution_bridge",
+            "status": "unavailable",
+            "error": str(admin_ugc_live_media_execution_bridge_error),
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+        }
+# ADMIN_UGC_LIVE_MEDIA_EXECUTION_BRIDGE_END
