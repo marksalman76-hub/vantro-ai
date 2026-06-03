@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getLatestDeliverable, resolveTenantKey } from "@/lib/deliverablePersistence";
 import { getApprovalRevisionHistory } from "@/lib/approvalRevisionHistory";
 import { mergeExecutionState, persistExecutionState } from "@/lib/executionStateSync";
+import { attachMediaAssetLifecycle } from "@/lib/mediaAssetLifecycle";
+
+// media_asset_lifecycle_enabled
 
 export const dynamic = "force-dynamic";
 
@@ -117,11 +120,11 @@ const normalised = normalise(payload as Record<string, unknown>);
         persistence_source: "latest_deliverable_store",
       };
       const syncedState = persistExecutionState(tenantKey, persistedPayload);
-      return NextResponse.json({
+      return NextResponse.json(attachMediaAssetLifecycle(tenantKey, {
         ...persistedPayload,
         execution_state_synchronised: true,
         execution_state: syncedState,
-      }, {
+      }), {
         status: 200,
         headers: { "cache-control": "no-store, no-cache, must-revalidate" },
       });
@@ -136,7 +139,7 @@ const normalised = normalise(payload as Record<string, unknown>);
     persistence_source: "backend_latest_deliverable_route",
   });
 
-  return NextResponse.json(latestPayload, {
+  return NextResponse.json(attachMediaAssetLifecycle(tenantKey, latestPayload), {
     status: response.status,
     headers: { "cache-control": "no-store, no-cache, must-revalidate" },
   });

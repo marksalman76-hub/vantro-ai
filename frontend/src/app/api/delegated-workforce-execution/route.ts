@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { persistLatestDeliverable, resolveTenantKey } from "@/lib/deliverablePersistence";
 import { persistExecutionState } from "@/lib/executionStateSync";
+import { persistMediaAssets, attachMediaAssetLifecycle } from "@/lib/mediaAssetLifecycle";
 
 export const dynamic = "force-dynamic";
 
@@ -151,6 +152,11 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   }
 
   const stateTenantKey = resolveTenantKey(req.headers, normalised);
+  const persistedMediaAssets = persistMediaAssets(stateTenantKey, normalised, "delegated_workforce_execution");
+  normalised.media_asset_lifecycle_enabled = true;
+  normalised.media_assets_persisted = persistedMediaAssets.length;
+  const lifecyclePayload = attachMediaAssetLifecycle(stateTenantKey, normalised);
+  Object.assign(normalised, lifecyclePayload);
   const executionState = persistExecutionState(stateTenantKey, normalised);
   normalised.execution_state_synchronised = true;
   normalised.execution_state = executionState;
