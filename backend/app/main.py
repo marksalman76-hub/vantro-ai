@@ -3535,3 +3535,42 @@ except Exception as post_launch_infrastructure_scaling_readiness_error:
             "error": str(post_launch_infrastructure_scaling_readiness_error),
         }
 # POST_LAUNCH_INFRASTRUCTURE_SCALING_READINESS_END
+
+# POST_LAUNCH_COMMERCIAL_OPERATIONS_SOPS_START
+try:
+    from backend.app.runtime.post_launch_commercial_operations_sops import (
+        get_client_safe_post_launch_commercial_operations_sops,
+        get_post_launch_commercial_operations_sops,
+    )
+
+    @app.get("/post-launch/commercial-operations-sops")
+    async def post_launch_commercial_operations_sops():
+        return get_client_safe_post_launch_commercial_operations_sops()
+
+    @app.get("/admin/post-launch/commercial-operations-sops")
+    async def admin_post_launch_commercial_operations_sops():
+        return get_post_launch_commercial_operations_sops()
+
+except Exception as post_launch_commercial_operations_sops_error:
+    @app.get("/post-launch/commercial-operations-sops")
+    async def post_launch_commercial_operations_sops_unavailable():
+        return {
+            "success": False,
+            "layer": "commercial_operations_sops",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "error": str(post_launch_commercial_operations_sops_error),
+        }
+
+    @app.get("/admin/post-launch/commercial-operations-sops")
+    async def admin_post_launch_commercial_operations_sops_unavailable():
+        return {
+            "success": False,
+            "layer": "commercial_operations_sops",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "error": str(post_launch_commercial_operations_sops_error),
+        }
+# POST_LAUNCH_COMMERCIAL_OPERATIONS_SOPS_END
