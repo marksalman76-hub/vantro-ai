@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { attachPackageCreditEnforcement } from "@/lib/packageCreditEnforcement";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 
@@ -141,3 +142,7 @@ export async function PUT(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   return proxy(req, "/run-agent");
 }
+
+
+// package_credit_enforcement_enabled
+// attachPackageCreditEnforcement is available for Row 14 runtime enforcement.

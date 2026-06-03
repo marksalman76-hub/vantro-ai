@@ -5,6 +5,7 @@ import { persistMediaAssets, attachMediaAssetLifecycle } from "@/lib/mediaAssetL
 import { attachRealMediaProviderDecision } from "@/lib/realMediaGenerationProviders";
 import { attachProviderQueueRetryFailover } from "@/lib/providerQueueRetryFailover";
 import { attachAgentOutputContract } from "@/lib/allAgentOutputContracts";
+import { attachPackageCreditEnforcement } from "@/lib/packageCreditEnforcement";
 
 export const dynamic = "force-dynamic";
 
@@ -155,6 +156,7 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   }
 
   const stateTenantKey = resolveTenantKey(req.headers, normalised);
+  Object.assign(normalised, attachPackageCreditEnforcement(stateTenantKey, req.headers, normalised, true));
   Object.assign(normalised, attachAgentOutputContract(normalised));
   Object.assign(normalised, attachRealMediaProviderDecision(stateTenantKey, normalised));
   Object.assign(normalised, attachProviderQueueRetryFailover(stateTenantKey, normalised));
