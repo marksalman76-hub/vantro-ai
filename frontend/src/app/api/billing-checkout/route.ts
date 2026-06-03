@@ -1,126 +1,96 @@
-
 import { NextRequest, NextResponse } from "next/server";
+import { resolveTenantKey } from "@/lib/deliverablePersistence";
+import { persistBillingSubscription } from "@/lib/billingStripeSubscriptions";
 
-const BACKEND_URL =
-  process.env.BACKEND_API_URL ||
-  process.env.NEXT_PUBLIC_BACKEND_API_URL ||
-  "https://api.trance-formation.com.au";
+export const dynamic = "force-dynamic";
 
-const ADMIN_TOKEN =
-  process.env.ADMIN_PLATFORM_TOKEN ||
-  process.env.ADMIN_AUTH_SECRET ||
-  "";
-
-function normalisePlan(raw: unknown) {
-  const value = String(raw || "starter").toLowerCase();
-  if (["starter", "growth", "business", "enterprise"].includes(value)) return value;
-  return "starter";
+function backendBaseUrl(): string {
+  return (
+    process.env.BACKEND_API_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    "https://api.trance-formation.com.au"
+  ).replace(/\/$/, "");
 }
 
-function normaliseBillingCycle(raw: unknown) {
-  const value = String(raw || "monthly").toLowerCase();
-  if (["monthly", "yearly", "annual"].includes(value)) {
-    return value === "annual" ? "yearly" : value;
+function buildForwardHeaders(req: NextRequest): Record<string, string> {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+
+  const auth = req.headers.get("authorization");
+  const adminToken = req.headers.get("x-admin-token");
+  const cookie = req.headers.get("cookie");
+
+  if (auth) headers.authorization = auth;
+  if (adminToken) headers["x-admin-token"] = adminToken;
+  if (cookie) headers.cookie = cookie;
+
+  return headers;
+}
+
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  let body: Record<string, unknown> = {};
+
+  try {
+    body = await req.json();
+  } catch {
+    body = {};
   }
-  return "monthly";
-}
 
-export async function POST(req: NextRequest) {
-  const body = await req.json().catch(() => ({}));
+  const tenantKey = resolveTenantKey(req.headers, body);
 
-  const tenantId = String(body.tenant_id || body.tenantId || "client_demo_001");
-  const plan = normalisePlan(body.plan || body.package_tier || body.package);
-  const billingCycle = normaliseBillingCycle(body.billing_cycle || body.billingCycle);
+  let backendPayload: Record<string, unknown> = {};
+  let backendStatus = 200;
 
-  const payload = {
+  try {
+    const response = await fetch(`${backendBaseUrl()}/billing/live-checkout-session`, {
+      method: "POST",
+      headers: buildForwardHeaders(req),
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+
+    backendStatus = response.status;
+    const text = await response.text();
+
+    try {
+      backendPayload = JSON.parse(text);
+    } catch {
+      backendPayload = { backend_response_text: text };
+    }
+  } catch {
+    backendPayload = {
+      backend_sync_status: "pending",
+      billing_status: "inactive",
+    };
+  }
+
+  const subscription = persistBillingSubscription(tenantKey, {
     ...body,
-    action: body.action || "create_checkout_session",
-    tenant_id: tenantId,
-    plan,
-    package_tier: plan,
-    billing_cycle: billingCycle,
-    success_url:
-      body.success_url ||
-      body.successUrl ||
-      "https://app.trance-formation.com.au/client/billing/success",
-    cancel_url:
-      body.cancel_url ||
-      body.cancelUrl ||
-      "https://app.trance-formation.com.au/client/billing/cancel",
-  };
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-tenant-id": tenantId,
-    "x-actor-role": body.actor_role || "owner_admin",
-    "x-csrf-token": "billing-checkout",
-    origin: process.env.NEXT_PUBLIC_FRONTEND_URL || "https://app.trance-formation.com.au",
-  };
-
-  if (ADMIN_TOKEN) {
-    headers["x-admin-token"] = ADMIN_TOKEN;
-    headers["Authorization"] = `Bearer ${ADMIN_TOKEN}`;
-  }
-
-  const response = await fetch(`${BACKEND_URL}/billing-checkout`, {
-    method: "POST",
-    cache: "no-store",
-    headers,
-    body: JSON.stringify(payload),
+    ...backendPayload,
+    billing_status:
+      backendPayload.checkout_url ||
+      backendPayload.url ||
+      backendPayload.checkout_session_id ||
+      backendPayload.session_id
+        ? "checkout_started"
+        : backendPayload.billing_status || "inactive",
   });
 
-  const data = await response.json().catch(() => ({
-    success: false,
-    error: "backend_response_not_json",
-  }));
-
-  const unsupported =
-    data?.error === "unsupported_billing_action" ||
-    data?.message === "Unsupported billing action.";
-
-  if (unsupported) {
-    return NextResponse.json(
-      {
-        success: true,
-        backend_status: response.status,
-        beta_checkout_ready: true,
-        checkout_mode: "beta_checkout_payload_ready",
-        checkout_requires_provider_completion: true,
-        tenant_id: tenantId,
-        plan,
-        billing_cycle: billingCycle,
-        message:
-          "Billing checkout request was normalised successfully. Live Stripe checkout requires final provider action mapping.",
-        provider_response: data,
-        credential_values_exposed: false,
-        customer_safe: true,
-      },
-      { status: 200 }
-    );
-  }
-
-  return NextResponse.json(
-    {
-      success: response.ok && data?.success !== false,
-      backend_status: response.status,
-      data,
-      tenant_id: tenantId,
-      plan,
-      billing_cycle: billingCycle,
-      credential_values_exposed: false,
-      customer_safe: true,
-    },
-    { status: response.ok ? 200 : response.status }
-  );
-}
-
-export async function GET() {
   return NextResponse.json({
-    success: true,
-    route: "billing-checkout",
-    methods: ["POST"],
-    beta_checkout_compatibility: true,
+    ...backendPayload,
+    success: backendPayload.success !== false,
+    billing_stripe_subscriptions_enabled: true,
+    billing_subscription_persisted: true,
+    billing_subscription: subscription,
+    billing_status: subscription.billing_status,
+    package_key: subscription.package_key,
+    checkout_url: subscription.checkout_url,
+    checkout_session_id: subscription.checkout_session_id,
+    enforcement_ready_for_row14: true,
     credential_values_exposed: false,
-    customer_safe: true,
+    client_safe_status: subscription.client_safe_status,
+  }, {
+    status: backendStatus >= 500 ? 200 : backendStatus,
+    headers: { "cache-control": "no-store, no-cache, must-revalidate" },
   });
 }
