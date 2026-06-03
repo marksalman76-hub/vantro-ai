@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getLatestDeliverable, resolveTenantKey } from "@/lib/deliverablePersistence";
 import { getApprovalRevisionHistory } from "@/lib/approvalRevisionHistory";
+import { mergeExecutionState, persistExecutionState } from "@/lib/executionStateSync";
 
 export const dynamic = "force-dynamic";
 
@@ -105,7 +106,7 @@ const normalised = normalise(payload as Record<string, unknown>);
     const tenantKey = resolveTenantKey(req.headers, normalised);
     const persisted = getLatestDeliverable(tenantKey);
     if (persisted) {
-      return NextResponse.json({
+      const persistedPayload = {
         ...persisted,
         success: true,
         has_real_output: true,
@@ -114,6 +115,12 @@ const normalised = normalise(payload as Record<string, unknown>);
         display_status: "Completed",
         deliverable_persisted: true,
         persistence_source: "latest_deliverable_store",
+      };
+      const syncedState = persistExecutionState(tenantKey, persistedPayload);
+      return NextResponse.json({
+        ...persistedPayload,
+        execution_state_synchronised: true,
+        execution_state: syncedState,
       }, {
         status: 200,
         headers: { "cache-control": "no-store, no-cache, must-revalidate" },
@@ -121,13 +128,15 @@ const normalised = normalise(payload as Record<string, unknown>);
     }
   }
 
-  return NextResponse.json({
+  const latestPayload = mergeExecutionState(tenantKey, {
     ...normalised,
     approval_revision_history: approvalHistory,
     latest_review_action: approvalHistory[0] || null,
     deliverable_persisted: false,
     persistence_source: "backend_latest_deliverable_route",
-  }, {
+  });
+
+  return NextResponse.json(latestPayload, {
     status: response.status,
     headers: { "cache-control": "no-store, no-cache, must-revalidate" },
   });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { persistLatestDeliverable, resolveTenantKey } from "@/lib/deliverablePersistence";
+import { persistExecutionState } from "@/lib/executionStateSync";
 
 export const dynamic = "force-dynamic";
 
@@ -148,6 +149,11 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
     normalised.deliverable_persisted = false;
     normalised.persisted_deliverable_id = null;
   }
+
+  const stateTenantKey = resolveTenantKey(req.headers, normalised);
+  const executionState = persistExecutionState(stateTenantKey, normalised);
+  normalised.execution_state_synchronised = true;
+  normalised.execution_state = executionState;
 
   return NextResponse.json(normalised, {
     status: response.status,

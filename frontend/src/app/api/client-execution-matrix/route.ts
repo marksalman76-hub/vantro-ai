@@ -1,87 +1,71 @@
 import { NextRequest, NextResponse } from "next/server";
+import { resolveTenantKey } from "@/lib/deliverablePersistence";
+import { getExecutionState } from "@/lib/executionStateSync";
+import { getLatestDeliverable } from "@/lib/deliverablePersistence";
+import { getApprovalRevisionHistory } from "@/lib/approvalRevisionHistory";
+import { getBusinessProfile } from "@/lib/businessProfilePersistence";
 
 export const dynamic = "force-dynamic";
 
-const BACKEND_URL =
-  process.env.BACKEND_URL ||
-  process.env.NEXT_PUBLIC_BACKEND_URL ||
-  "https://api.trance-formation.com.au";
-
-function getBearer(req: NextRequest): string {
-  const auth = req.headers.get("authorization") || "";
-  if (auth.toLowerCase().startsWith("bearer ")) return auth;
-
-  const cookieToken =
-    req.cookies.get("client_token")?.value ||
-    req.cookies.get("token")?.value ||
-    req.cookies.get("auth_token")?.value ||
-    "";
-
-  return cookieToken ? `Bearer ${cookieToken}` : "";
+function statusLabel(value: unknown, fallback: string): string {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  return fallback;
 }
 
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  const tenantKey = resolveTenantKey(req.headers, {});
+  const executionState = getExecutionState(tenantKey);
+  const latestDeliverable = getLatestDeliverable(tenantKey);
+  const approvalHistory = getApprovalRevisionHistory(tenantKey);
+  const businessProfile = getBusinessProfile(tenantKey);
 
-function sanitizeCustomerSafeBody(body: string): string {
-  return body
-    .replace(/internal_prompt_exposure_blocked/gi, "request_details_protected")
-    .replace(/backend_architecture_exposure_blocked/gi, "system_details_protected")
-    .replace(/internal prompt/gi, "request details")
-    .replace(/system prompt/gi, "request details")
-    .replace(/developer message/gi, "request details")
-    .replace(/backend architecture/gi, "system details")
-    .replace(/raw json/gi, "details")
-    .replace(/debug/gi, "support")
-    .replace(/webhook/gi, "connection");
-}
+  const hasRealOutput = Boolean(executionState?.has_real_output || latestDeliverable?.has_real_output);
+  const profileCompleted = Boolean(businessProfile?.profile_completed || executionState?.profile_completed);
 
-async function proxy(req: NextRequest, path: string) {
-  const bearer = getBearer(req);
+  const matrix = [
+    {
+      key: "profile",
+      label: "Business profile",
+      status: profileCompleted ? "complete" : "pending",
+      client_safe_status: profileCompleted ? "Complete" : "Needs profile details",
+    },
+    {
+      key: "execution",
+      label: "Execution",
+      status: statusLabel(executionState?.execution_status, "awaiting_output"),
+      client_safe_status: statusLabel(executionState?.client_safe_status, "Output pending"),
+    },
+    {
+      key: "deliverable",
+      label: "Deliverable",
+      status: hasRealOutput ? "complete" : "pending",
+      client_safe_status: hasRealOutput ? "Completed" : "No deliverable yet",
+    },
+    {
+      key: "review",
+      label: "Review",
+      status: approvalHistory.length ? "reviewed" : "not_reviewed",
+      client_safe_status: approvalHistory.length ? "Review recorded" : "Awaiting review",
+    },
+  ];
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-actor-role": req.headers.get("x-actor-role") || "client",
-    "x-tenant-id": req.headers.get("x-tenant-id") || req.cookies.get("tenant_id")?.value || "tenant_unknown",
-  };
-
-  if (bearer) headers.Authorization = bearer;
-
-  const init: RequestInit = {
-    method: req.method,
-    headers,
-    cache: "no-store",
-  };
-
-  if (!["GET", "HEAD"].includes(req.method)) {
-    const text = await req.text();
-    if (text) init.body = text;
-  }
-
-  const res = await fetch(`${BACKEND_URL}${path}`, init);
-  const contentType = res.headers.get("content-type") || "application/json";
-  const rawBody = await res.text();
-  const body = sanitizeCustomerSafeBody(rawBody);
-
-  return new NextResponse(body, {
-    status: res.status,
+  return NextResponse.json({
+    success: true,
+    execution_state_synchronised: true,
+    tenant_scoped: true,
+    client_safe: true,
+    matrix,
+    execution_state: executionState,
+    latest_deliverable: latestDeliverable,
+    latest_review_action: approvalHistory[0] || null,
+    approval_revision_history: approvalHistory,
+    business_profile: businessProfile,
+    has_real_output: hasRealOutput,
+    profile_completed: profileCompleted,
+  }, {
+    status: 200,
     headers: {
-      "Content-Type": contentType,
-      "Cache-Control": "no-store",
+      "cache-control": "no-store, no-cache, must-revalidate",
     },
   });
-}
-
-export async function GET(req: NextRequest) {
-  return proxy(req, "/client/execution-events");
-}
-
-export async function POST(req: NextRequest) {
-  return proxy(req, "/client/execution-events");
-}
-
-export async function PUT(req: NextRequest) {
-  return proxy(req, "/client/execution-events");
-}
-
-export async function PATCH(req: NextRequest) {
-  return proxy(req, "/client/execution-events");
 }
