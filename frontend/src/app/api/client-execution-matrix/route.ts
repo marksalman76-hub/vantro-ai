@@ -4,6 +4,7 @@ import { getExecutionState } from "@/lib/executionStateSync";
 import { getLatestDeliverable } from "@/lib/deliverablePersistence";
 import { getApprovalRevisionHistory } from "@/lib/approvalRevisionHistory";
 import { getBusinessProfile } from "@/lib/businessProfilePersistence";
+import { buildAdminClientExecutionVisibilityPacket } from "@/lib/adminClientExecutionVisibilitySync";
 
 export const dynamic = "force-dynamic";
 
@@ -49,9 +50,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     },
   ];
 
+  const visibilitySync = buildAdminClientExecutionVisibilityPacket(tenantKey, "client");
+
   return NextResponse.json({
     success: true,
     execution_state_synchronised: true,
+    admin_client_execution_visibility_sync_enabled: true,
+    visibility_sync: visibilitySync,
     tenant_scoped: true,
     client_safe: true,
     matrix,
