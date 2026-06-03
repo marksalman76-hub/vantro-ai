@@ -3574,3 +3574,42 @@ except Exception as post_launch_commercial_operations_sops_error:
             "error": str(post_launch_commercial_operations_sops_error),
         }
 # POST_LAUNCH_COMMERCIAL_OPERATIONS_SOPS_END
+
+# POST_LAUNCH_FINAL_OPERATIONAL_READINESS_LOCK_START
+try:
+    from backend.app.runtime.post_launch_final_operational_readiness_lock import (
+        get_client_safe_post_launch_final_operational_readiness_lock,
+        get_post_launch_final_operational_readiness_lock,
+    )
+
+    @app.get("/post-launch/final-operational-readiness-lock")
+    async def post_launch_final_operational_readiness_lock():
+        return get_client_safe_post_launch_final_operational_readiness_lock()
+
+    @app.get("/admin/post-launch/final-operational-readiness-lock")
+    async def admin_post_launch_final_operational_readiness_lock():
+        return get_post_launch_final_operational_readiness_lock()
+
+except Exception as post_launch_final_operational_readiness_lock_error:
+    @app.get("/post-launch/final-operational-readiness-lock")
+    async def post_launch_final_operational_readiness_lock_unavailable():
+        return {
+            "success": False,
+            "layer": "final_operational_readiness_lock",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "error": str(post_launch_final_operational_readiness_lock_error),
+        }
+
+    @app.get("/admin/post-launch/final-operational-readiness-lock")
+    async def admin_post_launch_final_operational_readiness_lock_unavailable():
+        return {
+            "success": False,
+            "layer": "final_operational_readiness_lock",
+            "status": "unavailable",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "error": str(post_launch_final_operational_readiness_lock_error),
+        }
+# POST_LAUNCH_FINAL_OPERATIONAL_READINESS_LOCK_END
