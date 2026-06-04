@@ -15,12 +15,17 @@ def _now() -> str:
 
 
 def _backend_base_url() -> str:
-    return (
+    value = (
         os.getenv("API_BASE_URL")
         or os.getenv("BACKEND_BASE_URL")
         or os.getenv("PUBLIC_BACKEND_BASE_URL")
         or "https://api.trance-formation.com.au"
     ).rstrip("/")
+
+    if "app.trance-formation.com.au" in value:
+        return "https://api.trance-formation.com.au"
+
+    return value
 
 
 def _signed_gateway_url(asset_id: str, delivery_type: str = "preview") -> str:
