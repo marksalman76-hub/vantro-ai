@@ -1,4 +1,18 @@
-from __future__ import annotations
+from pathlib import Path
+from datetime import datetime
+
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+TARGET = ROOT / "backend" / "app" / "runtime" / "asset_storage_signed_delivery_runtime.py"
+
+backup_dir = ROOT / "backups" / f"asset_delivery_registry_fallback_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+backup_dir.mkdir(parents=True, exist_ok=True)
+(backup_dir / "asset_storage_signed_delivery_runtime.py").write_text(
+    TARGET.read_text(encoding="utf-8"),
+    encoding="utf-8",
+)
+
+TARGET.write_text(
+r'''from __future__ import annotations
 
 import hashlib
 import hmac
@@ -461,3 +475,10 @@ def asset_storage_signed_delivery_status() -> Dict[str, Any]:
         "credential_values_exposed": False,
         "customer_safe": True,
     }
+''',
+encoding="utf-8",
+)
+
+print("ASSET_DELIVERY_REGISTRY_FALLBACK_FIXED")
+print("Updated:", TARGET)
+print("Backup:", backup_dir)
