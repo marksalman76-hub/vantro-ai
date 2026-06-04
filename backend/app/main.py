@@ -336,13 +336,16 @@ class RunAgentRequest(BaseModel):
 @app.get("/admin/persisted-creative-assets")
 async def admin_persisted_creative_assets():
     try:
-        assets = get_persisted_creative_assets(limit=100)
+        registry = get_persisted_creative_assets(limit=100)
+        asset_list = registry.get("assets", []) if isinstance(registry, dict) else []
         return {
             "success": True,
             "layer": "creative_asset_persistence_bridge",
             "status": "available",
-            "asset_count": len(assets) if isinstance(assets, list) else 0,
-            "assets": assets,
+            "asset_count": len(asset_list),
+            "total_asset_count": registry.get("total_asset_count", len(asset_list)) if isinstance(registry, dict) else len(asset_list),
+            "assets": asset_list,
+            "providers_checked": registry.get("providers_checked", []) if isinstance(registry, dict) else [],
             "credential_values_exposed": False,
         }
     except Exception as exc:
