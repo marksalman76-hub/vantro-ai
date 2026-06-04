@@ -359,9 +359,17 @@ async def asset_delivery(delivery_type: str, asset_id: str, expires: int, nonce:
         if serve_file_path:
             filename = result.get("filename")
             content_type = result.get("content_type") or "application/octet-stream"
-            if filename:
-                return FileResponse(path=serve_file_path, media_type=content_type, filename=filename)
-            return FileResponse(path=serve_file_path, media_type=content_type)
+
+            response = FileResponse(
+                path=serve_file_path,
+                media_type=content_type,
+                filename=filename if delivery_type == "download" else None,
+            )
+
+            if delivery_type == "preview":
+                response.headers["Content-Disposition"] = "inline"
+
+            return response
 
         redirect_url = result.get("redirect_url")
         if redirect_url:
