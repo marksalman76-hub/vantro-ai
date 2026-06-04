@@ -87,6 +87,7 @@ behaviour optimisation, and execution stack routing.
 from backend.app.runtime.global_execution_evidence_layer import build_execution_evidence_packet
 from fastapi import FastAPI, Header
 from backend.app.runtime.creative_asset_persistence_bridge import get_persisted_creative_assets, persist_creative_agent_output
+from backend.app.runtime.asset_storage_signed_delivery_runtime import build_customer_safe_delivery_response
 from backend.app.runtime.autonomous_workforce_orchestration_foundation import autonomous_workforce_orchestration_status, create_delegated_subtask_plan, create_orchestration_execution_graph, orchestration_replay_recovery_packet
 from backend.app.runtime.provider_workforce_runtime_hardening import provider_workforce_runtime_hardening_status, provider_runtime_health_summary, provider_recovery_readiness_summary
 from backend.app.runtime.real_provider_activation_registry import get_all_provider_activation_statuses, get_provider_activation_status, select_ready_provider_for_capability
@@ -333,6 +334,38 @@ class RunAgentRequest(BaseModel):
 
 
 # PRODUCTION_CREATIVE_ASSET_PERSISTENCE_BRIDGE_START
+
+# PRODUCTION_ASSET_DELIVERY_ROUTES_START
+@app.get("/asset-delivery/{delivery_type}/{asset_id}")
+async def asset_delivery_route(delivery_type: str, asset_id: str, expires: int, nonce: str, sig: str):
+    try:
+        result = build_customer_safe_delivery_response(
+            asset_id=asset_id,
+            delivery_type=delivery_type,
+            expires_at_ms=expires,
+            nonce=nonce,
+            signature=sig,
+        )
+        status_code = int(result.get("http_status", 200))
+        if status_code >= 400:
+            from fastapi.responses import JSONResponse
+            return JSONResponse(status_code=status_code, content=result)
+        return result
+    except Exception as exc:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            status_code=500,
+            content={
+                "success": False,
+                "status": "error",
+                "reason": "asset_delivery_route_failed",
+                "error": str(exc),
+                "credential_values_exposed": False,
+                "customer_safe": True,
+            },
+        )
+# PRODUCTION_ASSET_DELIVERY_ROUTES_END
+
 @app.get("/admin/persisted-creative-assets")
 async def admin_persisted_creative_assets():
     try:

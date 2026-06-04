@@ -17,8 +17,22 @@ def _now_ms() -> int:
 
 
 def _sign_payload(payload: str) -> str:
-    secret = os.getenv("ASSET_PACKET_SIGNING_SECRET") or os.getenv("ADMIN_AUTH_SECRET") or "dev-asset-signing-secret"
+    secret = (
+        os.getenv("ASSET_PACKET_SIGNING_SECRET")
+        or os.getenv("ADMIN_AUTH_SECRET")
+        or "dev-asset-signing-secret"
+    )
     return hmac.new(secret.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+def _safe_metadata(metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    safe_metadata: Dict[str, Any] = {}
+    for key, value in (metadata or {}).items():
+        lower_key = str(key).lower()
+        if "secret" in lower_key or "token" in lower_key or "key" in lower_key:
+            continue
+        safe_metadata[key] = value
+    return safe_metadata
 
 
 def reset_asset_storage_for_tests() -> Dict[str, Any]:
@@ -45,13 +59,6 @@ def create_asset_record(
     asset_id = f"asset_{uuid.uuid4().hex[:16]}"
     now = _now_ms()
 
-    safe_metadata = {}
-    for k, v in (metadata or {}).items():
-        lk = str(k).lower()
-        if "secret" in lk or "token" in lk or "key" in lk:
-            continue
-        safe_metadata[k] = v
-
     record = {
         "asset_id": asset_id,
         "tenant_id": tenant_id,
@@ -61,7 +68,7 @@ def create_asset_record(
         "asset_status": asset_status,
         "source_url_present": bool(source_url),
         "storage_key": storage_key or f"{tenant_id}/{request_id}/{asset_id}",
-        "metadata": safe_metadata,
+        "metadata": _safe_metadata(metadata),
         "created_at_ms": now,
         "updated_at_ms": now,
         "credential_values_exposed": False,
@@ -91,13 +98,13 @@ def list_asset_records(
     records = list(_ASSET_RECORDS.values())
 
     if tenant_id:
-        records = [r for r in records if r.get("tenant_id") == tenant_id]
+        records = [record for record in records if record.get("tenant_id") == tenant_id]
     if request_id:
-        records = [r for r in records if r.get("request_id") == request_id]
+        records = [record for record in records if record.get("request_id") == request_id]
     if provider_key:
-        records = [r for r in records if r.get("provider_key") == provider_key]
+        records = [record for record in records if record.get("provider_key") == provider_key]
 
-    records = sorted(records, key=lambda r: r.get("created_at_ms", 0), reverse=True)[:limit]
+    records = sorted(records, key=lambda record: record.get("created_at_ms", 0), reverse=True)[:limit]
 
     return {
         "records": records,
@@ -127,11 +134,7 @@ def update_asset_status(
 
     if metadata:
         safe_metadata = dict(record.get("metadata") or {})
-        for k, v in metadata.items():
-            lk = str(k).lower()
-            if "secret" in lk or "token" in lk or "key" in lk:
-                continue
-            safe_metadata[k] = v
+        safe_metadata.update(_safe_metadata(metadata))
         record["metadata"] = safe_metadata
 
     record["credential_values_exposed"] = False
@@ -164,6 +167,7 @@ def create_signed_asset_delivery_packet(
             "customer_safe": True,
         }
 
+    delivery_type = str(delivery_type or "preview").strip().lower()
     expires_at_ms = _now_ms() + int(expires_in_seconds * 1000)
     nonce = uuid.uuid4().hex
     payload = f"{tenant_id}:{asset_id}:{delivery_type}:{expires_at_ms}:{nonce}"
@@ -183,16 +187,18 @@ def create_signed_asset_delivery_packet(
         "customer_safe": True,
     }
 
-    _ASSET_DELIVERY_EVENTS.append({
-        "event_id": f"asset_delivery_{uuid.uuid4().hex[:16]}",
-        "tenant_id": tenant_id,
-        "asset_id": asset_id,
-        "delivery_type": delivery_type,
-        "event_type": "signed_delivery_packet_created",
-        "created_at_ms": _now_ms(),
-        "credential_values_exposed": False,
-        "customer_safe": True,
-    })
+    _ASSET_DELIVERY_EVENTS.append(
+        {
+            "event_id": f"asset_delivery_{uuid.uuid4().hex[:16]}",
+            "tenant_id": tenant_id,
+            "asset_id": asset_id,
+            "delivery_type": delivery_type,
+            "event_type": "signed_delivery_packet_created",
+            "created_at_ms": _now_ms(),
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+    )
 
     return packet
 
@@ -214,8 +220,9 @@ def verify_signed_asset_delivery_packet(
             "customer_safe": True,
         }
 
+    delivery_type = str(delivery_type or "preview").strip().lower()
     expected = _sign_payload(f"{tenant_id}:{asset_id}:{delivery_type}:{expires_at_ms}:{nonce}")
-    valid = hmac.compare_digest(expected, signature)
+    valid = hmac.compare_digest(expected, str(signature or ""))
 
     return {
         "valid": valid,
@@ -268,6 +275,93 @@ def create_customer_safe_asset_preview(
     }
 
 
+def build_customer_safe_delivery_response(
+    *,
+    asset_id: str,
+    delivery_type: str,
+    expires_at_ms: int,
+    nonce: str,
+    signature: str,
+) -> Dict[str, Any]:
+    record = get_asset_record(asset_id)
+    if record.get("status") == "not_found":
+        return {
+            "success": False,
+            "status": "not_found",
+            "reason": "asset_not_found_or_runtime_record_expired",
+            "asset_id": asset_id,
+            "http_status": 404,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
+    tenant_id = record.get("tenant_id")
+    verification = verify_signed_asset_delivery_packet(
+        tenant_id=tenant_id,
+        asset_id=asset_id,
+        delivery_type=delivery_type,
+        expires_at_ms=int(expires_at_ms),
+        nonce=nonce,
+        signature=signature,
+    )
+
+    if not verification.get("valid"):
+        return {
+            "success": False,
+            "status": "blocked",
+            "reason": verification.get("reason") or "invalid_delivery_signature",
+            "asset_id": asset_id,
+            "http_status": 403,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
+    _ASSET_DELIVERY_EVENTS.append(
+        {
+            "event_id": f"asset_delivery_{uuid.uuid4().hex[:16]}",
+            "tenant_id": tenant_id,
+            "asset_id": asset_id,
+            "delivery_type": delivery_type,
+            "event_type": "signed_delivery_packet_used",
+            "created_at_ms": _now_ms(),
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+    )
+
+    safe_asset = {
+        "asset_id": record.get("asset_id"),
+        "tenant_id": record.get("tenant_id"),
+        "request_id": record.get("request_id"),
+        "provider_key": record.get("provider_key"),
+        "asset_type": record.get("asset_type"),
+        "asset_status": record.get("asset_status"),
+        "source_url_present": bool(record.get("source_url_present")),
+        "metadata": record.get("metadata") or {},
+        "created_at_ms": record.get("created_at_ms"),
+        "updated_at_ms": record.get("updated_at_ms"),
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+    return {
+        "success": True,
+        "status": "ready",
+        "delivery_type": delivery_type,
+        "asset": safe_asset,
+        "delivery": {
+            "mode": "metadata_fallback",
+            "content_type": "application/json",
+            "download_ready": delivery_type == "download",
+            "preview_ready": delivery_type == "preview",
+            "internal_storage_key_exposed": False,
+        },
+        "credential_values_exposed": False,
+        "customer_safe": True,
+        "http_status": 200,
+    }
+
+
 def list_asset_delivery_events(
     *,
     tenant_id: Optional[str] = None,
@@ -277,11 +371,11 @@ def list_asset_delivery_events(
     events = list(_ASSET_DELIVERY_EVENTS)
 
     if tenant_id:
-        events = [e for e in events if e.get("tenant_id") == tenant_id]
+        events = [event for event in events if event.get("tenant_id") == tenant_id]
     if asset_id:
-        events = [e for e in events if e.get("asset_id") == asset_id]
+        events = [event for event in events if event.get("asset_id") == asset_id]
 
-    events = sorted(events, key=lambda e: e.get("created_at_ms", 0), reverse=True)[:limit]
+    events = sorted(events, key=lambda event: event.get("created_at_ms", 0), reverse=True)[:limit]
 
     return {
         "events": events,
