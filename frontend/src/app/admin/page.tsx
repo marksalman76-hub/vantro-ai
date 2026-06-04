@@ -814,6 +814,25 @@ const [activeNav, setActiveNav] = useState("Overview");
           <header className="pageHead" id="admin-overview">
             <span>Owner Command Centre</span>
             <h1>AI Workforce Platform</h1>
+            <div style={{ marginTop: "14px", marginBottom: "14px" }}>
+              <a
+                href="/admin/creative-assets"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: "10px 14px",
+                  borderRadius: "12px",
+                  border: "1px solid rgba(34,211,238,.35)",
+                  background: "rgba(8,145,178,.14)",
+                  color: "#a5f3fc",
+                  fontWeight: 900,
+                  textDecoration: "none"
+                }}
+              >
+                Creative Assets
+              </a>
+            </div>
             <p>Execution · Billing · Provider governance · Recovery · Launch monitoring</p>
             <div className="badges">
               <b>Client workspace mirror: Ready</b>
