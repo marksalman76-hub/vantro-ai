@@ -22,6 +22,11 @@ from backend.app.runtime.live_provider_adapters import (
     provider_timeout_policy,
 )
 
+try:
+    from backend.app.runtime.creative_asset_persistence_bridge import persist_creative_asset
+except Exception:
+    persist_creative_asset = None
+
 
 def _now_ms() -> int:
     return int(time.time() * 1000)
@@ -168,10 +173,6 @@ def execute_real_provider_http_request(
             "customer_safe": True,
         }
 
-    # Live execution is intentionally isolated here.
-    # This foundation confirms readiness but does not make external calls yet.
-    # Real HTTP dispatch should be enabled only after production credentials,
-    # owner policy gates, durable storage, and monitoring are configured.
     return {
         "provider_key": provider_key,
         "status": "ready_for_real_http_dispatch",
@@ -237,6 +238,7 @@ def real_provider_http_runtime_status(provider_key: str) -> Dict[str, Any]:
         "credential_values_exposed": False,
         "customer_safe": True,
     }
+
 
 def controlled_openai_live_execution_status() -> Dict[str, Any]:
     return {
@@ -325,6 +327,10 @@ def execute_controlled_openai_live_request(payload: Optional[Dict[str, Any]] = N
             output_text=output_text,
             asset_type=payload.get("asset_type") or "text",
             latency_ms=latency_ms,
+            agent_id=payload.get("agent_id") or payload.get("requested_agent") or payload.get("selected_agent"),
+            title=payload.get("title") or payload.get("test_label") or payload.get("task") or "Creative provider output",
+            campaign_context=payload.get("campaign_context") or payload.get("task"),
+            target_audience=payload.get("target_audience"),
         )
 
         return {
@@ -356,6 +362,7 @@ def execute_controlled_openai_live_request(payload: Optional[Dict[str, Any]] = N
             "customer_safe": True,
         }
 
+
 def persist_openai_execution_audit_asset(
     *,
     tenant_id: str,
@@ -364,6 +371,10 @@ def persist_openai_execution_audit_asset(
     output_text: Optional[str] = None,
     asset_type: str = "text",
     latency_ms: int = 0,
+    agent_id: Optional[str] = None,
+    title: Optional[str] = None,
+    campaign_context: Optional[str] = None,
+    target_audience: Optional[str] = None,
 ) -> Dict[str, Any]:
     execution_bridge = persist_provider_execution_record_bridge(
         tenant_id=tenant_id,
@@ -387,6 +398,7 @@ def persist_openai_execution_audit_asset(
             "provider_job_id": provider_job_id,
             "output_text_present": bool(output_text),
             "source": "controlled_openai_live_execution",
+            "execution_id": execution_id,
         },
     )
 
@@ -404,6 +416,54 @@ def persist_openai_execution_audit_asset(
         asset_id=asset["asset_id"],
     )
 
+    creative_registry_bridge = {
+        "success": False,
+        "persisted": False,
+        "reason": "creative_asset_persistence_bridge_unavailable",
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+    if persist_creative_asset is not None:
+        try:
+            creative_registry_bridge = persist_creative_asset(
+                {
+                    "asset_id": asset.get("asset_id"),
+                    "agent_id": agent_id or "marketing_specialist_agent",
+                    "agent_label": agent_id or "marketing_specialist_agent",
+                    "provider": "openai",
+                    "asset_type": asset_type or "text",
+                    "title": title or "OpenAI creative provider output",
+                    "test_label": request_id,
+                    "provider_asset_id": provider_job_id,
+                    "provider_asset_url": None,
+                    "preview_url": (preview.get("preview_packet") or {}).get("delivery_url"),
+                    "download_url": (preview.get("preview_packet") or {}).get("delivery_url"),
+                    "content": output_text,
+                    "summary": (output_text or "")[:500],
+                    "status": "ready",
+                    "quality_score": None,
+                    "campaign_context": campaign_context,
+                    "target_audience": target_audience,
+                    "usage_rights": {
+                        "status": "owner_review_required",
+                        "note": "Generated text creative asset. Confirm final usage rights before external publication.",
+                    },
+                    "owner_approval_required": True,
+                    "customer_safe": True,
+                    "credential_values_exposed": False,
+                }
+            )
+        except Exception as exc:
+            creative_registry_bridge = {
+                "success": False,
+                "persisted": False,
+                "reason": "creative_asset_registry_persist_failed",
+                "safe_error": str(exc)[:300],
+                "credential_values_exposed": False,
+                "customer_safe": True,
+            }
+
     event_bridge = persist_worker_event_bridge(
         tenant_id=tenant_id,
         request_id=request_id,
@@ -416,6 +476,7 @@ def persist_openai_execution_audit_asset(
             "asset_id": asset["asset_id"],
             "asset_type": asset_type,
             "output_text_present": bool(output_text),
+            "creative_registry_bridge": creative_registry_bridge,
         },
     )
 
@@ -434,6 +495,7 @@ def persist_openai_execution_audit_asset(
         "execution_id": execution_id,
         "asset": asset,
         "preview": preview,
+        "creative_registry_bridge": creative_registry_bridge,
         "event_bridge": event_bridge,
         "latency_bridge": latency_bridge,
         "credential_values_exposed": False,
@@ -447,10 +509,10 @@ def controlled_openai_audit_asset_integration_status() -> Dict[str, Any]:
         "audit_asset_integration_ready": True,
         "execution_record_persistence_ready": True,
         "asset_record_creation_ready": True,
+        "creative_registry_bridge_ready": persist_creative_asset is not None,
         "customer_safe_preview_ready": True,
         "ledger_event_ready": True,
         "latency_metric_ready": True,
         "credential_values_exposed": False,
         "customer_safe": True,
     }
-
