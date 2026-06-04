@@ -43,6 +43,48 @@ SAFE_ACTION_ADAPTERS = {
 }
 
 
+CREATIVE_MEDIA_AGENT_IDS = {
+    "ugc_creative_agent",
+    "paid_ads_agent",
+    "product_image_agent",
+    "social_media_manager_content_creator_agent",
+    "brand_strategy_agent",
+    "marketing_specialist_agent",
+    "website_landing_apps_agent",
+    "influencer_collaboration_agent",
+    "creative_rotation_agent",
+    "product_development_agent",
+    "ecommerce_agent",
+}
+
+CREATIVE_MEDIA_INTENT_KEYWORDS = {
+    "actual video",
+    "generate video",
+    "create video",
+    "video ad",
+    "ugc video",
+    "short-form video",
+    "reels",
+    "tiktok",
+    "voiceover",
+    "audio",
+    "avatar",
+    "lip sync",
+    "lipsync",
+    "image asset",
+    "product image",
+    "creative asset",
+    "media asset",
+    "runway",
+    "kling",
+    "heygen",
+    "elevenlabs",
+    "visual",
+    "ad creative",
+    "campaign creative",
+}
+
+
 
 def _extract_primary_creative_deliverable(packet: dict, result: dict) -> str:
     """
@@ -105,6 +147,31 @@ def _contains_high_risk_action(packet: Dict[str, Any]) -> bool:
     return any(keyword in text for keyword in HIGH_RISK_ACTION_KEYWORDS)
 
 
+def _is_creative_media_agent_or_request(packet: Dict[str, Any]) -> bool:
+    assigned_agent = str(packet.get("assigned_agent") or packet.get("recommended_agent") or packet.get("agent") or "").strip().lower()
+
+    raw = " ".join(
+        str(packet.get(key, ""))
+        for key in [
+            "action_type",
+            "implementation_action",
+            "action",
+            "title",
+            "description",
+            "user_requested_task",
+            "task",
+            "recommended_agent",
+            "assigned_agent",
+            "agent",
+        ]
+    ).lower().replace("_", " ")
+
+    if assigned_agent in CREATIVE_MEDIA_AGENT_IDS:
+        return True
+
+    return any(keyword in raw for keyword in CREATIVE_MEDIA_INTENT_KEYWORDS)
+
+
 def _normalise_action_type(packet: Dict[str, Any]) -> str:
     raw = " ".join(
         str(packet.get(k, ""))
@@ -121,6 +188,9 @@ def _normalise_action_type(packet: Dict[str, Any]) -> str:
     ).lower().replace("_", " ")
 
     assigned_agent = str(packet.get("assigned_agent") or packet.get("recommended_agent") or "").strip().lower()
+
+    if _is_creative_media_agent_or_request(packet):
+        return "ugc_creative_deliverable"
 
     if "website draft page" in raw or "landing page" in raw or assigned_agent == "website_landing_apps_agent":
         return "website_draft_page"
