@@ -336,6 +336,15 @@ class RunAgentRequest(BaseModel):
 @app.get("/admin/persisted-creative-assets")
 async def admin_persisted_creative_assets():
     try:
+        assets = get_persisted_creative_assets(limit=100)
+        return {
+            "success": True,
+            "layer": "creative_asset_persistence_bridge",
+            "status": "available",
+            "asset_count": len(assets) if isinstance(assets, list) else 0,
+            "assets": assets,
+            "credential_values_exposed": False,
+        }
     except Exception as exc:
         return {
             "success": False,
