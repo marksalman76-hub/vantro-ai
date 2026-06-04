@@ -1,20 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type CreativeMediaAsset = {
-  provider?: string;
-  asset_type?: string;
-  file_name?: string;
-  local_path?: string;
+  asset_id?: string | null;
+  provider?: string | null;
+  provider_key?: string | null;
+  asset_type?: string | null;
+  media_type?: string | null;
+  title?: string | null;
+  file_name?: string | null;
+  local_path?: string | null;
   metadata_path?: string | null;
-  size_bytes?: number;
+  provider_asset_url?: string | null;
+  preview_url?: string | null;
+  download_url?: string | null;
+  content?: string | null;
+  summary?: string | null;
+  size_bytes?: number | null;
   test_label?: string | null;
   task_id?: string | null;
+  provider_asset_id?: string | null;
   status?: string | null;
-  preview_ready?: boolean;
-  download_ready?: boolean;
-  customer_safe?: boolean;
+  preview_ready?: boolean | null;
+  download_ready?: boolean | null;
+  customer_safe?: boolean | null;
+  created_at?: string | null;
 };
 
 type CreativeAssetsResponse = {
@@ -28,7 +39,45 @@ type CreativeAssetsResponse = {
   error?: string;
 };
 
-export const dynamic = "force-dynamic";
+function getPreviewUrl(asset: CreativeMediaAsset): string {
+  return (
+    asset.preview_url ||
+    asset.provider_asset_url ||
+    asset.download_url ||
+    ""
+  ).trim();
+}
+
+function getDownloadUrl(asset: CreativeMediaAsset): string {
+  return (
+    asset.download_url ||
+    asset.provider_asset_url ||
+    asset.preview_url ||
+    ""
+  ).trim();
+}
+
+function isBrowserSafeUrl(url: string): boolean {
+  return url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:");
+}
+
+function isLocalRenderPath(url: string): boolean {
+  return url.startsWith("/opt/render/") || url.includes("/runtime_outputs/");
+}
+
+function getAssetLabel(asset: CreativeMediaAsset): string {
+  return (
+    asset.title ||
+    asset.test_label ||
+    asset.file_name ||
+    asset.asset_id ||
+    "Creative media asset"
+  );
+}
+
+function getAssetType(asset: CreativeMediaAsset): string {
+  return (asset.asset_type || asset.media_type || "asset").toLowerCase();
+}
 
 export default function AdminCreativeAssetsPage() {
   const [assets, setAssets] = useState<CreativeMediaAsset[]>([]);
@@ -161,94 +210,16 @@ export default function AdminCreativeAssetsPage() {
             padding: "22px",
             color: "#cbd5e1"
           }}>
-            No generated media assets found yet. Run a governed UGC creative media execution, then refresh this page.
+            No generated media assets found yet. Run a governed creative media execution, then refresh this page.
           </section>
         ) : (
           <section style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(320px,1fr))",
+            gridTemplateColumns: "repeat(auto-fit,minmax(360px,1fr))",
             gap: "18px"
           }}>
             {assets.map((asset, index) => (
-              <article
-                key={`${asset.provider}-${asset.file_name}-${index}`}
-                style={{
-                  border: "1px solid rgba(148,163,184,.22)",
-                  background: "rgba(15,23,42,.82)",
-                  borderRadius: "18px",
-                  padding: "18px",
-                  boxShadow: "0 18px 48px rgba(0,0,0,.28)"
-                }}
-              >
-                <div style={{display: "flex", justifyContent: "space-between", gap: "10px", marginBottom: "12px"}}>
-                  <span style={{
-                    color: "#67e8f9",
-                    background: "rgba(8,145,178,.12)",
-                    border: "1px solid rgba(34,211,238,.32)",
-                    borderRadius: "999px",
-                    padding: "6px 10px",
-                    fontSize: "12px",
-                    fontWeight: 900,
-                    textTransform: "uppercase"
-                  }}>
-                    {asset.provider || "provider"}
-                  </span>
-                  <span style={{
-                    color: "#c4b5fd",
-                    background: "rgba(124,58,237,.12)",
-                    border: "1px solid rgba(196,181,253,.25)",
-                    borderRadius: "999px",
-                    padding: "6px 10px",
-                    fontSize: "12px",
-                    fontWeight: 900,
-                    textTransform: "uppercase"
-                  }}>
-                    {asset.asset_type || "asset"}
-                  </span>
-                </div>
-
-                <h2 style={{fontSize: "16px", color: "white", wordBreak: "break-word"}}>
-                  {asset.test_label || asset.file_name || "Creative media asset"}
-                </h2>
-
-                <div style={{marginTop: "14px", display: "grid", gap: "8px", color: "#cbd5e1", fontSize: "13px"}}>
-                  <p>Status: <strong style={{color: "white"}}>{asset.status || "ready"}</strong></p>
-                  <p>Preview ready: <strong style={{color: "white"}}>{asset.preview_ready ? "Yes" : "No"}</strong></p>
-                  <p>Download ready: <strong style={{color: "white"}}>{asset.download_ready ? "Yes" : "No"}</strong></p>
-                  <p>Size: <strong style={{color: "white"}}>{asset.size_bytes ? `${Math.round(asset.size_bytes / 1024)} KB` : "Unknown"}</strong></p>
-                </div>
-
-                <div style={{
-                  marginTop: "14px",
-                  border: "1px solid rgba(148,163,184,.18)",
-                  background: "rgba(2,6,23,.65)",
-                  borderRadius: "12px",
-                  padding: "12px"
-                }}>
-                  <p style={{fontSize: "11px", color: "#64748b", textTransform: "uppercase", fontWeight: 900, marginBottom: "8px"}}>
-                    Local file path
-                  </p>
-                  <p style={{fontSize: "12px", color: "#e2e8f0", wordBreak: "break-all"}}>
-                    {asset.local_path || "Not available"}
-                  </p>
-                </div>
-
-                {asset.metadata_path ? (
-                  <div style={{
-                    marginTop: "10px",
-                    border: "1px solid rgba(148,163,184,.12)",
-                    borderRadius: "12px",
-                    padding: "10px"
-                  }}>
-                    <p style={{fontSize: "11px", color: "#64748b", textTransform: "uppercase", fontWeight: 900, marginBottom: "8px"}}>
-                      Metadata path
-                    </p>
-                    <p style={{fontSize: "11px", color: "#94a3b8", wordBreak: "break-all"}}>
-                      {asset.metadata_path}
-                    </p>
-                  </div>
-                ) : null}
-              </article>
+              <AssetCard key={`${asset.asset_id || asset.provider_asset_id || index}`} asset={asset} />
             ))}
           </section>
         )}
@@ -256,6 +227,170 @@ export default function AdminCreativeAssetsPage() {
     </main>
   );
 }
+
+function AssetCard({ asset }: { asset: CreativeMediaAsset }) {
+  const previewUrl = useMemo(() => getPreviewUrl(asset), [asset]);
+  const downloadUrl = useMemo(() => getDownloadUrl(asset), [asset]);
+  const assetType = getAssetType(asset);
+  const hasPreview = Boolean(previewUrl);
+  const hasDownload = Boolean(downloadUrl);
+  const browserPreview = hasPreview && isBrowserSafeUrl(previewUrl);
+  const browserDownload = hasDownload && isBrowserSafeUrl(downloadUrl);
+  const localDownloadPath = hasDownload && isLocalRenderPath(downloadUrl);
+
+  return (
+    <article style={{
+      border: "1px solid rgba(148,163,184,.22)",
+      background: "rgba(15,23,42,.82)",
+      borderRadius: "18px",
+      padding: "18px",
+      boxShadow: "0 18px 48px rgba(0,0,0,.28)"
+    }}>
+      <div style={{display: "flex", justifyContent: "space-between", gap: "10px", marginBottom: "12px"}}>
+        <span style={{
+          color: "#67e8f9",
+          background: "rgba(8,145,178,.12)",
+          border: "1px solid rgba(34,211,238,.32)",
+          borderRadius: "999px",
+          padding: "6px 10px",
+          fontSize: "12px",
+          fontWeight: 900,
+          textTransform: "uppercase"
+        }}>
+          {asset.provider || asset.provider_key || "provider"}
+        </span>
+        <span style={{
+          color: "#c4b5fd",
+          background: "rgba(124,58,237,.12)",
+          border: "1px solid rgba(196,181,253,.25)",
+          borderRadius: "999px",
+          padding: "6px 10px",
+          fontSize: "12px",
+          fontWeight: 900,
+          textTransform: "uppercase"
+        }}>
+          {assetType}
+        </span>
+      </div>
+
+      <h2 style={{fontSize: "16px", color: "white", wordBreak: "break-word"}}>
+        {getAssetLabel(asset)}
+      </h2>
+
+      <div style={{marginTop: "14px", display: "grid", gap: "8px", color: "#cbd5e1", fontSize: "13px"}}>
+        <p>Status: <strong style={{color: "white"}}>{asset.status || "ready"}</strong></p>
+        <p>Preview ready: <strong style={{color: "white"}}>{hasPreview ? "Yes" : "No"}</strong></p>
+        <p>Download ready: <strong style={{color: "white"}}>{hasDownload ? "Yes" : "No"}</strong></p>
+        <p>Size: <strong style={{color: "white"}}>{asset.size_bytes ? `${Math.round(asset.size_bytes / 1024)} KB` : "Unknown"}</strong></p>
+      </div>
+
+      {browserPreview ? (
+        <div style={{marginTop: "16px"}}>
+          {assetType.includes("video") ? (
+            <video
+              src={previewUrl}
+              controls
+              style={{width: "100%", borderRadius: "14px", border: "1px solid rgba(148,163,184,.2)"}}
+            />
+          ) : assetType.includes("audio") ? (
+            <audio
+              src={previewUrl}
+              controls
+              style={{width: "100%"}}
+            />
+          ) : assetType.includes("image") ? (
+            <img
+              src={previewUrl}
+              alt={getAssetLabel(asset)}
+              style={{width: "100%", borderRadius: "14px", border: "1px solid rgba(148,163,184,.2)"}}
+            />
+          ) : (
+            <a href={previewUrl} target="_blank" rel="noreferrer" style={{color: "#67e8f9", fontWeight: 900}}>
+              Open preview
+            </a>
+          )}
+        </div>
+      ) : null}
+
+      <div style={{
+        marginTop: "14px",
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "10px"
+      }}>
+        {browserPreview ? (
+          <a
+            href={previewUrl}
+            target="_blank"
+            rel="noreferrer"
+            style={buttonLinkStyle}
+          >
+            Open preview
+          </a>
+        ) : null}
+
+        {browserDownload ? (
+          <a
+            href={downloadUrl}
+            target="_blank"
+            rel="noreferrer"
+            download
+            style={buttonLinkStyle}
+          >
+            Download / open file
+          </a>
+        ) : null}
+      </div>
+
+      <div style={{
+        marginTop: "14px",
+        border: "1px solid rgba(148,163,184,.18)",
+        background: "rgba(2,6,23,.65)",
+        borderRadius: "12px",
+        padding: "12px"
+      }}>
+        <p style={{fontSize: "11px", color: "#64748b", textTransform: "uppercase", fontWeight: 900, marginBottom: "8px"}}>
+          Asset URL / path
+        </p>
+        <p style={{fontSize: "12px", color: "#e2e8f0", wordBreak: "break-all"}}>
+          {previewUrl || downloadUrl || asset.local_path || "Not available"}
+        </p>
+        {localDownloadPath ? (
+          <p style={{fontSize: "12px", color: "#fbbf24", marginTop: "8px"}}>
+            Stored on Render runtime. Use the preview URL for browser playback.
+          </p>
+        ) : null}
+      </div>
+
+      {asset.metadata_path ? (
+        <div style={{
+          marginTop: "10px",
+          border: "1px solid rgba(148,163,184,.12)",
+          borderRadius: "12px",
+          padding: "10px"
+        }}>
+          <p style={{fontSize: "11px", color: "#64748b", textTransform: "uppercase", fontWeight: 900, marginBottom: "8px"}}>
+            Metadata path
+          </p>
+          <p style={{fontSize: "11px", color: "#94a3b8", wordBreak: "break-all"}}>
+            {asset.metadata_path}
+          </p>
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+const buttonLinkStyle: React.CSSProperties = {
+  color: "#a5f3fc",
+  background: "rgba(8,145,178,.15)",
+  border: "1px solid rgba(34,211,238,.4)",
+  borderRadius: "12px",
+  padding: "10px 12px",
+  fontWeight: 900,
+  textDecoration: "none",
+  fontSize: "13px"
+};
 
 function Metric({ label, value }: { label: string; value: string }) {
   return (
