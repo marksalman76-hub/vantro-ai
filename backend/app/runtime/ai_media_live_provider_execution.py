@@ -1,8 +1,18 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
+import json
 import os
+import time
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+
+TRUE_VALUES = {"1", "true", "yes", "on", "enabled"}
 
 
 AI_MEDIA_PROVIDER_ENV_MAP = {
@@ -13,28 +23,28 @@ AI_MEDIA_PROVIDER_ENV_MAP = {
         "live_execution_supported": True,
     },
     "runway": {
-        "env_keys": ["RUNWAY_API_KEY"],
+        "env_keys": ["RUNWAYML_API_SECRET"],
         "category": "video",
         "capabilities": ["video_generation", "cinematic_generation", "image_to_video"],
-        "live_execution_supported": False,
+        "live_execution_supported": True,
     },
     "kling": {
-        "env_keys": ["KLING_API_KEY"],
+        "env_keys": ["KLING_ACCESS_KEY", "KLING_SECRET_KEY"],
         "category": "video",
         "capabilities": ["video_generation", "character_motion", "cinematic_video"],
-        "live_execution_supported": False,
+        "live_execution_supported": True,
     },
-    "pika": {
-        "env_keys": ["PIKA_API_KEY"],
-        "category": "video",
-        "capabilities": ["video_generation", "short_form_video"],
-        "live_execution_supported": False,
+    "heygen": {
+        "env_keys": ["HEYGEN_API_KEY"],
+        "category": "avatar_video",
+        "capabilities": ["avatar_video", "presenter_video", "lipsync_video"],
+        "live_execution_supported": True,
     },
     "elevenlabs": {
         "env_keys": ["ELEVENLABS_API_KEY"],
-        "category": "voice",
+        "category": "audio",
         "capabilities": ["voice_generation", "dubbing", "multilingual_audio"],
-        "live_execution_supported": False,
+        "live_execution_supported": True,
     },
 }
 
@@ -49,187 +59,172 @@ def _safe_text(value: Any, fallback: str = "") -> str:
     return str(value).strip() or fallback
 
 
-def _env_present(keys: List[str]) -> bool:
-    return any(bool(os.getenv(key, "").strip()) for key in keys)
+def _env_enabled(name: str) -> bool:
+    return str(os.getenv(name, "")).strip().lower() in TRUE_VALUES
 
 
-def detect_ai_media_provider_readiness() -> Dict[str, Any]:
-    providers = {}
+def _env_present(keys: List[str], *, require_all: bool = False) -> bool:
+    checks = [bool(os.getenv(key, "").strip()) for key in keys]
+    return all(checks) if require_all else any(checks)
 
-    for provider_id, config in AI_MEDIA_PROVIDER_ENV_MAP.items():
-        env_keys = list(config.get("env_keys", []))
-        configured = _env_present(env_keys)
-        providers[provider_id] = {
-            "provider_id": provider_id,
-            "configured": configured,
-            "env_keys_checked": env_keys,
-            "category": config.get("category"),
-            "capabilities": config.get("capabilities", []),
-            "live_execution_supported": bool(config.get("live_execution_supported")),
+
+def _live_dispatch_enabled() -> bool:
+    return all(
+        [
+            _env_enabled("LIVE_EXTERNAL_CALLS_ENABLED"),
+            _env_enabled("OWNER_APPROVED_LIVE_ACTIVATION"),
+            _env_enabled("REAL_PROVIDER_HTTP_DISPATCH_ENABLED"),
+        ]
+    )
+
+
+def _credential_configured(provider_id: str) -> bool:
+    config = AI_MEDIA_PROVIDER_ENV_MAP.get(provider_id, {})
+    keys = list(config.get("env_keys") or [])
+    if provider_id == "kling":
+        return _env_present(keys, require_all=True)
+    return _env_present(keys)
+
+
+def _request_json(
+    *,
+    url: str,
+    method: str = "POST",
+    headers: Optional[Dict[str, str]] = None,
+    payload: Optional[Dict[str, Any]] = None,
+    timeout: int = 60,
+) -> Dict[str, Any]:
+    body = json.dumps(payload or {}).encode("utf-8") if payload is not None else None
+    request = urllib.request.Request(
+        url,
+        data=body,
+        headers=headers or {},
+        method=method,
+    )
+
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            response_body = response.read()
+            response_text = response_body.decode("utf-8", errors="replace")
+            try:
+                parsed = json.loads(response_text)
+            except Exception:
+                parsed = {"raw_response": response_text[:5000]}
+
+            return {
+                "success": 200 <= int(response.status) < 300,
+                "status_code": int(response.status),
+                "response": parsed,
+                "credential_values_exposed": False,
+                "customer_safe": True,
+            }
+
+    except urllib.error.HTTPError as error:
+        error_body = error.read().decode("utf-8", errors="replace")
+        return {
+            "success": False,
+            "status_code": int(error.code),
+            "response": {"error_body": error_body[:5000]},
             "credential_values_exposed": False,
+            "customer_safe": True,
         }
 
-    configured_providers = [
-        provider_id for provider_id, provider in providers.items()
-        if provider.get("configured")
-    ]
-
-    live_supported_configured = [
-        provider_id for provider_id, provider in providers.items()
-        if provider.get("configured") and provider.get("live_execution_supported")
-    ]
-
-    return {
-        "success": True,
-        "runtime": "ai_media_live_provider_execution",
-        "status": "ready",
-        "provider_detection_enabled": True,
-        "configured_provider_count": len(configured_providers),
-        "configured_providers": configured_providers,
-        "live_supported_configured_providers": live_supported_configured,
-        "providers": providers,
-        "governance_preserved": True,
-        "secret_exposure": False,
-        "layout_changes": False,
-    }
+    except Exception as exc:
+        return {
+            "success": False,
+            "status_code": 0,
+            "response": {"error": str(exc)[:1500]},
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
 
 
-def select_provider_route(provider_ready_packet: Dict[str, Any]) -> Dict[str, Any]:
-    readiness = detect_ai_media_provider_readiness()
-    providers = readiness.get("providers", {})
+def _extract_first_url(value: Any) -> str:
+    if isinstance(value, str):
+        clean = value.strip()
+        if clean.startswith(("http://", "https://", "data:")):
+            return clean
+        return ""
 
-    primary_slot = _safe_text(provider_ready_packet.get("primary_provider_slot"), "multi_modal_generation_provider")
-    fallback_slots = provider_ready_packet.get("fallback_provider_slots", []) or []
-    media_type = _safe_text(provider_ready_packet.get("media_type"), "").lower()
+    if isinstance(value, list):
+        for item in value:
+            found = _extract_first_url(item)
+            if found:
+                return found
 
-    if "voice" in media_type or "dub" in media_type:
-        preferred = ["elevenlabs"]
-    elif "image" in media_type or "product" in media_type:
-        preferred = ["openai_image"]
-    elif "video" in media_type or "ugc" in media_type:
-        preferred = ["runway", "kling", "pika", "openai_image"]
-    else:
-        preferred = ["openai_image", "runway", "kling", "pika", "elevenlabs"]
+    if isinstance(value, dict):
+        for key in [
+            "url",
+            "asset_url",
+            "media_url",
+            "video_url",
+            "audio_url",
+            "image_url",
+            "download_url",
+            "preview_url",
+            "output_url",
+        ]:
+            found = _extract_first_url(value.get(key))
+            if found:
+                return found
 
-    available = [
-        provider_id for provider_id in preferred
-        if providers.get(provider_id, {}).get("configured")
-    ]
+        for nested in value.values():
+            found = _extract_first_url(nested)
+            if found:
+                return found
 
-    selected_provider = available[0] if available else None
-
-    return {
-        "success": True,
-        "routing_mode": "configured_provider_first_with_safe_fallback",
-        "primary_provider_slot": primary_slot,
-        "fallback_provider_slots": fallback_slots,
-        "preferred_provider_order": preferred,
-        "available_provider_order": available,
-        "selected_provider": selected_provider,
-        "provider_available": bool(selected_provider),
-        "live_execution_supported": bool(
-            selected_provider
-            and providers.get(selected_provider, {}).get("live_execution_supported")
-        ),
-        "manual_review_required": not bool(selected_provider),
-        "fallback_to_adapter_stub": not bool(selected_provider),
-        "secret_exposure": False,
-    }
+    return ""
 
 
-def build_standard_ai_media_provider_result(
-    *,
-    success: bool,
-    provider_id: Optional[str],
-    execution_status: str,
-    provider_ready_packet: Dict[str, Any],
-    provider_response: Optional[Dict[str, Any]] = None,
-    error: Optional[str] = None,
-) -> Dict[str, Any]:
-    return {
-        "success": bool(success),
-        "runtime": "ai_media_live_provider_execution",
-        "execution_status": execution_status,
-        "provider_id": provider_id,
-        "provider_response": provider_response or {},
-        "error": error,
-        "packet_type": provider_ready_packet.get("packet_type"),
-        "media_type": provider_ready_packet.get("media_type"),
-        "platform": provider_ready_packet.get("platform"),
-        "brand": provider_ready_packet.get("brand"),
-        "product": provider_ready_packet.get("product"),
-        "governance_controls": provider_ready_packet.get("governance_controls", {}),
-        "quality_controls": provider_ready_packet.get("quality_controls", {}),
-        "fallback_controls": provider_ready_packet.get("fallback_controls", {}),
-        "continuity_controls": provider_ready_packet.get("continuity_controls", {}),
-        "multilingual_controls": provider_ready_packet.get("multilingual_controls", {}),
-        "generated_at": _now(),
-        "secret_exposure": False,
-        "layout_changes": False,
-    }
+def _provider_parameters(packet: Dict[str, Any]) -> Dict[str, Any]:
+    params = packet.get("provider_parameters")
+    if isinstance(params, dict):
+        return params
+    return {}
 
 
-def execute_ai_media_provider_ready_packet(provider_ready_packet: Dict[str, Any]) -> Dict[str, Any]:
-    if not isinstance(provider_ready_packet, dict):
-        return build_standard_ai_media_provider_result(
-            success=False,
-            provider_id=None,
-            execution_status="invalid_provider_packet",
-            provider_ready_packet={},
-            error="provider_ready_packet_required",
-        )
-
-    if provider_ready_packet.get("execution_allowed") is False:
-        return build_standard_ai_media_provider_result(
-            success=False,
-            provider_id=None,
-            execution_status="blocked_by_orchestration",
-            provider_ready_packet=provider_ready_packet,
-            error="provider_execution_not_allowed_by_orchestration",
-        )
-
-    route = select_provider_route(provider_ready_packet)
-    selected_provider = route.get("selected_provider")
-
-    if not selected_provider:
-        return build_standard_ai_media_provider_result(
-            success=True,
-            provider_id=None,
-            execution_status="prepared_no_live_provider_configured",
-            provider_ready_packet=provider_ready_packet,
-            provider_response={
-                "route": route,
-                "adapter_stub_ready": True,
-                "live_generation_attempted": False,
-                "reason": "no_configured_ai_media_provider",
-            },
-        )
-
-    if not route.get("live_execution_supported"):
-        return build_standard_ai_media_provider_result(
-            success=True,
-            provider_id=selected_provider,
-            execution_status="prepared_provider_adapter_stub",
-            provider_ready_packet=provider_ready_packet,
-            provider_response={
-                "route": route,
-                "adapter_stub_ready": True,
-                "live_generation_attempted": False,
-                "reason": "provider_configured_but_live_adapter_not_enabled_yet",
-            },
-        )
-
-    # Foundation stage: do not call external providers yet.
-    # This intentionally standardises the result shape before enabling paid live API calls.
-    return build_standard_ai_media_provider_result(
-        success=True,
-        provider_id=selected_provider,
-        execution_status="prepared_live_adapter_ready",
-        provider_ready_packet=provider_ready_packet,
-        provider_response={
-            "route": route,
-            "adapter_stub_ready": True,
-            "live_generation_attempted": False,
-            "reason": "live_adapter_foundation_ready_external_call_disabled_until_next_phase",
-        },
+def _packet_prompt(packet: Dict[str, Any]) -> str:
+    params = _provider_parameters(packet)
+    return (
+        _safe_text(params.get("prompt"))
+        or _safe_text(params.get("script"))
+        or _safe_text(packet.get("prompt"))
+        or _safe_text(packet.get("task"))
+        or "Create a premium, customer-safe creative media asset."
     )
+
+
+def _packet_script(packet: Dict[str, Any]) -> str:
+    params = _provider_parameters(packet)
+    return (
+        _safe_text(params.get("script"))
+        or _safe_text(params.get("prompt"))
+        or _safe_text(packet.get("script"))
+        or _packet_prompt(packet)
+    )
+
+
+def _media_type(packet: Dict[str, Any]) -> str:
+    params = _provider_parameters(packet)
+    return (
+        _safe_text(params.get("media_type"))
+        or _safe_text(packet.get("media_type"))
+        or "media"
+    ).lower()
+
+
+def _make_data_url(content_type: str, binary: bytes) -> str:
+    return f"data:{content_type};base64,{base64.b64encode(binary).decode('utf-8')}"
+
+
+def _post_binary(
+    *,
+    url: str,
+    headers: Dict[str, str],
+    payload: Dict[str, Any],
+    content_type: str,
+    timeout: int = 90,
+) -> Dict[str, Any]:
+    request = urllib.request.Request(
+        url,
+        data=json.dumps(payload).encode("utf-8"),
