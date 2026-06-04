@@ -1,4 +1,28 @@
+from pathlib import Path
+from datetime import datetime
+import shutil
 
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+STAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
+BACKUP = ROOT / "backups" / f"shared_creative_agent_asset_persistence_before_{STAMP}"
+BACKUP.mkdir(parents=True, exist_ok=True)
+
+PERSIST_FILE = ROOT / "backend" / "app" / "runtime" / "creative_asset_persistence_bridge.py"
+MAIN_FILE = ROOT / "backend" / "app" / "main.py"
+TEST_FILE = ROOT / "test_shared_creative_agent_asset_persistence.py"
+
+CREATIVE_AGENT_IDS = [
+    "ugc_creative_agent",
+    "social_media_manager_content_creator_agent",
+    "paid_ads_agent",
+    "creative_rotation_agent",
+    "product_image_agent",
+    "marketing_specialist_agent",
+    "influencer_collaboration_agent",
+    "influencer_outreach_agent",
+]
+
+PERSIST_CODE = r'''
 from pathlib import Path
 from datetime import datetime, timezone
 import json
@@ -241,3 +265,79 @@ def get_persisted_creative_assets(limit=100):
         "providers_checked": ["elevenlabs", "runway", "heygen", "kling", "sync", "internal"],
         "credential_values_exposed": False,
     }
+'''
+
+TEST_CODE = r'''
+from backend.app.runtime.creative_asset_persistence_bridge import (
+    get_persisted_creative_assets,
+    is_creative_agent,
+    persist_creative_agent_output,
+)
+
+assert is_creative_agent("ugc_creative_agent")
+assert is_creative_agent("influencer_collaboration_agent")
+assert is_creative_agent("marketing_specialist_agent")
+assert not is_creative_agent("crm_ai_agent")
+
+result = persist_creative_agent_output(
+    "influencer_collaboration_agent",
+    {
+        "provider": "internal",
+        "title": "Influencer outreach packet for lymphatic massager campaign",
+        "summary": "Creator shortlist, UGC brief, outreach messages, usage rights notes, affiliate discount plan.",
+        "target_audience": "Women 25-45 interested in wellness and self-care.",
+        "quality_score": 91,
+    },
+)
+
+assert result["success"] is True
+assert result["persisted"] is True
+assert result["persisted_asset_count"] >= 1
+assert result["credential_values_exposed"] is False
+
+assets = get_persisted_creative_assets()
+assert assets["success"] is True
+assert assets["asset_count"] >= 1
+assert assets["credential_values_exposed"] is False
+
+print("SHARED_CREATIVE_AGENT_ASSET_PERSISTENCE_PASSED")
+'''
+
+def backup(path: Path):
+    if path.exists():
+        dest = BACKUP / path.relative_to(ROOT)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, dest)
+
+def main():
+    backup(PERSIST_FILE)
+    backup(MAIN_FILE)
+
+    PERSIST_FILE.parent.mkdir(parents=True, exist_ok=True)
+    PERSIST_FILE.write_text(PERSIST_CODE, encoding="utf-8", newline="\n")
+    TEST_FILE.write_text(TEST_CODE, encoding="utf-8", newline="\n")
+
+    main_text = MAIN_FILE.read_text(encoding="utf-8", errors="ignore")
+
+    import_line = "from backend.app.runtime.creative_asset_persistence_bridge import get_persisted_creative_assets, persist_creative_agent_output\n"
+    if "persist_creative_agent_output" not in main_text:
+        marker = "from backend.app.runtime.creative_asset_persistence_bridge import"
+        if marker in main_text:
+            lines = main_text.splitlines()
+            lines = [line for line in lines if "creative_asset_persistence_bridge import" not in line and "get_persisted_creative_assets" not in line]
+            main_text = "\n".join(lines) + "\n"
+        insert_marker = "from fastapi import"
+        idx = main_text.find(insert_marker)
+        end = main_text.find("\n", idx)
+        main_text = main_text[:end+1] + import_line + main_text[end+1:]
+
+    MAIN_FILE.write_text(main_text, encoding="utf-8", newline="\n")
+
+    print("SHARED_CREATIVE_AGENT_ASSET_PERSISTENCE_INSTALLED")
+    print(f"Backup: {BACKUP}")
+    print(f"Updated: {PERSIST_FILE}")
+    print(f"Updated: {MAIN_FILE}")
+    print(f"Created: {TEST_FILE}")
+
+if __name__ == "__main__":
+    main()
