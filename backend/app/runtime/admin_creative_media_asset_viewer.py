@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List
+
+from backend.app.runtime.asset_storage_signed_delivery_runtime import create_signed_asset_delivery_packet
 
 
 PROVIDERS_CHECKED = ["elevenlabs", "runway", "heygen", "kling", "sync", "openai_image", "internal"]
@@ -11,15 +14,45 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
-    preview_url = asset.get("preview_url") or asset.get("provider_asset_url") or asset.get("asset_url") or asset.get("media_url") or ""
-    download_url = asset.get("download_url") or asset.get("provider_asset_url") or asset.get("asset_url") or asset.get("media_url") or preview_url or ""
+def _backend_base_url() -> str:
+    return (
+        os.getenv("API_BASE_URL")
+        or os.getenv("BACKEND_BASE_URL")
+        or os.getenv("PUBLIC_BACKEND_BASE_URL")
+        or "https://api.trance-formation.com.au"
+    ).rstrip("/")
 
+
+def _signed_gateway_url(asset_id: str, delivery_type: str = "preview") -> str:
+    packet = create_signed_asset_delivery_packet(
+        tenant_id="owner_admin",
+        asset_id=asset_id,
+        delivery_type=delivery_type,
+        expires_in_seconds=86400,
+    )
+
+    if packet.get("status") != "ready" or not packet.get("delivery_url"):
+        return ""
+
+    return f"{_backend_base_url()}{packet.get('delivery_url')}"
+
+
+def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
+    asset_id = str(asset.get("asset_id") or "").strip()
     provider = asset.get("provider") or asset.get("provider_key") or "internal"
     asset_type = asset.get("asset_type") or asset.get("media_type") or "creative_asset"
 
+    gateway_preview_url = _signed_gateway_url(asset_id, "preview") if asset_id else ""
+    gateway_download_url = _signed_gateway_url(asset_id, "download") if asset_id else ""
+
+    original_preview_url = asset.get("preview_url") or asset.get("provider_asset_url") or asset.get("asset_url") or asset.get("media_url") or ""
+    original_download_url = asset.get("download_url") or asset.get("provider_asset_url") or asset.get("asset_url") or asset.get("media_url") or original_preview_url or ""
+
+    preview_url = gateway_preview_url or original_preview_url
+    download_url = gateway_download_url or original_download_url
+
     return {
-        "asset_id": asset.get("asset_id"),
+        "asset_id": asset_id or asset.get("asset_id"),
         "agent_id": asset.get("agent_id") or asset.get("agent_key") or asset.get("requested_agent"),
         "agent_label": asset.get("agent_label") or asset.get("agent_id") or asset.get("agent_key"),
         "provider": provider,
@@ -33,6 +66,8 @@ def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
         "provider_asset_url": asset.get("provider_asset_url"),
         "preview_url": preview_url,
         "download_url": download_url,
+        "original_preview_url": original_preview_url,
+        "original_download_url": original_download_url,
         "preview_ready": bool(preview_url or asset.get("content") or asset.get("summary")),
         "download_ready": bool(download_url),
         "content": asset.get("content"),
@@ -55,6 +90,7 @@ def get_admin_creative_media_asset_viewer_status() -> Dict[str, Any]:
         "layer": "admin_creative_media_asset_viewer",
         "status": "ready",
         "source": "creative_asset_persistence_bridge",
+        "delivery_mode": "signed_backend_asset_gateway",
         "providers_checked": PROVIDERS_CHECKED,
         "credential_values_exposed": False,
         "external_actions_performed": False,
@@ -81,6 +117,7 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
             "layer": "admin_creative_media_asset_viewer",
             "status": "ready",
             "source": "creative_asset_persistence_bridge",
+            "delivery_mode": "signed_backend_asset_gateway",
             "asset_count": len(assets),
             "total_asset_count": registry.get("total_asset_count", len(assets)) if isinstance(registry, dict) else len(assets),
             "assets": assets,
@@ -98,6 +135,7 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
             "layer": "admin_creative_media_asset_viewer",
             "status": "unavailable",
             "source": "creative_asset_persistence_bridge",
+            "delivery_mode": "signed_backend_asset_gateway",
             "asset_count": 0,
             "total_asset_count": 0,
             "assets": [],

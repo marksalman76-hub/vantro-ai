@@ -338,7 +338,9 @@ class RunAgentRequest(BaseModel):
 
 # PRODUCTION_ASSET_DELIVERY_ROUTES_START
 @app.get("/asset-delivery/{delivery_type}/{asset_id}")
-async def asset_delivery_route(delivery_type: str, asset_id: str, expires: int, nonce: str, sig: str):
+async def asset_delivery(delivery_type: str, asset_id: str, expires: int, nonce: str, sig: str):
+    from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+
     try:
         result = build_customer_safe_delivery_response(
             asset_id=asset_id,
@@ -347,25 +349,37 @@ async def asset_delivery_route(delivery_type: str, asset_id: str, expires: int, 
             nonce=nonce,
             signature=sig,
         )
-        status_code = int(result.get("http_status", 200))
+
+        status_code = int(result.get("http_status", 200) or 200)
+
         if status_code >= 400:
-            from fastapi.responses import JSONResponse
             return JSONResponse(status_code=status_code, content=result)
-        return result
+
+        serve_file_path = result.get("serve_file_path")
+        if serve_file_path:
+            filename = result.get("filename")
+            content_type = result.get("content_type") or "application/octet-stream"
+            if filename:
+                return FileResponse(path=serve_file_path, media_type=content_type, filename=filename)
+            return FileResponse(path=serve_file_path, media_type=content_type)
+
+        redirect_url = result.get("redirect_url")
+        if redirect_url:
+            return RedirectResponse(url=redirect_url, status_code=302)
+
+        return JSONResponse(status_code=status_code, content=result)
+
     except Exception as exc:
-        from fastapi.responses import JSONResponse
         return JSONResponse(
             status_code=500,
             content={
                 "success": False,
-                "status": "error",
-                "reason": "asset_delivery_route_failed",
+                "status": "delivery_failed",
                 "error": str(exc),
                 "credential_values_exposed": False,
                 "customer_safe": True,
             },
         )
-# PRODUCTION_ASSET_DELIVERY_ROUTES_END
 
 @app.get("/admin/persisted-creative-assets")
 async def admin_persisted_creative_assets():
