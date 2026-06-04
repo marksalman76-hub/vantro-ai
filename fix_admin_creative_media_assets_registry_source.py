@@ -1,4 +1,20 @@
-from __future__ import annotations
+from pathlib import Path
+from datetime import datetime
+
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+TARGET = ROOT / "backend" / "app" / "runtime" / "admin_creative_media_asset_viewer.py"
+
+backup_dir = ROOT / "backups" / f"admin_creative_media_asset_viewer_before_registry_source_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+backup_dir.mkdir(parents=True, exist_ok=True)
+
+if TARGET.exists():
+    (backup_dir / "admin_creative_media_asset_viewer.py").write_text(
+        TARGET.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+TARGET.write_text(
+r'''from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Dict, List
@@ -109,3 +125,10 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
             "customer_safe_visibility": True,
             "verified_at": _now(),
         }
+''',
+encoding="utf-8",
+)
+
+print("ADMIN_CREATIVE_MEDIA_ASSETS_REGISTRY_SOURCE_FIXED")
+print("Updated:", TARGET)
+print("Backup:", backup_dir)
