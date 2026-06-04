@@ -29,12 +29,12 @@ CREATIVE_MEDIA_AGENTS = {
 }
 
 PROVIDER_ENV_KEYS = {
-    "runway": ["RUNWAY_API_KEY", "RUNWAYML_API_SECRET"],
-    "kling": ["KLING_API_KEY", "KLING_SECRET_KEY"],
+    "runway": ["RUNWAYML_API_SECRET"],
+    "kling": ["KLING_ACCESS_KEY", "KLING_SECRET_KEY"],
     "heygen": ["HEYGEN_API_KEY"],
     "elevenlabs": ["ELEVENLABS_API_KEY"],
-    "sync": ["SYNC_API_KEY"],
-    "replicate": ["REPLICATE_API_TOKEN"],
+    "sync": ["HEYGEN_API_KEY"],
+    "replicate": [],
 }
 
 MEDIA_PROVIDER_PRIORITY = {
@@ -54,7 +54,13 @@ def _env_present(names: List[str]) -> bool:
 
 
 def _provider_configured(provider: str) -> bool:
-    return _env_present(PROVIDER_ENV_KEYS.get(provider, []))
+    provider = str(provider or "").strip().lower()
+    names = PROVIDER_ENV_KEYS.get(provider, [])
+
+    if provider == "kling":
+        return all(bool(os.getenv(name, "").strip()) for name in names)
+
+    return any(bool(os.getenv(name, "").strip()) for name in names)
 
 
 def _first_configured_provider(media_type: str) -> str:

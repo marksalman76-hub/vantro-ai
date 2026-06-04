@@ -1,4 +1,29 @@
-from __future__ import annotations
+from pathlib import Path
+from datetime import datetime
+import re
+
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+
+CHECK_FILE = ROOT / "backend" / "app" / "runtime" / "creative_provider_credential_activation_checks.py"
+MEDIA_FILE = ROOT / "backend" / "app" / "runtime" / "shared_creative_media_generation_runtime.py"
+
+backup_dir = ROOT / "backups" / f"creative_provider_env_names_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+backup_dir.mkdir(parents=True, exist_ok=True)
+
+if CHECK_FILE.exists():
+    (backup_dir / "creative_provider_credential_activation_checks.py").write_text(
+        CHECK_FILE.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+if MEDIA_FILE.exists():
+    (backup_dir / "shared_creative_media_generation_runtime.py").write_text(
+        MEDIA_FILE.read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+
+CHECK_FILE.write_text(
+r'''from __future__ import annotations
 
 from datetime import datetime, timezone
 import os
@@ -167,3 +192,53 @@ def get_client_safe_creative_provider_credential_activation_checks() -> Dict[str
         "live_provider_calls_triggered": False,
         "customer_safe": True,
     }
+''',
+encoding="utf-8",
+)
+
+media_text = MEDIA_FILE.read_text(encoding="utf-8")
+
+provider_env_block = '''PROVIDER_ENV_KEYS = {
+    "runway": ["RUNWAYML_API_SECRET"],
+    "kling": ["KLING_ACCESS_KEY", "KLING_SECRET_KEY"],
+    "heygen": ["HEYGEN_API_KEY"],
+    "elevenlabs": ["ELEVENLABS_API_KEY"],
+    "sync": ["HEYGEN_API_KEY"],
+    "replicate": [],
+}
+'''
+
+media_text = re.sub(
+    r'PROVIDER_ENV_KEYS\s*=\s*\{.*?\}\n\nMEDIA_PROVIDER_PRIORITY',
+    provider_env_block + "\nMEDIA_PROVIDER_PRIORITY",
+    media_text,
+    flags=re.S,
+)
+
+old_func_pattern = r'def _provider_configured\(provider: str\) -> bool:\n    return _env_present\(PROVIDER_ENV_KEYS\.get\(provider, \[\]\)\)\n'
+new_func = '''def _provider_configured(provider: str) -> bool:
+    provider = str(provider or "").strip().lower()
+    names = PROVIDER_ENV_KEYS.get(provider, [])
+
+    if provider == "kling":
+        return all(bool(os.getenv(name, "").strip()) for name in names)
+
+    return any(bool(os.getenv(name, "").strip()) for name in names)
+'''
+
+if old_func_pattern not in media_text:
+    media_text = re.sub(
+        r'def _provider_configured\(provider: str\) -> bool:\n    .*?\n\n',
+        new_func + "\n",
+        media_text,
+        flags=re.S,
+    )
+else:
+    media_text = media_text.replace(old_func_pattern, new_func)
+
+MEDIA_FILE.write_text(media_text, encoding="utf-8")
+
+print("CREATIVE_PROVIDER_EXACT_RENDER_ENV_NAMES_FIXED")
+print("Updated:", CHECK_FILE)
+print("Updated:", MEDIA_FILE)
+print("Backup:", backup_dir)
