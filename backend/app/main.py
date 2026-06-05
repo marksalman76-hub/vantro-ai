@@ -4241,3 +4241,11 @@ try:
     app.include_router(admin_industry_agent_store_router)
 except Exception as exc:
     print(f"ADMIN_INDUSTRY_AGENT_STORE_ROUTES_NOT_LOADED: {exc}")
+
+
+# Industry-aware client deployment resolver routes
+try:
+    from backend.app.api.industry_aware_client_deployment_routes import router as industry_aware_client_deployment_router
+    app.include_router(industry_aware_client_deployment_router)
+except Exception as exc:
+    print(f"INDUSTRY_AWARE_CLIENT_DEPLOYMENT_ROUTES_NOT_LOADED: {exc}")
