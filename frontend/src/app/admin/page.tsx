@@ -146,6 +146,10 @@ const [activeNav, setActiveNav] = useState("Overview");
   });
   const [orchestrationBusy, setOrchestrationBusy] = useState(false);
   const [orchestrationResult, setOrchestrationResult] = useState<any>(null);
+  const [refundRequests, setRefundRequests] = useState<any[]>([]);
+  const [industryPacks, setIndustryPacks] = useState<any[]>([]);
+  const [learningVaultRecords, setLearningVaultRecords] = useState<any[]>([]);
+  const [operationsStoreBusy, setOperationsStoreBusy] = useState(false);
 
   const [clock, setClock] = useState("--:--:--");
 
@@ -174,6 +178,7 @@ const [activeNav, setActiveNav] = useState("Overview");
       "Orchestration": "admin-orchestration",
       "Recovery": "admin-recovery",
       "Billing": "admin-billing",
+      "Operations Store": "admin-operations-store",
     };
     const target = document.getElementById(map[item]);
     if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -233,11 +238,85 @@ const [activeNav, setActiveNav] = useState("Overview");
     }
   }
 
+  async function loadOperationsStorePanels() {
+    setOperationsStoreBusy(true);
+    try {
+      const [refundRes, packsRes, vaultRes] = await Promise.all([
+        fetch("/api/admin-billing-refund-requests?limit=10", { cache: "no-store", headers: { "x-actor-role": "owner_admin" } }),
+        fetch("/api/admin-industry-agent-store-packs?limit=10", { cache: "no-store", headers: { "x-actor-role": "owner_admin" } }),
+        fetch("/api/admin-learning-vault-records?limit=10", { cache: "no-store", headers: { "x-actor-role": "owner_admin" } }),
+      ]);
+      const refundData = await refundRes.json().catch(() => ({}));
+      const packsData = await packsRes.json().catch(() => ({}));
+      const vaultData = await vaultRes.json().catch(() => ({}));
+      setRefundRequests(Array.isArray(refundData?.refunds) ? refundData.refunds : []);
+      setIndustryPacks(Array.isArray(packsData?.industry_packs) ? packsData.industry_packs : []);
+      setLearningVaultRecords(Array.isArray(vaultData?.learning_records) ? vaultData.learning_records : []);
+      showToast("Operations store refreshed.");
+    } catch {
+      setRefundRequests([]);
+      setIndustryPacks([]);
+      setLearningVaultRecords([]);
+      showToast("Operations store refresh failed.");
+    } finally {
+      setOperationsStoreBusy(false);
+    }
+  }
+
+  async function approveRefundRequest(refundId: string) {
+    try {
+      const response = await fetch("/api/admin-billing-refund-decision", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json", "x-actor-role": "owner_admin" },
+        body: JSON.stringify({ refund_id: refundId, decision: "approve", approved_by: "owner_admin", note: "Approved from admin refund queue." }),
+      });
+      const data = await response.json().catch(() => ({}));
+      showToast(data?.success === false ? `Refund approval blocked: ${data?.error || "review required"}` : "Refund approved for execution.");
+      loadOperationsStorePanels();
+    } catch {
+      showToast("Refund approval failed.");
+    }
+  }
+
+  async function rejectRefundRequest(refundId: string) {
+    try {
+      const response = await fetch("/api/admin-billing-refund-decision", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json", "x-actor-role": "owner_admin" },
+        body: JSON.stringify({ refund_id: refundId, decision: "reject", approved_by: "owner_admin", note: "Rejected from admin refund queue." }),
+      });
+      const data = await response.json().catch(() => ({}));
+      showToast(data?.success === false ? "Refund rejection failed." : "Refund rejected.");
+      loadOperationsStorePanels();
+    } catch {
+      showToast("Refund rejection failed.");
+    }
+  }
+
+  async function executeRefundRequest(refundId: string, amountCents?: number) {
+    try {
+      const response = await fetch("/api/admin-billing-refund-execute", {
+        method: "POST",
+        cache: "no-store",
+        headers: { "Content-Type": "application/json", "x-actor-role": "owner_admin" },
+        body: JSON.stringify({ refund_id: refundId, actor: "owner_admin", amount_cents: amountCents || 0 }),
+      });
+      const data = await response.json().catch(() => ({}));
+      showToast(data?.success === false ? `Refund execution failed: ${data?.error || "review required"}` : "Refund execution completed.");
+      loadOperationsStorePanels();
+    } catch {
+      showToast("Refund execution failed.");
+    }
+  }
+
   useEffect(() => {
     loadRuntime();
     loadClientRegistry();
     loadOrchestrationDashboard();
     loadActionExecutionHistory();
+    loadOperationsStorePanels();
   }, []);
 
 
@@ -758,7 +837,7 @@ const [activeNav, setActiveNav] = useState("Overview");
   }
 
 
-  const navItems = ["Overview", "Run Agent", "Deploy Clients", "Client Registry", "Runtime Health", "Provider Governance", "Orchestration", "Recovery", "Billing"];
+  const navItems = ["Overview", "Run Agent", "Deploy Clients", "Client Registry", "Runtime Health", "Provider Governance", "Orchestration", "Recovery", "Billing", "Operations Store"];
   const runtimeStatus = runtime?.runtime?.platform_status || "online";
   const registryTotal = clientRegistrySummary?.total || clientRegistrySummary?.tenant_count || clientRegistry.length || 0;
 
