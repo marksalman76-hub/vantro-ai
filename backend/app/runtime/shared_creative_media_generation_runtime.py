@@ -258,12 +258,9 @@ def _execute_runway_direct_if_available(
 
         return _safe_call(
             run_runway_text_to_video_quality_test,
-            prompt=prompt,
-            task=prompt,
-            agent_id=agent_id,
-            tenant_id=tenant_id,
-            pack_id=pack_id,
+            prompt_text=prompt,
             test_label=f"{pack_id}_runway_live_video",
+            allow_live_execution=True,
         )
     except Exception as exc:
         return {
@@ -301,6 +298,8 @@ def _normalise_asset_from_result(
         "download_url",
         "preview_url",
         "output_url",
+        "video_path",
+        "video_url_preview",
     ]:
         value = result.get(key)
         if isinstance(value, str) and value.strip():
@@ -313,13 +312,14 @@ def _normalise_asset_from_result(
                 if isinstance(value, str) and value.strip():
                     output_urls.append(value.strip())
                 elif isinstance(value, dict):
-                    for nested_key in ["url", "asset_url", "media_url", "download_url", "preview_url", "path"]:
+                    for nested_key in ["url", "asset_url", "media_url", "download_url", "preview_url", "path", "video_path", "video_url_preview"]:
                         nested_value = value.get(nested_key)
                         if isinstance(nested_value, str) and nested_value.strip():
                             output_urls.append(nested_value.strip())
 
-    preview_url = result.get("preview_url") or (output_urls[0] if output_urls else "")
-    download_url = result.get("download_url") or result.get("asset_url") or result.get("media_url") or preview_url
+    local_video_path = result.get("video_path") if result.get("video_saved") else ""
+    preview_url = result.get("preview_url") or local_video_path or result.get("video_url_preview") or (output_urls[0] if output_urls else "")
+    download_url = result.get("download_url") or result.get("asset_url") or result.get("media_url") or local_video_path or preview_url
 
     status = (
         result.get("status")
@@ -327,7 +327,7 @@ def _normalise_asset_from_result(
         or ("ready" if result.get("success") and (preview_url or download_url) else "provider_execution_attempted")
     )
 
-    real_media_asset_created = bool(preview_url or download_url or result.get("real_media_asset_created"))
+    real_media_asset_created = bool(preview_url or download_url or result.get("real_media_asset_created") or result.get("video_saved"))
 
     return {
         "asset_id": result.get("asset_id") or f"{media_type}_asset_{uuid.uuid4().hex[:12]}",
