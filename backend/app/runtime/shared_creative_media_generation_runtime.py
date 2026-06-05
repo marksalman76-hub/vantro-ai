@@ -1,3 +1,27 @@
+
+def _is_metadata_only_asset(asset):
+    status = str(asset.get("status") or "").lower()
+    if status in {
+        "provider_job_created_or_attempted",
+        "live_provider_ready_endpoint_missing",
+        "metadata_fallback",
+        "endpoint_missing",
+        "blocked_owner_approval_required",
+    }:
+        return True
+    return False
+
+def _strip_metadata_only_asset_urls(asset):
+    if not isinstance(asset, dict):
+        return asset
+    if _is_metadata_only_asset(asset):
+        asset = dict(asset)
+        asset["preview_ready"] = False
+        asset["download_ready"] = False
+        asset["preview_url"] = ""
+        asset["download_url"] = ""
+    return asset
+
 from __future__ import annotations
 
 from datetime import datetime
