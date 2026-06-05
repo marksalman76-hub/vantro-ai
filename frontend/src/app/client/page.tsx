@@ -2918,29 +2918,42 @@ const primaryAssetUrl =
               </div>
 
               <div style={{ display: "grid", gap: 9, marginTop: 13 }}>
-                {[
-                  ["Generated", liveDeliverable ? 100 : 35, "#22c55e"],
-                  ["Reviewed", reviewStatus === "approved" || reviewStatus === "rejected" ? 100 : 55, "var(--color-brand)"],
-                  ["Approved", reviewStatus === "approved" ? 100 : 25, "var(--color-teal)"],
-                  ["Pending", reviewStatus === "pending" ? 65 : 20, "#f59e0b"],
-                ].map(([label, value, color]) => (
-                  <div key={label} style={{ display: "grid", gridTemplateColumns: "86px 1fr 42px", gap: 10, alignItems: "center" }}>
-                    <div style={{ fontSize: 11.5, fontWeight: 900, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}>{label}</div>
-                    <div style={{ height: 9, borderRadius: 999, background: "#eef2f7", overflow: "hidden" }}>
-                      <div
-                        style={{
-                          width: `${value}%`,
-                          height: "100%",
-                          borderRadius: 999,
-                          background: String(color),
-                        }}
-                      />
+                {clientDynamicExecutionMetrics({
+                  executionState,
+                  liveDeliverable,
+                  latestDeliverable: executionTimeline?.[0] || null,
+                  reviewStatus,
+                }).map(([label, value]) => {
+                  const color =
+                    label === "Generated"
+                      ? "#22c55e"
+                      : label === "Provider"
+                        ? "#06b6d4"
+                        : label === "Quality"
+                          ? "#8b5cf6"
+                          : label === "Review"
+                            ? "var(--color-brand)"
+                            : "var(--color-teal)";
+
+                  return (
+                    <div key={label} style={{ display: "grid", gridTemplateColumns: "86px 1fr 42px", gap: 10, alignItems: "center" }}>
+                      <div style={{ fontSize: 11.5, fontWeight: 900, color: darkModeEnabled ? "#f8fafc" : "var(--color-dark)" }}>{label}</div>
+                      <div style={{ height: 9, borderRadius: 999, background: "#eef2f7", overflow: "hidden" }}>
+                        <div
+                          style={{
+                            width: `${value}%`,
+                            height: "100%",
+                            borderRadius: 999,
+                            background: String(color),
+                          }}
+                        />
+                      </div>
+                      <div style={{ textAlign: "right", fontSize: 11.5, fontWeight: 900, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>
+                        {value}%
+                      </div>
                     </div>
-                    <div style={{ textAlign: "right", fontSize: 11.5, fontWeight: 900, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>
-                      {value}%
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div
