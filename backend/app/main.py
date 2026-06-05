@@ -4149,3 +4149,79 @@ except Exception as admin_creative_media_asset_viewer_error:
             "live_provider_calls_triggered": False,
         }
 # ADMIN_CREATIVE_MEDIA_ASSET_VIEWER_END
+
+
+@app.get("/admin/creative/product-asset-library/status")
+async def admin_creative_product_asset_library_status():
+    from backend.app.runtime.creative_product_asset_library import creative_product_asset_library_status
+    return creative_product_asset_library_status()
+
+
+@app.get("/admin/creative/product-assets")
+async def admin_list_creative_product_assets(tenant_id: str = "owner_admin", asset_type: str = "", campaign_id: str = "", limit: int = 100):
+    from backend.app.runtime.creative_product_asset_library import list_creative_product_assets
+    return list_creative_product_assets(
+        tenant_id=tenant_id or None,
+        asset_type=asset_type or None,
+        campaign_id=campaign_id or None,
+        limit=limit,
+    )
+
+
+@app.post("/admin/creative/product-assets/upload")
+async def admin_upload_creative_product_asset(payload: dict):
+    from backend.app.runtime.creative_product_asset_library import upload_creative_product_asset
+    return upload_creative_product_asset(
+        tenant_id=payload.get("tenant_id") or "owner_admin",
+        filename=payload.get("filename") or "uploaded_asset",
+        content_base64=payload.get("content_base64") or "",
+        asset_type=payload.get("asset_type") or "reference_asset",
+        uploaded_by=payload.get("uploaded_by") or "owner_admin",
+        campaign_id=payload.get("campaign_id"),
+        metadata=payload.get("metadata") or {},
+    )
+
+
+@app.post("/admin/creative/product-assets/delete")
+async def admin_delete_creative_product_asset(payload: dict):
+    from backend.app.runtime.creative_product_asset_library import delete_creative_product_asset
+    return delete_creative_product_asset(
+        asset_id=payload.get("asset_id") or "",
+        tenant_id=payload.get("tenant_id") or None,
+    )
+
+
+@app.get("/client/creative/product-assets")
+async def client_list_creative_product_assets(tenant_id: str = "owner_admin", asset_type: str = "", campaign_id: str = "", limit: int = 100):
+    from backend.app.runtime.creative_product_asset_library import list_creative_product_assets
+    return list_creative_product_assets(
+        tenant_id=tenant_id or "owner_admin",
+        asset_type=asset_type or None,
+        campaign_id=campaign_id or None,
+        limit=limit,
+    )
+
+
+@app.post("/client/creative/product-assets/upload")
+async def client_upload_creative_product_asset(payload: dict):
+    from backend.app.runtime.creative_product_asset_library import upload_creative_product_asset
+    return upload_creative_product_asset(
+        tenant_id=payload.get("tenant_id") or "owner_admin",
+        filename=payload.get("filename") or "uploaded_asset",
+        content_base64=payload.get("content_base64") or "",
+        asset_type=payload.get("asset_type") or "reference_asset",
+        uploaded_by=payload.get("uploaded_by") or "client",
+        campaign_id=payload.get("campaign_id"),
+        metadata=payload.get("metadata") or {},
+    )
+
+
+@app.get("/creative/product-assets/execution-context")
+async def creative_product_asset_execution_context(tenant_id: str = "owner_admin", campaign_id: str = "", limit: int = 25):
+    from backend.app.runtime.creative_product_asset_library import build_creative_execution_asset_context
+    return build_creative_execution_asset_context(
+        tenant_id=tenant_id or "owner_admin",
+        campaign_id=campaign_id or None,
+        limit=limit,
+    )
+
