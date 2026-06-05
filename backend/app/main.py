@@ -4233,3 +4233,11 @@ try:
     app.include_router(refund_router)
 except Exception as exc:
     print(f"GOVERNED_REFUND_ROUTES_NOT_LOADED: {exc}")
+
+
+# Admin Industry Agent Store + Tenant-Safe Learning Vault routes
+try:
+    from backend.app.api.admin_industry_agent_store_routes import router as admin_industry_agent_store_router
+    app.include_router(admin_industry_agent_store_router)
+except Exception as exc:
+    print(f"ADMIN_INDUSTRY_AGENT_STORE_ROUTES_NOT_LOADED: {exc}")
