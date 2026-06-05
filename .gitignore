@@ -47,3 +47,13 @@ telemetry/security/*secret*
 telemetry/security/*audit-report*
 logs/*.log
 
+
+# Local/generated operational artifacts
+.admin-token.local
+archive/
+full-system-backups/
+runtime_outputs/
+cleanup_report.txt
+frontend_assets.json
+latest_media_assets.json
+tmp_ugc_persistence_payload.json

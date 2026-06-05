@@ -3538,6 +3538,7 @@ const primaryAssetUrl =
             {[
               ["Privacy Policy", "/privacy-policy"],
               ["Terms of Service", "/terms-of-service"],
+              ["Refund Policy", "/refund-policy"],
               ["Contact us", "/support-request"],
             ].map(([label, href]) => (
               <a

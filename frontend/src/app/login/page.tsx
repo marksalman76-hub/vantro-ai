@@ -73,7 +73,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <button type="submit" style={buttonStyle}>Login to workspace</button>
 
         <p style={{ margin: "18px 0 0", color: "#cbd5e1", textAlign: "center", fontSize: 13 }}>
-          Need access? <a href="/support-request" style={{ color: "#c4b5fd", fontWeight: 800 }}>Contact support</a>
+          <div style={{ marginTop: 16, display: "flex", gap: 10, justifyContent: "center", flexWrap: "wrap", fontSize: 12 }}>
+          <a href="/terms-of-service" style={{ color: "#c4b5fd", fontWeight: 800 }}>Terms</a>
+          <a href="/privacy-policy" style={{ color: "#c4b5fd", fontWeight: 800 }}>Privacy</a>
+          <a href="/refund-policy" style={{ color: "#c4b5fd", fontWeight: 800 }}>Refund Policy</a>
+        </div>
+
+        Need access? <a href="/support-request" style={{ color: "#c4b5fd", fontWeight: 800 }}>Contact support</a>
         </p>
       </form>
 
