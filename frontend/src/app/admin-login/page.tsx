@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import AdminLoginSupportClient from "./support-client";
 
 export default async function AdminLoginPage({
   searchParams,
@@ -24,7 +23,6 @@ export default async function AdminLoginPage({
         <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px solid rgba(148,163,184,.16)", color: "#94a3b8", textAlign: "center", fontSize: 13 }}>Secure access · All actions are logged</div>
       </form>
 
-      <AdminLoginSupportClient />
     </main>
   );
 }
