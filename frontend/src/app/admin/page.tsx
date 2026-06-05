@@ -1363,6 +1363,19 @@ const [activeNav, setActiveNav] = useState("Overview");
             </div>
           </section>
 
+          <div id="admin-operations-store">
+            <Panel title="Operations Store" subtitle="Refunds, industry packs, and tenant-safe learning vault.">
+              <div className="reviewRows">
+                <div><span>Refund requests</span><b>{refundRequests.length}</b></div>
+                <div><span>Industry packs</span><b>{industryPacks.length}</b></div>
+                <div><span>Learning records</span><b>{learningVaultRecords.length}</b></div>
+              </div>
+              <button className="ghost full" onClick={loadOperationsStorePanels} disabled={operationsStoreBusy}>
+                {operationsStoreBusy ? "Refreshing..." : "Refresh operations store"}
+              </button>
+            </Panel>
+          </div>
+
           <div id="admin-billing">
             <Panel title="Billing & Deployment" subtitle="Subscription, Stripe and deployment readiness.">
               <div className="billingGrid">
