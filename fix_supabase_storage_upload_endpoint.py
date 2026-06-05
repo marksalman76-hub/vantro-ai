@@ -1,4 +1,14 @@
-from __future__ import annotations
+from pathlib import Path
+from datetime import datetime
+
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+FILE = ROOT / "backend" / "app" / "runtime" / "supabase_creative_storage.py"
+
+backup = ROOT / "backups" / f"supabase_storage_upload_endpoint_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+backup.mkdir(parents=True, exist_ok=True)
+(backup / FILE.name).write_text(FILE.read_text(encoding="utf-8"), encoding="utf-8")
+
+FILE.write_text(r'''from __future__ import annotations
 
 import json
 import mimetypes
@@ -221,3 +231,8 @@ def download_json_from_supabase(*, bucket: str, object_key: str, fallback: Any) 
         return {**result, "json": json.loads(result.get("text") or "")}
     except Exception as exc:
         return {**result, "success": False, "status": "invalid_json", "error": str(exc), "json": fallback}
+''', encoding="utf-8")
+
+print("SUPABASE_STORAGE_UPLOAD_ENDPOINT_FIXED")
+print("Updated:", FILE)
+print("Backup:", backup)
