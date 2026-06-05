@@ -378,6 +378,17 @@ def execute_action_adapter(
 
 
     if adapter == "ugc_creative_deliverable_adapter":
+        media_pack = generate_creative_media_pack(
+            task=str(packet.get("user_requested_task") or action_text),
+            agent_id="ugc_creative_agent",
+            tenant_id=tenant_id,
+            include_image=True,
+            include_audio=True,
+            include_video=True,
+            include_avatar=True,
+        )
+        visual_asset = (media_pack.get("image_assets") or [{}])[0]
+
         media_plan = create_media_generation_plan(
             "ugc_creative_agent",
             str(packet.get("user_requested_task") or action_text),
@@ -424,6 +435,10 @@ def execute_action_adapter(
                 }
             ],
             "media_generation_plan": media_plan,
+            "creative_media_pack": media_pack,
+            "media_assets": media_pack.get("media_assets", []),
+            "persisted_asset_count": media_pack.get("persisted_asset_count", 0),
+            "real_media_asset_count": media_pack.get("real_media_asset_count", 0),
             "preview_url": visual_asset.get("preview_url"),
             "asset_url": visual_asset.get("asset_url"),
             "media_url": visual_asset.get("media_url"),
