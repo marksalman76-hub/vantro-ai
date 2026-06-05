@@ -1,6 +1,5 @@
 "use client";
 
-import HomepageSupportClient from "./homepage-support-client";
 
 import { useEffect, useRef, useState, useCallback, Suspense } from "react";
 import { motion, useScroll, useTransform, useSpring, AnimatePresence, useMotionValue, useInView } from "framer-motion";
@@ -844,7 +843,7 @@ function FinalCTA() {
 function Footer() {
   const cols = [
     { title: "Company",    links: [["About","/about"],["Blog","/blog"],["Contact","/support-request"]] },
-    { title: "Legal",      links: [["Terms","/terms-of-service"],["Privacy","/privacy-policy"],["Cookies","/cookies"]] },
+    { title: "Legal",      links: [["Terms","/terms-of-service"],["Privacy","/privacy-policy"],["Cookies","/cookies"],["Refund Policy","/refund-policy"]] },
   ];
   return (
     <footer className="footer">
@@ -978,7 +977,6 @@ export default function Page() {
 
     </main>
       <Footer />
-      <HomepageSupportClient />
     </>
   );
 }
