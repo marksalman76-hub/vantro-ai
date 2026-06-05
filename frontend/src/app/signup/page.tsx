@@ -146,6 +146,10 @@ function SignupContent() {
           <label style={{ display: "block", marginTop: 22, fontWeight: 900 }}>Work email</label>
           <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@company.com" style={{ width: "100%", boxSizing: "border-box", marginTop: 10, padding: "14px 15px", borderRadius: 14, border: "1px solid rgba(148,163,184,.24)", background: "rgba(15,23,42,.88)", color: "#f8fafc", fontSize: 14 }} />
 
+          <div style={{ marginTop: 14, color: "#94a3b8", fontSize: 12, lineHeight: 1.5 }}>
+            By continuing, you agree to the <a href="/terms-of-service" style={{ color: "#c4b5fd", fontWeight: 850 }}>Terms of Service</a>, <a href="/privacy-policy" style={{ color: "#c4b5fd", fontWeight: 850 }}>Privacy Policy</a>, and <a href="/refund-policy" style={{ color: "#c4b5fd", fontWeight: 850 }}>Refund Policy</a>. Refunds are only considered if the account has not been activated or used.
+          </div>
+
           <button onClick={startCheckout} disabled={busy || !email.includes("@") || selected.length === 0} style={{ width: "100%", marginTop: 18, border: "1px solid rgba(139,92,246,.75)", borderRadius: 15, padding: "15px 18px", fontWeight: 950, color: "#fff", background: busy || !email.includes("@") || selected.length === 0 ? "rgba(148,163,184,.28)" : "linear-gradient(135deg,#635BFF,#8b5cf6)", boxShadow: busy || !email.includes("@") || selected.length === 0 ? "none" : "0 16px 42px rgba(99,91,255,.30)", cursor: busy || !email.includes("@") || selected.length === 0 ? "not-allowed" : "pointer" }}>
             {busy ? "Starting checkout..." : "Continue to secure checkout"}
           </button>
