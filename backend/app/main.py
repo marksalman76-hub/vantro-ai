@@ -4257,3 +4257,15 @@ try:
     app.include_router(admin_commercial_operations_router)
 except Exception as exc:
     print(f"ADMIN_COMMERCIAL_OPERATIONS_ROUTES_NOT_LOADED: {exc}")
+
+@app.get("/admin/media-jobs")
+def admin_list_media_jobs():
+    from backend.app.runtime.async_media_job_foundation import list_media_jobs
+    return list_media_jobs(limit=100)
+
+
+@app.post("/admin/media-jobs/run-next")
+def admin_run_next_media_job():
+    from backend.app.runtime.async_media_job_foundation import run_next_media_job
+    return run_next_media_job()
+
