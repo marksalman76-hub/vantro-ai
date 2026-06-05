@@ -2,6 +2,34 @@
 
 import React, { useEffect, useState } from "react";
 
+function cleanAssetReference(value: any): string {
+  const text = String(value || "");
+  if (!text) return "";
+  if (text.startsWith("data:")) return "Embedded generated asset reference hidden for clean admin display.";
+  if (text.length > 320) return text.slice(0, 320) + "...";
+  return text;
+}
+
+function isHugeEmbeddedAsset(value: any): boolean {
+  const text = String(value || "");
+  return text.startsWith("data:") || text.length > 1200;
+}
+
+function cleanAssetContent(value: any): string {
+  const text = String(value || "");
+  if (!text) return "";
+  if (text.startsWith("{") && text.includes('"content"')) {
+    try {
+      const parsed = JSON.parse(text);
+      return String(parsed.content || parsed.summary || parsed.asset_content || text);
+    } catch {
+      return text;
+    }
+  }
+  return text;
+}
+
+
 type CreativeMediaAsset = {
   asset_id?: string | null;
   provider?: string | null;
