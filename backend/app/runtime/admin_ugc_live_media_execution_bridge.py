@@ -6,6 +6,11 @@ import subprocess
 from typing import Any, Dict, Optional
 
 try:
+    from backend.app.runtime.creative_product_asset_library import build_creative_execution_asset_context
+except Exception:
+    build_creative_execution_asset_context = None
+
+try:
     from backend.app.runtime.runtime_creative_execution_integration import create_runtime_creative_execution_plan
 except Exception:
     create_runtime_creative_execution_plan = None
@@ -270,6 +275,12 @@ def run_admin_ugc_live_media_execution(
     audio_path = voice_result.get("audio_path")
     video_path = video_result.get("video_path")
 
+    creative_asset_context = (
+        build_creative_execution_asset_context(tenant_id="owner_admin", limit=25)
+        if build_creative_execution_asset_context is not None
+        else {"success": False, "asset_count": 0, "assets_by_type": {}}
+    )
+
     composition_result = compose_audio_video_asset(
         video_path=video_path,
         audio_path=audio_path,
@@ -339,6 +350,7 @@ def run_admin_ugc_live_media_execution(
         "agent_key": agent_key,
         "task": task,
         "execution_plan": execution_plan,
+        "creative_asset_context": creative_asset_context,
         "voice_result": voice_result,
         "video_result": video_result,
         "composition_result": composition_result,
