@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +30,7 @@ function adminHeaders(): Record<string, string> {
 
 export async function GET() {
   try {
-    const response = await fetch(`${BACKEND_BASE_URL}/client/creative/product-assets`, {
+    const response = await fetch(`${BACKEND_BASE_URL}/admin/creative/product-assets`, {
       method: "GET",
       cache: "no-store",
       headers: adminHeaders(),

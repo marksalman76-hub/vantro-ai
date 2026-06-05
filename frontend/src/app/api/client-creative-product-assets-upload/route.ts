@@ -32,11 +32,14 @@ export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();
 
-    const response = await fetch(`${BACKEND_BASE_URL}/client/creative/product-assets/upload`, {
+    const response = await fetch(`${BACKEND_BASE_URL}/admin/creative/product-assets/upload`, {
       method: "POST",
       cache: "no-store",
       headers: adminHeaders(),
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        ...payload,
+        uploaded_by: "client",
+      }),
     });
 
     const data = await response.json();
