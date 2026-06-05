@@ -356,6 +356,32 @@ def _normalise_asset_from_result(
 
 
 
+
+def _has_real_media_url(asset: Dict[str, Any]) -> bool:
+    values = [
+        asset.get("preview_url"),
+        asset.get("download_url"),
+        asset.get("asset_url"),
+        asset.get("media_url"),
+        asset.get("video_url"),
+        asset.get("audio_url"),
+    ]
+    for value in values:
+        raw = str(value or "").strip()
+        if not raw:
+            continue
+        if raw.startswith("http") or raw.startswith("data:video") or raw.startswith("data:audio") or raw.startswith("data:image"):
+            return True
+    return False
+
+def _is_provider_job_metadata_only(asset: Dict[str, Any]) -> bool:
+    status = str(asset.get("status") or "").lower()
+    if "provider_job_created_or_attempted" in status:
+        return not _has_real_media_url(asset)
+    if "metadata_fallback" in status:
+        return True
+    return False
+
 def _compose_video_audio_asset(
     video_assets: List[Dict[str, Any]],
     audio_assets: List[Dict[str, Any]],
@@ -554,8 +580,9 @@ def generate_creative_media_pack(
             pack_id=pack_id,
             prompt=video_prompt,
         )
-        video_asset["persistence"] = _persist_media_asset(video_asset)
-        video_assets.append(video_asset)
+        if not _is_provider_job_metadata_only(video_asset):
+            video_asset["persistence"] = _persist_media_asset(video_asset)
+            video_assets.append(video_asset)
         generation_jobs.append(
             {
                 "job_id": provider_result.get("job_id") or provider_result.get("provider_job_id") or f"video_job_{uuid.uuid4().hex[:10]}",
@@ -591,8 +618,9 @@ def generate_creative_media_pack(
             prompt=audio_script,
             script=audio_script,
         )
-        audio_asset["persistence"] = _persist_media_asset(audio_asset)
-        audio_assets.append(audio_asset)
+        if not _is_provider_job_metadata_only(audio_asset):
+            audio_asset["persistence"] = _persist_media_asset(audio_asset)
+            audio_assets.append(audio_asset)
         generation_jobs.append(
             {
                 "job_id": provider_result.get("job_id") or provider_result.get("provider_job_id") or f"audio_job_{uuid.uuid4().hex[:10]}",
