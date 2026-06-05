@@ -444,6 +444,7 @@ def execute_action_adapter(
     assigned_agent = str(packet.get("assigned_agent") or packet.get("agent") or packet.get("recommended_agent") or "").strip()
 
     creative_visual_adapter_agents = {
+        "ugc_creative_agent",
         "product_image_agent",
         "paid_ads_agent",
         "brand_strategy_agent",
@@ -458,6 +459,7 @@ def execute_action_adapter(
         "client_deliverable_adapter",
         "product_image_adapter",
         "strategy_document_adapter",
+        "ugc_creative_deliverable_adapter",
     }:
         media_pack = generate_creative_media_pack(
             task=str(packet.get("user_requested_task") or action_text),
