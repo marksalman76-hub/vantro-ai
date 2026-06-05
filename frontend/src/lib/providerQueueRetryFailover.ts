@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import {
   MediaGenerationProviderDecision,
   RealMediaProviderKey,
@@ -35,34 +33,17 @@ export type ProviderQueueJob = {
   provider_decision: MediaGenerationProviderDecision | null;
 };
 
-const STORE_DIR = path.join(process.cwd(), ".runtime", "provider-queue");
-const STORE_FILE = path.join(STORE_DIR, "provider-queue.json");
 
-function ensureStore(): void {
-  fs.mkdirSync(STORE_DIR, { recursive: true });
-  if (!fs.existsSync(STORE_FILE)) {
-    fs.writeFileSync(STORE_FILE, JSON.stringify({ jobs: {} }, null, 2), "utf-8");
-  }
-}
+const memoryStore: { jobs: Record<string, ProviderQueueJob[]> } =
+  (globalThis as any).__providerQueueRetryFailoverStore ||
+  ((globalThis as any).__providerQueueRetryFailoverStore = { jobs: {} });
 
 function safeReadStore(): { jobs: Record<string, ProviderQueueJob[]> } {
-  ensureStore();
-
-  try {
-    const parsed = JSON.parse(fs.readFileSync(STORE_FILE, "utf-8"));
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return { jobs: {} };
-    if (!parsed.jobs || typeof parsed.jobs !== "object" || Array.isArray(parsed.jobs)) return { jobs: {} };
-    return parsed as { jobs: Record<string, ProviderQueueJob[]> };
-  } catch {
-    return { jobs: {} };
-  }
+  return memoryStore;
 }
 
 function safeWriteStore(store: { jobs: Record<string, ProviderQueueJob[]> }): void {
-  ensureStore();
-  const tmp = `${STORE_FILE}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(store, null, 2), "utf-8");
-  fs.renameSync(tmp, STORE_FILE);
+  memoryStore.jobs = store.jobs || {};
 }
 
 function nextRetryAt(retryCount: number): string {
