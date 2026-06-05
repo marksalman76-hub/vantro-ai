@@ -1,4 +1,4 @@
-
+from __future__ import annotations
 def _is_metadata_only_asset(asset):
     status = str(asset.get("status") or "").lower()
     if status in {
@@ -22,7 +22,6 @@ def _strip_metadata_only_asset_urls(asset):
         asset["download_url"] = ""
     return asset
 
-from __future__ import annotations
 
 from datetime import datetime
 import inspect
