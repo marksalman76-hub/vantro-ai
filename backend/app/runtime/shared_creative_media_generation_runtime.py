@@ -1,38 +1,16 @@
 from __future__ import annotations
-def _is_metadata_only_asset(asset):
-    status = str(asset.get("status") or "").lower()
-    if status in {
-        "provider_job_created_or_attempted",
-        "live_provider_ready_endpoint_missing",
-        "metadata_fallback",
-        "endpoint_missing",
-        "blocked_owner_approval_required",
-    }:
-        return True
-    return False
-
-def _strip_metadata_only_asset_urls(asset):
-    if not isinstance(asset, dict):
-        return asset
-    if _is_metadata_only_asset(asset):
-        asset = dict(asset)
-        asset["preview_ready"] = False
-        asset["download_ready"] = False
-        asset["preview_url"] = ""
-        asset["download_url"] = ""
-    return asset
-
 
 from datetime import datetime
 import inspect
 import os
+import re
 import uuid
 from typing import Any, Callable, Dict, List, Optional
 
 from dotenv import load_dotenv
 
-from backend.app.runtime.shared_creative_visual_generation_runtime import generate_creative_visual_asset
 from backend.app.runtime.audio_visual_provider_stack import recommended_stack_for_task
+from backend.app.runtime.shared_creative_visual_generation_runtime import generate_creative_visual_asset
 
 load_dotenv(".env.local")
 
@@ -52,12 +30,13 @@ CREATIVE_MEDIA_AGENTS = {
 }
 
 PROVIDER_ENV_KEYS = {
-    "runway": ["RUNWAYML_API_SECRET"],
-    "kling": ["KLING_ACCESS_KEY", "KLING_SECRET_KEY"],
-    "heygen": ["HEYGEN_API_KEY"],
+    # Render/project env compatibility.
+    "runway": ["RUNWAYML_API_SECRET", "RUNWAY_API_KEY", "RUNWAY_CREATE_JOB_URL"],
+    "kling": ["KLING_API_KEY", "KLING_ACCESS_KEY", "KLING_SECRET_KEY", "KLING_CREATE_JOB_URL"],
+    "heygen": ["HEYGEN_API_KEY", "HEYGEN_CREATE_JOB_URL"],
     "elevenlabs": ["ELEVENLABS_API_KEY"],
-    "sync": ["HEYGEN_API_KEY"],
-    "replicate": [],
+    "sync": ["SYNC_API_KEY", "HEYGEN_API_KEY", "HEYGEN_CREATE_JOB_URL"],
+    "replicate": ["REPLICATE_API_TOKEN", "REPLICATE_API_KEY"],
 }
 
 MEDIA_PROVIDER_PRIORITY = {
@@ -65,6 +44,15 @@ MEDIA_PROVIDER_PRIORITY = {
     "video": ["runway", "kling", "replicate"],
     "audio": ["elevenlabs", "heygen"],
     "avatar": ["heygen", "sync"],
+}
+
+METADATA_ONLY_STATUSES = {
+    "provider_job_created_or_attempted",
+    "live_provider_ready_endpoint_missing",
+    "metadata_fallback",
+    "endpoint_missing",
+    "blocked_owner_approval_required",
+    "provider_execution_attempted",
 }
 
 
@@ -78,12 +66,15 @@ def _env_present(names: List[str]) -> bool:
 
 def _provider_configured(provider: str) -> bool:
     provider = str(provider or "").strip().lower()
-    names = PROVIDER_ENV_KEYS.get(provider, [])
 
     if provider == "kling":
-        return all(bool(os.getenv(name, "").strip()) for name in names)
+        # Kling may be configured as one key or an access/secret pair.
+        return bool(os.getenv("KLING_API_KEY", "").strip()) or (
+            bool(os.getenv("KLING_ACCESS_KEY", "").strip())
+            and bool(os.getenv("KLING_SECRET_KEY", "").strip())
+        )
 
-    return any(bool(os.getenv(name, "").strip()) for name in names)
+    return _env_present(PROVIDER_ENV_KEYS.get(provider, []))
 
 
 def _first_configured_provider(media_type: str) -> str:
@@ -149,14 +140,12 @@ Clear voice, natural pacing, lip-sync suitable, brand-safe claims.
 def _safe_call(func: Callable[..., Any], **kwargs: Any) -> Dict[str, Any]:
     try:
         signature = inspect.signature(func)
-        accepted = {
-            key: value
-            for key, value in kwargs.items()
-            if key in signature.parameters
-        }
+        accepted = {key: value for key, value in kwargs.items() if key in signature.parameters}
         result = func(**accepted)
         if isinstance(result, dict):
             result.setdefault("success", True)
+            result.setdefault("credential_values_exposed", False)
+            result.setdefault("customer_safe", True)
             return result
         return {
             "success": True,
@@ -216,6 +205,7 @@ def _execute_ai_media_provider_packet(
             "tenant_id": tenant_id,
             "pack_id": pack_id,
             "aspect_ratio": "9:16",
+            "duration": 5,
             "format": "mp4" if media_type in {"video", "avatar"} else "mp3" if media_type == "audio" else "png",
         },
         "governance_controls": {
@@ -283,6 +273,9 @@ def _execute_runway_direct_if_available(
             run_runway_text_to_video_quality_test,
             prompt_text=prompt,
             test_label=f"{pack_id}_runway_live_video",
+            model=os.getenv("RUNWAY_MODEL", "").strip() or None,
+            ratio="9:16",
+            duration=5,
             allow_live_execution=True,
         )
     except Exception as exc:
@@ -299,18 +292,8 @@ def _execute_runway_direct_if_available(
         }
 
 
-def _normalise_asset_from_result(
-    *,
-    result: Dict[str, Any],
-    provider: str,
-    media_type: str,
-    agent_id: str,
-    tenant_id: str,
-    pack_id: str,
-    prompt: str,
-    script: str = "",
-) -> Dict[str, Any]:
-    output_urls = []
+def _extract_candidate_urls(result: Dict[str, Any]) -> List[str]:
+    urls: List[str] = []
 
     for key in [
         "asset_url",
@@ -322,27 +305,96 @@ def _normalise_asset_from_result(
         "preview_url",
         "output_url",
         "video_path",
+        "audio_path",
+        "image_path",
         "video_url_preview",
     ]:
         value = result.get(key)
         if isinstance(value, str) and value.strip():
-            output_urls.append(value.strip())
+            urls.append(value.strip())
 
-    for key in ["output_urls", "urls", "generated_urls", "generated_files"]:
+    for key in ["output_urls", "urls", "generated_urls", "generated_files", "outputs", "output"]:
         values = result.get(key)
         if isinstance(values, list):
             for value in values:
                 if isinstance(value, str) and value.strip():
-                    output_urls.append(value.strip())
+                    urls.append(value.strip())
                 elif isinstance(value, dict):
-                    for nested_key in ["url", "asset_url", "media_url", "download_url", "preview_url", "path", "video_path", "video_url_preview"]:
+                    for nested_key in [
+                        "url",
+                        "asset_url",
+                        "media_url",
+                        "download_url",
+                        "preview_url",
+                        "path",
+                        "video_path",
+                        "audio_path",
+                        "image_path",
+                        "video_url_preview",
+                    ]:
                         nested_value = value.get(nested_key)
                         if isinstance(nested_value, str) and nested_value.strip():
-                            output_urls.append(nested_value.strip())
+                            urls.append(nested_value.strip())
+        elif isinstance(values, dict):
+            urls.extend(_extract_candidate_urls(values))
+        elif isinstance(values, str):
+            urls.extend(re.findall(r"(?:https?://|data:)[^\s'\"\]\)]+", values))
+
+    clean: List[str] = []
+    for url in urls:
+        candidate = str(url).strip().rstrip("',)]}")
+        if candidate and candidate not in clean:
+            clean.append(candidate)
+    return clean
+
+
+def _is_media_reference(value: Any) -> bool:
+    raw = str(value or "").strip()
+    if not raw:
+        return False
+    lower = raw.lower()
+    if raw.startswith("http://") or raw.startswith("https://"):
+        return True
+    if raw.startswith("data:video") or raw.startswith("data:audio") or raw.startswith("data:image"):
+        return True
+    if lower.endswith((".mp4", ".mov", ".webm", ".mp3", ".wav", ".m4a", ".png", ".jpg", ".jpeg", ".webp")):
+        return True
+    if "/runtime_outputs/" in lower or "\\runtime_outputs\\" in lower:
+        return True
+    return False
+
+
+def _normalise_asset_from_result(
+    *,
+    result: Dict[str, Any],
+    provider: str,
+    media_type: str,
+    agent_id: str,
+    tenant_id: str,
+    pack_id: str,
+    prompt: str,
+    script: str = "",
+) -> Dict[str, Any]:
+    output_urls = _extract_candidate_urls(result)
 
     local_video_path = result.get("video_path") if result.get("video_saved") else ""
-    preview_url = result.get("preview_url") or local_video_path or result.get("video_url_preview") or (output_urls[0] if output_urls else "")
-    download_url = result.get("download_url") or result.get("asset_url") or result.get("media_url") or local_video_path or preview_url
+    local_audio_path = result.get("audio_path") if result.get("audio_saved") else ""
+    local_image_path = result.get("image_path") if result.get("image_saved") else ""
+    local_path = local_video_path or local_audio_path or local_image_path
+
+    preview_url = (
+        result.get("preview_url")
+        or local_path
+        or result.get("video_url_preview")
+        or (output_urls[0] if output_urls else "")
+    )
+    download_url = (
+        result.get("download_url")
+        or result.get("asset_url")
+        or result.get("media_url")
+        or local_path
+        or preview_url
+    )
 
     status = (
         result.get("status")
@@ -350,7 +402,18 @@ def _normalise_asset_from_result(
         or ("ready" if result.get("success") and (preview_url or download_url) else "provider_execution_attempted")
     )
 
-    real_media_asset_created = bool(preview_url or download_url or result.get("real_media_asset_created") or result.get("video_saved"))
+    real_media_asset_created = bool(
+        _is_media_reference(preview_url)
+        or _is_media_reference(download_url)
+        or result.get("real_media_asset_created")
+        or result.get("video_saved")
+        or result.get("audio_saved")
+        or result.get("image_saved")
+    )
+
+    # Critical fix: successful local MP4 downloads must not remain metadata-only.
+    if real_media_asset_created and str(status or "").lower() in METADATA_ONLY_STATUSES:
+        status = "persisted"
 
     return {
         "asset_id": result.get("asset_id") or f"{media_type}_asset_{uuid.uuid4().hex[:12]}",
@@ -359,25 +422,23 @@ def _normalise_asset_from_result(
         "tenant_id": tenant_id,
         "provider": provider,
         "asset_type": media_type,
+        "media_type": media_type,
         "status": status,
-        "preview_ready": bool(preview_url),
-        "download_ready": bool(download_url),
-        "preview_url": preview_url,
-        "download_url": download_url,
-        "media_url": result.get("media_url") or download_url,
-        "asset_url": result.get("asset_url") or download_url,
+        "preview_ready": bool(preview_url and real_media_asset_created),
+        "download_ready": bool(download_url and real_media_asset_created),
+        "preview_url": preview_url if real_media_asset_created else "",
+        "download_url": download_url if real_media_asset_created else "",
+        "media_url": (result.get("media_url") or download_url) if real_media_asset_created else "",
+        "asset_url": (result.get("asset_url") or download_url) if real_media_asset_created else "",
         "prompt": prompt,
         "script": script,
         "provider_result": result,
         "live_provider_execution_attempted": bool(result.get("live_provider_execution_attempted", True)),
-        "real_media_asset_created": real_media_asset_created,
+        "real_media_asset_created": bool(real_media_asset_created),
         "credential_values_exposed": False,
         "customer_safe": True,
         "created_at": _now(),
     }
-
-
-
 
 
 def _has_real_media_url(asset: Dict[str, Any]) -> bool:
@@ -388,22 +449,30 @@ def _has_real_media_url(asset: Dict[str, Any]) -> bool:
         asset.get("media_url"),
         asset.get("video_url"),
         asset.get("audio_url"),
+        asset.get("provider_asset_url"),
+        asset.get("provider_asset_id"),
     ]
-    for value in values:
-        raw = str(value or "").strip()
-        if not raw:
-            continue
-        if raw.startswith("http") or raw.startswith("data:video") or raw.startswith("data:audio") or raw.startswith("data:image"):
-            return True
-    return False
+    provider_result = asset.get("provider_result")
+    if isinstance(provider_result, dict):
+        values.extend(
+            [
+                provider_result.get("video_path"),
+                provider_result.get("audio_path"),
+                provider_result.get("image_path"),
+                provider_result.get("video_url_preview"),
+            ]
+        )
+    return any(_is_media_reference(value) for value in values) or bool(asset.get("real_media_asset_created"))
+
 
 def _is_provider_job_metadata_only(asset: Dict[str, Any]) -> bool:
     status = str(asset.get("status") or "").lower()
-    if "provider_job_created_or_attempted" in status:
+    if status in METADATA_ONLY_STATUSES or "provider_job_created_or_attempted" in status:
         return not _has_real_media_url(asset)
     if "metadata_fallback" in status:
         return True
     return False
+
 
 def _compose_video_audio_asset(
     video_assets: List[Dict[str, Any]],
@@ -427,6 +496,7 @@ def _compose_video_audio_asset(
 
     try:
         from backend.app.runtime.sync_live_lipsync_adapter import compose_lipsync_video
+
         composed = compose_lipsync_video(
             video_url=video_url,
             audio_url=audio_url,
@@ -462,10 +532,10 @@ def _compose_video_audio_asset(
         "agent_id": agent_id,
         "tenant_id": tenant_id,
         "pack_id": pack_id,
-        "provider": composed.get("provider") or "sync",
+        "provider": composed.get("provider") or "internal_ffmpeg",
         "asset_type": "combined_video",
         "media_type": "combined_video",
-        "status": composed.get("status") or "combined_video_created",
+        "status": composed.get("status") or "final_synced_video_persisted",
         "asset_url": composed_url,
         "preview_url": composed_url,
         "download_url": composed_url,
@@ -475,16 +545,28 @@ def _compose_video_audio_asset(
         "source_video_asset_id": video.get("asset_id"),
         "source_audio_asset_id": audio.get("asset_id"),
         "provider_result": composed,
+        "credential_values_exposed": False,
+        "customer_safe": True,
     }
+
 
 def _is_provider_endpoint_placeholder(asset: Dict[str, Any], result: Dict[str, Any]) -> bool:
     status = str(asset.get("status") or asset.get("execution_status") or "").lower()
     result_status = str(result.get("execution_status") or result.get("status") or "").lower()
     return "live_provider_ready_endpoint_missing" in status or "live_provider_ready_endpoint_missing" in result_status
 
+
 def _persist_media_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
     try:
         from backend.app.runtime.creative_asset_persistence_bridge import persist_creative_asset
+
+        provider_result = asset.get("provider_result") if isinstance(asset.get("provider_result"), dict) else {}
+        provider_asset_url = (
+            asset.get("asset_url")
+            or asset.get("media_url")
+            or asset.get("download_url")
+            or asset.get("preview_url")
+        )
 
         return persist_creative_asset(
             {
@@ -492,11 +574,20 @@ def _persist_media_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
                 "agent_id": asset.get("agent_id"),
                 "agent_label": asset.get("agent_id"),
                 "provider": asset.get("provider"),
+                "provider_key": asset.get("provider"),
                 "asset_type": asset.get("asset_type"),
+                "media_type": asset.get("media_type") or asset.get("asset_type"),
                 "title": f"{asset.get('agent_id')} {asset.get('asset_type')} asset",
                 "test_label": asset.get("pack_id"),
-                "provider_asset_url": asset.get("asset_url") or asset.get("media_url"),
-                "provider_asset_id": asset.get("provider_result", {}).get("provider_job_id") or asset.get("provider_result", {}).get("job_id"),
+                "provider_asset_url": provider_asset_url,
+                "provider_asset_id": (
+                    provider_result.get("provider_job_id")
+                    or provider_result.get("job_id")
+                    or provider_result.get("video_path")
+                    or provider_result.get("audio_path")
+                    or provider_result.get("image_path")
+                    or asset.get("asset_id")
+                ),
                 "preview_url": asset.get("preview_url"),
                 "download_url": asset.get("download_url"),
                 "content": asset.get("prompt") or asset.get("script"),
@@ -504,6 +595,7 @@ def _persist_media_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
                 "status": asset.get("status"),
                 "campaign_context": asset.get("prompt"),
                 "owner_approval_required": True,
+                "governed": True,
                 "credential_values_exposed": False,
                 "customer_safe": True,
             }
@@ -517,6 +609,22 @@ def _persist_media_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
             "credential_values_exposed": False,
             "customer_safe": True,
         }
+
+
+def _append_if_persistable(asset: Dict[str, Any], target: List[Dict[str, Any]]) -> Dict[str, Any]:
+    if _is_provider_job_metadata_only(asset):
+        asset["persistence"] = {
+            "success": False,
+            "persisted": False,
+            "reason": "metadata_only_asset_not_persisted",
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+        return asset
+
+    asset["persistence"] = _persist_media_asset(asset)
+    target.append(asset)
+    return asset
 
 
 def generate_creative_media_pack(
@@ -560,24 +668,47 @@ def generate_creative_media_pack(
             {
                 "provider": image_provider if _provider_configured(image_provider) else image_asset.get("provider", "internal"),
                 "asset_type": "image",
+                "media_type": "image",
                 "pack_id": pack_id,
+                "agent_id": agent_id,
+                "tenant_id": tenant_id,
                 "live_provider_execution_attempted": _provider_configured(image_provider),
-                "real_media_asset_created": bool(image_asset.get("preview_url") or image_asset.get("download_url") or image_asset.get("asset_url")),
+                "real_media_asset_created": bool(
+                    image_asset.get("preview_url")
+                    or image_asset.get("download_url")
+                    or image_asset.get("asset_url")
+                    or image_asset.get("media_url")
+                ),
                 "credential_values_exposed": False,
                 "customer_safe": True,
             }
         )
-        image_asset["persistence"] = _persist_media_asset(image_asset)
-        image_assets.append(image_asset)
+        # Avoid persisting giant embedded data images that slow the viewer.
+        image_url = str(image_asset.get("preview_url") or image_asset.get("download_url") or image_asset.get("asset_url") or "")
+        if image_asset.get("real_media_asset_created") and not (image_url.startswith("data:image") and len(image_url) > 250_000):
+            _append_if_persistable(image_asset, image_assets)
+        elif image_asset.get("real_media_asset_created"):
+            image_asset["persistence"] = {
+                "success": False,
+                "persisted": False,
+                "reason": "embedded_image_too_large_for_registry",
+                "credential_values_exposed": False,
+                "customer_safe": True,
+            }
+            image_assets.append(image_asset)
 
     if include_video:
         provider = _first_configured_provider("video")
-        direct_runway_result = _execute_runway_direct_if_available(
-            prompt=video_prompt,
-            agent_id=agent_id,
-            tenant_id=tenant_id,
-            pack_id=pack_id,
-        ) if provider == "runway" else {}
+        direct_runway_result = (
+            _execute_runway_direct_if_available(
+                prompt=video_prompt,
+                agent_id=agent_id,
+                tenant_id=tenant_id,
+                pack_id=pack_id,
+            )
+            if provider == "runway"
+            else {}
+        )
 
         if direct_runway_result and direct_runway_result.get("success"):
             provider_result = direct_runway_result
@@ -603,9 +734,7 @@ def generate_creative_media_pack(
             pack_id=pack_id,
             prompt=video_prompt,
         )
-        if not _is_provider_job_metadata_only(video_asset):
-            video_asset["persistence"] = _persist_media_asset(video_asset)
-            video_assets.append(video_asset)
+        _append_if_persistable(video_asset, video_assets)
         generation_jobs.append(
             {
                 "job_id": provider_result.get("job_id") or provider_result.get("provider_job_id") or f"video_job_{uuid.uuid4().hex[:10]}",
@@ -641,9 +770,7 @@ def generate_creative_media_pack(
             prompt=audio_script,
             script=audio_script,
         )
-        if not _is_provider_job_metadata_only(audio_asset):
-            audio_asset["persistence"] = _persist_media_asset(audio_asset)
-            audio_assets.append(audio_asset)
+        _append_if_persistable(audio_asset, audio_assets)
         generation_jobs.append(
             {
                 "job_id": provider_result.get("job_id") or provider_result.get("provider_job_id") or f"audio_job_{uuid.uuid4().hex[:10]}",
@@ -679,6 +806,7 @@ def generate_creative_media_pack(
             prompt=avatar_prompt,
             script=audio_script,
         )
+
         if _is_provider_endpoint_placeholder(avatar_asset, provider_result):
             if video_assets:
                 source_video = dict(video_assets[0])
@@ -713,8 +841,7 @@ def generate_creative_media_pack(
             or avatar_asset.get("asset_url")
             or avatar_asset.get("media_url")
         ):
-            avatar_asset["persistence"] = _persist_media_asset(avatar_asset)
-            avatar_assets.append(avatar_asset)
+            _append_if_persistable(avatar_asset, avatar_assets)
 
         generation_jobs.append(
             {
@@ -739,10 +866,14 @@ def generate_creative_media_pack(
         prompt=task,
     )
     if combined_video_asset.get("success") and combined_video_asset.get("real_media_asset_created"):
-        combined_video_asset["persistence"] = _persist_media_asset(combined_video_asset)
-        combined_video_assets.append(combined_video_asset)
+        _append_if_persistable(combined_video_asset, combined_video_assets)
 
     media_assets = [*image_assets, *combined_video_assets, *video_assets, *audio_assets, *avatar_assets]
+    persisted_asset_records = [
+        asset.get("persistence")
+        for asset in media_assets
+        if isinstance(asset.get("persistence"), dict) and asset.get("persistence", {}).get("success")
+    ]
 
     return {
         "success": True,
@@ -760,6 +891,9 @@ def generate_creative_media_pack(
         "avatar_assets": avatar_assets,
         "media_assets": media_assets,
         "real_media_asset_count": sum(1 for asset in media_assets if asset.get("real_media_asset_created")),
+        "persisted_asset_count": len(persisted_asset_records),
+        "persisted_asset_records": persisted_asset_records,
+        "creative_asset_registry_write_attempted": True,
         "live_provider_execution_attempted_count": sum(1 for result in provider_execution_results if result.get("live_provider_execution_attempted")),
         "audio_url": audio_assets[0].get("download_url", "") if audio_assets else "",
         "video_url": combined_video_assets[0].get("download_url", "") if combined_video_assets else (video_assets[0].get("download_url", "") if video_assets else ""),
