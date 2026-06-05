@@ -1,5 +1,9 @@
 from datetime import datetime, timezone
-from typing import Any, Dict
+from pathlib import Path
+import os
+import shutil
+import subprocess
+from typing import Any, Dict, Optional
 
 try:
     from backend.app.runtime.runtime_creative_execution_integration import create_runtime_creative_execution_plan
@@ -16,30 +20,148 @@ try:
 except Exception:
     run_runway_text_to_video_quality_test = None
 
-
 try:
     from backend.app.runtime.creative_asset_persistence_bridge import persist_creative_asset
 except Exception:
     persist_creative_asset = None
 
 
+ROOT = Path(__file__).resolve().parents[3]
+COMPOSED_OUTPUT_DIR = ROOT / "runtime_outputs" / "creative_composed_media"
+COMPOSED_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _safe_label(value: str) -> str:
+    cleaned = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in str(value or "asset"))
+    return cleaned[:120] or "asset"
+
+
+def _ffmpeg_available() -> bool:
+    return shutil.which("ffmpeg") is not None
+
+
+def _file_exists(path: Optional[str]) -> bool:
+    return bool(path and Path(path).exists() and Path(path).is_file())
+
+
+def compose_audio_video_asset(
+    *,
+    video_path: Optional[str],
+    audio_path: Optional[str],
+    test_label: str,
+) -> Dict[str, Any]:
+    if not _file_exists(video_path) or not _file_exists(audio_path):
+        return {
+            "success": False,
+            "status": "composition_skipped_missing_audio_or_video",
+            "video_path_present": bool(video_path),
+            "audio_path_present": bool(audio_path),
+            "video_file_exists": _file_exists(video_path),
+            "audio_file_exists": _file_exists(audio_path),
+            "composed_video_saved": False,
+            "credential_values_exposed": False,
+        }
+
+    if not _ffmpeg_available():
+        return {
+            "success": False,
+            "status": "composition_skipped_ffmpeg_unavailable",
+            "composed_video_saved": False,
+            "credential_values_exposed": False,
+        }
+
+    safe_label = _safe_label(test_label)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    output_path = COMPOSED_OUTPUT_DIR / f"{stamp}_{safe_label}_final_synced_video.mp4"
+
+    cmd = [
+        "ffmpeg",
+        "-y",
+        "-i", str(video_path),
+        "-i", str(audio_path),
+        "-map", "0:v:0",
+        "-map", "1:a:0",
+        "-c:v", "copy",
+        "-c:a", "aac",
+        "-shortest",
+        str(output_path),
+    ]
+
+    try:
+        completed = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=180,
+        )
+
+        if completed.returncode != 0:
+            return {
+                "success": False,
+                "status": "composition_failed",
+                "return_code": completed.returncode,
+                "stderr": (completed.stderr or "")[-2000:],
+                "composed_video_saved": False,
+                "credential_values_exposed": False,
+            }
+
+        return {
+            "success": True,
+            "status": "composed_synced_video_created",
+            "provider": "internal_ffmpeg",
+            "asset_type": "combined_video",
+            "video_path": str(video_path),
+            "audio_path": str(audio_path),
+            "composed_video_path": str(output_path),
+            "composed_video_saved": output_path.exists(),
+            "composed_video_size_bytes": output_path.stat().st_size if output_path.exists() else 0,
+            "ffmpeg_available": True,
+            "credential_values_exposed": False,
+            "external_action_performed": False,
+            "live_provider_call_triggered": False,
+            "created_at": _now(),
+        }
+
+    except Exception as exc:
+        return {
+            "success": False,
+            "status": "composition_exception",
+            "error": str(exc),
+            "composed_video_saved": False,
+            "credential_values_exposed": False,
+        }
 
 
 def should_route_to_ugc_live_media(task: str, agent_key: str = "") -> bool:
     text = f"{task or ''} {agent_key or ''}".lower()
 
-    ugc_agent_match = (
-        "ugc" in text
-        or "ugc_creative" in text
-        or "ugc creative" in text
+    creative_agent_match = any(
+        marker in text
+        for marker in [
+            "ugc",
+            "ugc_creative",
+            "ugc creative",
+            "paid_ads",
+            "paid ads",
+            "product_image",
+            "product image",
+            "social_media",
+            "social media",
+            "marketing",
+            "influencer",
+            "creative",
+        ]
     )
 
     media_intent_match = any(
         marker in text
         for marker in [
             "video",
+            "audio",
             "ad",
             "advertisement",
             "reel",
@@ -50,10 +172,12 @@ def should_route_to_ugc_live_media(task: str, agent_key: str = "") -> bool:
             "campaign",
             "product demo",
             "social media",
+            "visual",
+            "image",
         ]
     )
 
-    return bool(ugc_agent_match and media_intent_match)
+    return bool(creative_agent_match and media_intent_match)
 
 
 def run_admin_ugc_live_media_execution(
@@ -67,7 +191,7 @@ def run_admin_ugc_live_media_execution(
             "success": False,
             "provider_runtime": "admin_ugc_live_media_execution_bridge",
             "status": "blocked_owner_approval_required",
-            "reason": "Live UGC media execution requires owner_approved_live_execution=True.",
+            "reason": "Live creative media execution requires owner_approved_live_execution=True.",
             "credential_values_exposed": False,
             "external_actions_performed": False,
             "live_provider_calls_triggered": False,
@@ -143,13 +267,41 @@ def run_admin_ugc_live_media_execution(
             allow_live_execution=True,
         )
 
+    audio_path = voice_result.get("audio_path")
+    video_path = video_result.get("video_path")
+
+    composition_result = compose_audio_video_asset(
+        video_path=video_path,
+        audio_path=audio_path,
+        test_label=test_label,
+    )
+
     media_assets_created = bool(
-        voice_result.get("audio_saved") or video_result.get("video_saved")
+        voice_result.get("audio_saved")
+        or video_result.get("video_saved")
+        or composition_result.get("composed_video_saved")
     )
 
     persisted_asset_records = []
 
     if persist_creative_asset is not None:
+        if composition_result.get("composed_video_saved"):
+            persisted_asset_records.append(
+                persist_creative_asset(
+                    {
+                        "provider": "internal_ffmpeg",
+                        "asset_type": "combined_video",
+                        "test_label": f"{test_label}_final_synced_video",
+                        "provider_asset_id": composition_result.get("composed_video_path"),
+                        "provider_asset_url": composition_result.get("composed_video_path"),
+                        "preview_url": composition_result.get("composed_video_path"),
+                        "download_url": composition_result.get("composed_video_path"),
+                        "status": "final_synced_video_persisted",
+                        "summary": "Final synced MP4 combining generated Runway video with ElevenLabs voiceover.",
+                    }
+                )
+            )
+
         if voice_result.get("audio_saved"):
             persisted_asset_records.append(
                 persist_creative_asset(
@@ -189,14 +341,18 @@ def run_admin_ugc_live_media_execution(
         "execution_plan": execution_plan,
         "voice_result": voice_result,
         "video_result": video_result,
+        "composition_result": composition_result,
         "media_assets_created": media_assets_created,
         "audio_saved": bool(voice_result.get("audio_saved")),
         "video_saved": bool(video_result.get("video_saved")),
-        "audio_path": voice_result.get("audio_path"),
-        "video_path": video_result.get("video_path"),
+        "final_synced_video_saved": bool(composition_result.get("composed_video_saved")),
+        "audio_path": audio_path,
+        "video_path": video_path,
+        "final_synced_video_path": composition_result.get("composed_video_path"),
         "video_url_preview": video_result.get("video_url_preview"),
         "persisted_asset_records": persisted_asset_records,
         "persisted_asset_count": len(persisted_asset_records),
+        "primary_deliverable_type": "combined_video" if composition_result.get("composed_video_saved") else "separate_audio_video",
         "credential_values_exposed": False,
         "external_actions_performed": bool(
             voice_result.get("external_action_performed")
@@ -207,10 +363,11 @@ def run_admin_ugc_live_media_execution(
             or video_result.get("live_provider_call_triggered")
         ),
         "customer_safe_summary": {
-            "title": "UGC media execution completed",
+            "title": "Creative media execution completed",
             "description": "Generated live premium creative media assets through governed provider execution.",
             "audio_created": bool(voice_result.get("audio_saved")),
             "video_created": bool(video_result.get("video_saved")),
+            "final_synced_video_created": bool(composition_result.get("composed_video_saved")),
         },
         "created_at": _now(),
     }
@@ -222,9 +379,12 @@ def get_admin_ugc_live_media_execution_bridge_status() -> Dict[str, Any]:
         "provider_runtime": "admin_ugc_live_media_execution_bridge",
         "status": "ready",
         "ugc_media_routing_enabled": True,
+        "creative_team_media_routing_enabled": True,
         "runtime_creative_execution_connected": create_runtime_creative_execution_plan is not None,
         "elevenlabs_adapter_connected": run_elevenlabs_tts_quality_test is not None,
         "runway_adapter_connected": run_runway_text_to_video_quality_test is not None,
+        "media_composition_enabled": True,
+        "ffmpeg_available": _ffmpeg_available(),
         "owner_approval_required_for_live_execution": True,
         "credential_values_exposed": False,
         "external_actions_performed": False,
