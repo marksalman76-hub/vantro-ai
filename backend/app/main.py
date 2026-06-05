@@ -4249,3 +4249,11 @@ try:
     app.include_router(industry_aware_client_deployment_router)
 except Exception as exc:
     print(f"INDUSTRY_AWARE_CLIENT_DEPLOYMENT_ROUTES_NOT_LOADED: {exc}")
+
+
+# Admin Commercial Operations Visibility routes
+try:
+    from backend.app.api.admin_commercial_operations_routes import router as admin_commercial_operations_router
+    app.include_router(admin_commercial_operations_router)
+except Exception as exc:
+    print(f"ADMIN_COMMERCIAL_OPERATIONS_ROUTES_NOT_LOADED: {exc}")
