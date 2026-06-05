@@ -4225,3 +4225,11 @@ async def creative_product_asset_execution_context(tenant_id: str = "owner_admin
         limit=limit,
     )
 
+
+
+# Governed refund workflow routes
+try:
+    from backend.app.api.refund_routes import router as refund_router
+    app.include_router(refund_router)
+except Exception as exc:
+    print(f"GOVERNED_REFUND_ROUTES_NOT_LOADED: {exc}")
