@@ -17,6 +17,7 @@ export async function GET() {
   try {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
+      "Cache-Control": "no-store",
     };
 
     if (ADMIN_TOKEN) {
@@ -25,7 +26,7 @@ export async function GET() {
       headers["x-actor-role"] = "owner_admin";
     }
 
-    const response = await fetch(`${BACKEND_BASE_URL}/admin/persisted-creative-assets`, {
+    const response = await fetch(`${BACKEND_BASE_URL}/admin/creative/media-assets`, {
       method: "GET",
       cache: "no-store",
       headers,
