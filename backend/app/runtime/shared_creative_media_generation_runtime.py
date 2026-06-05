@@ -355,6 +355,79 @@ def _normalise_asset_from_result(
 
 
 
+
+def _compose_video_audio_asset(
+    video_assets: List[Dict[str, Any]],
+    audio_assets: List[Dict[str, Any]],
+    agent_id: str,
+    tenant_id: str,
+    pack_id: str,
+    prompt: str,
+) -> Dict[str, Any]:
+    if not video_assets or not audio_assets:
+        return {}
+
+    video = video_assets[0]
+    audio = audio_assets[0]
+
+    video_url = video.get("download_url") or video.get("preview_url") or video.get("asset_url") or video.get("media_url")
+    audio_url = audio.get("download_url") or audio.get("preview_url") or audio.get("asset_url") or audio.get("media_url")
+
+    if not video_url or not audio_url:
+        return {}
+
+    try:
+        from backend.app.runtime.sync_live_lipsync_adapter import compose_lipsync_video
+        composed = compose_lipsync_video(
+            video_url=video_url,
+            audio_url=audio_url,
+            script=audio.get("script") or audio.get("prompt") or prompt,
+            tenant_id=tenant_id,
+            agent_id=agent_id,
+        )
+    except Exception as exc:
+        return {
+            "success": False,
+            "status": "combined_video_compose_failed",
+            "error": str(exc)[:500],
+        }
+
+    composed_url = (
+        composed.get("composed_video_url")
+        or composed.get("final_video_url")
+        or composed.get("video_url")
+        or composed.get("download_url")
+        or composed.get("video_path")
+    )
+
+    if not composed_url:
+        return {
+            "success": False,
+            "status": composed.get("status") or "combined_video_not_available",
+            "compose_result": composed,
+        }
+
+    return {
+        "success": True,
+        "asset_id": f"combined_video_asset_{uuid.uuid4().hex[:10]}",
+        "agent_id": agent_id,
+        "tenant_id": tenant_id,
+        "pack_id": pack_id,
+        "provider": composed.get("provider") or "sync",
+        "asset_type": "combined_video",
+        "media_type": "combined_video",
+        "status": composed.get("status") or "combined_video_created",
+        "asset_url": composed_url,
+        "preview_url": composed_url,
+        "download_url": composed_url,
+        "prompt": prompt,
+        "script": audio.get("script") or audio.get("prompt") or prompt,
+        "real_media_asset_created": True,
+        "source_video_asset_id": video.get("asset_id"),
+        "source_audio_asset_id": audio.get("asset_id"),
+        "provider_result": composed,
+    }
+
 def _is_provider_endpoint_placeholder(asset: Dict[str, Any], result: Dict[str, Any]) -> bool:
     status = str(asset.get("status") or asset.get("execution_status") or "").lower()
     result_status = str(result.get("execution_status") or result.get("status") or "").lower()
@@ -605,7 +678,20 @@ def generate_creative_media_pack(
             }
         )
 
-    media_assets = [*image_assets, *video_assets, *audio_assets, *avatar_assets]
+    combined_video_assets: List[Dict[str, Any]] = []
+    combined_video_asset = _compose_video_audio_asset(
+        video_assets=video_assets,
+        audio_assets=audio_assets,
+        agent_id=agent_id,
+        tenant_id=tenant_id,
+        pack_id=pack_id,
+        prompt=task,
+    )
+    if combined_video_asset.get("success") and combined_video_asset.get("real_media_asset_created"):
+        combined_video_asset["persistence"] = _persist_media_asset(combined_video_asset)
+        combined_video_assets.append(combined_video_asset)
+
+    media_assets = [*image_assets, *combined_video_assets, *video_assets, *audio_assets, *avatar_assets]
 
     return {
         "success": True,
@@ -619,12 +705,14 @@ def generate_creative_media_pack(
         "image_assets": image_assets,
         "audio_assets": audio_assets,
         "video_assets": video_assets,
+        "combined_video_assets": combined_video_assets,
         "avatar_assets": avatar_assets,
         "media_assets": media_assets,
         "real_media_asset_count": sum(1 for asset in media_assets if asset.get("real_media_asset_created")),
         "live_provider_execution_attempted_count": sum(1 for result in provider_execution_results if result.get("live_provider_execution_attempted")),
         "audio_url": audio_assets[0].get("download_url", "") if audio_assets else "",
-        "video_url": video_assets[0].get("download_url", "") if video_assets else "",
+        "video_url": combined_video_assets[0].get("download_url", "") if combined_video_assets else (video_assets[0].get("download_url", "") if video_assets else ""),
+        "combined_video_url": combined_video_assets[0].get("download_url", "") if combined_video_assets else "",
         "avatar_video_url": avatar_assets[0].get("download_url", "") if avatar_assets else "",
         "voiceover_script": audio_script,
         "video_prompt": video_prompt,

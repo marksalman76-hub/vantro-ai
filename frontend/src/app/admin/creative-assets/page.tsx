@@ -73,6 +73,12 @@ function isSignedGatewayUrl(url?: string | null): boolean {
   );
 }
 
+
+function isPlaceholderAsset(asset: CreativeMediaAsset): boolean {
+  const status = String(asset.status || "").toLowerCase();
+  return status.includes("live_provider_ready_endpoint_missing") || status.includes("endpoint_missing");
+}
+
 function getPreviewUrl(asset: CreativeMediaAsset): string {
   const value = String(asset.preview_url || "").trim();
   return isSignedGatewayUrl(value) ? value : "";
@@ -183,8 +189,9 @@ function AssetCard({ asset }: { asset: CreativeMediaAsset }) {
   const assetType = getAssetType(asset);
   const previewUrl = getPreviewUrl(asset);
   const downloadUrl = getDownloadUrl(asset);
-  const hasPreview = Boolean(previewUrl);
-  const hasDownload = Boolean(downloadUrl);
+  const isPlaceholder = isPlaceholderAsset(asset);
+  const hasPreview = Boolean(previewUrl) && !isPlaceholder;
+  const hasDownload = Boolean(downloadUrl) && !isPlaceholder;
 
   return (
     <article style={cardStyle}>
@@ -235,7 +242,9 @@ function AssetCard({ asset }: { asset: CreativeMediaAsset }) {
         </div>
       ) : (
         <div style={warningBoxStyle}>
-          Signed backend preview URL unavailable. This asset will not use the raw provider URL.
+          {isPlaceholder
+            ? "Provider endpoint missing — no real media file was generated yet."
+            : "Signed backend preview URL unavailable. This asset will not use the raw provider URL."}
         </div>
       )}
 
