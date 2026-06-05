@@ -1,4 +1,16 @@
 from pathlib import Path
+from datetime import datetime
+
+ROOT = Path(r"C:\Users\User\Desktop\ecommerce-ai-agent-platform")
+MEDIA_BRIDGE = ROOT / "backend" / "app" / "runtime" / "creative_asset_persistence_bridge.py"
+
+backup_dir = ROOT / "backups" / f"supabase_media_registry_fallback_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+backup_dir.mkdir(parents=True, exist_ok=True)
+
+backup_file = backup_dir / MEDIA_BRIDGE.name
+backup_file.write_text(MEDIA_BRIDGE.read_text(encoding="utf-8"), encoding="utf-8")
+
+MEDIA_BRIDGE.write_text(r'''from pathlib import Path
 from datetime import datetime, timezone
 import json
 import os
@@ -431,3 +443,8 @@ def get_persisted_creative_assets(limit=100):
         "last_supabase_media_upload": LAST_SUPABASE_MEDIA_UPLOAD,
         "credential_values_exposed": False,
     }
+''', encoding="utf-8")
+
+print("SUPABASE_MEDIA_REGISTRY_FALLBACK_FIXED")
+print("Updated:", MEDIA_BRIDGE)
+print("Backup:", backup_dir)
