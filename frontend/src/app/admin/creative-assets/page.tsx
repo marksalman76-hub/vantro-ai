@@ -261,7 +261,11 @@ function AssetCard({ asset }: { asset: CreativeMediaAsset }) {
       {asset.original_preview_url || asset.provider_asset_url ? (
         <div style={urlBoxStyle}>
           <p style={urlLabelStyle}>Original provider URL / reference</p>
-          <p style={urlTextStyle}>{asset.original_preview_url || asset.provider_asset_url}</p>
+          <p style={urlTextStyle}>
+            {isHugeEmbeddedAsset(asset.original_preview_url || asset.provider_asset_url)
+              ? "Embedded generated provider reference hidden for clean admin display."
+              : cleanAssetReference(asset.original_preview_url || asset.provider_asset_url)}
+          </p>
           <p style={warningTextStyle}>Not used for browser playback.</p>
         </div>
       ) : null}
