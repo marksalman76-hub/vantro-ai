@@ -2,10 +2,12 @@
 from pathlib import Path
 from datetime import datetime, timezone
 import json
+import os
 import hashlib
 
 ROOT = Path(__file__).resolve().parents[3]
-REGISTRY_DIR = ROOT / "runtime_outputs" / "creative_asset_registry"
+DEFAULT_REGISTRY_DIR = ROOT / "runtime_outputs" / "creative_asset_registry"
+REGISTRY_DIR = Path(os.getenv("CREATIVE_MEDIA_PERSISTENCE_DIR", str(DEFAULT_REGISTRY_DIR)))
 REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
 REGISTRY_FILE = REGISTRY_DIR / "creative_assets.json"
 
@@ -132,6 +134,8 @@ def persist_creative_asset(asset_packet: dict):
         "governed": True,
         "customer_safe": True,
         "credential_values_exposed": False,
+        "persistence_mode": "durable" if os.getenv("CREATIVE_MEDIA_PERSISTENCE_DIR") else "local_runtime_fallback",
+        "persistence_root": str(REGISTRY_DIR) if "REGISTRY_DIR" in globals() else str(globals().get("ASSET_REGISTRY_DIR", globals().get("CREATIVE_ASSET_REGISTRY_DIR", ""))),
         "created_at": created_at,
     }
 

@@ -12,7 +12,8 @@ from typing import Any, Dict, List, Optional
 
 
 ROOT = Path(__file__).resolve().parents[3]
-ASSET_ROOT = ROOT / "runtime_outputs" / "creative_product_assets"
+DEFAULT_ASSET_ROOT = ROOT / "runtime_outputs" / "creative_product_assets"
+ASSET_ROOT = Path(os.getenv("CREATIVE_ASSET_PERSISTENCE_DIR", str(DEFAULT_ASSET_ROOT)))
 REGISTRY_PATH = ASSET_ROOT / "creative_product_asset_registry.json"
 
 ALLOWED_EXTENSIONS = {
@@ -235,6 +236,10 @@ def list_creative_product_assets(
         "allowed_extensions": sorted(ALLOWED_EXTENSIONS),
         "credential_values_exposed": False,
         "customer_safe": True,
+        "persistence_mode": "durable" if os.getenv("CREATIVE_ASSET_PERSISTENCE_DIR") else "local_runtime_fallback",
+        "persistence_root": str(ASSET_ROOT),
+        "persistence_mode": "durable" if os.getenv("CREATIVE_ASSET_PERSISTENCE_DIR") else "local_runtime_fallback",
+        "persistence_root": str(ASSET_ROOT),
         "verified_at": _now(),
     }
 
@@ -360,5 +365,9 @@ def creative_product_asset_library_status() -> Dict[str, Any]:
         "allowed_extensions": sorted(ALLOWED_EXTENSIONS),
         "credential_values_exposed": False,
         "customer_safe": True,
+        "persistence_mode": "durable" if os.getenv("CREATIVE_ASSET_PERSISTENCE_DIR") else "local_runtime_fallback",
+        "persistence_root": str(ASSET_ROOT),
+        "persistence_mode": "durable" if os.getenv("CREATIVE_ASSET_PERSISTENCE_DIR") else "local_runtime_fallback",
+        "persistence_root": str(ASSET_ROOT),
         "verified_at": _now(),
     }
