@@ -18,6 +18,7 @@ from backend.app.runtime.react_website_generation_runtime import generate_react_
 from backend.app.runtime.shared_creative_media_generation_runtime import generate_creative_media_pack
 from backend.app.runtime.shared_agent_learning_runtime import load_agent_learning_context, save_agent_learning, hide_proprietary_learning_fields
 from backend.app.runtime.media_generation_orchestrator import create_media_generation_plan
+from backend.app.runtime.async_media_job_foundation import enqueue_media_job
 
 
 
@@ -378,16 +379,25 @@ def execute_action_adapter(
 
 
     if adapter == "ugc_creative_deliverable_adapter":
-        media_pack = generate_creative_media_pack(
+        media_job = enqueue_media_job(
             task=str(packet.get("user_requested_task") or action_text),
             agent_id="ugc_creative_agent",
             tenant_id=tenant_id,
             include_image=True,
             include_audio=True,
             include_video=True,
-            include_avatar=True,
+            include_avatar=False,
         )
-        visual_asset = (media_pack.get("image_assets") or [{}])[0]
+        media_pack = {
+            "success": True,
+            "status": "queued",
+            "media_job_id": media_job.get("job_id"),
+            "media_assets": [],
+            "persisted_asset_count": 0,
+            "real_media_asset_count": 0,
+            "credential_values_exposed": False,
+        }
+        visual_asset = {}
 
         media_plan = create_media_generation_plan(
             "ugc_creative_agent",
@@ -406,7 +416,7 @@ def execute_action_adapter(
             "adapter": "ugc_creative_deliverable_adapter",
             "tenant_id": tenant_id,
             "performed_actual_action": True,
-            "execution_status": "creative_deliverable_generated",
+            "execution_status": "media_job_queued",
             "owner_approval_required": False,
             "customer_safe": True,
             "credential_values_exposed": False,
@@ -415,7 +425,9 @@ def execute_action_adapter(
             "external_readiness": external_readiness,
             "external_action_ready": external_readiness.get("external_action_ready") is True,
             "real_external_execution": None,
-            "internal_fallback_used": True,
+            "internal_fallback_used": False,
+            "media_job_created": True,
+            "media_job_id": media_pack.get("media_job_id"),
             "missing_connections": external_readiness.get("missing_connections", []),
             "actions_performed": [
                 {
