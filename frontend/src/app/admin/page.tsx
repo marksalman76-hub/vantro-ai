@@ -1363,7 +1363,9 @@ const [activeNav, setActiveNav] = useState("Overview");
             </div>
           </section>
 
-          <div id="admin-billing">
+          </div>
+
+            <div id="admin-billing">
             <Panel title="Billing & Deployment" subtitle="Subscription, Stripe and deployment readiness.">
               <div className="billingGrid">
                 <div>
