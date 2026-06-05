@@ -1,15 +1,33 @@
-
 from pathlib import Path
 from datetime import datetime, timezone
 import json
 import os
 import hashlib
+import mimetypes
+
+try:
+    from backend.app.runtime.supabase_creative_storage import (
+        supabase_enabled,
+        storage_status as supabase_storage_status,
+        media_output_bucket,
+        upload_file_to_supabase,
+        upload_json_to_supabase,
+        download_json_from_supabase,
+    )
+except Exception:
+    supabase_enabled = lambda: False
+    supabase_storage_status = lambda: {"durable_storage_ready": False}
+    media_output_bucket = lambda: "creative-media-outputs"
+    upload_file_to_supabase = None
+    upload_json_to_supabase = None
+    download_json_from_supabase = None
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_REGISTRY_DIR = ROOT / "runtime_outputs" / "creative_asset_registry"
 REGISTRY_DIR = Path(os.getenv("CREATIVE_MEDIA_PERSISTENCE_DIR", str(DEFAULT_REGISTRY_DIR)))
 REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
 REGISTRY_FILE = REGISTRY_DIR / "creative_assets.json"
+SUPABASE_REGISTRY_OBJECT_KEY = "registries/creative_media_asset_registry.json"
 
 CREATIVE_AGENT_IDS = {
     "ugc_creative_agent",
@@ -45,9 +63,26 @@ MEDIA_ASSET_TYPES = {
     "ugc_video",
     "ad_video",
     "product_image",
+    "combined_video",
 }
 
+def _now():
+    return datetime.now(timezone.utc).isoformat()
+
+def _blank_registry():
+    return []
+
 def _load_registry():
+    if supabase_enabled() and download_json_from_supabase is not None:
+        result = download_json_from_supabase(
+            bucket=media_output_bucket(),
+            object_key=SUPABASE_REGISTRY_OBJECT_KEY,
+            fallback=[],
+        )
+        data = result.get("json")
+        if isinstance(data, list):
+            return data
+
     if not REGISTRY_FILE.exists():
         return []
     try:
@@ -57,12 +92,24 @@ def _load_registry():
         return []
 
 def _save_registry(data):
+    if supabase_enabled() and upload_json_to_supabase is not None:
+        upload_json_to_supabase(
+            bucket=media_output_bucket(),
+            object_key=SUPABASE_REGISTRY_OBJECT_KEY,
+            payload=data,
+        )
+
+    REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
     REGISTRY_FILE.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 def _safe_string(value, fallback=""):
     if value is None:
         return fallback
     return str(value)
+
+def _safe_slug(value, fallback="asset"):
+    raw = _safe_string(value, fallback).strip() or fallback
+    return "".join(ch if ch.isalnum() or ch in ("-", "_", ".") else "_" for ch in raw)[:160] or fallback
 
 def _asset_id(packet):
     raw = "|".join([
@@ -103,26 +150,74 @@ def classify_creative_asset(packet):
 
     return "creative_strategy"
 
+def _maybe_upload_media_file(packet, asset_id, asset_type):
+    if not supabase_enabled() or upload_file_to_supabase is None:
+        return None
+
+    candidate = (
+        packet.get("download_url")
+        or packet.get("preview_url")
+        or packet.get("provider_asset_url")
+    )
+
+    if not candidate:
+        return None
+
+    candidate_text = str(candidate)
+    if candidate_text.startswith("http://") or candidate_text.startswith("https://"):
+        return None
+
+    path = Path(candidate_text)
+    if not path.exists() or not path.is_file():
+        return None
+
+    filename = path.name
+    test_label = _safe_slug(packet.get("test_label") or packet.get("title") or asset_id)
+    object_key = f"tenants/{_safe_slug(packet.get('tenant_id') or 'owner_admin')}/{asset_type}/{asset_id}_{test_label}_{filename}"
+    content_type = mimetypes.guess_type(str(path))[0] or "application/octet-stream"
+
+    upload = upload_file_to_supabase(
+        bucket=media_output_bucket(),
+        object_key=object_key,
+        file_path=str(path),
+        content_type=content_type,
+    )
+
+    if upload.get("success"):
+        return upload
+
+    return upload
+
 def persist_creative_asset(asset_packet: dict):
     registry = _load_registry()
     packet = dict(asset_packet or {})
 
     agent_id = packet.get("agent_id") or packet.get("agent_key") or packet.get("requested_agent")
     asset_type = classify_creative_asset(packet)
-    created_at = datetime.now(timezone.utc).isoformat()
+    created_at = _now()
+    asset_id = packet.get("asset_id") or _asset_id(packet)
+
+    storage_upload = _maybe_upload_media_file(packet, asset_id, asset_type)
+    storage_url = storage_upload.get("public_url") if isinstance(storage_upload, dict) and storage_upload.get("success") else None
 
     stored = {
-        "asset_id": packet.get("asset_id") or _asset_id(packet),
+        "asset_id": asset_id,
         "agent_id": agent_id,
         "agent_label": packet.get("agent_label"),
         "provider": packet.get("provider") or "internal",
         "asset_type": asset_type,
         "title": packet.get("title") or packet.get("test_label") or asset_type.replace("_", " ").title(),
         "test_label": packet.get("test_label"),
-        "provider_asset_url": packet.get("provider_asset_url"),
+        "provider_asset_url": storage_url or packet.get("provider_asset_url"),
         "provider_asset_id": packet.get("provider_asset_id"),
-        "preview_url": packet.get("preview_url") or packet.get("provider_asset_url"),
-        "download_url": packet.get("download_url") or packet.get("provider_asset_url"),
+        "preview_url": storage_url or packet.get("preview_url") or packet.get("provider_asset_url"),
+        "download_url": storage_url or packet.get("download_url") or packet.get("provider_asset_url"),
+        "original_preview_url": packet.get("preview_url") or packet.get("provider_asset_url"),
+        "original_download_url": packet.get("download_url") or packet.get("provider_asset_url"),
+        "storage_provider": "supabase" if storage_url else "external_or_local_runtime_fallback",
+        "storage_bucket": media_output_bucket() if storage_url else None,
+        "storage_object_key": storage_upload.get("object_key") if isinstance(storage_upload, dict) else None,
+        "storage_upload": storage_upload,
         "content": packet.get("content"),
         "summary": packet.get("summary"),
         "status": packet.get("status") or "persisted",
@@ -134,8 +229,6 @@ def persist_creative_asset(asset_packet: dict):
         "governed": True,
         "customer_safe": True,
         "credential_values_exposed": False,
-        "persistence_mode": "durable" if os.getenv("CREATIVE_MEDIA_PERSISTENCE_DIR") else "local_runtime_fallback",
-        "persistence_root": str(REGISTRY_DIR) if "REGISTRY_DIR" in globals() else str(globals().get("ASSET_REGISTRY_DIR", globals().get("CREATIVE_ASSET_REGISTRY_DIR", ""))),
         "created_at": created_at,
     }
 
@@ -151,6 +244,8 @@ def persist_creative_asset(asset_packet: dict):
         "asset_id": stored["asset_id"],
         "asset_type": stored["asset_type"],
         "registry_count": len(registry),
+        "storage_provider": stored["storage_provider"],
+        "durable_storage_ready": stored["storage_provider"] == "supabase",
         "credential_values_exposed": False,
     }
 
@@ -237,11 +332,16 @@ def get_persisted_creative_assets(limit=100):
         clean["credential_values_exposed"] = False
         safe_assets.append(clean)
 
+    storage = supabase_storage_status()
+
     return {
         "success": True,
         "asset_count": len(safe_assets),
         "total_asset_count": len(registry),
         "assets": safe_assets,
         "providers_checked": ["elevenlabs", "runway", "heygen", "kling", "sync", "internal"],
+        "storage_provider": storage.get("storage_provider"),
+        "durable_storage_ready": storage.get("durable_storage_ready"),
+        "storage_bucket": media_output_bucket(),
         "credential_values_exposed": False,
     }

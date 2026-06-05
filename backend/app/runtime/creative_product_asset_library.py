@@ -10,11 +10,29 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+try:
+    from backend.app.runtime.supabase_creative_storage import (
+        supabase_enabled,
+        storage_status as supabase_storage_status,
+        product_asset_bucket,
+        upload_bytes_to_supabase,
+        download_json_from_supabase,
+        upload_json_to_supabase,
+    )
+except Exception:
+    supabase_enabled = lambda: False
+    supabase_storage_status = lambda: {"durable_storage_ready": False}
+    product_asset_bucket = lambda: "creative-product-assets"
+    upload_bytes_to_supabase = None
+    download_json_from_supabase = None
+    upload_json_to_supabase = None
+
 
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_ASSET_ROOT = ROOT / "runtime_outputs" / "creative_product_assets"
 ASSET_ROOT = Path(os.getenv("CREATIVE_ASSET_PERSISTENCE_DIR", str(DEFAULT_ASSET_ROOT)))
 REGISTRY_PATH = ASSET_ROOT / "creative_product_asset_registry.json"
+SUPABASE_REGISTRY_OBJECT_KEY = "registries/creative_product_asset_registry.json"
 
 ALLOWED_EXTENSIONS = {
     ".jpg", ".jpeg", ".png", ".webp", ".gif",
@@ -66,24 +84,47 @@ def _tenant_dir(tenant_id: str, asset_type: str) -> Path:
     return path
 
 
+def _blank_registry() -> Dict[str, Any]:
+    return {"assets": [], "updated_at": _now(), "credential_values_exposed": False}
+
+
 def _load_registry() -> Dict[str, Any]:
+    if supabase_enabled() and download_json_from_supabase is not None:
+        result = download_json_from_supabase(
+            bucket=product_asset_bucket(),
+            object_key=SUPABASE_REGISTRY_OBJECT_KEY,
+            fallback=_blank_registry(),
+        )
+        data = result.get("json")
+        if isinstance(data, dict):
+            data.setdefault("assets", [])
+            return data
+
     ASSET_ROOT.mkdir(parents=True, exist_ok=True)
     if not REGISTRY_PATH.exists():
-        return {"assets": [], "updated_at": _now(), "credential_values_exposed": False}
+        return _blank_registry()
     try:
         data = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
-            return {"assets": [], "updated_at": _now(), "credential_values_exposed": False}
+            return _blank_registry()
         data.setdefault("assets", [])
         return data
     except Exception:
-        return {"assets": [], "updated_at": _now(), "credential_values_exposed": False}
+        return _blank_registry()
 
 
 def _save_registry(data: Dict[str, Any]) -> None:
-    ASSET_ROOT.mkdir(parents=True, exist_ok=True)
     data["updated_at"] = _now()
     data["credential_values_exposed"] = False
+
+    if supabase_enabled() and upload_json_to_supabase is not None:
+        upload_json_to_supabase(
+            bucket=product_asset_bucket(),
+            object_key=SUPABASE_REGISTRY_OBJECT_KEY,
+            payload=data,
+        )
+
+    ASSET_ROOT.mkdir(parents=True, exist_ok=True)
     REGISTRY_PATH.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
@@ -159,12 +200,26 @@ def upload_creative_product_asset(
         }
 
     asset_id = f"product_asset_{uuid.uuid4().hex[:18]}"
+    mime_type = mimetypes.guess_type(safe_filename)[0] or "application/octet-stream"
+
     asset_dir = _tenant_dir(tenant_id, asset_type)
     stored_filename = f"{asset_id}_{safe_filename}"
     stored_path = asset_dir / stored_filename
     stored_path.write_bytes(content)
 
-    mime_type = mimetypes.guess_type(str(stored_path))[0] or "application/octet-stream"
+    object_key = f"tenants/{_safe_slug(tenant_id)}/{asset_type}/{stored_filename}"
+    storage_upload = None
+    storage_url = None
+
+    if supabase_enabled() and upload_bytes_to_supabase is not None:
+        storage_upload = upload_bytes_to_supabase(
+            bucket=product_asset_bucket(),
+            object_key=object_key,
+            content=content,
+            content_type=mime_type,
+        )
+        if storage_upload.get("success"):
+            storage_url = storage_upload.get("public_url")
 
     record = {
         "asset_id": asset_id,
@@ -173,14 +228,20 @@ def upload_creative_product_asset(
         "filename": original_filename,
         "stored_filename": stored_filename,
         "stored_path": str(stored_path),
+        "storage_provider": "supabase" if storage_url else "local_runtime_fallback",
+        "storage_bucket": product_asset_bucket() if storage_url else None,
+        "storage_object_key": object_key if storage_url else None,
+        "public_url": storage_url,
+        "preview_url": storage_url,
+        "download_url": storage_url,
         "mime_type": mime_type,
         "size_bytes": len(content),
         "sha256": _hash_bytes(content),
         "uploaded_by": _safe_text(uploaded_by, "owner_admin"),
         "campaign_id": campaign_id,
         "metadata": _safe_metadata(metadata),
-        "preview_ready": mime_type.startswith(("image/", "video/")) or mime_type == "application/pdf",
-        "download_ready": True,
+        "preview_ready": bool(storage_url) or mime_type.startswith(("image/", "video/")) or mime_type == "application/pdf",
+        "download_ready": bool(storage_url) or True,
         "customer_safe": True,
         "credential_values_exposed": False,
         "created_at": _now(),
@@ -198,6 +259,9 @@ def upload_creative_product_asset(
         "status": "creative_product_asset_uploaded",
         "asset": record,
         "asset_id": asset_id,
+        "storage_upload": storage_upload,
+        "storage_provider": record["storage_provider"],
+        "durable_storage_ready": record["storage_provider"] == "supabase",
         "credential_values_exposed": False,
         "customer_safe": True,
     }
@@ -224,6 +288,7 @@ def list_creative_product_assets(
         records = [r for r in records if r.get("campaign_id") == campaign_id]
 
     records = records[: max(int(limit or 100), 1)]
+    storage = supabase_storage_status()
 
     return {
         "success": True,
@@ -234,12 +299,11 @@ def list_creative_product_assets(
         "assets": records,
         "supported_asset_types": sorted(set(ASSET_TYPE_ALIASES.values())),
         "allowed_extensions": sorted(ALLOWED_EXTENSIONS),
+        "storage_provider": storage.get("storage_provider"),
+        "durable_storage_ready": storage.get("durable_storage_ready"),
+        "storage_bucket": product_asset_bucket(),
         "credential_values_exposed": False,
         "customer_safe": True,
-        "persistence_mode": "durable" if os.getenv("CREATIVE_ASSET_PERSISTENCE_DIR") else "local_runtime_fallback",
-        "persistence_root": str(ASSET_ROOT),
-        "persistence_mode": "durable" if os.getenv("CREATIVE_ASSET_PERSISTENCE_DIR") else "local_runtime_fallback",
-        "persistence_root": str(ASSET_ROOT),
         "verified_at": _now(),
     }
 
@@ -330,6 +394,12 @@ def build_creative_execution_asset_context(
             "filename": asset.get("filename"),
             "mime_type": asset.get("mime_type"),
             "stored_path": asset.get("stored_path"),
+            "storage_provider": asset.get("storage_provider"),
+            "storage_bucket": asset.get("storage_bucket"),
+            "storage_object_key": asset.get("storage_object_key"),
+            "public_url": asset.get("public_url"),
+            "preview_url": asset.get("preview_url"),
+            "download_url": asset.get("download_url"),
             "size_bytes": asset.get("size_bytes"),
         })
 
@@ -345,6 +415,8 @@ def build_creative_execution_asset_context(
         "logos": grouped.get("logo", []),
         "brand_assets": grouped.get("brand_asset", []) + grouped.get("brand_guideline", []),
         "reference_assets": grouped.get("reference_asset", []) + grouped.get("reference_video", []),
+        "storage_provider": listed.get("storage_provider"),
+        "durable_storage_ready": listed.get("durable_storage_ready"),
         "credential_values_exposed": False,
         "customer_safe": True,
         "created_at": _now(),
@@ -353,6 +425,7 @@ def build_creative_execution_asset_context(
 
 def creative_product_asset_library_status() -> Dict[str, Any]:
     listed = list_creative_product_assets(limit=1)
+    storage = supabase_storage_status()
     return {
         "success": True,
         "layer": "creative_product_asset_library",
@@ -363,11 +436,10 @@ def creative_product_asset_library_status() -> Dict[str, Any]:
         "execution_context_ready": True,
         "total_asset_count": listed.get("total_asset_count", 0),
         "allowed_extensions": sorted(ALLOWED_EXTENSIONS),
+        "storage_provider": storage.get("storage_provider"),
+        "durable_storage_ready": storage.get("durable_storage_ready"),
+        "storage_bucket": product_asset_bucket(),
         "credential_values_exposed": False,
         "customer_safe": True,
-        "persistence_mode": "durable" if os.getenv("CREATIVE_ASSET_PERSISTENCE_DIR") else "local_runtime_fallback",
-        "persistence_root": str(ASSET_ROOT),
-        "persistence_mode": "durable" if os.getenv("CREATIVE_ASSET_PERSISTENCE_DIR") else "local_runtime_fallback",
-        "persistence_root": str(ASSET_ROOT),
         "verified_at": _now(),
     }
