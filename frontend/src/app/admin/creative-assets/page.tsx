@@ -48,6 +48,12 @@ type CreativeMediaAsset = {
   provider_asset_id?: string | null;
   status?: string | null;
   created_at?: string | null;
+  preview_ready?: boolean | null;
+  download_ready?: boolean | null;
+  playable?: boolean | null;
+  metadata_only?: boolean | null;
+  delivery_status?: string | null;
+  not_playable_reason?: string | null;
 };
 
 type CreativeAssetsResponse = {
@@ -65,7 +71,7 @@ type CreativeAssetsResponse = {
 function isSignedGatewayUrl(url?: string | null): boolean {
   const value = String(url || "").trim();
   return (
-    value.startsWith("https://api.trance-formation.com.au/asset-delivery/") &&
+    value.includes("/asset-delivery/") &&
     value.includes("?") &&
     value.includes("expires=") &&
     value.includes("nonce=") &&
@@ -73,20 +79,27 @@ function isSignedGatewayUrl(url?: string | null): boolean {
   );
 }
 
+function isPlayableUrl(url?: string | null): boolean {
+  const value = String(url || "").trim();
+  if (!value || value.startsWith("data:")) return false;
+  return isSignedGatewayUrl(value) || value.startsWith("http://") || value.startsWith("https://");
+}
+
 
 function isPlaceholderAsset(asset: CreativeMediaAsset): boolean {
   const status = String(asset.status || "").toLowerCase();
-  return status.includes("live_provider_ready_endpoint_missing") || status.includes("endpoint_missing");
+  const deliveryStatus = String(asset.delivery_status || "").toLowerCase();
+  return Boolean(asset.metadata_only) || ["processing", "provider_job_created", "provider_polling", "metadata_only", "failed"].includes(deliveryStatus) || status.includes("live_provider_ready_endpoint_missing") || status.includes("endpoint_missing");
 }
 
 function getPreviewUrl(asset: CreativeMediaAsset): string {
   const value = String(asset.preview_url || "").trim();
-  return isSignedGatewayUrl(value) ? value : "";
+  return asset.preview_ready && isPlayableUrl(value) ? value : "";
 }
 
 function getDownloadUrl(asset: CreativeMediaAsset): string {
   const value = String(asset.download_url || "").trim();
-  return isSignedGatewayUrl(value) ? value : "";
+  return asset.download_ready && isPlayableUrl(value) ? value : "";
 }
 
 function getAssetType(asset: CreativeMediaAsset): string {
@@ -101,6 +114,15 @@ function getAssetLabel(asset: CreativeMediaAsset): string {
     asset.asset_id ||
     "Creative media asset"
   );
+}
+
+function getNotPlayableMessage(asset: CreativeMediaAsset): string {
+  const deliveryStatus = String(asset.delivery_status || "").replaceAll("_", " ");
+  const reason = String(asset.not_playable_reason || "").replaceAll("_", " ");
+  if (deliveryStatus || reason) {
+    return `${deliveryStatus || "Not playable yet"}${reason ? `: ${reason}` : ""}`;
+  }
+  return "Processing or metadata-only asset. Playable media is not available yet.";
 }
 
 export default function AdminCreativeAssetsPage() {
@@ -190,8 +212,8 @@ function AssetCard({ asset }: { asset: CreativeMediaAsset }) {
   const previewUrl = getPreviewUrl(asset);
   const downloadUrl = getDownloadUrl(asset);
   const isPlaceholder = isPlaceholderAsset(asset);
-  const hasPreview = Boolean(previewUrl) && !isPlaceholder;
-  const hasDownload = Boolean(downloadUrl) && !isPlaceholder;
+  const hasPreview = Boolean(asset.preview_ready && previewUrl) && !isPlaceholder;
+  const hasDownload = Boolean(asset.download_ready && downloadUrl) && !isPlaceholder;
 
   return (
     <article style={cardStyle}>
@@ -243,7 +265,7 @@ function AssetCard({ asset }: { asset: CreativeMediaAsset }) {
       ) : (
         <div style={warningBoxStyle}>
           {isPlaceholder
-            ? "Provider endpoint missing — no real media file was generated yet."
+            ? getNotPlayableMessage(asset)
             : "Signed backend preview URL unavailable. This asset will not use the raw provider URL."}
         </div>
       )}

@@ -12,10 +12,8 @@ from backend.app.runtime.external_action_readiness_classifier import (
 from backend.app.runtime.real_external_integration_execution_bridge import (
     execute_real_external_action,
 )
-from backend.app.runtime.ugc_visual_generation_runtime import generate_ugc_visual_asset
 from backend.app.runtime.shared_creative_visual_generation_runtime import generate_creative_visual_asset
 from backend.app.runtime.react_website_generation_runtime import generate_react_website_project
-from backend.app.runtime.shared_creative_media_generation_runtime import generate_creative_media_pack
 from backend.app.runtime.shared_agent_learning_runtime import load_agent_learning_context, save_agent_learning, hide_proprietary_learning_fields
 from backend.app.runtime.media_generation_orchestrator import create_media_generation_plan
 from backend.app.runtime.async_media_job_foundation import enqueue_media_job
@@ -397,15 +395,10 @@ def execute_action_adapter(
             "real_media_asset_count": 0,
             "credential_values_exposed": False,
         }
-        visual_asset = {}
 
         media_plan = create_media_generation_plan(
             "ugc_creative_agent",
             str(packet.get("user_requested_task") or action_text),
-            tenant_id=tenant_id,
-        )
-        visual_asset = generate_ugc_visual_asset(
-            prompt=str(packet.get("user_requested_task") or action_text),
             tenant_id=tenant_id,
         )
         ugc_output = _generate_ugc_creative_deliverable(str(packet.get("user_requested_task") or action_text))
@@ -428,6 +421,9 @@ def execute_action_adapter(
             "internal_fallback_used": False,
             "media_job_created": True,
             "media_job_id": media_pack.get("media_job_id"),
+            "media_assets_created": False,
+            "preview_ready": False,
+            "download_ready": False,
             "missing_connections": external_readiness.get("missing_connections", []),
             "actions_performed": [
                 {
@@ -451,17 +447,18 @@ def execute_action_adapter(
             "media_assets": media_pack.get("media_assets", []),
             "persisted_asset_count": media_pack.get("persisted_asset_count", 0),
             "real_media_asset_count": media_pack.get("real_media_asset_count", 0),
-            "preview_url": visual_asset.get("preview_url"),
-            "asset_url": visual_asset.get("asset_url"),
-            "media_url": visual_asset.get("media_url"),
-            "generated_files": visual_asset.get("generated_files", []),
+            "preview_url": "",
+            "asset_url": "",
+            "media_url": "",
+            "generated_files": [],
             "output": ugc_output,
             "asset": {
                 "asset_id": asset_id,
                 "task_id": task_id,
-                "status": "created",
-                "preview_ready": True,
-                "download_ready": True,
+                "status": "media_job_queued",
+                "media_job_id": media_pack.get("media_job_id"),
+                "preview_ready": False,
+                "download_ready": False,
                 "customer_safe": True,
             },
             "created_at": _now(),
@@ -488,7 +485,7 @@ def execute_action_adapter(
         "strategy_document_adapter",
         "ugc_creative_deliverable_adapter",
     }:
-        media_pack = generate_creative_media_pack(
+        media_job = enqueue_media_job(
             task=str(packet.get("user_requested_task") or action_text),
             agent_id=assigned_agent,
             tenant_id=tenant_id,
@@ -497,7 +494,18 @@ def execute_action_adapter(
             include_video=True,
             include_avatar=True,
         )
-        visual_asset = (media_pack.get("image_assets") or [None])[0]
+        media_pack = {
+            "success": True,
+            "status": "queued",
+            "media_job_id": media_job.get("job_id"),
+            "media_assets": [],
+            "persisted_asset_count": 0,
+            "real_media_asset_count": 0,
+            "playable_asset_count": 0,
+            "metadata_only_asset_count": 0,
+            "credential_values_exposed": False,
+        }
+        visual_asset = None
     else:
         media_pack = None
         visual_asset = None
@@ -803,6 +811,8 @@ Shop the Collection"""
     visual_provider_live_generation = visual_asset.get("provider_live_generation") if visual_asset else False
     visual_fallback_used = visual_asset.get("fallback_used") if visual_asset else False
     media_pack_payload = media_pack or {}
+    media_job_id = media_pack_payload.get("media_job_id")
+    media_job_queued = bool(media_job_id and media_pack_payload.get("status") == "queued")
 
     learning_saved_packet = save_agent_learning(
         tenant_id=tenant_id,
@@ -822,7 +832,7 @@ Shop the Collection"""
         "adapter": adapter,
         "tenant_id": tenant_id,
         "performed_actual_action": True,
-        "execution_status": "adapter_action_executed",
+        "execution_status": "media_job_queued" if media_job_queued else "adapter_action_executed",
         "owner_approval_required": False,
         "customer_safe": True,
         "credential_values_exposed": False,
@@ -835,6 +845,11 @@ Shop the Collection"""
         "provider": visual_provider,
         "provider_live_generation": visual_provider_live_generation,
         "fallback_used": visual_fallback_used,
+        "media_job_created": media_job_queued,
+        "media_job_id": media_job_id,
+        "media_assets_created": False if media_job_queued else bool(media_pack_payload.get("real_media_asset_count")),
+        "preview_ready": False if media_job_queued else bool(visual_preview_url),
+        "download_ready": False if media_job_queued else bool(visual_asset_url or visual_media_url),
         "media_pack": media_pack_payload,
         "voiceover_script": media_pack_payload.get("voiceover_script", ""),
         "video_prompt": media_pack_payload.get("video_prompt", ""),
@@ -871,9 +886,10 @@ Shop the Collection"""
         "asset": {
             "asset_id": asset_id,
             "task_id": task_id,
-            "status": "created",
-            "preview_ready": True,
-            "download_ready": False,
+            "status": "media_job_queued" if media_job_queued else "created",
+            "media_job_id": media_job_id,
+            "preview_ready": False if media_job_queued else bool(visual_preview_url),
+            "download_ready": False if media_job_queued else False,
             "customer_safe": True,
         },
         "created_at": _now(),

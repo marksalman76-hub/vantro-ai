@@ -623,6 +623,18 @@ def _append_if_persistable(asset: Dict[str, Any], target: List[Dict[str, Any]]) 
         return asset
 
     asset["persistence"] = _persist_media_asset(asset)
+    persistence = asset["persistence"] if isinstance(asset.get("persistence"), dict) else {}
+    if persistence.get("metadata_only") or not persistence.get("playable"):
+        asset["preview_ready"] = False
+        asset["download_ready"] = False
+        asset["real_media_asset_created"] = False
+        asset["playable"] = False
+        asset["metadata_only"] = True
+    else:
+        asset["preview_ready"] = bool(persistence.get("preview_ready"))
+        asset["download_ready"] = bool(persistence.get("download_ready"))
+        asset["playable"] = True
+        asset["metadata_only"] = False
     target.append(asset)
     return asset
 
@@ -695,6 +707,11 @@ def generate_creative_media_pack(
                 "credential_values_exposed": False,
                 "customer_safe": True,
             }
+            image_asset["preview_ready"] = False
+            image_asset["download_ready"] = False
+            image_asset["real_media_asset_created"] = False
+            image_asset["playable"] = False
+            image_asset["metadata_only"] = True
             image_assets.append(image_asset)
 
     if include_video:
@@ -874,6 +891,16 @@ def generate_creative_media_pack(
         for asset in media_assets
         if isinstance(asset.get("persistence"), dict) and asset.get("persistence", {}).get("success")
     ]
+    playable_asset_records = [
+        asset.get("persistence")
+        for asset in media_assets
+        if isinstance(asset.get("persistence"), dict) and asset.get("persistence", {}).get("playable")
+    ]
+    playable_media_assets = [
+        asset
+        for asset in media_assets
+        if bool(asset.get("playable") or (isinstance(asset.get("persistence"), dict) and asset.get("persistence", {}).get("playable")))
+    ]
 
     return {
         "success": True,
@@ -890,15 +917,17 @@ def generate_creative_media_pack(
         "combined_video_assets": combined_video_assets,
         "avatar_assets": avatar_assets,
         "media_assets": media_assets,
-        "real_media_asset_count": sum(1 for asset in media_assets if asset.get("real_media_asset_created")),
+        "real_media_asset_count": len(playable_media_assets),
+        "playable_asset_count": len(playable_asset_records),
+        "metadata_only_asset_count": sum(1 for asset in media_assets if asset.get("metadata_only")),
         "persisted_asset_count": len(persisted_asset_records),
         "persisted_asset_records": persisted_asset_records,
         "creative_asset_registry_write_attempted": True,
         "live_provider_execution_attempted_count": sum(1 for result in provider_execution_results if result.get("live_provider_execution_attempted")),
-        "audio_url": audio_assets[0].get("download_url", "") if audio_assets else "",
-        "video_url": combined_video_assets[0].get("download_url", "") if combined_video_assets else (video_assets[0].get("download_url", "") if video_assets else ""),
-        "combined_video_url": combined_video_assets[0].get("download_url", "") if combined_video_assets else "",
-        "avatar_video_url": avatar_assets[0].get("download_url", "") if avatar_assets else "",
+        "audio_url": audio_assets[0].get("download_url", "") if audio_assets and audio_assets[0].get("playable") else "",
+        "video_url": combined_video_assets[0].get("download_url", "") if combined_video_assets and combined_video_assets[0].get("playable") else (video_assets[0].get("download_url", "") if video_assets and video_assets[0].get("playable") else ""),
+        "combined_video_url": combined_video_assets[0].get("download_url", "") if combined_video_assets and combined_video_assets[0].get("playable") else "",
+        "avatar_video_url": avatar_assets[0].get("download_url", "") if avatar_assets and avatar_assets[0].get("playable") else "",
         "voiceover_script": audio_script,
         "video_prompt": video_prompt,
         "avatar_prompt": avatar_prompt,

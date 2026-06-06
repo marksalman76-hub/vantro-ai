@@ -88,7 +88,7 @@ from backend.app.runtime.global_execution_evidence_layer import build_execution_
 from fastapi import FastAPI, Header
 from backend.app.runtime.creative_asset_persistence_bridge import get_persisted_creative_assets, persist_creative_agent_output
 from backend.app.runtime.asset_storage_signed_delivery_runtime import build_customer_safe_delivery_response
-from backend.app.runtime.shared_creative_media_generation_runtime import generate_creative_media_pack, CREATIVE_MEDIA_AGENTS
+from backend.app.runtime.shared_creative_media_generation_runtime import CREATIVE_MEDIA_AGENTS
 from backend.app.runtime.autonomous_workforce_orchestration_foundation import autonomous_workforce_orchestration_status, create_delegated_subtask_plan, create_orchestration_execution_graph, orchestration_replay_recovery_packet
 from backend.app.runtime.provider_workforce_runtime_hardening import provider_workforce_runtime_hardening_status, provider_runtime_health_summary, provider_recovery_readiness_summary
 from backend.app.runtime.real_provider_activation_registry import get_all_provider_activation_statuses, get_provider_activation_status, select_ready_provider_for_capability
@@ -680,7 +680,9 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             }
 
         try:
-            media_pack = generate_creative_media_pack(
+            from backend.app.runtime.async_media_job_foundation import enqueue_media_job
+
+            media_job = enqueue_media_job(
                 task=request.task,
                 agent_id=requested_agent,
                 tenant_id=request.tenant_id or "owner_admin",
@@ -690,32 +692,18 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
                 include_avatar=True,
             )
 
-            media_assets = media_pack.get("media_assets", []) if isinstance(media_pack, dict) else []
-            provider_results = media_pack.get("provider_execution_results", []) if isinstance(media_pack, dict) else []
-            generation_jobs = media_pack.get("generation_jobs", []) if isinstance(media_pack, dict) else []
-
-            real_media_asset_count = int(media_pack.get("real_media_asset_count", 0) or 0) if isinstance(media_pack, dict) else 0
-            provider_attempted_count = int(media_pack.get("live_provider_execution_attempted_count", 0) or 0) if isinstance(media_pack, dict) else 0
-
-            execution_status = (
-                "creative_live_media_generated"
-                if real_media_asset_count > 0
-                else "creative_media_provider_execution_attempted"
-                if provider_attempted_count > 0
-                else "creative_media_provider_not_available"
-            )
-
             creative_payload = {
-                "workflow_status": "creative_media_execution_completed",
-                "execution_status": execution_status,
+                "workflow_status": "creative_media_job_queued",
+                "execution_status": "media_job_queued",
                 "requested_agent": requested_agent,
                 "tenant_id": request.tenant_id,
                 "project_id": request.project_id,
-                "media_pack": media_pack,
-                "media_asset_count": len(media_assets),
-                "real_media_asset_count": real_media_asset_count,
-                "provider_attempted_count": provider_attempted_count,
-                "generation_job_count": len(generation_jobs),
+                "media_job_id": media_job.get("job_id"),
+                "media_job_status": media_job.get("status"),
+                "media_asset_count": 0,
+                "real_media_asset_count": 0,
+                "playable_asset_count": 0,
+                "generation_job_count": 1,
                 "credential_values_exposed": False,
                 "customer_safe": True,
             }
@@ -725,7 +713,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
                     tenant_id=request.tenant_id,
                     project_id=request.project_id,
                     record_type="creative_media_execution",
-                    title=f"{requested_agent} creative media execution",
+                    title=f"{requested_agent} creative media job queued",
                     payload=creative_payload,
                 )
             except Exception:
@@ -736,7 +724,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
                     tenant_id=request.tenant_id,
                     project_id=request.project_id,
                     record_type="creative_media_execution",
-                    title=f"{requested_agent} creative media execution",
+                    title=f"{requested_agent} creative media job queued",
                     payload=creative_payload,
                 )
             except Exception:
@@ -746,8 +734,8 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
                 add_execution_event(
                     tenant_id=request.tenant_id,
                     project_id=request.project_id,
-                    event_type="creative_media_execution_completed",
-                    title=f"{requested_agent} creative media execution completed",
+                    event_type="creative_media_job_queued",
+                    title=f"{requested_agent} creative media job queued",
                     agent_id=requested_agent,
                     payload=creative_payload,
                 )
@@ -756,20 +744,35 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
 
             return {
                 "success": True,
-                "status": "creative_media_execution_completed",
-                "workflow_status": "creative_media_execution_completed",
-                "execution_status": execution_status,
+                "status": "creative_media_job_queued",
+                "workflow_status": "creative_media_job_queued",
+                "execution_status": "media_job_queued",
                 "requested_agent": requested_agent,
                 "tenant_id": request.tenant_id,
                 "actor_role": request.actor_role,
                 "owner_approved": True,
                 "owner_approval_required": False,
-                "provider_execution_attempted": provider_attempted_count > 0,
-                "real_media_asset_count": real_media_asset_count,
-                "media_asset_count": len(media_assets),
-                "generation_job_count": len(generation_jobs),
-                "media_pack": media_pack,
-                "output": media_pack,
+                "media_job_created": True,
+                "media_job_id": media_job.get("job_id"),
+                "media_job_status": media_job.get("status"),
+                "provider_execution_attempted": False,
+                "real_media_asset_count": 0,
+                "playable_asset_count": 0,
+                "media_asset_count": 0,
+                "generation_job_count": 1,
+                "preview_ready": False,
+                "download_ready": False,
+                "media_pack": {
+                    "success": True,
+                    "status": "queued",
+                    "media_job_id": media_job.get("job_id"),
+                    "media_assets": [],
+                    "persisted_asset_count": 0,
+                    "real_media_asset_count": 0,
+                    "playable_asset_count": 0,
+                    "credential_values_exposed": False,
+                },
+                "output": creative_payload,
                 "credential_values_exposed": False,
                 "customer_safe": True,
             }
@@ -4259,13 +4262,65 @@ except Exception as exc:
     print(f"ADMIN_COMMERCIAL_OPERATIONS_ROUTES_NOT_LOADED: {exc}")
 
 @app.get("/admin/media-jobs")
-def admin_list_media_jobs():
+def admin_list_media_jobs(
+    x_admin_token: str | None = Header(default=None),
+    x_actor_role: str | None = Header(default=None),
+):
+    if x_actor_role not in {"owner_admin", "admin"}:
+        return {
+            "success": False,
+            "error": "admin_only",
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
     from backend.app.runtime.async_media_job_foundation import list_media_jobs
     return list_media_jobs(limit=100)
 
 
+@app.get("/admin/media-jobs/{job_id}")
+def admin_read_media_job(
+    job_id: str,
+    x_admin_token: str | None = Header(default=None),
+    x_actor_role: str | None = Header(default=None),
+):
+    if x_actor_role not in {"owner_admin", "admin"}:
+        return {
+            "success": False,
+            "error": "admin_only",
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
+    from backend.app.runtime.async_media_job_foundation import read_media_job
+    return read_media_job(job_id)
+
+
 @app.post("/admin/media-jobs/run-next")
-def admin_run_next_media_job():
+def admin_run_next_media_job(
+    x_admin_token: str | None = Header(default=None),
+    x_actor_role: str | None = Header(default=None),
+):
+    if x_actor_role not in {"owner_admin", "admin"}:
+        return {
+            "success": False,
+            "error": "admin_only",
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
     from backend.app.runtime.async_media_job_foundation import run_next_media_job
     return run_next_media_job()
 
+
+@app.post("/admin/media-jobs/run-all")
+def admin_run_all_media_jobs(
+    x_admin_token: str | None = Header(default=None),
+    x_actor_role: str | None = Header(default=None),
+):
+    if x_actor_role not in {"owner_admin", "admin"}:
+        return {
+            "success": False,
+            "error": "admin_only",
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
+    from backend.app.runtime.async_media_job_foundation import run_all_media_jobs
+    return run_all_media_jobs(limit=25)

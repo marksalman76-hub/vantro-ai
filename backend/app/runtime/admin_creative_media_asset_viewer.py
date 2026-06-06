@@ -46,15 +46,30 @@ def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
     asset_id = str(asset.get("asset_id") or "").strip()
     provider = asset.get("provider") or asset.get("provider_key") or "internal"
     asset_type = asset.get("asset_type") or asset.get("media_type") or "creative_asset"
+    playable = bool(asset.get("playable") or (asset.get("preview_ready") and not asset.get("metadata_only")))
+    downloadable = bool(asset.get("download_ready") and playable)
+    raw_status = str(asset.get("status") or asset.get("asset_status") or "persisted")
+    if playable:
+        delivery_status = "final_asset_ready"
+        delivery_reason = "playable_delivery_source_available"
+    elif "failed" in raw_status.lower():
+        delivery_status = "failed"
+        delivery_reason = "media_generation_or_persistence_failed"
+    elif asset.get("metadata_only"):
+        delivery_status = "metadata_only"
+        delivery_reason = "asset_record_has_no_playable_delivery_source"
+    else:
+        delivery_status = "processing"
+        delivery_reason = "playable_media_not_available_yet"
 
-    gateway_preview_url = _signed_gateway_url(asset_id, "preview") if asset_id else ""
-    gateway_download_url = _signed_gateway_url(asset_id, "download") if asset_id else ""
+    gateway_preview_url = _signed_gateway_url(asset_id, "preview") if asset_id and playable else ""
+    gateway_download_url = _signed_gateway_url(asset_id, "download") if asset_id and downloadable else ""
 
     original_preview_url = asset.get("preview_url") or asset.get("provider_asset_url") or asset.get("asset_url") or asset.get("media_url") or ""
     original_download_url = asset.get("download_url") or asset.get("provider_asset_url") or asset.get("asset_url") or asset.get("media_url") or original_preview_url or ""
 
-    preview_url = gateway_preview_url or original_preview_url
-    download_url = gateway_download_url or original_download_url
+    preview_url = gateway_preview_url if playable else ""
+    download_url = gateway_download_url if downloadable else ""
 
     return {
         "asset_id": asset_id or asset.get("asset_id"),
@@ -65,7 +80,9 @@ def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
         "asset_type": asset_type,
         "media_type": asset_type,
         "title": asset.get("title") or asset.get("test_label") or str(asset_type).replace("_", " ").title(),
-        "status": asset.get("status") or asset.get("asset_status") or "persisted",
+        "status": raw_status,
+        "delivery_status": delivery_status,
+        "not_playable_reason": "" if playable else delivery_reason,
         "test_label": asset.get("test_label"),
         "provider_asset_id": asset.get("provider_asset_id"),
         "provider_asset_url": asset.get("provider_asset_url"),
@@ -73,8 +90,10 @@ def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
         "download_url": download_url,
         "original_preview_url": original_preview_url,
         "original_download_url": original_download_url,
-        "preview_ready": bool(preview_url or asset.get("content") or asset.get("summary")),
-        "download_ready": bool(download_url),
+        "preview_ready": bool(preview_url and playable),
+        "download_ready": bool(download_url and downloadable),
+        "playable": playable,
+        "metadata_only": bool(asset.get("metadata_only") or not playable),
         "content": asset.get("content"),
         "summary": asset.get("summary"),
         "quality_score": asset.get("quality_score"),

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 from uuid import uuid4
 import json
 import threading
@@ -36,6 +36,14 @@ def enqueue_media_job(*, task: str, agent_id: str, tenant_id: str, include_image
         "include_audio": include_audio,
         "include_video": include_video,
         "include_avatar": include_avatar,
+        "lifecycle": "queued",
+        "media_asset_count": 0,
+        "real_media_asset_count": 0,
+        "persisted_asset_count": 0,
+        "preview_ready_count": 0,
+        "download_ready_count": 0,
+        "final_asset_ids": [],
+        "final_assets": [],
         "created_at": _now(),
         "updated_at": _now(),
         "credential_values_exposed": False,
@@ -48,8 +56,11 @@ def enqueue_media_job(*, task: str, agent_id: str, tenant_id: str, include_image
 def read_media_job(job_id: str) -> Dict[str, Any]:
     path = _job_path(job_id)
     if not path.exists():
-        return {"success": False, "job_id": job_id, "status": "not_found"}
-    return json.loads(path.read_text(encoding="utf-8"))
+        return {"success": False, "job_id": job_id, "status": "not_found", "credential_values_exposed": False}
+    job = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(job, dict):
+        job["credential_values_exposed"] = False
+    return job
 
 
 def list_media_jobs(limit: int = 50) -> Dict[str, Any]:
@@ -68,18 +79,54 @@ def list_media_jobs(limit: int = 50) -> Dict[str, Any]:
     }
 
 
-def run_next_media_job() -> Dict[str, Any]:
-    queued = [j for j in list_media_jobs(200).get("jobs", []) if j.get("status") == "queued"]
-    if not queued:
-        return {"success": True, "status": "empty", "processed": False}
+def _write_job(job: Dict[str, Any]) -> None:
+    _job_path(str(job["job_id"])).write_text(json.dumps(job, indent=2), encoding="utf-8")
 
-    job = queued[-1]
-    job_id = job["job_id"]
+
+def _asset_delivery_summary(asset: Dict[str, Any]) -> Dict[str, Any]:
+    persistence = asset.get("persistence") if isinstance(asset.get("persistence"), dict) else {}
+    return {
+        "asset_id": persistence.get("asset_id") or asset.get("asset_id"),
+        "media_type": asset.get("media_type") or asset.get("asset_type"),
+        "asset_type": asset.get("asset_type") or asset.get("media_type"),
+        "status": asset.get("status"),
+        "preview_ready": bool(persistence.get("preview_ready") or asset.get("preview_ready")),
+        "download_ready": bool(persistence.get("download_ready") or asset.get("download_ready")),
+        "playable": bool(persistence.get("playable") or asset.get("playable")),
+        "storage_provider": persistence.get("storage_provider"),
+    }
+
+
+def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
+    job_id = str(job.get("job_id") or "")
+    if not job_id:
+        return {
+            "success": False,
+            "processed": False,
+            "status": "invalid_job",
+            "error": "missing_job_id",
+            "credential_values_exposed": False,
+        }
 
     try:
-        job["status"] = "processing"
-        job["updated_at"] = _now()
-        _job_path(job_id).write_text(json.dumps(job, indent=2), encoding="utf-8")
+        with _LOCK:
+            current = read_media_job(job_id)
+            current_status = str(current.get("status") or "").lower()
+            if current_status in {"processing", "completed", "failed"}:
+                return {
+                    "success": True,
+                    "processed": False,
+                    "status": current_status,
+                    "reason": "job_not_queued",
+                    "job": current,
+                    "credential_values_exposed": False,
+                }
+            job = current if current.get("success", True) is not False else job
+            job["status"] = "processing"
+            job["lifecycle"] = "processing"
+            job["started_at"] = job.get("started_at") or _now()
+            job["updated_at"] = _now()
+            _write_job(job)
 
         from backend.app.runtime.shared_creative_media_generation_runtime import generate_creative_media_pack
 
@@ -93,29 +140,92 @@ def run_next_media_job() -> Dict[str, Any]:
             include_avatar=bool(job.get("include_avatar")),
         )
 
+        final_assets = [
+            _asset_delivery_summary(asset)
+            for asset in media_pack.get("media_assets", [])
+            if isinstance(asset, dict)
+        ]
+
         job["status"] = "completed"
+        if not final_assets:
+            job["status"] = "failed"
+            job["lifecycle"] = "failed"
+            job["error"] = "no_playable_or_metadata_asset_result"
+            job["failed_at"] = _now()
+            job["updated_at"] = _now()
+            job["credential_values_exposed"] = False
+            _write_job(job)
+            return {
+                "success": False,
+                "processed": True,
+                "job": job,
+                "error": job["error"],
+                "credential_values_exposed": False,
+            }
+
+        job["status"] = "completed"
+        job["lifecycle"] = "final_asset_ready" if any(asset.get("playable") for asset in final_assets) else "metadata_only"
         job["media_pack_id"] = media_pack.get("media_pack_id")
         job["media_asset_count"] = len(media_pack.get("media_assets", []))
         job["real_media_asset_count"] = media_pack.get("real_media_asset_count", 0)
         job["persisted_asset_count"] = media_pack.get("persisted_asset_count", 0)
-        job["final_assets"] = [
-            {
-                "asset_id": asset.get("asset_id"),
-                "media_type": asset.get("media_type"),
-                "status": asset.get("status"),
-                "preview_ready": asset.get("preview_ready"),
-                "download_ready": asset.get("download_ready"),
-            }
-            for asset in media_pack.get("media_assets", [])
-            if isinstance(asset, dict)
+        job["final_asset_ids"] = [
+            asset.get("asset_id")
+            for asset in final_assets
+            if asset.get("asset_id")
         ]
+        job["final_assets"] = final_assets
+        job["preview_ready_count"] = sum(1 for asset in final_assets if asset.get("preview_ready"))
+        job["download_ready_count"] = sum(1 for asset in final_assets if asset.get("download_ready"))
+        job["completed_at"] = _now()
         job["updated_at"] = _now()
-        _job_path(job_id).write_text(json.dumps(job, indent=2), encoding="utf-8")
+        job["credential_values_exposed"] = False
+        _write_job(job)
 
         return {"success": True, "processed": True, "job": job, "credential_values_exposed": False}
     except Exception as exc:
         job["status"] = "failed"
+        job["lifecycle"] = "failed"
         job["error"] = str(exc)[:800]
+        job["failed_at"] = _now()
         job["updated_at"] = _now()
-        _job_path(job_id).write_text(json.dumps(job, indent=2), encoding="utf-8")
-        return {"success": False, "processed": True, "job": job, "error": str(exc)[:800], "credential_values_exposed": False}
+        job["credential_values_exposed"] = False
+        _write_job(job)
+        return {
+            "success": False,
+            "processed": True,
+            "job": job,
+            "error": str(exc)[:800],
+            "credential_values_exposed": False,
+        }
+
+
+def run_next_media_job() -> Dict[str, Any]:
+    queued = [j for j in list_media_jobs(200).get("jobs", []) if j.get("status") == "queued"]
+    if not queued:
+        return {"success": True, "status": "empty", "processed": False}
+
+    job = queued[-1]
+    return process_media_job(job)
+
+
+def run_all_media_jobs(limit: int = 25) -> Dict[str, Any]:
+    results: List[Dict[str, Any]] = []
+    processed = 0
+
+    for _ in range(max(int(limit or 25), 1)):
+        result = run_next_media_job()
+        results.append(result)
+        if not result.get("processed"):
+            break
+        processed += 1
+        if result.get("success") is False:
+            break
+
+    return {
+        "success": True,
+        "status": "completed" if processed else "empty",
+        "processed_count": processed,
+        "results": results,
+        "credential_values_exposed": False,
+    }
