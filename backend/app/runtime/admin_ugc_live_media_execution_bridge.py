@@ -204,6 +204,78 @@ def run_admin_ugc_live_media_execution(
             "created_at": _now(),
         }
 
+    try:
+        from backend.app.runtime.async_media_job_foundation import enqueue_media_job
+
+        media_job = enqueue_media_job(
+            task=task or "Create a premium UGC creative media asset.",
+            agent_id=agent_key or "ugc_creative_agent",
+            tenant_id="owner_admin",
+            include_image=True,
+            include_audio=True,
+            include_video=True,
+            include_avatar=False,
+        )
+
+        execution_plan = (
+            create_runtime_creative_execution_plan(
+                creative_goal=task,
+                content_type="ugc video ad",
+                target_platform="TikTok / Instagram Reels / Meta Ads",
+                language="English",
+                quality_priority="high",
+                budget_priority="balanced",
+                requires_avatar=False,
+                requires_lipsync=False,
+                requires_dubbing=False,
+                requires_cinematic=False,
+                requires_ugc_realism=True,
+                requires_voiceover=True,
+                owner_approved_live_execution=True,
+            )
+            if create_runtime_creative_execution_plan is not None
+            else {"success": True, "status": "media_job_queued_without_runtime_plan"}
+        )
+
+        return {
+            "success": True,
+            "provider_runtime": "admin_ugc_live_media_execution_bridge",
+            "status": "media_job_queued",
+            "execution_status": "media_job_queued",
+            "agent_key": agent_key,
+            "task": task,
+            "execution_plan": execution_plan,
+            "media_job_created": True,
+            "media_job_id": media_job.get("job_id"),
+            "media_job_status": media_job.get("status"),
+            "media_assets_created": False,
+            "preview_ready": False,
+            "download_ready": False,
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "customer_safe_summary": {
+                "title": "Creative media job queued",
+                "description": "Live provider execution will run through the governed media job worker.",
+                "audio_created": False,
+                "video_created": False,
+                "final_synced_video_created": False,
+            },
+            "created_at": _now(),
+        }
+    except Exception as exc:
+        return {
+            "success": False,
+            "provider_runtime": "admin_ugc_live_media_execution_bridge",
+            "status": "media_job_queue_failed",
+            "error": str(exc)[:800],
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "media_assets_created": False,
+            "created_at": _now(),
+        }
+
     if create_runtime_creative_execution_plan is None:
         return {
             "success": False,

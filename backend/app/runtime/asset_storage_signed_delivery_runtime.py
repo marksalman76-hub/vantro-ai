@@ -35,7 +35,7 @@ def _safe_metadata(metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
 
 def _is_browser_url(value: Any) -> bool:
     text = str(value or "").strip()
-    return text.startswith(("http://", "https://", "data:"))
+    return text.startswith(("http://", "https://"))
 
 
 def _is_local_runtime_path(value: Any) -> bool:
@@ -156,6 +156,8 @@ def _registry_asset_to_record(asset_id: str) -> Dict[str, Any]:
                 "provider_key": asset.get("provider") or "internal",
                 "asset_type": asset.get("asset_type") or "creative_asset",
                 "asset_status": asset.get("status") or "persisted",
+                "metadata_only": bool(asset.get("metadata_only") or not asset.get("playable")),
+                "playable": bool(asset.get("playable")),
                 "source_url_present": bool(source_url),
                 "source_url": source_url,
                 "local_file_path": local_file_path,
@@ -265,6 +267,15 @@ def create_signed_asset_delivery_packet(
     if record.get("status") == "not_found":
         return {
             "status": "not_found",
+            "asset_id": asset_id,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
+    if record.get("metadata_only") and not record.get("source_url") and not record.get("local_file_path"):
+        return {
+            "status": "metadata_only",
+            "reason": "asset_has_no_playable_delivery_source",
             "asset_id": asset_id,
             "credential_values_exposed": False,
             "customer_safe": True,
@@ -426,6 +437,27 @@ def build_customer_safe_delivery_response(
     local_file_path = record.get("local_file_path") or ""
     source_url = record.get("source_url") or ""
 
+    if record.get("metadata_only") and not local_file_path and not source_url:
+        metadata = record.get("metadata") if isinstance(record.get("metadata"), dict) else {}
+        return {
+            "success": True,
+            "status": "metadata_only",
+            "reason": "asset_has_no_playable_delivery_source",
+            "delivery_type": delivery_type,
+            "asset_id": asset_id,
+            "content": metadata.get("content"),
+            "summary": metadata.get("summary"),
+            "http_status": 200,
+            "delivery": {
+                "mode": "metadata_fallback",
+                "preview_ready": False,
+                "download_ready": False,
+                "internal_storage_key_exposed": False,
+            },
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
     if local_file_path and Path(local_file_path).exists():
         return {
             "success": True,
@@ -468,7 +500,8 @@ def build_customer_safe_delivery_response(
 
     return {
         "success": True,
-        "status": "ready",
+        "status": "metadata_only",
+        "reason": "asset_has_no_playable_delivery_source",
         "delivery_type": delivery_type,
         "asset_id": asset_id,
         "content": metadata.get("content"),
@@ -476,7 +509,7 @@ def build_customer_safe_delivery_response(
         "http_status": 200,
         "delivery": {
             "mode": "metadata_fallback",
-            "preview_ready": bool(metadata.get("content") or metadata.get("summary")),
+            "preview_ready": False,
             "download_ready": False,
             "internal_storage_key_exposed": False,
         },

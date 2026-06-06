@@ -272,35 +272,44 @@ def _force_creative_media_pack_persistence(packet: Dict[str, Any], result: Dict[
                 "credential_values_exposed": False,
             }
 
-        from backend.app.runtime.shared_creative_media_generation_runtime import generate_creative_media_pack
+        from backend.app.runtime.async_media_job_foundation import enqueue_media_job
 
-        media_pack = generate_creative_media_pack(
+        media_job = enqueue_media_job(
             task=task or "Create a premium customer-safe creative media asset.",
             agent_id=str(agent_id or "creative_agent"),
             tenant_id=str(packet.get("tenant_id") or packet.get("client_id") or "owner_admin"),
+            include_image=True,
             include_video=True,
             include_audio=True,
             include_avatar=False,
         )
 
-        result["creative_media_pack"] = media_pack
-        result["media_assets"] = media_pack.get("media_assets", [])
-        result["generation_jobs"] = media_pack.get("generation_jobs", [])
-        result["persisted_asset_records"] = [
-            asset.get("persistence")
-            for asset in media_pack.get("media_assets", [])
-            if isinstance(asset, dict) and isinstance(asset.get("persistence"), dict)
-        ]
+        result["creative_media_pack"] = {
+            "success": True,
+            "status": "queued",
+            "media_job_id": media_job.get("job_id"),
+            "media_assets": [],
+            "persisted_asset_count": 0,
+            "real_media_asset_count": 0,
+            "credential_values_exposed": False,
+        }
+        result["media_job_created"] = True
+        result["media_job_id"] = media_job.get("job_id")
+        result["media_assets"] = []
+        result["generation_jobs"] = [media_job]
+        result["persisted_asset_records"] = []
         result["creative_media_pack_forced"] = True
         result["creative_asset_registry_write_attempted"] = True
-        result["creative_asset_registry_persisted_count"] = len(result["persisted_asset_records"])
+        result["creative_asset_registry_persisted_count"] = 0
         result["credential_values_exposed"] = False
 
         return {
             "success": True,
             "creative_media_pack_forced": True,
-            "persisted_asset_count": len(result["persisted_asset_records"]),
-            "media_asset_count": len(media_pack.get("media_assets", [])),
+            "media_job_created": True,
+            "media_job_id": media_job.get("job_id"),
+            "persisted_asset_count": 0,
+            "media_asset_count": 0,
             "credential_values_exposed": False,
         }
     except Exception as exc:
