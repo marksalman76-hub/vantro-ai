@@ -27,7 +27,7 @@ DEFAULT_REGISTRY_DIR = ROOT / "runtime_outputs" / "creative_asset_registry"
 REGISTRY_DIR = Path(os.getenv("CREATIVE_MEDIA_PERSISTENCE_DIR", str(DEFAULT_REGISTRY_DIR)))
 REGISTRY_DIR.mkdir(parents=True, exist_ok=True)
 REGISTRY_FILE = REGISTRY_DIR / "creative_assets.json"
-SUPABASE_REGISTRY_OBJECT_KEY = "registries/creative_media_asset_registry.json"
+SUPABASE_REGISTRY_OBJECT_KEY = "registries/creative_media_asset_registry_index.json"
 
 LAST_SUPABASE_REGISTRY_READ = {}
 LAST_SUPABASE_REGISTRY_WRITE = {}
@@ -85,6 +85,10 @@ def _load_local_registry():
         return []
 
 
+def _registry_object_key():
+    return f"registries/creative_media_asset_registry_{datetime.now(timezone.utc).strftime('%Y_%m')}.json"
+
+
 def _load_registry():
     global LAST_SUPABASE_REGISTRY_READ
 
@@ -93,7 +97,7 @@ def _load_registry():
     if supabase_enabled() and download_json_from_supabase is not None:
         result = download_json_from_supabase(
             bucket=media_output_bucket(),
-            object_key=SUPABASE_REGISTRY_OBJECT_KEY,
+            object_key=_registry_object_key(),
             fallback=None,
         )
         LAST_SUPABASE_REGISTRY_READ = {
@@ -122,7 +126,7 @@ def _save_registry(data):
     if supabase_enabled() and upload_json_to_supabase is not None:
         result = upload_json_to_supabase(
             bucket=media_output_bucket(),
-            object_key=SUPABASE_REGISTRY_OBJECT_KEY,
+            object_key=_registry_object_key(),
             payload=data,
         )
         LAST_SUPABASE_REGISTRY_WRITE = {
@@ -297,6 +301,7 @@ def persist_creative_asset(asset_packet: dict):
         "storage_bucket": media_output_bucket() if storage_url else None,
         "storage_object_key": storage_upload.get("object_key") if isinstance(storage_upload, dict) else None,
         "storage_upload": storage_upload,
+        "registry_partitioned": True,
         "content": packet.get("content"),
         "summary": packet.get("summary"),
         "status": packet.get("status") or "persisted",
