@@ -9,6 +9,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from backend.app.runtime.canonical_entitlement_activation_runtime import activate_entitlement_once
+
 
 DATA_DIR = Path(__file__).resolve().parents[1] / "data"
 ACCOUNT_STORE = DATA_DIR / "tenant_client_accounts.json"
@@ -244,9 +246,19 @@ def activate_client_account(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     _save_store(data)
 
+    entitlement_activation = activate_entitlement_once(
+        tenant_id=tenant_id,
+        package=invite.get("package"),
+        selected_agents=invite.get("active_agents", []),
+        actor_role="system",
+        source="tenant_account_runtime_compat",
+    )
+
     return {
         "success": True,
         "account": _safe_account(account),
+        "account_store_role": "compatibility_cache",
+        "canonical_entitlement_activation": entitlement_activation,
     }
 
 

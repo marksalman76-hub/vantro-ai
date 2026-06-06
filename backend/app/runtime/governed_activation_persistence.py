@@ -6,6 +6,14 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+from backend.app.core.canonical_billing_state_runtime import owner_admin_bypasses_client_billing
+from backend.app.runtime.canonical_entitlement_activation_runtime import (
+    activate_entitlement_once,
+    get_entitlement,
+    owner_admin_override_entitlement,
+    request_entitlement_change,
+)
+
 
 _ACTIVATED_AGENT_REGISTRY: Dict[str, Dict[str, Any]] = {}
 _CHANGE_REQUEST_QUEUE: Dict[str, Dict[str, Any]] = {}
@@ -74,31 +82,42 @@ def persist_activation_packet(packet: Dict[str, Any], actor_role: str = "system"
             "customer_safe": True,
         }
 
-    existing = _ACTIVATED_AGENT_REGISTRY.get(tenant_id)
-    if existing and existing.get("activation_locked") is True:
+    existing = get_entitlement(tenant_id)
+    if existing.get("success") and existing.get("entitlement", {}).get("activation_locked") is True:
         return {
             "success": False,
             "status": "blocked",
             "workflow_status": "activation_change_blocked",
             "next_stage": "owner_admin_review_required",
             "tenant_id": tenant_id,
-            "activated_agents": deepcopy(existing.get("activated_agents", [])),
+            "activated_agents": deepcopy(existing.get("entitlement", {}).get("active_agents", [])),
             "requested_agents": selected_agents,
             "message": "Client post-activation agent changes are blocked and require owner/admin approval.",
             "credential_values_exposed": False,
             "customer_safe": True,
         }
 
+    activated = activate_entitlement_once(
+        tenant_id=tenant_id,
+        package=package_id,
+        selected_agents=selected_agents,
+        actor_role=actor_role,
+        source="governed_activation_persistence",
+    )
+
+    if not activated.get("success"):
+        return {
+            **activated,
+            "workflow_status": "activation_persist_rejected",
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
+    entitlement = activated["entitlement"]
     record = {
-        "tenant_id": tenant_id,
-        "package_id": package_id,
-        "activated_agents": selected_agents,
-        "activation_locked": True,
-        "activation_status": "activated",
-        "activation_version": 1,
-        "activated_at": _now(),
-        "updated_at": _now(),
-        "source": "signup_activation_packet",
+        **entitlement,
+        "package_id": entitlement.get("package"),
+        "activated_agents": entitlement.get("active_agents", []),
         "entitlement_hydrated": True,
         "customer_safe": True,
         "credential_values_exposed": False,
@@ -132,7 +151,8 @@ def persist_activation_packet(packet: Dict[str, Any], actor_role: str = "system"
 
 def hydrate_activation_state(tenant_id: str) -> Dict[str, Any]:
     key = str(tenant_id or "").strip()
-    record = _ACTIVATED_AGENT_REGISTRY.get(key)
+    canonical = get_entitlement(key)
+    record = canonical.get("entitlement") if canonical.get("success") else _ACTIVATED_AGENT_REGISTRY.get(key)
 
     if not record:
         return {
@@ -151,7 +171,7 @@ def hydrate_activation_state(tenant_id: str) -> Dict[str, Any]:
         event_type="activation_state_hydrated",
         status="found",
         actor_role="system",
-        details={"activated_agent_count": len(record.get("activated_agents", []))},
+        details={"activated_agent_count": len(record.get("active_agents") or record.get("activated_agents", []))},
     )
 
     return {
@@ -159,7 +179,7 @@ def hydrate_activation_state(tenant_id: str) -> Dict[str, Any]:
         "status": "found",
         "tenant_id": key,
         "activation_state": deepcopy(record),
-        "activated_agents": deepcopy(record.get("activated_agents", [])),
+        "activated_agents": deepcopy(record.get("active_agents") or record.get("activated_agents", [])),
         "entitlement_hydrated": True,
         "activation_locked": bool(record.get("activation_locked")),
         "credential_values_exposed": False,
@@ -214,19 +234,21 @@ def submit_activation_change_request(
         }
 
     request_id = f"activation_change_{uuid4().hex[:12]}"
-    record = _ACTIVATED_AGENT_REGISTRY.get(key, {})
+    canonical_change = request_entitlement_change(key, requested, reason, actor_role)
+    current = get_entitlement(key).get("entitlement") or {}
 
     change = {
         "request_id": request_id,
         "tenant_id": key,
         "requested_agents": requested,
-        "current_agents": deepcopy(record.get("activated_agents", [])),
+        "current_agents": deepcopy(current.get("active_agents", [])),
         "reason": reason,
         "status": "owner_admin_review_required",
         "created_at": _now(),
         "updated_at": _now(),
         "actor_role": actor_role,
         "client_self_service_allowed": False,
+        "canonical_change_request": canonical_change,
         "credential_values_exposed": False,
         "customer_safe": True,
     }
@@ -264,7 +286,7 @@ def approve_activation_change_request(request_id: str, actor_role: str = "owner_
             "customer_safe": True,
         }
 
-    if actor_role not in {"owner", "admin", "owner_admin", "system_admin"}:
+    if not owner_admin_bypasses_client_billing(actor_role):
         return {
             "success": False,
             "status": "blocked",
@@ -274,17 +296,27 @@ def approve_activation_change_request(request_id: str, actor_role: str = "owner_
         }
 
     tenant_id = change["tenant_id"]
-    existing = _ACTIVATED_AGENT_REGISTRY.get(tenant_id, {})
-    version = int(existing.get("activation_version", 1)) + 1
+    existing = get_entitlement(tenant_id).get("entitlement") or {}
+    updated_result = owner_admin_override_entitlement(
+        tenant_id=tenant_id,
+        package=existing.get("package") or existing.get("package_id") or "starter",
+        selected_agents=change.get("requested_agents", []),
+        actor_role=actor_role,
+        source="governed_activation_change_approval",
+    )
+    if not updated_result.get("success"):
+        return {
+            **updated_result,
+            "workflow_status": "activation_change_approval_blocked",
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
 
+    updated_entitlement = updated_result["entitlement"]
+    version = int(updated_entitlement.get("activation_version", 1))
     updated = {
-        **existing,
-        "tenant_id": tenant_id,
-        "activated_agents": deepcopy(change.get("requested_agents", [])),
-        "activation_locked": True,
-        "activation_status": "activated",
-        "activation_version": version,
-        "updated_at": _now(),
+        **updated_entitlement,
+        "activated_agents": deepcopy(updated_entitlement.get("active_agents", [])),
         "entitlement_hydrated": True,
         "credential_values_exposed": False,
         "customer_safe": True,

@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 import psycopg
 
 from backend.app.core.canonical_billing_state_runtime import owner_admin_bypasses_client_billing
+from backend.app.runtime.canonical_entitlement_activation_runtime import activate_entitlement_once
 
 
 DATABASE_URL = os.getenv("DATABASE_URL")
@@ -256,6 +257,14 @@ def activate_account(token: str, password: str):
             "details": str(exc),
         }
 
+    entitlement_activation = activate_entitlement_once(
+        tenant_id=invite["tenant_id"],
+        package=invite["package"],
+        selected_agents=invite["active_agents"],
+        actor_role="system",
+        source="postgres_account_activation",
+    )
+
     return {
         "success": True,
         "account": {
@@ -265,7 +274,8 @@ def activate_account(token: str, password: str):
             "package": invite["package"],
             "active_agents": invite["active_agents"],
             "status": "active",
-        }
+        },
+        "canonical_entitlement_activation": entitlement_activation,
     }
 
 

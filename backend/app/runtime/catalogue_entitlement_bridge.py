@@ -2,24 +2,23 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+from backend.app.runtime.canonical_entitlement_activation_runtime import (
+    PACKAGE_RULES,
+    build_activation_packet,
+    get_package_rules,
+    validate_agent_selection,
+)
 from backend.app.runtime.real_agent_component_catalogue import (
     CLIENT_FACING_AGENTS,
-    get_catalogue_component_by_key,
     list_client_selectable_agents,
     real_agent_component_catalogue_status,
 )
 
-PACKAGE_RULES = {
-    "starter": {"max_selectable_agents": 3, "enterprise_only_allowed": False},
-    "growth": {"max_selectable_agents": 6, "enterprise_only_allowed": False},
-    "business": {"max_selectable_agents": 12, "enterprise_only_allowed": False},
-    "enterprise": {"max_selectable_agents": 27, "enterprise_only_allowed": True},
-}
-
 
 def get_package_catalogue_rules(plan: str) -> Dict[str, Any]:
-    plan_key = (plan or "business").strip().lower()
-    rules = PACKAGE_RULES.get(plan_key) or PACKAGE_RULES["business"]
+    canonical = get_package_rules(plan or "business")
+    plan_key = canonical["package"]
+    rules = canonical["rules"]
 
     return {
         "plan": plan_key,
@@ -50,71 +49,45 @@ def list_package_selectable_agents(plan: str) -> Dict[str, Any]:
 
 
 def validate_package_agent_selection(*, plan: str, selected_agent_keys: List[str]) -> Dict[str, Any]:
-    plan_key = (plan or "business").strip().lower()
-    rules = PACKAGE_RULES.get(plan_key) or PACKAGE_RULES["business"]
-
-    selected = []
-    invalid = []
-    enterprise_blocked = []
-
-    for raw_key in selected_agent_keys or []:
-        key = str(raw_key).strip().lower()
-        found = get_catalogue_component_by_key(key)
-
-        if not found.get("found"):
-            invalid.append(key)
-            continue
-
-        component = found["component"]
-        if found["component_type"] != "client_facing_agent":
-            invalid.append(key)
-            continue
-
-        if component.get("enterprise_only") and not rules["enterprise_only_allowed"]:
-            enterprise_blocked.append(key)
-            continue
-
-        selected.append(component)
-
-    over_limit = len(selected) > rules["max_selectable_agents"]
-
-    valid = not invalid and not enterprise_blocked and not over_limit
+    canonical = validate_agent_selection(plan, selected_agent_keys)
+    selected_keys = set(canonical["selected_agents"])
+    selected = [
+        agent
+        for agent in CLIENT_FACING_AGENTS
+        if agent.get("key") in selected_keys
+    ]
 
     return {
-        "valid": valid,
-        "plan": plan_key,
+        "valid": canonical["valid"],
+        "plan": canonical["plan"],
         "selected_count": len(selected),
-        "max_selectable_agents": rules["max_selectable_agents"],
+        "max_selectable_agents": canonical["max_selectable_agents"],
         "selected_agents": selected,
-        "invalid_agent_keys": invalid,
-        "enterprise_blocked_agent_keys": enterprise_blocked,
-        "over_limit": over_limit,
-        "activation_allowed": valid,
+        "invalid_agent_keys": canonical["invalid_agent_keys"],
+        "enterprise_blocked_agent_keys": canonical["enterprise_blocked_agent_keys"],
+        "over_limit": canonical["over_limit"],
+        "activation_allowed": canonical["activation_allowed"],
         "head_agent_selected": any(a["key"] == "head_agent" for a in selected),
+        "canonical_source": canonical["canonical_source"],
         "credential_values_exposed": False,
         "customer_safe": True,
     }
 
 
 def build_agent_activation_entitlement_packet(*, plan: str, selected_agent_keys: List[str]) -> Dict[str, Any]:
-    validation = validate_package_agent_selection(
-        plan=plan,
-        selected_agent_keys=selected_agent_keys,
-    )
-
-    active_agents = [a["key"] for a in validation["selected_agents"]] if validation["valid"] else []
-
+    packet = build_activation_packet(plan, selected_agent_keys)
     installed_catalogue = [a["key"] for a in CLIENT_FACING_AGENTS]
 
     return {
-        "plan": validation["plan"],
-        "activation_allowed": validation["activation_allowed"],
-        "active_agents": active_agents,
+        "plan": packet["plan"],
+        "activation_allowed": packet["activation_allowed"],
+        "active_agents": packet["active_agents"],
         "installed_catalogue": installed_catalogue,
-        "hidden_unpurchased_agents": [k for k in installed_catalogue if k not in active_agents],
-        "client_visible_agents": active_agents,
-        "client_hidden_agents_count": len([k for k in installed_catalogue if k not in active_agents]),
-        "validation": validation,
+        "hidden_unpurchased_agents": [k for k in installed_catalogue if k not in packet["active_agents"]],
+        "client_visible_agents": packet["active_agents"],
+        "client_hidden_agents_count": len([k for k in installed_catalogue if k not in packet["active_agents"]]),
+        "validation": packet["validation"],
+        "canonical_source": "canonical_entitlement_activation_runtime",
         "full_catalogue_installed_for_owner_admin": True,
         "client_access_limited_to_paid_selected_agents": True,
         "credential_values_exposed": False,

@@ -5,10 +5,10 @@ from copy import deepcopy
 from typing import Any, Dict
 
 from backend.app.runtime.governed_activation_persistence import (
-    hydrate_runtime_entitlements,
     persist_activation_packet,
 )
 from backend.app.core.canonical_billing_state_runtime import owner_admin_bypasses_client_billing
+from backend.app.runtime.canonical_entitlement_activation_runtime import evaluate_execution_entitlement, get_entitlement
 
 
 def hydrate_entitlements_for_execution(execution_request: Dict[str, Any]) -> Dict[str, Any]:
@@ -64,34 +64,46 @@ def hydrate_entitlements_for_execution(execution_request: Dict[str, Any]) -> Dic
             "customer_safe": True,
         }
 
-    hydrated = hydrate_runtime_entitlements(tenant_id)
-    runtime_entitlements = hydrated.get("runtime_entitlements", {})
-    allowed = runtime_entitlements.get("allowed_agent_ids", [])
+    execution_decision = evaluate_execution_entitlement(
+        tenant_id=tenant_id,
+        requested_agent=requested_agent,
+        actor_role=actor_role,
+    )
+    entitlement_result = get_entitlement(tenant_id)
+    entitlement = entitlement_result.get("entitlement") or {}
+    allowed = entitlement.get("active_agents", [])
+    runtime_entitlements = {
+        "allowed_agent_ids": deepcopy(allowed),
+        "agent_execution_allowed": bool(execution_decision.get("execution_allowed")),
+        "post_activation_client_changes_blocked": True,
+        "owner_admin_required_for_post_activation_changes": True,
+        "activation_locked": bool(entitlement.get("activation_locked")),
+    }
 
-    if not hydrated.get("success"):
+    if not entitlement_result.get("success"):
         return {
             "success": False,
             "status": "blocked",
-            "error": "activation_state_not_found",
+            "error": "entitlement_not_found",
             "tenant_id": tenant_id,
             "requested_agent": requested_agent,
             "execution_allowed": False,
-            "entitlement_source": "governed_activation_persistence",
+            "entitlement_source": "canonical_entitlement_activation_runtime",
             "runtime_entitlements": deepcopy(runtime_entitlements),
             "credential_values_exposed": False,
             "customer_safe": True,
         }
 
-    if requested_agent not in allowed:
+    if not execution_decision.get("execution_allowed"):
         return {
             "success": False,
             "status": "blocked",
-            "error": "requested_agent_not_activated",
+            "error": execution_decision.get("error") or "requested_agent_not_activated",
             "tenant_id": tenant_id,
             "requested_agent": requested_agent,
             "activated_agents": deepcopy(allowed),
             "execution_allowed": False,
-            "entitlement_source": "governed_activation_persistence",
+            "entitlement_source": "canonical_entitlement_activation_runtime",
             "next_stage": "owner_admin_review_required",
             "credential_values_exposed": False,
             "customer_safe": True,
@@ -103,7 +115,7 @@ def hydrate_entitlements_for_execution(execution_request: Dict[str, Any]) -> Dic
         "tenant_id": tenant_id,
         "requested_agent": requested_agent,
         "execution_allowed": True,
-        "entitlement_source": "governed_activation_persistence",
+        "entitlement_source": "canonical_entitlement_activation_runtime",
         "runtime_entitlements": deepcopy(runtime_entitlements),
         "credential_values_exposed": False,
         "customer_safe": True,

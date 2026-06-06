@@ -5,6 +5,11 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 from backend.app.runtime.signup_agent_selection_bridge import build_signup_activation_packet
+from backend.app.runtime.canonical_entitlement_activation_runtime import (
+    activate_entitlement_once,
+    get_entitlement,
+    request_entitlement_change,
+)
 
 
 _SELECTION_DRAFTS: Dict[str, Dict[str, Any]] = {}
@@ -38,7 +43,8 @@ def create_agent_selection_draft(
 ) -> Dict[str, Any]:
     key = _activation_key(tenant_id, package_id)
 
-    if key in _ACTIVATED_PACKAGE_SELECTIONS:
+    canonical = get_entitlement(tenant_id)
+    if canonical.get("success") and canonical.get("entitlement", {}).get("activation_locked") is True:
         return {
             "status": "blocked",
             "reason": "package_agent_selection_already_activated",
@@ -102,8 +108,20 @@ def activate_agent_selection_once(
 ) -> Dict[str, Any]:
     key = _activation_key(tenant_id, package_id)
 
-    if key in _ACTIVATED_PACKAGE_SELECTIONS:
-        existing = _ACTIVATED_PACKAGE_SELECTIONS[key]
+    canonical = get_entitlement(tenant_id)
+    if canonical.get("success") and canonical.get("entitlement", {}).get("activation_locked") is True:
+        existing_entitlement = canonical["entitlement"]
+        existing = {
+            "tenant_id": existing_entitlement.get("tenant_id"),
+            "package_id": package_id,
+            "plan": existing_entitlement.get("package"),
+            "active_agents": existing_entitlement.get("active_agents", []),
+            "client_visible_agents": existing_entitlement.get("active_agents", []),
+            "selection_locked": True,
+            "client_can_change_selection": False,
+            "owner_admin_required_for_changes": True,
+            "canonical_entitlement": existing_entitlement,
+        }
         return {
             "status": "blocked",
             "reason": "package_agent_selection_already_activated",
@@ -141,6 +159,24 @@ def activate_agent_selection_once(
             "customer_safe": True,
         }
 
+    canonical_activation = activate_entitlement_once(
+        tenant_id=tenant_id,
+        package=draft["plan"],
+        selected_agents=draft["activation_packet"]["packet"]["active_agents"],
+        actor_role="client",
+        source="one_time_agent_selection_lock",
+    )
+
+    if not canonical_activation.get("success"):
+        return {
+            "status": canonical_activation.get("status") or "blocked",
+            "reason": canonical_activation.get("reason") or canonical_activation.get("error"),
+            "selection_locked": bool(canonical_activation.get("selection_locked")),
+            "canonical_entitlement_result": canonical_activation,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
     activated = {
         "activation_id": f"agent_selection_activation_{uuid.uuid4().hex[:16]}",
         "tenant_id": tenant_id,
@@ -155,6 +191,7 @@ def activate_agent_selection_once(
         "owner_admin_required_for_changes": True,
         "head_agent_enterprise_only_enforced": True,
         "activated_at_ms": _now_ms(),
+        "canonical_entitlement": canonical_activation.get("entitlement"),
         "credential_values_exposed": False,
         "customer_safe": True,
     }
@@ -180,7 +217,23 @@ def get_activated_agent_selection(
     package_id: str,
 ) -> Dict[str, Any]:
     key = _activation_key(tenant_id, package_id)
-    activated = _ACTIVATED_PACKAGE_SELECTIONS.get(key)
+    canonical = get_entitlement(tenant_id)
+
+    if canonical.get("success"):
+        entitlement = canonical["entitlement"]
+        activated = {
+            "tenant_id": tenant_id,
+            "package_id": package_id,
+            "plan": entitlement.get("package"),
+            "active_agents": entitlement.get("active_agents", []),
+            "client_visible_agents": entitlement.get("active_agents", []),
+            "selection_locked": bool(entitlement.get("activation_locked")),
+            "client_can_change_selection": False,
+            "owner_admin_required_for_changes": True,
+            "canonical_entitlement": entitlement,
+        }
+    else:
+        activated = _ACTIVATED_PACKAGE_SELECTIONS.get(key)
 
     if not activated:
         return {
@@ -219,19 +272,12 @@ def request_post_activation_agent_change(
             "customer_safe": True,
         }
 
-    return {
-        "status": "owner_admin_review_required",
-        "reason": "post_activation_agent_changes_require_owner_admin_approval",
-        "tenant_id": tenant_id,
-        "package_id": package_id,
-        "current_active_agents": existing["activated_selection"]["active_agents"],
-        "requested_agent_keys": requested_agent_keys,
-        "change_reason_present": bool(reason),
-        "client_can_change_selection": False,
-        "owner_admin_required_for_changes": True,
-        "credential_values_exposed": False,
-        "customer_safe": True,
-    }
+    return request_entitlement_change(
+        tenant_id=tenant_id,
+        requested_agents=requested_agent_keys,
+        reason=reason or "",
+        actor_role="client",
+    )
 
 
 def one_time_agent_selection_lock_status() -> Dict[str, Any]:

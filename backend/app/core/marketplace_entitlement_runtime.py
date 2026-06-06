@@ -3,13 +3,12 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from backend.app.core.global_agent_registry import list_global_agents
+from backend.app.runtime.canonical_entitlement_activation_runtime import PACKAGE_RULES
 
 
 PACKAGE_LIMITS = {
-    "starter": 1,
-    "growth": 3,
-    "business": 5,
-    "enterprise": 999,
+    package: int(rules["max_selectable_agents"])
+    for package, rules in PACKAGE_RULES.items()
 }
 
 PACKAGE_ORDER = ["starter", "growth", "business", "enterprise"]

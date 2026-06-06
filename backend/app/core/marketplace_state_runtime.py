@@ -11,6 +11,11 @@ from backend.app.core.marketplace_activation_runtime import (
     build_client_marketplace_workspace,
 )
 from backend.app.core.marketplace_entitlement_runtime import PACKAGE_LIMITS
+from backend.app.runtime.canonical_entitlement_activation_runtime import (
+    activate_entitlement_once,
+    owner_admin_override_entitlement,
+    validate_package_downgrade as canonical_validate_package_downgrade,
+)
 
 
 DATA_DIR = Path.cwd() / "runtime_data"
@@ -94,7 +99,20 @@ def upsert_marketplace_state(payload: Dict[str, Any]) -> Dict[str, Any]:
         "package": state.get("package"),
     })
 
-    return {"success": True, "state": state}
+    canonical_sync = owner_admin_override_entitlement(
+        tenant_id=tenant_id,
+        package=state["package"],
+        selected_agents=state["active_agents"] or state["purchased_agents"],
+        actor_role=str(payload.get("actor_role") or "owner_admin"),
+        source="marketplace_state_runtime",
+    )
+
+    return {
+        "success": True,
+        "state": state,
+        "state_store_role": "audit_visibility_cache",
+        "canonical_entitlement_sync": canonical_sync,
+    }
 
 
 def get_marketplace_state(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -154,6 +172,13 @@ def persist_activation_action(payload: Dict[str, Any]) -> Dict[str, Any]:
     if result.get("success"):
         state["active_agents"] = result.get("active_agents", state.get("active_agents", []))
         state["updated_at"] = _now()
+        owner_admin_override_entitlement(
+            tenant_id=tenant_id,
+            package=state.get("package"),
+            selected_agents=state.get("active_agents", []),
+            actor_role=str(payload.get("actor_role") or "owner_admin"),
+            source="marketplace_activation_action",
+        )
 
         records = [r for r in _read_jsonl(STATE_FILE) if r.get("tenant_id") != tenant_id]
         records.append(state)
@@ -182,11 +207,10 @@ def validate_package_downgrade(payload: Dict[str, Any]) -> Dict[str, Any]:
     current_package = str(payload.get("current_package") or payload.get("package") or "starter").lower()
     target_package = str(payload.get("target_package") or "starter").lower()
     active_agents = _unique(payload.get("active_agents") or [])
-
-    current_limit = PACKAGE_LIMITS.get(current_package, 2)
-    target_limit = PACKAGE_LIMITS.get(target_package, 2)
-
-    blocked = target_package != "enterprise" and len(active_agents) > target_limit
+    canonical = canonical_validate_package_downgrade(current_package, target_package, active_agents)
+    current_limit = PACKAGE_LIMITS.get(current_package, canonical.get("target_package_limit", 3))
+    target_limit = canonical.get("target_package_limit")
+    blocked = canonical.get("blocked")
 
     return {
         "success": True,
@@ -204,6 +228,7 @@ def validate_package_downgrade(payload: Dict[str, Any]) -> Dict[str, Any]:
         "secret_exposure": False,
         "entitlement_bypass": False,
         "governance_bypass": False,
+        "canonical_downgrade_check": canonical,
     }
 
 

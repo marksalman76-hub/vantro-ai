@@ -47,6 +47,11 @@ from backend.app.core.subscription_billing_runtime import (
     handle_invoice_payment_failed,
 )
 from backend.app.core.canonical_billing_state_runtime import owner_admin_bypasses_client_billing
+from backend.app.runtime.canonical_entitlement_activation_runtime import (
+    activate_entitlement_once as canonical_activate_entitlement_once,
+    evaluate_execution_entitlement as canonical_evaluate_execution_entitlement,
+    get_entitlement as canonical_get_entitlement,
+)
 
 
 # Step 173 durable Postgres account runtime
@@ -597,19 +602,36 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
 
     active_agents = tenant_account.get("account", {}).get("active_agents", [])
 
-    if not owner_admin_internal_execution:
-        normalised_active_agents = [
-            normalize_agent_id(agent) for agent in active_agents
-        ]
+    existing_canonical_entitlement = canonical_get_entitlement(request.tenant_id)
 
-        if requested_agent not in normalised_active_agents:
-            return {
-                "success": False,
-                "error": "agent_not_active_for_tenant",
-                "tenant_id": request.tenant_id,
-                "requested_agent": request.requested_agent,
-                "normalised_agent": requested_agent,
-            }
+    if (
+        tenant_account.get("success")
+        and not owner_admin_internal_execution
+        and not existing_canonical_entitlement.get("success")
+    ):
+        canonical_activate_entitlement_once(
+            tenant_id=request.tenant_id,
+            package=tenant_account.get("account", {}).get("package") or "starter",
+            selected_agents=[normalize_agent_id(agent) for agent in active_agents],
+            actor_role="system",
+            source="client_accounts_migration_seed",
+        )
+
+    entitlement_decision = canonical_evaluate_execution_entitlement(
+        tenant_id=request.tenant_id,
+        requested_agent=requested_agent,
+        actor_role=request.actor_role,
+    )
+
+    if not entitlement_decision.get("execution_allowed"):
+        return {
+            "success": False,
+            "error": entitlement_decision.get("error") or "agent_not_active_for_tenant",
+            "tenant_id": request.tenant_id,
+            "requested_agent": request.requested_agent,
+            "normalised_agent": requested_agent,
+            "entitlement_decision": entitlement_decision,
+        }
 
     # CREATIVE_TEAM_REAL_MEDIA_EXECUTION_PATH_START
     creative_media_keywords = {
@@ -3130,77 +3152,87 @@ def admin_post_deploy_validation_status():
 # Signup Agent Selection Package Options Route
 @app.get("/signup-agent-selection/options/{plan}")
 def signup_agent_selection_options(plan: str):
-    clean_plan = str(plan or "starter").strip().lower()
-    if clean_plan not in {"starter", "growth", "business", "enterprise"}:
-        clean_plan = "starter"
+    from backend.app.runtime.signup_agent_selection_bridge import get_signup_agent_selection_options
 
-    package_limits = {
-        "starter": 3,
-        "growth": 7,
-        "business": 10,
-        "enterprise": 27,
+    options = get_signup_agent_selection_options(plan)
+    return {
+        "success": True,
+        "package_tier": options.get("plan"),
+        "agent_limit": options.get("max_selectable_agents"),
+        "client_safe": True,
+        **options,
     }
 
-    reserved_enterprise_only = {"head_agent", "orchestration_agent"}
 
-    agents = [
-        {"agent_id": "strategist_agent", "name": "Strategist Agent", "enterprise_only": False},
-        {"agent_id": "business_growth_partnerships_agent", "name": "Business Growth & Partnerships Agent", "enterprise_only": False},
-        {"agent_id": "lead_generator_appointment_setter_agent", "name": "Lead Generator / Appointment Setter Agent", "enterprise_only": False},
-        {"agent_id": "marketing_specialist_agent", "name": "Marketing Specialist Agent", "enterprise_only": False},
-        {"agent_id": "social_media_manager_content_creator_agent", "name": "Social Media Manager / Content Creator Agent", "enterprise_only": False},
-        {"agent_id": "seo_agent", "name": "SEO Agent", "enterprise_only": False},
-        {"agent_id": "email_reply_agent", "name": "Email Reply Agent", "enterprise_only": False},
-        {"agent_id": "crm_ai_agent", "name": "CRM AI Agent", "enterprise_only": False},
-        {"agent_id": "receptionist_agent", "name": "Receptionist Agent", "enterprise_only": False},
-        {"agent_id": "custom_websites_landing_pages_apps_agent", "name": "Custom Websites, Landing Pages & Apps Agent", "enterprise_only": False},
-        {"agent_id": "product_development_agent", "name": "Product Development Agent", "enterprise_only": False},
-        {"agent_id": "ecommerce_agent", "name": "Ecommerce Agent", "enterprise_only": False},
-        {"agent_id": "ugc_creative_agent", "name": "UGC Creative Agent", "enterprise_only": False},
-        {"agent_id": "analytics_optimisation_agent", "name": "Analytics Optimisation Agent", "enterprise_only": False},
-        {"agent_id": "analytics_intelligence_agent", "name": "Analytics Intelligence Agent", "enterprise_only": False},
-        {"agent_id": "product_research_agent", "name": "Product Research Agent", "enterprise_only": False},
-        {"agent_id": "ad_creative_agent", "name": "Ad Creative Agent", "enterprise_only": False},
-        {"agent_id": "product_image_agent", "name": "Product Image Agent", "enterprise_only": False},
-        {"agent_id": "influencer_collaboration_agent", "name": "Influencer Collaboration Agent", "enterprise_only": False},
-        {"agent_id": "demo_trial_agent", "name": "Demo / Trial Agent", "enterprise_only": False},
+@app.post("/signup-agent-selection/validate")
+def signup_agent_selection_validate(payload: dict):
+    from backend.app.runtime.signup_agent_selection_bridge import validate_signup_agent_selection
 
-        {"agent_id": "head_agent", "name": "Head Agent", "enterprise_only": True},
-        {"agent_id": "orchestration_agent", "name": "Orchestration Agent", "enterprise_only": True},
-        {"agent_id": "security_compliance_agent", "name": "Security & Compliance Agent", "enterprise_only": True},
-        {"agent_id": "integration_automation_agent", "name": "Integration / Automation Agent", "enterprise_only": True},
-        {"agent_id": "qa_testing_agent", "name": "QA / Testing Agent", "enterprise_only": True},
-        {"agent_id": "billing_optimisation_agent", "name": "Billing Optimisation Agent", "enterprise_only": True},
-        {"agent_id": "training_learning_agent", "name": "Training / Learning Agent", "enterprise_only": True},
-    ]
+    return validate_signup_agent_selection(
+        str(payload.get("plan") or payload.get("package") or payload.get("package_tier") or "starter"),
+        payload.get("selected_agents") or payload.get("selectedAgents") or [],
+    )
 
-    if clean_plan != "enterprise":
-        selectable_agents = [a for a in agents if a["agent_id"] not in reserved_enterprise_only]
-    else:
-        selectable_agents = agents
 
-    max_selectable_agents = package_limits[clean_plan]
-    head_agent_available = clean_plan == "enterprise"
-    available_count = len(selectable_agents)
+@app.post("/signup-agent-selection/activation-packet")
+def signup_agent_selection_activation_packet(payload: dict):
+    from backend.app.runtime.signup_agent_selection_bridge import build_signup_activation_packet
 
     return {
         "success": True,
-        "plan": clean_plan,
-        "package_tier": clean_plan,
-        "agent_limit": max_selectable_agents,
-        "max_selectable_agents": max_selectable_agents,
-        "selection_required": True,
-        "selection_locked_after_activation": True,
-        "owner_approval_required_for_changes": True,
-        "enterprise_only_agent_ids": sorted(list(reserved_enterprise_only)),
-        "head_agent_available": head_agent_available,
-        "agents": selectable_agents,
-        "agent_count": available_count,
-        "available_count": available_count,
+        "data": build_signup_activation_packet(
+            str(payload.get("plan") or payload.get("package") or payload.get("package_tier") or "starter"),
+            payload.get("selected_agents") or payload.get("selectedAgents") or [],
+        ),
+        "canonical_entitlement_authority": "canonical_entitlement_activation_runtime",
         "credential_values_exposed": False,
-        "client_safe": True,
         "customer_safe": True,
     }
+
+
+@app.post("/signup-locked-activation/draft")
+def signup_locked_activation_draft(payload: dict):
+    from backend.app.runtime.signup_locked_activation_bridge import create_signup_locked_selection_draft
+
+    return create_signup_locked_selection_draft(
+        tenant_id=str(payload.get("tenant_id") or payload.get("tenantId") or ""),
+        package_id=str(payload.get("package_id") or payload.get("package") or payload.get("plan") or "starter"),
+        plan=str(payload.get("plan") or payload.get("package") or "starter"),
+        selected_agent_keys=payload.get("selected_agent_keys") or payload.get("selected_agents") or [],
+    )
+
+
+@app.post("/signup-locked-activation/activate")
+def signup_locked_activation_activate(payload: dict):
+    from backend.app.runtime.signup_locked_activation_bridge import activate_signup_locked_selection
+
+    return activate_signup_locked_selection(
+        tenant_id=str(payload.get("tenant_id") or payload.get("tenantId") or ""),
+        package_id=str(payload.get("package_id") or payload.get("package") or payload.get("plan") or "starter"),
+        draft_id=str(payload.get("draft_id") or ""),
+    )
+
+
+@app.post("/signup-locked-activation/status")
+def signup_locked_activation_status(payload: dict):
+    from backend.app.runtime.signup_locked_activation_bridge import get_signup_locked_selection_status
+
+    return get_signup_locked_selection_status(
+        tenant_id=str(payload.get("tenant_id") or payload.get("tenantId") or ""),
+        package_id=str(payload.get("package_id") or payload.get("package") or payload.get("plan") or "starter"),
+    )
+
+
+@app.post("/signup-locked-activation/change-request")
+def signup_locked_activation_change_request(payload: dict):
+    from backend.app.runtime.signup_locked_activation_bridge import request_signup_agent_change_after_activation
+
+    return request_signup_agent_change_after_activation(
+        tenant_id=str(payload.get("tenant_id") or payload.get("tenantId") or ""),
+        package_id=str(payload.get("package_id") or payload.get("package") or payload.get("plan") or "starter"),
+        requested_agent_keys=payload.get("requested_agent_keys") or payload.get("selected_agents") or [],
+        reason=str(payload.get("reason") or ""),
+    )
 
 
 # Global Beta Readiness Admin Status Route

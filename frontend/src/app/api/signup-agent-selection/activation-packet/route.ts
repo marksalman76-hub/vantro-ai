@@ -50,18 +50,20 @@ function buildLocalActivationPacket(body: any) {
   return {
     success: true,
     profile: "signup_activation_packet_beta_compatibility_v1",
+    fallback_authority: "frontend_advisory_only",
+    backend_activation_required: true,
     tenant_id: tenantId,
     package_tier: plan,
     selected_agents: selectedAgents,
-    activated_agents: activatedAgents,
-    active_agent_count: activatedAgents.length,
+    activated_agents: [],
+    active_agent_count: 0,
     max_agent_count: maxAgents,
     enterprise_only_agents_blocked:
       plan === "enterprise"
         ? []
         : selectedAgents.filter((agent) => ENTERPRISE_ONLY.has(agent)),
-    entitlement_status: "activation_packet_ready",
-    activation_status: "ready_for_client_activation",
+    entitlement_status: "advisory_packet_only",
+    activation_status: "backend_activation_required",
     customer_safe: true,
     credential_values_exposed: false,
   };
@@ -117,8 +119,10 @@ export async function POST(req: NextRequest) {
       backend_status: response?.status || 404,
       data: buildLocalActivationPacket(body),
       fallback_mode: "frontend_beta_activation_packet",
+      fallback_authority: "frontend_advisory_only",
+      backend_activation_required: true,
       message:
-        "Backend activation packet route unavailable; generated beta-safe activation packet from locked package rules.",
+        "Backend activation packet route unavailable; generated advisory package preview only. Backend activation is required before execution entitlement changes.",
       credential_values_exposed: false,
       customer_safe: true,
     },

@@ -49,6 +49,11 @@ def enforce_agent_limit(package_id, agents):
 from pathlib import Path
 from typing import Any, Dict, List
 
+from backend.app.runtime.canonical_entitlement_activation_runtime import (
+    activate_entitlement_once,
+    owner_admin_override_entitlement,
+)
+
 
 SAAS_PROVISIONING_PROFILE = "priority8_saas_provisioning_runtime_v1"
 
@@ -178,6 +183,14 @@ def provision_tenant(payload: Dict[str, Any]) -> Dict[str, Any]:
     safe_link["token_hash"] = "hidden"
     safe_link["deployment_token_visible_once"] = True
 
+    canonical_entitlement_activation = activate_entitlement_once(
+        tenant_id=tenant_id,
+        package=package,
+        selected_agents=activated_agents,
+        actor_role="system",
+        source="saas_provisioning_runtime",
+    )
+
     return {
         "success": True,
         "provisioning_profile": SAAS_PROVISIONING_PROFILE,
@@ -192,6 +205,8 @@ def provision_tenant(payload: Dict[str, Any]) -> Dict[str, Any]:
             "billing_status": tenant_record["billing_status"],
             "subscription_status": tenant_record["subscription_status"],
         },
+        "provisioning_store_role": "audit_bootstrap_cache",
+        "canonical_entitlement_activation": canonical_entitlement_activation,
         "customer_safe_response_mode": True,
         "secret_exposure": False,
         "governance_bypass": False,
@@ -504,6 +519,15 @@ def update_tenant_lifecycle(payload: Dict[str, Any]) -> Dict[str, Any]:
         tenant["lifecycle_updated_at"] = now
         tenant["last_lifecycle_action"] = action
         updated = True
+
+        if action in {"suspend", "deactivate", "cancel_subscription"}:
+            owner_admin_override_entitlement(
+                tenant_id=tenant.get("tenant_id"),
+                package=tenant.get("package"),
+                selected_agents=tenant.get("activated_agents", []),
+                actor_role="system",
+                source=f"saas_provisioning_lifecycle_{action}",
+            )
 
         _append_jsonl(
             AUDIT_FILE,
