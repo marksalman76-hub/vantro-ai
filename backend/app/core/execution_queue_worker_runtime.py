@@ -1,18 +1,20 @@
 from __future__ import annotations
 
 import os
-import time
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
-from backend.app.core.execution_queue_runtime import (
-    mark_execution_failed,
-    list_execution_queue,
+from backend.app.runtime.durable_execution_queue_runtime import (
+    claim_next_execution_job,
+    complete_execution_job,
+    get_execution_queue_status,
+    heartbeat_execution_job,
+    release_expired_execution_leases,
 )
 
 
-QUEUE_WORKER_PROFILE = "priority4_execution_queue_worker_v1"
+QUEUE_WORKER_PROFILE = "priority4_execution_queue_worker_v2_durable"
 
 _WORKER_STATE: Dict[str, Any] = {
     "worker_id": f"worker_{uuid.uuid4().hex[:12]}",
@@ -25,8 +27,6 @@ _WORKER_STATE: Dict[str, Any] = {
     "total_failed": 0,
     "last_results": [],
 }
-
-_LOCKED_QUEUE_IDS = set()
 
 
 def _now_iso() -> str:
@@ -44,18 +44,24 @@ def _max_batch_size() -> int:
         return 5
 
 
-def _claimable_statuses() -> List[str]:
-    return ["queued", "retry_scheduled"]
+def _lease_seconds() -> int:
+    try:
+        return max(30, min(3600, int(os.getenv("EXECUTION_QUEUE_LEASE_SECONDS", "300"))))
+    except Exception:
+        return 300
 
 
 def queue_worker_health() -> Dict[str, Any]:
+    queue_status = get_execution_queue_status(queue_name="execution_queue")
     return {
-        "success": True,
+        "success": bool(queue_status.get("success", True)),
         "worker_profile": QUEUE_WORKER_PROFILE,
         "worker_enabled": _worker_enabled(),
         "safe_worker_mode": True,
         "concurrency_control_enabled": True,
         "claiming_enabled": True,
+        "claiming_mode": "durable_postgres_or_dev_only_fallback",
+        "process_local_locks_enabled": False,
         "retry_execution_foundation_enabled": True,
         "heartbeat_enabled": True,
         "provider_direct_execution_enabled": False,
@@ -64,8 +70,7 @@ def queue_worker_health() -> Dict[str, Any]:
         "entitlement_bypass": False,
         "governance_bypass": False,
         "state": dict(_WORKER_STATE),
-        "locked_queue_count": len(_LOCKED_QUEUE_IDS),
-        "locked_queue_ids": sorted(list(_LOCKED_QUEUE_IDS))[:25],
+        "durable_queue": queue_status,
     }
 
 
@@ -76,139 +81,91 @@ def worker_heartbeat() -> Dict[str, Any]:
         "worker_profile": QUEUE_WORKER_PROFILE,
         "worker_id": _WORKER_STATE["worker_id"],
         "heartbeat_at": _WORKER_STATE["last_heartbeat_at"],
+        "durable_queue": get_execution_queue_status(queue_name="execution_queue"),
     }
 
 
 def clear_queue_worker_locks() -> Dict[str, Any]:
-    cleared = len(_LOCKED_QUEUE_IDS)
-    _LOCKED_QUEUE_IDS.clear()
+    released = release_expired_execution_leases(queue_name="execution_queue")
     return {
-        "success": True,
+        "success": bool(released.get("success")),
         "worker_profile": QUEUE_WORKER_PROFILE,
-        "cleared_locks": cleared,
-        "locked_queue_count": len(_LOCKED_QUEUE_IDS),
+        "clear_mode": "release_expired_durable_leases",
+        "process_local_locks_enabled": False,
+        "released_expired_leases": released,
     }
 
 
-def _normalise_items(queue_result: Dict[str, Any]) -> List[Dict[str, Any]]:
-    if not isinstance(queue_result, dict):
-        return []
-
-    for key in ("items", "queue", "executions", "results"):
-        value = queue_result.get(key)
-        if isinstance(value, list):
-            return value
-
-    return []
-
-
-def _candidate_batch(limit: int = 0) -> List[Dict[str, Any]]:
-    batch_limit = int(limit or _max_batch_size())
-    candidates: List[Dict[str, Any]] = []
-
-    for status in _claimable_statuses():
-        if len(candidates) >= batch_limit:
-            break
-
-        result = list_execution_queue(status=status, limit=batch_limit)
-        items = _normalise_items(result)
-
-        for item in items:
-            if len(candidates) >= batch_limit:
-                break
-
-            queue_id = item.get("queue_id") or item.get("id")
-            if queue_id is None:
-                continue
-
-            try:
-                queue_id_int = int(queue_id)
-            except Exception:
-                continue
-
-            if queue_id_int in _LOCKED_QUEUE_IDS:
-                continue
-
-            candidates.append(item)
-
-    return candidates
-
-
 def claim_execution_queue_batch(limit: int = 0) -> Dict[str, Any]:
-    """
-    Preview claimable queue items without permanently locking them.
-
-    This route is for admin/operator inspection. Actual processing locks are
-    applied only inside run_queue_worker_once, then released after the run.
-    """
     if not _worker_enabled():
         return {
             "success": False,
             "worker_profile": QUEUE_WORKER_PROFILE,
             "error": "queue_worker_disabled",
             "claimed": [],
+            "credential_values_exposed": False,
         }
 
-    claimed = _candidate_batch(limit=limit)
+    batch_limit = max(1, min(int(limit or _max_batch_size()), 25))
+    claimed: List[Dict[str, Any]] = []
 
+    for _ in range(batch_limit):
+        result = claim_next_execution_job(
+            queue_name="execution_queue",
+            worker_id=_WORKER_STATE["worker_id"],
+            lease_seconds=_lease_seconds(),
+        )
+        if not result.get("success"):
+            return {
+                "success": False,
+                "worker_profile": QUEUE_WORKER_PROFILE,
+                "claim_mode": "durable_atomic_claim",
+                "claimed_count": len(claimed),
+                "claimed": claimed,
+                "error": result,
+                "credential_values_exposed": False,
+            }
+        if result.get("status") == "empty" or not result.get("job"):
+            break
+        claimed.append(result["job"])
+
+    _WORKER_STATE["total_claimed"] += len(claimed)
     return {
         "success": True,
         "worker_profile": QUEUE_WORKER_PROFILE,
-        "claim_mode": "preview_non_locking",
+        "claim_mode": "durable_atomic_claim",
         "claimed_count": len(claimed),
         "claimed": claimed,
-        "locked_queue_count": len(_LOCKED_QUEUE_IDS),
+        "process_local_locks_enabled": False,
+        "credential_values_exposed": False,
     }
 
 
-def _lock_for_processing(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    locked_items: List[Dict[str, Any]] = []
-
-    for item in items:
-        queue_id = item.get("queue_id") or item.get("id")
-        try:
-            queue_id_int = int(queue_id)
-        except Exception:
-            continue
-
-        if queue_id_int in _LOCKED_QUEUE_IDS:
-            continue
-
-        _LOCKED_QUEUE_IDS.add(queue_id_int)
-        locked_items.append(item)
-
-    _WORKER_STATE["total_claimed"] += len(locked_items)
-    return locked_items
-
-
-def _release_processing_locks(items: List[Dict[str, Any]]) -> None:
-    for item in items:
-        queue_id = item.get("queue_id") or item.get("id")
-        try:
-            _LOCKED_QUEUE_IDS.discard(int(queue_id))
-        except Exception:
-            pass
-
-
 def _process_item_safely(item: Dict[str, Any]) -> Dict[str, Any]:
-    queue_id = item.get("queue_id") or item.get("id")
+    job_id = item.get("job_id") or item.get("queue_id")
     action_type = str(item.get("action_type") or item.get("action") or "unknown")
     tenant_id = str(item.get("tenant_id") or "unknown")
     agent_id = str(item.get("agent_id") or "unknown")
 
-    result = {
-        "queue_id": queue_id,
+    heartbeat_execution_job(
+        str(job_id),
+        worker_id=_WORKER_STATE["worker_id"],
+        lease_seconds=_lease_seconds(),
+    )
+
+    return {
+        "queue_id": job_id,
+        "job_id": job_id,
         "tenant_id": tenant_id,
         "agent_id": agent_id,
         "action_type": action_type,
         "processed_at": _now_iso(),
-        "execution_mode": "worker_safe_foundation",
+        "execution_mode": "durable_worker_safe_foundation",
         "provider_direct_execution": False,
         "governed_execution_required": True,
         "status": "worker_foundation_processed",
+        "credential_values_exposed": False,
     }
-
-    return result
 
 
 def run_queue_worker_once(limit: int = 0) -> Dict[str, Any]:
@@ -216,34 +173,39 @@ def run_queue_worker_once(limit: int = 0) -> Dict[str, Any]:
     _WORKER_STATE["last_run_at"] = _now_iso()
     _WORKER_STATE["total_batches"] += 1
 
-    candidates = _candidate_batch(limit=limit)
-    claimed = _lock_for_processing(candidates)
+    claim_result = claim_execution_queue_batch(limit=limit)
+    if not claim_result.get("success"):
+        return claim_result
 
+    claimed = claim_result.get("claimed", [])
     results: List[Dict[str, Any]] = []
     failed: List[Dict[str, Any]] = []
 
-    try:
-        for item in claimed:
-            queue_id = item.get("queue_id") or item.get("id")
-            try:
-                processed = _process_item_safely(item)
-                results.append(processed)
-                _WORKER_STATE["total_processed"] += 1
-            except Exception as exc:
-                failed_result = {
-                    "queue_id": queue_id,
-                    "error": str(exc),
-                    "failed_at": _now_iso(),
-                }
-                failed.append(failed_result)
-                _WORKER_STATE["total_failed"] += 1
-                try:
-                    if queue_id is not None:
-                        mark_execution_failed(int(queue_id), str(exc))
-                except Exception:
-                    pass
-    finally:
-        _release_processing_locks(claimed)
+    for item in claimed:
+        job_id = item.get("job_id") or item.get("queue_id")
+        try:
+            processed = _process_item_safely(item)
+            complete_result = complete_execution_job(
+                str(job_id),
+                worker_id=_WORKER_STATE["worker_id"],
+                result=processed,
+            )
+            processed["completion"] = {
+                "success": complete_result.get("success"),
+                "status": complete_result.get("status"),
+            }
+            results.append(processed)
+            _WORKER_STATE["total_processed"] += 1
+        except Exception as exc:
+            failed_result = {
+                "queue_id": job_id,
+                "job_id": job_id,
+                "error": str(exc),
+                "failed_at": _now_iso(),
+                "credential_values_exposed": False,
+            }
+            failed.append(failed_result)
+            _WORKER_STATE["total_failed"] += 1
 
     batch_result = {
         "success": True,
@@ -254,12 +216,12 @@ def run_queue_worker_once(limit: int = 0) -> Dict[str, Any]:
         "failed_count": len(failed),
         "results": results,
         "failed": failed,
-        "locked_queue_count_after_run": len(_LOCKED_QUEUE_IDS),
+        "process_local_locks_enabled": False,
         "provider_direct_execution_enabled": False,
         "governed_execution_required": True,
         "owner_approval_controls_preserved": True,
+        "credential_values_exposed": False,
     }
 
     _WORKER_STATE["last_results"] = results[-10:]
-
     return batch_result

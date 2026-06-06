@@ -1147,7 +1147,7 @@ async def admin_execution_queue_enqueue(payload: dict):
 @app.post("/admin/execution-queue/mark-failed")
 async def admin_execution_queue_mark_failed(payload: dict):
     return mark_execution_failed(
-        int(payload.get("queue_id") or 0),
+        str(payload.get("job_id") or payload.get("queue_id") or ""),
         str(payload.get("error") or "manual_failure_test"),
     )
 
