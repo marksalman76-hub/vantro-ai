@@ -7,6 +7,7 @@ from typing import Any, Dict, List
 
 from backend.app.core.marketplace_entitlement_runtime import PACKAGE_LIMITS
 from backend.app.core.marketplace_state_runtime import get_marketplace_state, upsert_marketplace_state, validate_package_downgrade
+from backend.app.core.canonical_billing_state_runtime import evaluate_subscription_status
 
 
 DATA_DIR = Path.cwd() / "runtime_data"
@@ -213,11 +214,16 @@ def apply_entitlement_change_after_billing(payload: Dict[str, Any]) -> Dict[str,
     active_agents = list(dict.fromkeys(payload.get("active_agents") or []))
     billing_status = str(payload.get("billing_status") or "paid").lower()
 
-    if billing_status not in {"paid", "active", "trial_active"}:
+    subscription_decision = evaluate_subscription_status(
+        "active" if billing_status == "trial_active" else billing_status
+    )
+
+    if not subscription_decision.get("subscription_execution_allowed"):
         return {
             "success": False,
             "error": "billing_not_active",
             "billing_status": billing_status,
+            "subscription_decision": subscription_decision,
             "customer_safe_message": "Billing must be active before this change can be applied.",
         }
 

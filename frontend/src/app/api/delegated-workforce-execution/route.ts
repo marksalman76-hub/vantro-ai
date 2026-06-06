@@ -156,7 +156,12 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   }
 
   const stateTenantKey = resolveTenantKey(req.headers, normalised);
-  Object.assign(normalised, attachPackageCreditEnforcement(stateTenantKey, req.headers, normalised, true));
+  const backendExecutionAllowed = normalised.execution_allowed;
+  const backendExecutionStatus = normalised.execution_status;
+  Object.assign(normalised, attachPackageCreditEnforcement(stateTenantKey, req.headers, normalised, false));
+  normalised.execution_allowed = backendExecutionAllowed;
+  normalised.execution_status = backendExecutionStatus;
+  normalised.package_credit_enforcement_authority = "frontend_advisory_only";
   Object.assign(normalised, attachAgentOutputContract(normalised));
   Object.assign(normalised, attachRealMediaProviderDecision(stateTenantKey, normalised));
   Object.assign(normalised, attachProviderQueueRetryFailover(stateTenantKey, normalised));

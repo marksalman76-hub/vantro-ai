@@ -5,6 +5,7 @@ from typing import Any, Dict
 from fastapi import APIRouter, Header
 from pydantic import BaseModel
 
+from backend.app.core.canonical_billing_state_runtime import owner_admin_bypasses_client_billing
 from backend.app.core.stripe_checkout_runtime import (
     create_subscription_checkout_session,
     get_stripe_checkout_readiness,
@@ -25,7 +26,7 @@ class CheckoutSessionRequest(BaseModel):
 
 @router.get("/admin/billing/stripe-checkout-readiness")
 async def stripe_checkout_readiness(x_actor_role: str = Header(default="owner")) -> Dict[str, Any]:
-    if x_actor_role not in {"owner", "admin", "system"}:
+    if not owner_admin_bypasses_client_billing(x_actor_role):
         return {
             "success": False,
             "error": "owner_admin_required",
@@ -39,7 +40,7 @@ async def create_checkout_session(
     payload: CheckoutSessionRequest,
     x_actor_role: str = Header(default="owner"),
 ) -> Dict[str, Any]:
-    if x_actor_role not in {"owner", "admin", "system"}:
+    if not owner_admin_bypasses_client_billing(x_actor_role):
         return {
             "success": False,
             "error": "owner_admin_required",

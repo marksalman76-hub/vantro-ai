@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict
 
 from backend.app.core.durable_billing_state_store import apply_billing_runtime_mutation
+from backend.app.core.subscription_billing_runtime import apply_subscription_state_update
 from backend.app.core.stripe_tenant_mapping_store import resolve_tenant_by_stripe_ids
 
 
@@ -88,6 +89,38 @@ def apply_stripe_classification_to_billing_runtime(
         })
 
     if tenant_id:
+        if runtime_update.get("target_subscription_status") in {None, "unchanged"}:
+            canonical_subscription_sync = {
+                "success": True,
+                "sync_skipped": True,
+                "reason": "stripe_event_does_not_change_subscription_state",
+                "canonical_subscription_source": "client_subscriptions",
+            }
+        else:
+            try:
+                canonical_subscription_sync = apply_subscription_state_update({
+                    "tenant_id": tenant_id,
+                    "company_name": tenant_mapping.get("company_name") if tenant_mapping else None,
+                    "package_name": tenant_mapping.get("package_name") if tenant_mapping else None,
+                    "stripe_customer_id": stripe_customer_id,
+                    "stripe_subscription_id": stripe_subscription_id,
+                    "event_type": event.get("event_type"),
+                    "billing_status": runtime_update.get("target_subscription_status"),
+                    "target_subscription_status": runtime_update.get("target_subscription_status"),
+                    "target_credit_action": runtime_update.get("target_credit_action"),
+                    "cancel_at_period_end": runtime_update.get("cancel_at_period_end"),
+                    "provider": "stripe",
+                })
+            except Exception as exc:
+                canonical_subscription_sync = {
+                    "success": False,
+                    "reason": "canonical_subscription_sync_unavailable",
+                    "error_type": type(exc).__name__,
+                    "canonical_subscription_source": "client_subscriptions",
+                }
+        runtime_update["canonical_subscription_sync"] = canonical_subscription_sync
+        runtime_update["canonical_subscription_source"] = "client_subscriptions"
+
         mutation = apply_billing_runtime_mutation(
             tenant_id=tenant_id,
             stripe_customer_id=stripe_customer_id,
@@ -103,6 +136,11 @@ def apply_stripe_classification_to_billing_runtime(
         runtime_update["runtime_mutation_committed"] = bool(mutation.get("mutation_committed"))
         runtime_update["durable_billing_mutation"] = mutation
     else:
+        runtime_update["canonical_subscription_sync"] = {
+            "success": False,
+            "reason": "tenant_not_resolved",
+            "canonical_subscription_source": "client_subscriptions",
+        }
         runtime_update["durable_billing_mutation"] = {
             "success": False,
             "mutation_committed": False,

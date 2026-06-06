@@ -4,6 +4,7 @@ from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Header
 
+from backend.app.core.canonical_billing_state_runtime import owner_admin_bypasses_client_billing
 from backend.app.core.stripe_customer_billing_portal import (
     billing_portal_readiness,
     create_customer_billing_portal_session,
@@ -14,7 +15,7 @@ router = APIRouter()
 
 
 def _is_owner_admin(role: Optional[str]) -> bool:
-    return role in {"owner", "admin", "system"}
+    return owner_admin_bypasses_client_billing(role)
 
 
 @router.get("/customer/billing/visibility")

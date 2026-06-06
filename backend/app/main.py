@@ -46,6 +46,7 @@ from backend.app.core.subscription_billing_runtime import (
     handle_invoice_payment_succeeded,
     handle_invoice_payment_failed,
 )
+from backend.app.core.canonical_billing_state_runtime import owner_admin_bypasses_client_billing
 
 
 # Step 173 durable Postgres account runtime
@@ -522,7 +523,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             "requested_credits": request.requested_credits,
         })
 
-    owner_admin_credit_bypass = actor_role in {"owner", "admin", "owner_admin", "system"}
+    owner_admin_credit_bypass = owner_admin_bypasses_client_billing(actor_role)
 
     owner_managed_client_credit_bypass = (
         tenant_id_clean in {"client_demo_001", "owner_managed_demo", "owner_managed_demo_client", "manual_deployment_client"}
@@ -562,7 +563,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
     }
 
     if not agent_exists(requested_agent) and not (
-        (request.actor_role or "").strip().lower() in {"owner", "admin", "owner_admin", "system"}
+        owner_admin_bypasses_client_billing(request.actor_role)
         and requested_agent in owner_admin_system_agents
     ):
         return {
@@ -572,7 +573,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             "normalised_agent": requested_agent,
         }
 
-    owner_admin_internal_execution = (request.actor_role or "").strip().lower() in {"owner", "admin", "owner_admin", "system"}
+    owner_admin_internal_execution = owner_admin_bypasses_client_billing(request.actor_role)
 
     tenant_account = pg_lookup_client_account(request.tenant_id)
 
@@ -660,7 +661,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
         owner_media_execution_allowed = bool(
             owner_admin_internal_execution
             or request.owner_approved
-            or actor_role in {"owner", "admin", "owner_admin", "system"}
+            or owner_admin_bypasses_client_billing(actor_role)
         )
 
         if not owner_media_execution_allowed:
@@ -1842,7 +1843,9 @@ async def billing_execution_guard_middleware(request, call_next):
     try:
         return await call_next(request)
     except Exception as exc:
-        if (actor_role or "").strip().lower() in {"owner", "admin", "system"}:
+        from backend.app.core.canonical_billing_state_runtime import owner_admin_bypasses_client_billing
+
+        if owner_admin_bypasses_client_billing(actor_role):
             from datetime import datetime, timezone
 
             return JSONResponse(
@@ -1871,7 +1874,9 @@ async def owner_admin_credit_gate_bypass_middleware(request, call_next):
 
     actor_role = (request.headers.get("x-actor-role") or "").strip().lower()
 
-    if actor_role not in {"owner", "admin", "system"}:
+    from backend.app.core.canonical_billing_state_runtime import owner_admin_bypasses_client_billing
+
+    if not owner_admin_bypasses_client_billing(actor_role):
         return await call_next(request)
 
     try:

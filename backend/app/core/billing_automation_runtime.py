@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from backend.app.core.marketplace_commercial_bridge import apply_entitlement_change_after_billing, PACKAGE_PRICING
+from backend.app.core.subscription_billing_runtime import apply_subscription_state_update
 
 
 DATA_DIR = Path.cwd() / "runtime_data"
@@ -94,9 +95,33 @@ def upsert_billing_state(payload: Dict[str, Any]) -> Dict[str, Any]:
         "tenant_id": tenant_id,
         "package": package,
         "subscription_status": status,
+        "store_role": "audit_history_only",
     })
 
-    return {"success": True, "state": state}
+    try:
+        canonical_subscription_sync = apply_subscription_state_update({
+            **payload,
+            "tenant_id": tenant_id,
+            "package_name": package,
+            "billing_status": status,
+            "target_subscription_status": status,
+            "event_type": payload.get("event_type") or "billing_automation.state_upserted",
+            "provider": payload.get("provider") or "billing_automation",
+        })
+    except Exception as exc:
+        canonical_subscription_sync = {
+            "success": False,
+            "reason": "canonical_subscription_sync_unavailable",
+            "error_type": type(exc).__name__,
+            "canonical_subscription_source": "client_subscriptions",
+        }
+
+    return {
+        "success": True,
+        "state": state,
+        "state_store_role": "audit_history_only",
+        "canonical_subscription_sync": canonical_subscription_sync,
+    }
 
 
 def create_checkout_session_payload(payload: Dict[str, Any]) -> Dict[str, Any]:

@@ -244,10 +244,13 @@ def get_subscription(identifier: str):
     with get_connection() as conn:
         with conn.cursor() as cur:
             cur.execute("""
-            SELECT tenant_id, email, company_name, package_name, billing_cycle, billing_status, monthly_credits, next_billing_date, cancel_at_period_end
+            SELECT tenant_id, email, company_name, package_name, billing_cycle, billing_status, monthly_credits, next_billing_date, cancel_at_period_end, stripe_customer_id, stripe_subscription_id
             FROM client_subscriptions
-            WHERE lower(tenant_id) = %s OR lower(email) = %s
-            """, (identifier, identifier))
+            WHERE lower(tenant_id) = %s
+               OR lower(email) = %s
+               OR lower(COALESCE(stripe_customer_id, '')) = %s
+               OR lower(COALESCE(stripe_subscription_id, '')) = %s
+            """, (identifier, identifier, identifier, identifier))
 
             row = cur.fetchone()
 
@@ -266,6 +269,8 @@ def get_subscription(identifier: str):
             "monthly_credits": row[6],
             "next_billing_date": row[7].isoformat() if row[7] else None,
             "cancel_at_period_end": row[8],
+            "stripe_customer_id": row[9],
+            "stripe_subscription_id": row[10],
         },
     }
 
@@ -315,6 +320,163 @@ def handle_invoice_payment_succeeded(payload: dict):
         "event_record": event_result,
         "invoice_email_provider": "stripe",
         "local_card_storage": False,
+    }
+
+
+def apply_subscription_state_update(payload: dict):
+    """Synchronise canonical client_subscriptions from Stripe/admin billing events."""
+    now = datetime.now(timezone.utc)
+
+    tenant_id = str(payload.get("tenant_id") or "").strip()
+    if not tenant_id:
+        return {"success": False, "error": "tenant_id_required"}
+
+    billing_status = str(
+        payload.get("billing_status")
+        or payload.get("subscription_status")
+        or payload.get("target_subscription_status")
+        or "unknown"
+    ).strip().lower()
+    if billing_status == "cancel_at_period_end":
+        billing_status = "active"
+
+    package_name = str(payload.get("package") or payload.get("package_name") or "starter").strip().lower()
+    billing_cycle = str(payload.get("billing_cycle") or "monthly").strip().lower()
+    stripe_customer_id = payload.get("stripe_customer_id")
+    stripe_subscription_id = payload.get("stripe_subscription_id")
+    cancel_at_period_end = bool(payload.get("cancel_at_period_end", False))
+    target_credit_action = str(payload.get("target_credit_action") or "sync_only")
+
+    existing = get_subscription(tenant_id)
+    existing_subscription = existing.get("subscription") if existing.get("success") else {}
+    email = str(
+        payload.get("email")
+        or payload.get("customer_email")
+        or existing_subscription.get("email")
+        or f"{tenant_id}@billing.local"
+    ).strip().lower()
+    company_name = payload.get("company_name") or existing_subscription.get("company_name")
+    monthly_credits = int(
+        payload.get("monthly_credits")
+        if payload.get("monthly_credits") is not None
+        else existing_subscription.get("monthly_credits") or 0
+    )
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("""
+            INSERT INTO client_subscriptions (
+                tenant_id,
+                email,
+                company_name,
+                package_name,
+                billing_cycle,
+                billing_status,
+                monthly_credits,
+                stripe_customer_id,
+                stripe_subscription_id,
+                stripe_price_id,
+                current_period_start,
+                current_period_end,
+                next_billing_date,
+                cancel_at_period_end,
+                created_at,
+                updated_at
+            )
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (tenant_id)
+            DO UPDATE SET
+                email = COALESCE(NULLIF(EXCLUDED.email, ''), client_subscriptions.email),
+                company_name = COALESCE(EXCLUDED.company_name, client_subscriptions.company_name),
+                package_name = COALESCE(NULLIF(EXCLUDED.package_name, ''), client_subscriptions.package_name),
+                billing_cycle = COALESCE(NULLIF(EXCLUDED.billing_cycle, ''), client_subscriptions.billing_cycle),
+                billing_status = EXCLUDED.billing_status,
+                monthly_credits = CASE
+                    WHEN EXCLUDED.monthly_credits > 0 THEN EXCLUDED.monthly_credits
+                    ELSE client_subscriptions.monthly_credits
+                END,
+                stripe_customer_id = COALESCE(EXCLUDED.stripe_customer_id, client_subscriptions.stripe_customer_id),
+                stripe_subscription_id = COALESCE(EXCLUDED.stripe_subscription_id, client_subscriptions.stripe_subscription_id),
+                stripe_price_id = COALESCE(EXCLUDED.stripe_price_id, client_subscriptions.stripe_price_id),
+                current_period_start = COALESCE(EXCLUDED.current_period_start, client_subscriptions.current_period_start),
+                current_period_end = COALESCE(EXCLUDED.current_period_end, client_subscriptions.current_period_end),
+                next_billing_date = COALESCE(EXCLUDED.next_billing_date, client_subscriptions.next_billing_date),
+                cancel_at_period_end = EXCLUDED.cancel_at_period_end,
+                updated_at = EXCLUDED.updated_at
+            RETURNING tenant_id, email, company_name, package_name, billing_cycle, billing_status, monthly_credits, next_billing_date, cancel_at_period_end, stripe_customer_id, stripe_subscription_id
+            """, (
+                tenant_id,
+                email,
+                company_name,
+                package_name,
+                billing_cycle,
+                billing_status,
+                monthly_credits,
+                stripe_customer_id,
+                stripe_subscription_id,
+                payload.get("stripe_price_id"),
+                payload.get("current_period_start"),
+                payload.get("current_period_end"),
+                payload.get("next_billing_date"),
+                cancel_at_period_end,
+                now,
+                now,
+            ))
+
+            row = cur.fetchone()
+
+        conn.commit()
+
+    credit_sync = None
+    if target_credit_action == "reset_monthly_credits" and int(row[6] or 0) > 0:
+        try:
+            from backend.app.core.postgres_account_runtime import assign_client_credits
+
+            credit_sync = assign_client_credits({
+                "tenant_id": tenant_id,
+                "monthly_credits": int(row[6] or 0),
+                "top_up_credits": 0,
+            })
+        except Exception as exc:
+            credit_sync = {
+                "success": False,
+                "error": "credit_reset_failed",
+                "error_type": type(exc).__name__,
+            }
+
+    event_result = record_billing_event({
+        "tenant_id": tenant_id,
+        "email": row[1],
+        "event_type": payload.get("event_type") or "subscription.state_synced",
+        "provider": payload.get("provider") or "stripe",
+        "provider_event_id": payload.get("provider_event_id"),
+        "billing_status": billing_status,
+        "target_credit_action": target_credit_action,
+        "credit_sync": credit_sync,
+        "stripe_customer_id": stripe_customer_id,
+        "stripe_subscription_id": stripe_subscription_id,
+        "local_card_storage": False,
+    })
+
+    return {
+        "success": True,
+        "canonical_subscription_source": "client_subscriptions",
+        "tenant_id": row[0],
+        "subscription": {
+            "tenant_id": row[0],
+            "email": row[1],
+            "company_name": row[2],
+            "package": row[3],
+            "billing_cycle": row[4],
+            "billing_status": row[5],
+            "monthly_credits": row[6],
+            "next_billing_date": row[7].isoformat() if row[7] else None,
+            "cancel_at_period_end": row[8],
+            "stripe_customer_id": row[9],
+            "stripe_subscription_id": row[10],
+        },
+        "credit_sync": credit_sync,
+        "event_record": event_result,
     }
 
 

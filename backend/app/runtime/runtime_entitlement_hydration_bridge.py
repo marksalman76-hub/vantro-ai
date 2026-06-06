@@ -8,9 +8,7 @@ from backend.app.runtime.governed_activation_persistence import (
     hydrate_runtime_entitlements,
     persist_activation_packet,
 )
-
-
-OWNER_ADMIN_ROLES = {"owner", "admin", "owner_admin", "system_admin", "platform_admin"}
+from backend.app.core.canonical_billing_state_runtime import owner_admin_bypasses_client_billing
 
 
 def hydrate_entitlements_for_execution(execution_request: Dict[str, Any]) -> Dict[str, Any]:
@@ -28,7 +26,7 @@ def hydrate_entitlements_for_execution(execution_request: Dict[str, Any]) -> Dic
         or ""
     ).strip()
 
-    if actor_role in OWNER_ADMIN_ROLES:
+    if owner_admin_bypasses_client_billing(actor_role):
         return {
             "success": True,
             "status": "owner_admin_unrestricted",

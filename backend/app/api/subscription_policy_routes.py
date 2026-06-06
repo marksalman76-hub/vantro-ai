@@ -7,7 +7,12 @@ from typing import Any, Dict, Optional
 from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel
 
+from backend.app.core.canonical_billing_state_runtime import (
+    get_canonical_billing_state,
+    owner_admin_bypasses_client_billing,
+)
 from backend.app.core.durable_billing_state_store import get_billing_runtime_state, apply_billing_runtime_mutation
+from backend.app.core.subscription_billing_runtime import apply_subscription_state_update
 
 from backend.app.core.stripe_tenant_mapping_store import (
     list_stripe_tenant_mappings,
@@ -53,7 +58,7 @@ class StripeTenantMappingRequest(BaseModel):
 
 
 def require_owner(actor_role: Optional[str]) -> None:
-    if actor_role not in {"owner", "admin", "system"}:
+    if not owner_admin_bypasses_client_billing(actor_role):
         raise HTTPException(status_code=403, detail="owner_or_admin_required")
 
 
@@ -90,6 +95,24 @@ def cancel_subscription(
         preserve_cycle_anchor=True,
         retry_interval_hours=48,
     )
+    try:
+        canonical_subscription_sync = apply_subscription_state_update({
+            "tenant_id": payload.tenant_id,
+            "stripe_subscription_id": payload.subscription_id,
+            "event_type": "customer.subscription.cancel_requested",
+            "billing_status": "active" if payload.cancel_at_period_end else "cancelled",
+            "target_subscription_status": "active" if payload.cancel_at_period_end else "cancelled",
+            "target_credit_action": "allow_until_period_end" if payload.cancel_at_period_end else "block_credit_consuming_execution",
+            "cancel_at_period_end": payload.cancel_at_period_end,
+            "provider": "admin",
+        })
+    except Exception as exc:
+        canonical_subscription_sync = {
+            "success": False,
+            "reason": "canonical_subscription_sync_unavailable",
+            "error_type": type(exc).__name__,
+            "canonical_subscription_source": "client_subscriptions",
+        }
 
     return {
         "success": True,
@@ -103,6 +126,7 @@ def cancel_subscription(
         "owner_admin_access": "unaffected",
         "reason": payload.reason,
         "durable_billing_mutation": durable_billing_mutation,
+        "canonical_subscription_sync": canonical_subscription_sync,
         "recorded_at": recorded_at,
     }
 
@@ -126,6 +150,24 @@ def reactivate_subscription(
         preserve_cycle_anchor=True,
         retry_interval_hours=48,
     )
+    try:
+        canonical_subscription_sync = apply_subscription_state_update({
+            "tenant_id": payload.tenant_id,
+            "stripe_subscription_id": payload.subscription_id,
+            "event_type": "customer.subscription.reactivate_requested",
+            "billing_status": "active",
+            "target_subscription_status": "active",
+            "target_credit_action": "preserve_or_restore_credit_access",
+            "cancel_at_period_end": False,
+            "provider": "admin",
+        })
+    except Exception as exc:
+        canonical_subscription_sync = {
+            "success": False,
+            "reason": "canonical_subscription_sync_unavailable",
+            "error_type": type(exc).__name__,
+            "canonical_subscription_source": "client_subscriptions",
+        }
 
     return {
         "success": True,
@@ -138,6 +180,7 @@ def reactivate_subscription(
         "owner_admin_access": "unaffected",
         "reason": payload.reason,
         "durable_billing_mutation": durable_billing_mutation,
+        "canonical_subscription_sync": canonical_subscription_sync,
         "recorded_at": recorded_at,
     }
 
@@ -169,6 +212,7 @@ async def hardened_stripe_webhook(
         )
 
     checkout_mapping_update = None
+    checkout_subscription_sync = None
 
     if event["event_type"] == "checkout.session.completed":
         raw_object = payload.get("data", {}).get("object", {}) if isinstance(payload, dict) else {}
@@ -202,6 +246,26 @@ async def hardened_stripe_webhook(
                 subscription_status="active",
                 package_name=str(package_name),
             )
+            try:
+                checkout_subscription_sync = apply_subscription_state_update({
+                    "tenant_id": str(tenant_id),
+                    "company_name": str(company_name),
+                    "package_name": str(package_name),
+                    "stripe_customer_id": str(stripe_customer_id),
+                    "stripe_subscription_id": str(stripe_subscription_id),
+                    "event_type": "checkout.session.completed",
+                    "billing_status": "active",
+                    "target_subscription_status": "active",
+                    "target_credit_action": "sync_only",
+                    "provider": "stripe",
+                })
+            except Exception as exc:
+                checkout_subscription_sync = {
+                    "success": False,
+                    "reason": "canonical_subscription_sync_unavailable",
+                    "error_type": type(exc).__name__,
+                    "canonical_subscription_source": "client_subscriptions",
+                }
         else:
             checkout_mapping_update = {
                 "success": False,
@@ -220,6 +284,7 @@ async def hardened_stripe_webhook(
         "event": event,
         "classification": classification,
         "checkout_mapping_update": checkout_mapping_update,
+        "checkout_subscription_sync": checkout_subscription_sync,
         "billing_runtime_update": billing_runtime_update,
         "policy": {
             "month_to_month": True,
@@ -275,4 +340,6 @@ def admin_billing_durable_runtime_state(
     limit: int = 50,
 ) -> Dict[str, Any]:
     require_owner(x_actor_role)
+    if tenant_id:
+        return get_canonical_billing_state(tenant_id)
     return get_billing_runtime_state(tenant_id=tenant_id, limit=limit)

@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 
 import psycopg
 
+from backend.app.core.canonical_billing_state_runtime import owner_admin_bypasses_client_billing
+
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -571,7 +573,7 @@ def lookup_client_account(identifier: str):
 def client_credit_gate(payload: dict):
     actor_role = str(payload.get("actor_role") or "client").strip().lower()
 
-    if actor_role in {"owner", "admin", "system"}:
+    if owner_admin_bypasses_client_billing(actor_role):
         return {
             "success": True,
             "credit_gate_passed": True,

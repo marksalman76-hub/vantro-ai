@@ -4,7 +4,7 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from backend.app.core.durable_billing_state_store import get_billing_runtime_state
+from backend.app.core.canonical_billing_state_runtime import get_canonical_billing_state
 from backend.app.core.stripe_tenant_mapping_store import list_stripe_tenant_mappings
 
 
@@ -26,22 +26,22 @@ def _find_mapping_for_tenant(tenant_id: str) -> Optional[Dict[str, Any]]:
 
 def customer_billing_visibility(tenant_id: str) -> Dict[str, Any]:
     mapping = _find_mapping_for_tenant(tenant_id)
-    runtime_state = get_billing_runtime_state(tenant_id=tenant_id)
+    canonical_state = get_canonical_billing_state(tenant_id)
 
-    state = runtime_state.get("state") or {}
+    state = canonical_state.get("durable_state") or {}
 
     subscription_status = (
-        state.get("subscription_status")
+        canonical_state.get("subscription_status")
         or (mapping or {}).get("subscription_status")
         or "unknown"
     )
 
-    client_execution_allowed = state.get("client_execution_allowed")
-    credit_state = state.get("credit_state")
-    execution_block_reason = state.get("execution_block_reason")
+    client_execution_allowed = canonical_state.get("client_execution_allowed")
+    credit_state = canonical_state.get("credit_state")
+    execution_block_reason = canonical_state.get("execution_block_reason")
     retry_interval_hours = state.get("retry_interval_hours")
 
-    failed_payment_warning = subscription_status in {"past_due", "unpaid", "payment_failed"} or credit_state == "blocked"
+    failed_payment_warning = not bool(canonical_state.get("execution_allowed"))
 
     return {
         "success": True,
@@ -59,6 +59,7 @@ def customer_billing_visibility(tenant_id: str) -> Dict[str, Any]:
             "owner_admin_access_unaffected": True,
             "next_billing_date": state.get("current_period_end") or state.get("next_billing_date"),
             "last_webhook_processed_at": state.get("last_webhook_processed_at"),
+            "canonical_subscription_source": canonical_state.get("canonical_source"),
         },
         "stripe_mapping": {
             "mapping_available": mapping is not None,

@@ -15,6 +15,7 @@ from backend.app.core.billing_automation_runtime import (
     handle_invoice_payment_succeeded_runtime,
     reactivate_subscription_runtime,
 )
+from backend.app.core.canonical_billing_state_runtime import evaluate_subscription_status
 
 
 DATA_DIR = Path.cwd() / "runtime_data"
@@ -194,11 +195,14 @@ def transition_trial_to_paid(payload: Dict[str, Any]) -> Dict[str, Any]:
     tenant_id = payload.get("tenant_id")
     billing_status = str(payload.get("billing_status") or "paid").lower()
 
-    if billing_status not in {"paid", "active"}:
+    subscription_decision = evaluate_subscription_status(billing_status)
+
+    if not subscription_decision.get("subscription_execution_allowed"):
         return {
             "success": False,
             "error": "trial_to_paid_requires_active_billing",
             "billing_status": billing_status,
+            "subscription_decision": subscription_decision,
             "secret_exposure": False,
         }
 

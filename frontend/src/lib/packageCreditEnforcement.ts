@@ -17,6 +17,7 @@ export type PackageCreditDecision = {
   remaining_credits: number | null;
   client_safe_status: string;
   enforcement_reason: string;
+  decision_authority: "backend_canonical" | "frontend_advisory";
 };
 
 const STORE_DIR = path.join(process.cwd(), ".runtime", "package-credit-enforcement");
@@ -128,6 +129,7 @@ export function evaluatePackageCreditEnforcement(
       client_safe_status: "Owner/admin execution unrestricted",
       enforcement_reason:
         "Owner/admin execution is not limited by client credits, package limits, selected-agent caps, business count, business type, or subscription state.",
+      decision_authority: "frontend_advisory",
     };
   }
 
@@ -172,6 +174,7 @@ export function evaluatePackageCreditEnforcement(
     remaining_credits: remainingCredits,
     client_safe_status: clientSafeStatus,
     enforcement_reason: reason,
+    decision_authority: "frontend_advisory",
   };
 }
 
@@ -192,6 +195,8 @@ export function attachPackageCreditEnforcement(
   return {
     ...payload,
     package_credit_enforcement_enabled: true,
+    package_credit_enforcement_authority: "frontend_advisory_only",
+    backend_execution_decision_authority: "canonical_billing_state_runtime",
     package_credit_decision: {
       ...decision,
       remaining_credits: remainingCredits,
