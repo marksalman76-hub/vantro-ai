@@ -59,6 +59,24 @@ function backendCanonicalHeaders(req: NextRequest, tenantKey: string): Record<st
   return headers;
 }
 
+function backendAdminMediaJobHeaders(req: NextRequest): Record<string, string> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    "cache-control": "no-store",
+    "x-actor-role": "owner_admin",
+  };
+
+  const auth = req.headers.get("authorization");
+  const adminToken = req.headers.get("x-admin-token") || process.env.ADMIN_PLATFORM_TOKEN || process.env.ADMIN_TOKEN || "";
+  const cookie = req.headers.get("cookie");
+
+  if (auth) headers.authorization = auth;
+  if (adminToken) headers["x-admin-token"] = adminToken;
+  if (cookie) headers.cookie = cookie;
+
+  return headers;
+}
+
 function isMeaningfulValue(value: unknown): boolean {
   if (value === null || value === undefined) return false;
   if (typeof value === "string") {
@@ -286,6 +304,34 @@ async function syncBackendCanonicalExecutionState(
   }
 }
 
+async function runBackendMediaJobsForDelegatedWorkforce(req: NextRequest): Promise<Record<string, unknown>> {
+  try {
+    const response = await fetch(`${backendBaseUrl()}/admin/media-jobs/run-all`, {
+      method: "POST",
+      headers: backendAdminMediaJobHeaders(req),
+      cache: "no-store",
+    });
+    const text = await response.text();
+    const result = text ? JSON.parse(text) as Record<string, unknown> : {};
+
+    return {
+      ...result,
+      media_job_runner_triggered: response.status < 500 && result.success !== false,
+      media_job_runner_status: response.status,
+      credential_values_exposed: false,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      media_job_runner_triggered: false,
+      media_job_runner_status: "unavailable",
+      error: error instanceof Error ? error.message : String(error),
+      customer_safe: true,
+      credential_values_exposed: false,
+    };
+  }
+}
+
 async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   const body = await req.text();
   const headers: Record<string, string> = {
@@ -338,6 +384,12 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   Object.assign(normalised, attachAgentOutputContract(normalised));
   Object.assign(normalised, attachRealMediaProviderDecision(stateTenantKey, normalised));
   Object.assign(normalised, await attachDurableProviderQueueRetryFailover(req, stateTenantKey, normalised));
+  const mediaJobRunner = await runBackendMediaJobsForDelegatedWorkforce(req);
+  normalised.media_job_runner_triggered = Boolean(mediaJobRunner.media_job_runner_triggered);
+  normalised.media_job_runner_status = mediaJobRunner.status || mediaJobRunner.media_job_runner_status || "unknown";
+  normalised.media_job_processed_count = Number(mediaJobRunner.processed_count || 0);
+  normalised.media_job_runner_results = Array.isArray(mediaJobRunner.results) ? mediaJobRunner.results : [];
+  normalised.credential_values_exposed = false;
   const persistedMediaAssets = persistMediaAssets(stateTenantKey, normalised, "delegated_workforce_execution");
   normalised.media_asset_lifecycle_enabled = true;
   normalised.media_assets_persisted = persistedMediaAssets.length;

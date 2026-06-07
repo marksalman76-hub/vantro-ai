@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import sys
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -61,6 +63,7 @@ def test_queued_creative_media_job_processed_to_safe_visible_evidence() -> None:
             assert processed["processed_count"] == 1
             processed_job = processed["results"][0]["job"]
             assert processed_job["status"] == "blocked"
+            assert processed_job["status"] != "queued"
             assert processed_job["blocked_reason"]
             assert "secret" not in processed_job["blocked_reason"].lower()
             assert "token" not in processed_job["blocked_reason"].lower()
@@ -90,6 +93,17 @@ def test_queued_creative_media_job_processed_to_safe_visible_evidence() -> None:
             media_jobs.STORE = old_store
 
 
+def test_delegated_workforce_api_triggers_media_job_runner() -> None:
+    route_text = Path("frontend/src/app/api/delegated-workforce-execution/route.ts").read_text(encoding="utf-8")
+    assert "/admin/media-jobs/run-all" in route_text
+    assert "runBackendMediaJobsForDelegatedWorkforce" in route_text
+    assert "media_job_runner_triggered" in route_text
+    assert "media_job_processed_count" in route_text
+
+
 if __name__ == "__main__":
     test_queued_creative_media_job_processed_to_safe_visible_evidence()
+    test_delegated_workforce_api_triggers_media_job_runner()
     print("MEDIA_JOB_VISIBLE_ASSET_EVIDENCE_PASSED")
+    sys.stdout.flush()
+    os._exit(0)

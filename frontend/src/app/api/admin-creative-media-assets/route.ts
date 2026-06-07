@@ -18,12 +18,12 @@ export async function GET() {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       "Cache-Control": "no-store",
+      "x-actor-role": "owner_admin",
     };
 
     if (ADMIN_TOKEN) {
       headers.Authorization = `Bearer ${ADMIN_TOKEN}`;
       headers["x-admin-token"] = ADMIN_TOKEN;
-      headers["x-actor-role"] = "owner_admin";
     }
 
     const response = await fetch(`${BACKEND_BASE_URL}/admin/creative/media-assets`, {

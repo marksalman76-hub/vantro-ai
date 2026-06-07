@@ -112,6 +112,7 @@ export function extractMediaAssetCandidates(payload: Record<string, unknown>): R
   const completed = Array.isArray(payload.completed_results) ? payload.completed_results : [];
   const dataCompleted = Array.isArray(data.completed_results) ? data.completed_results : [];
   const resultCompleted = Array.isArray(result.completed_results) ? result.completed_results : [];
+  const mediaJobRunnerResults = Array.isArray(payload.media_job_runner_results) ? payload.media_job_runner_results : [];
 
   const rawCandidates: unknown[] = [
     payload.asset,
@@ -151,7 +152,10 @@ export function extractMediaAssetCandidates(payload: Record<string, unknown>): R
     }
   }
 
-  const jobInputs = [...flattened, ...completed, ...dataCompleted, ...resultCompleted];
+  const runnerJobs = mediaJobRunnerResults
+    .map((item) => objectValue(item).job)
+    .filter((item) => Object.keys(objectValue(item)).length);
+  const jobInputs = [...flattened, ...completed, ...dataCompleted, ...resultCompleted, ...runnerJobs];
   const jobEvidence = jobInputs
     .map(mediaJobEvidenceCandidate)
     .filter((candidate) => Object.keys(candidate).length);
