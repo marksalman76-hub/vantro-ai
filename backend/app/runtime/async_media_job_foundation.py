@@ -14,6 +14,39 @@ STORE.mkdir(parents=True, exist_ok=True)
 
 _LOCK = threading.Lock()
 
+TERMINAL_MEDIA_JOB_STATUSES = {"completed", "provider_unavailable", "blocked", "failed"}
+
+PROVIDER_UNAVAILABLE_STATUSES = {
+    "provider_key_missing",
+    "prepared_no_live_provider_configured",
+    "live_provider_ready_endpoint_missing",
+    "endpoint_missing",
+    "blocked_live_dispatch_not_enabled",
+}
+
+PROVIDER_BLOCKED_STATUSES = {
+    "blocked_by_orchestration",
+    "blocked_owner_approval_required",
+    "blocked_by_safety_policy",
+    "safety_blocked",
+    "policy_blocked",
+}
+
+PROVIDER_FAILED_STATUSES = {
+    "invalid_provider_packet",
+    "unsupported_provider",
+    "provider_execution_failed",
+    "provider_http_error",
+    "provider_execution_attempted_no_asset_url",
+    "provider_job_created_or_attempted",
+    "no_playable_or_metadata_asset_result",
+    "no_playable_provider_asset_result",
+}
+
+SAFE_PROVIDER_UNAVAILABLE_REASON = "Provider execution is not currently available. No credentials or provider secrets were exposed."
+SAFE_PROVIDER_BLOCKED_REASON = "Provider execution was blocked by governance or provider safety controls. No credentials or provider secrets were exposed."
+SAFE_PROVIDER_FAILED_REASON = "Provider execution was attempted but did not complete safely. No credentials or provider secrets were exposed."
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -31,7 +64,7 @@ def _scrub_sensitive(value: Any) -> Any:
     safe: Dict[str, Any] = {}
     for key, item in value.items():
         lowered = str(key).lower()
-        if any(marker in lowered for marker in ("token", "secret", "password", "api_key", "authorization", "credential", "debug", "raw")):
+        if any(marker in lowered for marker in ("token", "secret", "password", "api_key", "authorization", "credential", "debug", "raw", "internal_prompt", "provider_response", "provider_result", "provider_payload")):
             continue
         safe[str(key)] = _scrub_sensitive(item)
     safe["credential_values_exposed"] = False
@@ -117,9 +150,13 @@ def _safe_blocked_reason(job: Dict[str, Any]) -> str:
     status = str(job.get("status") or "").lower()
     if status == "queued":
         return "Media generation is queued and waiting for delegated workforce processing."
+    if status == "provider_unavailable":
+        return SAFE_PROVIDER_UNAVAILABLE_REASON
     if status in {"processing", "running"}:
         return "Media generation is running. Refresh assets shortly."
-    if status in {"failed", "blocked"}:
+    if status == "blocked":
+        return SAFE_PROVIDER_BLOCKED_REASON
+    if status == "failed":
         return "Provider execution could not complete. Check provider readiness and rerun the media job."
     return "Media job evidence is available, but no playable generated asset is attached yet."
 
@@ -132,7 +169,7 @@ def media_job_to_visible_asset_evidence(job: Dict[str, Any], *, audience: str = 
     playable_count = sum(1 for asset in final_assets if asset.get("playable") or asset.get("preview_ready"))
     generated_count = int(job.get("media_asset_count") or job.get("real_media_asset_count") or len(final_assets) or 0)
     blocked_reason = _safe_blocked_reason(job)
-    provider_readiness = "ready" if playable_count else ("blocked" if status.lower() in {"failed", "blocked"} else status.lower() or "queued")
+    provider_readiness = "ready" if playable_count else ("blocked" if status.lower() == "blocked" else status.lower() or "queued")
     preview_ready = any(asset.get("preview_ready") for asset in final_assets)
     download_ready = any(asset.get("download_ready") for asset in final_assets)
     title = f"Creative media job {_label(status, 'Queued').lower()}"
@@ -195,6 +232,63 @@ def _asset_delivery_summary(asset: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _status_texts(media_pack: Dict[str, Any]) -> List[str]:
+    texts: List[str] = []
+    for collection_name in ("provider_execution_results", "generation_jobs", "media_assets"):
+        collection = media_pack.get(collection_name, [])
+        if not isinstance(collection, list):
+            continue
+        for item in collection:
+            if not isinstance(item, dict):
+                continue
+            for key in ("status", "execution_status", "reason", "error"):
+                value = item.get(key)
+                if value:
+                    texts.append(str(value).strip().lower())
+    return texts
+
+
+def _resolve_no_playable_terminal_state(media_pack: Dict[str, Any]) -> Dict[str, str]:
+    statuses = _status_texts(media_pack)
+    generation_jobs = [item for item in media_pack.get("generation_jobs", []) if isinstance(item, dict)]
+    provider_results = [item for item in media_pack.get("provider_execution_results", []) if isinstance(item, dict)]
+    live_generation_available = any(bool(item.get("live_generation_available")) for item in generation_jobs)
+    live_execution_attempted = any(bool(item.get("live_provider_execution_attempted")) for item in provider_results + generation_jobs)
+    live_attempted_count = int(media_pack.get("live_provider_execution_attempted_count") or 0)
+
+    if any(status in PROVIDER_BLOCKED_STATUSES or "safety" in status for status in statuses):
+        return {
+            "status": "blocked",
+            "lifecycle": "provider_safety_blocked",
+            "reason": SAFE_PROVIDER_BLOCKED_REASON,
+        }
+
+    if (
+        any(status in PROVIDER_UNAVAILABLE_STATUSES for status in statuses)
+        or (generation_jobs and not live_generation_available)
+        or (provider_results and not live_execution_attempted and live_attempted_count == 0)
+        or not provider_results
+    ):
+        return {
+            "status": "provider_unavailable",
+            "lifecycle": "provider_unavailable",
+            "reason": SAFE_PROVIDER_UNAVAILABLE_REASON,
+        }
+
+    if any(status in PROVIDER_FAILED_STATUSES or "failed" in status or "http_error" in status for status in statuses):
+        return {
+            "status": "failed",
+            "lifecycle": "provider_execution_failed",
+            "reason": SAFE_PROVIDER_FAILED_REASON,
+        }
+
+    return {
+        "status": "failed" if live_execution_attempted or live_attempted_count else "provider_unavailable",
+        "lifecycle": "provider_execution_failed" if live_execution_attempted or live_attempted_count else "provider_unavailable",
+        "reason": SAFE_PROVIDER_FAILED_REASON if live_execution_attempted or live_attempted_count else SAFE_PROVIDER_UNAVAILABLE_REASON,
+    }
+
+
 def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
     job_id = str(job.get("job_id") or "")
     if not job_id:
@@ -210,7 +304,7 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
         with _LOCK:
             current = read_media_job(job_id)
             current_status = str(current.get("status") or "").lower()
-            if current_status in {"processing", "completed", "blocked"}:
+            if current_status in {"processing", *TERMINAL_MEDIA_JOB_STATUSES}:
                 return {
                     "success": True,
                     "processed": False,
@@ -246,9 +340,11 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
         playable_assets = [asset for asset in final_assets if asset.get("playable") or asset.get("preview_ready") or asset.get("download_ready")]
 
         if not playable_assets:
-            job["status"] = "blocked"
-            job["lifecycle"] = "provider_unavailable_or_no_playable_asset"
-            job["blocked_reason"] = "Provider execution did not return a playable media asset. Connect or enable a supported media provider, then rerun the media job."
+            terminal_state = _resolve_no_playable_terminal_state(media_pack)
+            job["status"] = terminal_state["status"]
+            job["lifecycle"] = terminal_state["lifecycle"]
+            job["blocked_reason"] = terminal_state["reason"]
+            job["safe_visible_reason"] = terminal_state["reason"]
             job["media_pack_id"] = media_pack.get("media_pack_id")
             job["media_asset_count"] = len(media_pack.get("media_assets", []))
             job["real_media_asset_count"] = media_pack.get("real_media_asset_count", 0)
@@ -261,16 +357,17 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
             job["final_assets"] = final_assets
             job["preview_ready_count"] = 0
             job["download_ready_count"] = 0
-            job["blocked_at"] = _now()
+            job[f"{terminal_state['status']}_at"] = _now()
             job["updated_at"] = _now()
             job["credential_values_exposed"] = False
             _write_job(job)
             return {
                 "success": True,
                 "processed": True,
-                "status": "blocked",
+                "status": terminal_state["status"],
                 "job": job,
                 "blocked_reason": job["blocked_reason"],
+                "safe_visible_reason": job["safe_visible_reason"],
                 "credential_values_exposed": False,
             }
 
@@ -295,17 +392,18 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
 
         return {"success": True, "processed": True, "job": job, "credential_values_exposed": False}
     except Exception as exc:
-        job["status"] = "blocked"
-        job["lifecycle"] = "provider_dispatch_blocked"
-        job["blocked_reason"] = "Provider execution is not configured or could not complete safely. Connect the required media provider and rerun the job."
-        job["blocked_at"] = _now()
+        job["status"] = "failed"
+        job["lifecycle"] = "provider_execution_failed"
+        job["blocked_reason"] = SAFE_PROVIDER_FAILED_REASON
+        job["safe_visible_reason"] = SAFE_PROVIDER_FAILED_REASON
+        job["failed_at"] = _now()
         job["updated_at"] = _now()
         job["credential_values_exposed"] = False
         _write_job(job)
         return {
             "success": True,
             "processed": True,
-            "status": "blocked",
+            "status": "failed",
             "job": job,
             "blocked_reason": job["blocked_reason"],
             "credential_values_exposed": False,
@@ -322,6 +420,10 @@ def run_next_media_job() -> Dict[str, Any]:
 
 
 def run_all_media_jobs(limit: int = 25) -> Dict[str, Any]:
+    return process_queued_creative_media_jobs(limit=limit)
+
+
+def process_queued_creative_media_jobs(limit: int = 25) -> Dict[str, Any]:
     results: List[Dict[str, Any]] = []
     processed = 0
 

@@ -62,11 +62,11 @@ def test_queued_creative_media_job_processed_to_safe_visible_evidence() -> None:
             assert processed["success"] is True
             assert processed["processed_count"] == 1
             processed_job = processed["results"][0]["job"]
-            assert processed_job["status"] == "blocked"
+            assert processed_job["status"] == "provider_unavailable"
             assert processed_job["status"] != "queued"
             assert processed_job["blocked_reason"]
-            assert "secret" not in processed_job["blocked_reason"].lower()
-            assert "token" not in processed_job["blocked_reason"].lower()
+            assert "super_secret_provider_token" not in processed_job["blocked_reason"]
+            assert "provider_token" not in processed_job["blocked_reason"]
             assert not _contains_secret(processed)
 
             admin_assets = get_admin_creative_media_assets(limit=10)
@@ -74,8 +74,8 @@ def test_queued_creative_media_job_processed_to_safe_visible_evidence() -> None:
             assert admin_assets["asset_count"] >= 1
             admin_evidence = [asset for asset in admin_assets["assets"] if asset.get("asset_id") == job["job_id"]]
             assert admin_evidence
-            assert admin_evidence[0]["status"] == "blocked"
-            assert admin_evidence[0]["provider_readiness"] == "blocked"
+            assert admin_evidence[0]["status"] == "provider_unavailable"
+            assert admin_evidence[0]["provider_readiness"] == "provider_unavailable"
             assert admin_evidence[0]["blocked_reason"]
             assert admin_evidence[0]["credential_values_exposed"] is False
             assert not _contains_secret(admin_assets)
@@ -85,7 +85,7 @@ def test_queued_creative_media_job_processed_to_safe_visible_evidence() -> None:
             assert client_assets["asset_count"] >= 1
             client_evidence = [asset for asset in client_assets["assets"] if asset.get("asset_id") == job["job_id"]]
             assert client_evidence
-            assert client_evidence[0]["status"] == "blocked"
+            assert client_evidence[0]["status"] == "provider_unavailable"
             assert client_evidence[0]["customer_safe"] is True
             assert client_evidence[0]["credential_values_exposed"] is False
             assert not _contains_secret(client_assets)
