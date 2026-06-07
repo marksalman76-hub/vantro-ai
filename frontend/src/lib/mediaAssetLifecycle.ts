@@ -63,6 +63,31 @@ function objectValue(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function mediaJobEvidenceCandidate(value: unknown): Record<string, unknown> {
+  const job = objectValue(value);
+  const jobId = text(job.media_job_id || job.job_id);
+  if (!jobId) return {};
+
+  const status = text(job.media_job_status || job.status || job.execution_status || job.workflow_status) || "queued";
+  const blockedReason = text(job.blocked_reason || job.error || job.not_playable_reason);
+
+  return {
+    asset_id: jobId,
+    asset_type: "creative_media_job_evidence",
+    type: "creative_media_job_evidence",
+    status,
+    preview_ready: false,
+    download_ready: false,
+    provider: "creative_media_queue",
+    filename: jobId,
+    blocked_reason: blockedReason || "Media generation is queued or waiting for provider execution.",
+    media_job_id: jobId,
+    agent_id: text(job.agent_id || job.requested_agent),
+    customer_safe: true,
+    credential_values_exposed: false,
+  };
+}
+
 function futureExpiry(): string {
   const date = new Date();
   date.setDate(date.getDate() + 30);
@@ -84,6 +109,9 @@ function resolveLifecycleStatus(asset: Record<string, unknown>): MediaAssetRecor
 export function extractMediaAssetCandidates(payload: Record<string, unknown>): Record<string, unknown>[] {
   const result = objectValue(payload.result);
   const data = objectValue(payload.data);
+  const completed = Array.isArray(payload.completed_results) ? payload.completed_results : [];
+  const dataCompleted = Array.isArray(data.completed_results) ? data.completed_results : [];
+  const resultCompleted = Array.isArray(result.completed_results) ? result.completed_results : [];
 
   const rawCandidates: unknown[] = [
     payload.asset,
@@ -98,6 +126,15 @@ export function extractMediaAssetCandidates(payload: Record<string, unknown>): R
     result.media_assets,
     data.media_asset,
     data.media_assets,
+    payload.media_job,
+    payload.media_jobs,
+    payload.generation_jobs,
+    result.media_job,
+    result.media_jobs,
+    result.generation_jobs,
+    data.media_job,
+    data.media_jobs,
+    data.generation_jobs,
   ];
 
   const flattened: Record<string, unknown>[] = [];
@@ -114,7 +151,12 @@ export function extractMediaAssetCandidates(payload: Record<string, unknown>): R
     }
   }
 
-  return flattened;
+  const jobInputs = [...flattened, ...completed, ...dataCompleted, ...resultCompleted];
+  const jobEvidence = jobInputs
+    .map(mediaJobEvidenceCandidate)
+    .filter((candidate) => Object.keys(candidate).length);
+
+  return [...flattened, ...jobEvidence];
 }
 
 export function persistMediaAssets(
@@ -156,6 +198,8 @@ export function persistMediaAssets(
         filename: text(asset.filename),
         size_bytes: asset.size_bytes || null,
         original_status: text(asset.status),
+        media_job_id: text(asset.media_job_id),
+        blocked_reason: text(asset.blocked_reason),
       },
     };
   });

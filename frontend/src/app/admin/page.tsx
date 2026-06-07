@@ -1,7 +1,10 @@
 "use client";
 
 type CreativeMediaAsset = {
+  job_id?: string;
+  media_job_id?: string;
   provider?: string;
+  provider_readiness?: string;
   asset_type?: string;
   file_name?: string;
   local_path?: string;
@@ -10,6 +13,10 @@ type CreativeMediaAsset = {
   test_label?: string | null;
   task_id?: string | null;
   status?: string | null;
+  delivery_status?: string | null;
+  blocked_reason?: string | null;
+  not_playable_reason?: string | null;
+  agent_label?: string | null;
   preview_ready?: boolean;
   download_ready?: boolean;
   customer_safe?: boolean;
@@ -795,6 +802,11 @@ const [activeNav, setActiveNav] = useState("Overview");
       if (!result?.success) {
         setDelegatedWorkforceResults((prev) => [result, ...prev].slice(0, 10));
         await loadActionExecutionHistory();
+        await fetch("/api/admin-media-jobs-run-all", {
+          method: "POST",
+          cache: "no-store",
+        }).catch(() => null);
+        await refreshCreativeMediaAssets();
         showToast("Delegated workforce execution returned review status.");
         return;
       }
@@ -806,13 +818,19 @@ const [activeNav, setActiveNav] = useState("Overview");
 
       setDelegatedWorkforceResults((prev) => [result, ...prev].slice(0, 10));
       await loadActionExecutionHistory();
+      const mediaJobsResponse = await fetch("/api/admin-media-jobs-run-all", {
+        method: "POST",
+        cache: "no-store",
+      });
+      const mediaJobsResult = await mediaJobsResponse.json().catch(() => ({}));
+      await refreshCreativeMediaAssets();
 
       if (performedCount > 0) {
-        showToast(`Delegated workforce executed ${performedCount} action(s). Queued ${queuedCount}, blocked ${blockedCount}.`);
+        showToast(`Delegated workforce executed ${performedCount} action(s). Media jobs processed ${mediaJobsResult?.processed_count ?? 0}.`);
       } else if (queuedCount > 0 || blockedCount > 0) {
         showToast(`Delegated workforce needs review. Queued ${queuedCount}, blocked ${blockedCount}.`);
       } else {
-        showToast(`Delegated workforce completed ${completedCount} packet(s).`);
+        showToast(`Delegated workforce completed ${completedCount} packet(s). Media jobs processed ${mediaJobsResult?.processed_count ?? 0}.`);
       }
     } catch {
       showToast("Delegated workforce execution failed before reaching backend.");
@@ -1529,15 +1547,31 @@ const [activeNav, setActiveNav] = useState("Overview");
 
                   <div className="mt-3 space-y-2 text-xs text-slate-400">
                     <p>Status: <span className="text-slate-200">{asset.status || "ready"}</span></p>
+                    {asset.job_id || asset.media_job_id || asset.task_id ? (
+                      <p>Job ID: <span className="text-slate-200">{asset.job_id || asset.media_job_id || asset.task_id}</span></p>
+                    ) : null}
+                    {asset.agent_label ? (
+                      <p>Agent: <span className="text-slate-200">{asset.agent_label}</span></p>
+                    ) : null}
+                    {asset.provider_readiness ? (
+                      <p>Provider readiness: <span className="text-slate-200">{asset.provider_readiness}</span></p>
+                    ) : null}
                     <p>Preview ready: <span className="text-slate-200">{asset.preview_ready ? "Yes" : "No"}</span></p>
                     <p>Download ready: <span className="text-slate-200">{asset.download_ready ? "Yes" : "No"}</span></p>
                     <p>Size: <span className="text-slate-200">{asset.size_bytes ? `${Math.round(asset.size_bytes / 1024)} KB` : "Unknown"}</span></p>
                   </div>
 
-                  <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950/80 p-3">
-                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Local file path</p>
-                    <p className="break-all text-xs text-slate-300">{asset.local_path || "Not available"}</p>
-                  </div>
+                  {asset.blocked_reason || asset.not_playable_reason ? (
+                    <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-300">Safe status</p>
+                      <p className="text-xs text-amber-100">{asset.blocked_reason || asset.not_playable_reason}</p>
+                    </div>
+                  ) : (
+                    <div className="mt-4 rounded-xl border border-slate-700 bg-slate-950/80 p-3">
+                      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Local file path</p>
+                      <p className="break-all text-xs text-slate-300">{asset.local_path || "Not available"}</p>
+                    </div>
+                  )}
 
                   {asset.asset_type === "video" ? (
                     <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-3 text-xs text-emerald-200">

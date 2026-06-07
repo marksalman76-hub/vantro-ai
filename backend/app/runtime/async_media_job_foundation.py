@@ -83,6 +83,85 @@ def _write_job(job: Dict[str, Any]) -> None:
     _job_path(str(job["job_id"])).write_text(json.dumps(job, indent=2), encoding="utf-8")
 
 
+def _label(value: Any, fallback: str = "") -> str:
+    text = str(value or fallback).strip()
+    if not text:
+        return fallback
+    return " ".join(part.capitalize() for part in text.replace("_", " ").split())
+
+
+def _safe_blocked_reason(job: Dict[str, Any]) -> str:
+    raw = str(job.get("error") or job.get("blocked_reason") or "").strip()
+    if raw:
+        lowered = raw.lower()
+        if any(marker in lowered for marker in ("token", "secret", "password", "api_key", "authorization", "credential")):
+            return "Provider execution is not configured for this media job. Connect the required provider credentials or run it again once provider dispatch is ready."
+        return raw[:260]
+    status = str(job.get("status") or "").lower()
+    if status == "queued":
+        return "Media generation is queued and waiting for delegated workforce processing."
+    if status in {"processing", "running"}:
+        return "Media generation is running. Refresh assets shortly."
+    if status in {"failed", "blocked"}:
+        return "Provider execution could not complete. Check provider readiness and rerun the media job."
+    return "Media job evidence is available, but no playable generated asset is attached yet."
+
+
+def media_job_to_visible_asset_evidence(job: Dict[str, Any], *, audience: str = "admin") -> Dict[str, Any]:
+    job_id = str(job.get("job_id") or job.get("media_job_id") or "").strip()
+    status = str(job.get("status") or job.get("media_job_status") or "queued").strip()
+    agent_id = str(job.get("agent_id") or job.get("requested_agent") or "creative_media_agent").strip()
+    final_assets = [asset for asset in job.get("final_assets", []) if isinstance(asset, dict)]
+    playable_count = sum(1 for asset in final_assets if asset.get("playable") or asset.get("preview_ready"))
+    generated_count = int(job.get("media_asset_count") or job.get("real_media_asset_count") or len(final_assets) or 0)
+    blocked_reason = _safe_blocked_reason(job)
+    provider_readiness = "ready" if playable_count else ("blocked" if status.lower() in {"failed", "blocked"} else status.lower() or "queued")
+    title = f"Creative media job {_label(status, 'Queued').lower()}"
+
+    return {
+        "asset_id": job_id,
+        "id": job_id,
+        "job_id": job_id,
+        "media_job_id": job_id,
+        "task_id": job_id,
+        "tenant_id": job.get("tenant_id") or "owner_admin",
+        "agent_id": agent_id,
+        "agent_label": _label(agent_id, "Creative Media Agent"),
+        "provider": "creative_media_queue",
+        "provider_key": "creative_media_queue",
+        "provider_readiness": provider_readiness,
+        "asset_type": "creative_media_job_evidence",
+        "media_type": "creative_media_job_evidence",
+        "title": title,
+        "test_label": f"{title}: {_label(agent_id, 'Creative Media Agent')}",
+        "file_name": job_id,
+        "status": status,
+        "delivery_status": "final_asset_ready" if playable_count else provider_readiness,
+        "lifecycle_status": "preview_ready" if playable_count else "pending",
+        "summary": (
+            f"Creative media job {job_id} is {_label(status, 'queued').lower()}. "
+            f"Generated assets: {generated_count}. Playable assets: {playable_count}."
+        ),
+        "blocked_reason": "" if playable_count else blocked_reason,
+        "not_playable_reason": "" if playable_count else blocked_reason,
+        "preview_ready": False,
+        "download_ready": False,
+        "playable": False,
+        "metadata_only": True,
+        "media_asset_count": generated_count,
+        "real_media_asset_count": int(job.get("real_media_asset_count") or 0),
+        "playable_asset_count": playable_count,
+        "final_assets": final_assets if audience == "admin" else [],
+        "owner_approval_required": False,
+        "governed": True,
+        "customer_safe": True,
+        "client_safe": True,
+        "credential_values_exposed": False,
+        "created_at": job.get("created_at"),
+        "updated_at": job.get("updated_at"),
+    }
+
+
 def _asset_delivery_summary(asset: Dict[str, Any]) -> Dict[str, Any]:
     persistence = asset.get("persistence") if isinstance(asset.get("persistence"), dict) else {}
     return {

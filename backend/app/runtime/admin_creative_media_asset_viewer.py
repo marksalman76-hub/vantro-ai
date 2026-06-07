@@ -137,6 +137,7 @@ def get_admin_creative_media_asset_viewer_status() -> Dict[str, Any]:
 def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
     try:
         from backend.app.runtime.creative_asset_persistence_bridge import get_persisted_creative_assets
+        from backend.app.runtime.async_media_job_foundation import list_media_jobs, media_job_to_visible_asset_evidence
 
         registry = get_persisted_creative_assets(limit=max(int(limit or 50), 1))
         raw_assets = registry.get("assets", []) if isinstance(registry, dict) else []
@@ -146,15 +147,29 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
             if isinstance(asset, dict):
                 assets.append(_safe_asset(asset))
 
+        jobs = list_media_jobs(limit=max(int(limit or 50), 1)).get("jobs", [])
+        existing_ids = {str(asset.get("asset_id") or "") for asset in assets}
+        job_evidence = []
+        for job in jobs:
+            if not isinstance(job, dict):
+                continue
+            evidence = media_job_to_visible_asset_evidence(job, audience="admin")
+            if evidence.get("asset_id") and str(evidence.get("asset_id")) not in existing_ids:
+                job_evidence.append(evidence)
+                existing_ids.add(str(evidence.get("asset_id")))
+
+        visible_assets = (assets + job_evidence)[: max(int(limit or 50), 1)]
+
         return {
             "success": True,
             "layer": "admin_creative_media_asset_viewer",
             "status": "ready",
             "source": "creative_asset_persistence_bridge",
             "delivery_mode": "signed_backend_asset_gateway",
-            "asset_count": (locals().get("registry") or {}).get("asset_count", len(locals().get("assets") or [])),
-            "total_asset_count": (locals().get("registry") or {}).get("total_asset_count", len(locals().get("assets") or [])) if isinstance(registry, dict) else len(assets),
-            "assets": assets,
+            "asset_count": len(visible_assets),
+            "total_asset_count": (registry.get("total_asset_count", len(assets)) if isinstance(registry, dict) else len(assets)) + len(job_evidence),
+            "job_evidence_count": len(job_evidence),
+            "assets": visible_assets,
             "providers_checked": registry.get("providers_checked", PROVIDERS_CHECKED) if isinstance(registry, dict) else PROVIDERS_CHECKED,
             "credential_values_exposed": False,
             "bridge_asset_count": (locals().get("registry") or {}).get("asset_count"),
