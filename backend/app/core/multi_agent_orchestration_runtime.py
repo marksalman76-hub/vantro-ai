@@ -6,6 +6,13 @@ from typing import Any, Dict, List
 
 from backend.app.agents.agent_registry import AGENT_CATALOGUE, agent_exists, normalize_agent_id, get_agent_role, get_agent_display_name
 from backend.app.core.execution_queue_runtime import enqueue_execution
+from backend.app.runtime.durable_orchestration_state_runtime import (
+    create_orchestration_plan as create_durable_orchestration_plan,
+    create_orchestration_step,
+    create_recovery_checkpoint,
+    ensure_orchestration_tables,
+    record_orchestration_event,
+)
 
 
 ORCHESTRATION_PROFILE = "priority6_multi_agent_orchestration_runtime_v1"
@@ -158,7 +165,7 @@ def create_orchestration_plan(payload: Dict[str, Any]) -> Dict[str, Any]:
 
     plan_id = f"orch_{uuid.uuid4().hex[:16]}"
 
-    return {
+    result = {
         "success": True,
         "orchestration_profile": ORCHESTRATION_PROFILE,
         "plan_id": plan_id,
@@ -185,8 +192,55 @@ def create_orchestration_plan(payload: Dict[str, Any]) -> Dict[str, Any]:
         "entitlement_bypass": False,
     }
 
+    persisted = create_durable_orchestration_plan(
+        orchestration_id=plan_id,
+        tenant_id=tenant_id,
+        project_id=str(payload.get("project_id") or plan_id),
+        root_agent_id=str(payload.get("root_agent_id") or "orchestration_agent"),
+        status="blocked_pending_owner_approval" if owner_approval_required else "planned",
+        plan_type="multi_agent_orchestration",
+        payload=result,
+    )
+    if not persisted.get("success"):
+        return {
+            **persisted,
+            "orchestration_profile": ORCHESTRATION_PROFILE,
+            "plan_id": plan_id,
+            "governance_bypass": False,
+            "entitlement_bypass": False,
+        }
+
+    for step in dependencies:
+        create_orchestration_step(
+            step_id=str(step.get("step_id") or ""),
+            orchestration_id=plan_id,
+            tenant_id=tenant_id,
+            agent_id=str(step.get("agent_id") or ""),
+            action_type="orchestrated_agent_execution",
+            status=str(step.get("status") or "planned"),
+            dependency_step_ids=list(step.get("dependencies") or []),
+        )
+
+    create_recovery_checkpoint(
+        orchestration_id=plan_id,
+        tenant_id=tenant_id,
+        checkpoint_type="plan_created",
+        recoverable_status="blocked_pending_owner_approval" if owner_approval_required else "planned",
+        payload={"plan_id": plan_id, "selected_agents": selected_agents},
+    )
+
+    result["canonical_persistence"] = {
+        "success": True,
+        "storage_mode": persisted.get("storage_mode"),
+        "durable": persisted.get("durable", False),
+        "dev_only": persisted.get("dev_only", False),
+        "not_production_durable": persisted.get("not_production_durable", False),
+    }
+    return result
+
 
 def orchestration_readiness() -> Dict[str, Any]:
+    durable_readiness = ensure_orchestration_tables()
     total_agents = len(AGENT_CATALOGUE)
     head_exists = agent_exists("head_agent")
     orchestration_exists = agent_exists("orchestration_agent")
@@ -195,6 +249,7 @@ def orchestration_readiness() -> Dict[str, Any]:
         "success": True,
         "orchestration_profile": ORCHESTRATION_PROFILE,
         "runtime_enabled": True,
+        "durable_orchestration_store": durable_readiness,
         "agent_registry_connected": True,
         "total_registered_agents": total_agents,
         "head_agent_available": head_exists,
@@ -279,6 +334,25 @@ def enqueue_orchestration_plan(payload: Dict[str, Any]) -> Dict[str, Any]:
     for packet in packet_result.get("delegated_execution_packets", []):
         try:
             enqueue_result = enqueue_execution(packet)
+            step_id = str(packet.get("payload", {}).get("step_id") or "")
+            if enqueue_result.get("success"):
+                create_orchestration_step(
+                    step_id=step_id,
+                    orchestration_id=str(plan.get("plan_id") or ""),
+                    tenant_id=str(plan.get("tenant_id") or "unknown"),
+                    agent_id=str(packet.get("agent_id") or ""),
+                    action_type=str(packet.get("action_type") or "orchestrated_agent_execution"),
+                    status="queued",
+                    dependency_step_ids=list(packet.get("payload", {}).get("dependencies") or []),
+                    execution_job_id=str(enqueue_result.get("job_id") or enqueue_result.get("queue_id") or ""),
+                )
+                record_orchestration_event(
+                    orchestration_id=str(plan.get("plan_id") or ""),
+                    step_id=step_id or None,
+                    tenant_id=str(plan.get("tenant_id") or "unknown"),
+                    event_type="orchestration_step_enqueued",
+                    payload={"queue_result": enqueue_result, "agent_id": packet.get("agent_id")},
+                )
             queued.append({
                 "agent_id": packet.get("agent_id"),
                 "step_id": packet.get("payload", {}).get("step_id"),

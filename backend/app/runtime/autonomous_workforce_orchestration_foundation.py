@@ -8,6 +8,13 @@ from backend.app.runtime.provider_workforce_runtime_hardening import (
     provider_runtime_health_summary,
     provider_recovery_readiness_summary,
 )
+from backend.app.runtime.durable_orchestration_state_runtime import (
+    create_orchestration_plan,
+    create_orchestration_step,
+    create_recovery_checkpoint,
+    get_orchestration_recovery_packet,
+    record_orchestration_event,
+)
 
 
 def _now_ms() -> int:
@@ -79,6 +86,45 @@ def create_delegated_subtask_plan(
         for index, agent in enumerate(requested_agents)
     ]
 
+    persisted = create_orchestration_plan(
+        orchestration_id=orchestration_id,
+        tenant_id=tenant_id,
+        project_id=project_id,
+        root_agent_id=lead_agent,
+        status="prepared_for_governed_execution",
+        plan_type="autonomous_workforce_delegated_subtask_plan",
+        payload={
+            "objective": objective,
+            "requested_agents": requested_agents,
+            "execution_mode": "planning_only",
+            "governance_enforced": True,
+        },
+    )
+    if not persisted.get("success"):
+        return persisted
+
+    previous_step_id = None
+    for index, packet in enumerate(packets, start=1):
+        step_id = str(packet.get("packet_id") or f"{orchestration_id}_step_{index:03d}")
+        create_orchestration_step(
+            step_id=step_id,
+            orchestration_id=orchestration_id,
+            tenant_id=tenant_id,
+            agent_id=str(packet.get("target_agent") or ""),
+            action_type="agent_to_agent_execution_packet",
+            status="prepared",
+            dependency_step_ids=[previous_step_id] if previous_step_id else [],
+        )
+        previous_step_id = step_id
+
+    create_recovery_checkpoint(
+        orchestration_id=orchestration_id,
+        tenant_id=tenant_id,
+        checkpoint_type="delegated_subtask_plan_created",
+        recoverable_status="prepared_for_governed_execution",
+        payload={"packet_count": len(packets), "objective": objective},
+    )
+
     return {
         "success": True,
         "profile": "delegated_subtask_plan_v1",
@@ -97,6 +143,12 @@ def create_delegated_subtask_plan(
         "customer_safe": True,
         "governance_enforced": True,
         "created_at_ms": _now_ms(),
+        "canonical_persistence": {
+            "success": True,
+            "storage_mode": persisted.get("storage_mode"),
+            "durable": persisted.get("durable", False),
+            "dev_only": persisted.get("dev_only", False),
+        },
     }
 
 
@@ -159,6 +211,28 @@ def orchestration_replay_recovery_packet(
     retry_allowed = int(attempt_count) < 3
     next_action = "retry_prepared" if retry_allowed else "owner_review_required"
 
+    checkpoint = create_recovery_checkpoint(
+        orchestration_id=orchestration_id,
+        tenant_id="unknown",
+        checkpoint_type="orchestration_replay_recovery_packet",
+        recoverable_status=next_action,
+        payload={
+            "failure_reason": failure_reason,
+            "attempt_count": int(attempt_count),
+            "retry_allowed": retry_allowed,
+            "owner_review_required": not retry_allowed,
+        },
+    )
+    if not checkpoint.get("success"):
+        return checkpoint
+    durable_packet = get_orchestration_recovery_packet(orchestration_id)
+    record_orchestration_event(
+        orchestration_id=orchestration_id,
+        tenant_id="unknown",
+        event_type="orchestration_replay_recovery_packet_created",
+        payload={"failure_reason": failure_reason, "attempt_count": int(attempt_count), "next_action": next_action},
+    )
+
     return {
         "success": True,
         "profile": "orchestration_replay_recovery_packet_v1",
@@ -174,6 +248,8 @@ def orchestration_replay_recovery_packet(
         "credential_values_exposed": False,
         "customer_safe": True,
         "created_at_ms": _now_ms(),
+        "checkpoint": checkpoint.get("checkpoint"),
+        "durable_recovery_packet": durable_packet if durable_packet.get("success") else None,
     }
 
 

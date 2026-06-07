@@ -1,20 +1,27 @@
 from __future__ import annotations
 
-import json
-import os
-import sqlite3
+from copy import deepcopy
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from backend.app.runtime.durable_orchestration_state_runtime import (
+    create_orchestration_plan,
+    create_orchestration_step,
+    create_recovery_checkpoint,
+    ensure_orchestration_tables,
+    get_orchestration_context,
+    get_orchestration_plan,
+    record_orchestration_event,
+    record_orchestration_result_memory,
+    update_orchestration_plan_status,
+    update_orchestration_step_status,
+)
 from backend.app.runtime.persistent_workflow_runtime import (
     action_requires_owner_approval,
     create_workflow,
     get_workflow,
 )
 
-
-DEFAULT_DB_PATH = Path(os.getenv("CROSS_AGENT_ORCHESTRATION_DB_PATH", "data/cross_agent_orchestration.sqlite3"))
 
 HEAD_AGENT_IDS = {"head_agent", "ceo_agent", "orchestration_agent"}
 
@@ -38,93 +45,16 @@ def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def _db_path() -> Path:
-    path = Path(os.getenv("CROSS_AGENT_ORCHESTRATION_DB_PATH", str(DEFAULT_DB_PATH)))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    return path
-
-
-def _connect() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(_db_path()))
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def _json(data: Optional[Dict[str, Any]]) -> str:
-    return json.dumps(data or {}, ensure_ascii=False, sort_keys=True)
-
-
 def init_cross_agent_orchestration_store() -> Dict[str, Any]:
-    with _connect() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS cross_agent_orchestrations (
-                orchestration_id TEXT PRIMARY KEY,
-                workflow_id TEXT,
-                tenant_id TEXT,
-                head_agent_id TEXT,
-                status TEXT,
-                created_at TEXT,
-                updated_at TEXT,
-                objective_json TEXT,
-                final_result_json TEXT
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS cross_agent_tasks (
-                task_id TEXT PRIMARY KEY,
-                orchestration_id TEXT,
-                workflow_id TEXT,
-                assigned_agent_id TEXT,
-                task_type TEXT,
-                status TEXT,
-                sequence_order INTEGER,
-                owner_approval_required INTEGER DEFAULT 0,
-                retry_count INTEGER DEFAULT 0,
-                max_retries INTEGER DEFAULT 3,
-                created_at TEXT,
-                updated_at TEXT,
-                task_payload_json TEXT,
-                task_result_json TEXT,
-                task_error_json TEXT
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS cross_agent_orchestration_events (
-                event_id INTEGER PRIMARY KEY AUTOINCREMENT,
-                orchestration_id TEXT,
-                task_id TEXT,
-                event_type TEXT,
-                event_status TEXT,
-                created_at TEXT,
-                details_json TEXT
-            )
-        """)
-        conn.commit()
-
+    readiness = ensure_orchestration_tables()
     return {
-        "success": True,
-        "status": "cross_agent_orchestration_store_ready",
-        "db_path": str(_db_path()),
+        **readiness,
+        "success": readiness.get("success", False),
+        "status": "cross_agent_orchestration_store_ready" if readiness.get("success") else readiness.get("status"),
+        "db_path": "canonical_postgres_or_dev_memory",
         "governance_preserved": True,
         "owner_approval_controls_preserved": True,
     }
-
-
-def _record_event(
-    orchestration_id: str,
-    event_type: str,
-    event_status: str,
-    task_id: Optional[str] = None,
-    details: Optional[Dict[str, Any]] = None,
-) -> None:
-    with _connect() as conn:
-        conn.execute("""
-            INSERT INTO cross_agent_orchestration_events (
-                orchestration_id, task_id, event_type, event_status, created_at, details_json
-            )
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (orchestration_id, task_id, event_type, event_status, utc_now_iso(), _json(details)))
-        conn.commit()
 
 
 def _normalise_agent(agent_id: str) -> str:
@@ -133,6 +63,39 @@ def _normalise_agent(agent_id: str) -> str:
 
 def can_head_agent_orchestrate(head_agent_id: str, active_agent_count: int = 2) -> bool:
     return _normalise_agent(head_agent_id) in HEAD_AGENT_IDS and int(active_agent_count) >= 2
+
+
+def _task_from_step(step: Dict[str, Any], event_payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    payload = deepcopy(event_payload or {})
+    return {
+        "task_id": step.get("step_id"),
+        "assigned_agent_id": step.get("agent_id"),
+        "task_type": step.get("action_type"),
+        "status": step.get("status"),
+        "sequence_order": int(payload.get("sequence_order") or 0),
+        "owner_approval_required": bool(payload.get("owner_approval_required", False)),
+        "retry_count": int(step.get("attempt_count") or payload.get("retry_count") or 0),
+        "max_retries": int(payload.get("max_retries") or 3),
+        "payload": deepcopy(payload.get("task_payload") or {}),
+        "result": deepcopy(payload.get("task_result") or {}),
+        "error": deepcopy(payload.get("task_error") or {}),
+    }
+
+
+def _context_events(orchestration_id: str) -> List[Dict[str, Any]]:
+    context = get_orchestration_context(orchestration_id, limit=300)
+    if not context.get("success"):
+        return []
+    return [
+        {
+            "task_id": event.get("step_id"),
+            "event_type": event.get("event_type"),
+            "event_status": (event.get("payload") or {}).get("status") or event.get("event_type"),
+            "created_at": event.get("created_at"),
+            "details": event.get("payload") or {},
+        }
+        for event in context.get("events", [])
+    ]
 
 
 def create_cross_agent_orchestration(
@@ -144,7 +107,9 @@ def create_cross_agent_orchestration(
     head_agent_id: str = "head_agent",
     active_agent_count: int = 2,
 ) -> Dict[str, Any]:
-    init_cross_agent_orchestration_store()
+    store = init_cross_agent_orchestration_store()
+    if not store.get("success"):
+        return store
 
     if not can_head_agent_orchestrate(head_agent_id, active_agent_count):
         return {
@@ -155,10 +120,10 @@ def create_cross_agent_orchestration(
             "active_agent_count": active_agent_count,
             "governance_preserved": True,
             "owner_approval_controls_preserved": True,
+            "credential_values_exposed": False,
         }
 
     workflow_type = str(objective.get("workflow_type") or "cross_agent_orchestration").strip().lower()
-
     workflow = create_workflow(
         workflow_id=workflow_id,
         workflow_type=workflow_type,
@@ -171,153 +136,128 @@ def create_cross_agent_orchestration(
         actor_role=head_agent_id,
         max_retries=int(objective.get("max_retries", 3)),
     )
+    if not workflow.get("success"):
+        return workflow
 
-    now = utc_now_iso()
     orchestration_status = "blocked_pending_owner_approval" if workflow.get("owner_approval_required") else "pending"
+    created = create_orchestration_plan(
+        orchestration_id=orchestration_id,
+        tenant_id=tenant_id or "unknown",
+        project_id=workflow_id,
+        root_agent_id=head_agent_id,
+        status=orchestration_status,
+        plan_type="cross_agent_orchestration",
+        payload={
+            "workflow_id": workflow_id,
+            "objective": deepcopy(objective),
+            "head_agent_id": head_agent_id,
+            "task_count": len(tasks),
+            "compatibility_wrapper": "cross_agent_workflow_orchestration",
+        },
+    )
+    if not created.get("success"):
+        return created
 
-    with _connect() as conn:
-        conn.execute("""
-            INSERT OR REPLACE INTO cross_agent_orchestrations (
-                orchestration_id, workflow_id, tenant_id, head_agent_id, status,
-                created_at, updated_at, objective_json, final_result_json
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            orchestration_id,
-            workflow_id,
-            tenant_id,
-            head_agent_id,
-            orchestration_status,
-            now,
-            now,
-            _json(objective),
-            _json({}),
-        ))
+    for index, task in enumerate(tasks, start=1):
+        agent_id = _normalise_agent(task.get("assigned_agent_id"))
+        task_type = str(task.get("task_type") or "specialist_task").strip().lower()
+        approval_required = action_requires_owner_approval(task_type)
+        allowed_agent = agent_id in SPECIALIST_AGENT_ALLOWLIST
+        status = "blocked_agent_not_allowed"
+        if allowed_agent:
+            status = "blocked_pending_owner_approval" if approval_required else "pending"
 
-        for index, task in enumerate(tasks, start=1):
-            agent_id = _normalise_agent(task.get("assigned_agent_id"))
-            task_type = str(task.get("task_type") or "specialist_task").strip().lower()
-            approval_required = action_requires_owner_approval(task_type)
-            allowed_agent = agent_id in SPECIALIST_AGENT_ALLOWLIST
+        task_id = str(task.get("task_id") or f"{orchestration_id}_task_{index:03d}")
+        create_orchestration_step(
+            step_id=task_id,
+            orchestration_id=orchestration_id,
+            tenant_id=tenant_id or "unknown",
+            agent_id=agent_id,
+            action_type=task_type,
+            status=status,
+            dependency_step_ids=list(task.get("dependency_step_ids") or []),
+        )
+        record_orchestration_event(
+            orchestration_id=orchestration_id,
+            step_id=task_id,
+            tenant_id=tenant_id or "unknown",
+            event_type="cross_agent_task_created",
+            payload={
+                "status": status,
+                "sequence_order": index,
+                "owner_approval_required": approval_required,
+                "task_payload": deepcopy(task.get("payload") or {}),
+                "max_retries": int(task.get("max_retries", 3)),
+            },
+        )
 
-            status = "blocked_agent_not_allowed"
-            if allowed_agent:
-                status = "blocked_pending_owner_approval" if approval_required else "pending"
-
-            task_id = task.get("task_id") or f"{orchestration_id}_task_{index:03d}"
-
-            conn.execute("""
-                INSERT OR REPLACE INTO cross_agent_tasks (
-                    task_id, orchestration_id, workflow_id, assigned_agent_id, task_type,
-                    status, sequence_order, owner_approval_required, retry_count, max_retries,
-                    created_at, updated_at, task_payload_json, task_result_json, task_error_json
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                task_id,
-                orchestration_id,
-                workflow_id,
-                agent_id,
-                task_type,
-                status,
-                index,
-                1 if approval_required else 0,
-                0,
-                int(task.get("max_retries", 3)),
-                now,
-                now,
-                _json(task.get("payload", {})),
-                _json({}),
-                _json({}),
-            ))
-
-        conn.commit()
-
-    _record_event(
-        orchestration_id,
-        "orchestration_created",
-        orchestration_status,
-        details={
+    record_orchestration_event(
+        orchestration_id=orchestration_id,
+        tenant_id=tenant_id or "unknown",
+        event_type="orchestration_created",
+        payload={
             "workflow_id": workflow_id,
             "tenant_id": tenant_id,
             "head_agent_id": head_agent_id,
             "task_count": len(tasks),
             "workflow_status": workflow.get("status"),
+            "status": orchestration_status,
         },
+    )
+    create_recovery_checkpoint(
+        orchestration_id=orchestration_id,
+        tenant_id=tenant_id or "unknown",
+        checkpoint_type="cross_agent_orchestration_created",
+        recoverable_status=orchestration_status,
+        payload={"workflow_id": workflow_id, "task_count": len(tasks)},
     )
 
     return get_cross_agent_orchestration(orchestration_id)
 
 
 def get_cross_agent_orchestration(orchestration_id: str) -> Dict[str, Any]:
-    init_cross_agent_orchestration_store()
-
-    with _connect() as conn:
-        row = conn.execute(
-            "SELECT * FROM cross_agent_orchestrations WHERE orchestration_id = ?",
-            (orchestration_id,),
-        ).fetchone()
-
-        if not row:
+    plan_result = get_orchestration_plan(orchestration_id)
+    if not plan_result.get("success"):
+        if plan_result.get("status") == "orchestration_not_found":
             return {
                 "success": False,
                 "status": "orchestration_not_found",
                 "orchestration_id": orchestration_id,
+                "credential_values_exposed": False,
             }
+        return plan_result
 
-        tasks = conn.execute("""
-            SELECT * FROM cross_agent_tasks
-            WHERE orchestration_id = ?
-            ORDER BY sequence_order ASC
-        """, (orchestration_id,)).fetchall()
-
-        events = conn.execute("""
-            SELECT task_id, event_type, event_status, created_at, details_json
-            FROM cross_agent_orchestration_events
-            WHERE orchestration_id = ?
-            ORDER BY event_id ASC
-        """, (orchestration_id,)).fetchall()
-
-    workflow = get_workflow(row["workflow_id"])
+    plan = plan_result.get("plan") or {}
+    payload = plan.get("payload") or {}
+    workflow_id = str(payload.get("workflow_id") or plan.get("project_id") or "")
+    workflow = get_workflow(workflow_id) if workflow_id else {}
+    events = _context_events(orchestration_id)
+    task_event_payloads: Dict[str, Dict[str, Any]] = {}
+    for event in events:
+        if event.get("event_type") == "cross_agent_task_created" and event.get("task_id"):
+            task_event_payloads[str(event.get("task_id"))] = deepcopy(event.get("details") or {})
+    tasks = [
+        _task_from_step(step, task_event_payloads.get(str(step.get("step_id") or "")))
+        for step in plan_result.get("steps", [])
+    ]
+    tasks.sort(key=lambda task: int(task.get("sequence_order") or 0))
 
     return {
         "success": True,
-        "status": row["status"],
-        "orchestration_id": row["orchestration_id"],
-        "workflow_id": row["workflow_id"],
+        "status": plan.get("status"),
+        "orchestration_id": plan.get("orchestration_id"),
+        "workflow_id": workflow_id,
         "workflow_status": workflow.get("status"),
-        "tenant_id": row["tenant_id"],
-        "head_agent_id": row["head_agent_id"],
-        "objective": json.loads(row["objective_json"] or "{}"),
-        "final_result": json.loads(row["final_result_json"] or "{}"),
-        "tasks": [
-            {
-                "task_id": task["task_id"],
-                "assigned_agent_id": task["assigned_agent_id"],
-                "task_type": task["task_type"],
-                "status": task["status"],
-                "sequence_order": task["sequence_order"],
-                "owner_approval_required": bool(task["owner_approval_required"]),
-                "retry_count": task["retry_count"],
-                "max_retries": task["max_retries"],
-                "payload": json.loads(task["task_payload_json"] or "{}"),
-                "result": json.loads(task["task_result_json"] or "{}"),
-                "error": json.loads(task["task_error_json"] or "{}"),
-            }
-            for task in tasks
-        ],
-        "events": [
-            {
-                "task_id": event["task_id"],
-                "event_type": event["event_type"],
-                "event_status": event["event_status"],
-                "created_at": event["created_at"],
-                "details": json.loads(event["details_json"] or "{}"),
-            }
-            for event in events
-        ],
+        "tenant_id": plan.get("tenant_id"),
+        "head_agent_id": plan.get("root_agent_id"),
+        "objective": deepcopy(payload.get("objective") or {}),
+        "final_result": deepcopy(payload.get("final_result") or {}),
+        "tasks": tasks,
+        "events": events,
+        "canonical_storage_mode": plan_result.get("storage_mode"),
         "governance_preserved": True,
         "owner_approval_controls_preserved": True,
+        "credential_values_exposed": False,
     }
 
 
@@ -338,6 +278,7 @@ def complete_cross_agent_task(
             "orchestration_id": orchestration_id,
             "task_id": task_id,
             "governance_preserved": True,
+            "credential_values_exposed": False,
         }
 
     if matched["owner_approval_required"]:
@@ -349,19 +290,31 @@ def complete_cross_agent_task(
             "execution_status": "task_not_completed",
             "governance_preserved": True,
             "owner_approval_controls_preserved": True,
+            "credential_values_exposed": False,
         }
 
-    now = utc_now_iso()
-
-    with _connect() as conn:
-        conn.execute("""
-            UPDATE cross_agent_tasks
-            SET status = ?, updated_at = ?, task_result_json = ?
-            WHERE task_id = ? AND orchestration_id = ?
-        """, ("completed", now, _json(result), task_id, orchestration_id))
-        conn.commit()
-
-    _record_event(orchestration_id, "task_completed", "completed", task_id=task_id, details=result or {})
+    update_orchestration_step_status(
+        step_id=task_id,
+        orchestration_id=orchestration_id,
+        tenant_id=current.get("tenant_id") or "unknown",
+        status="completed",
+    )
+    record_orchestration_result_memory(
+        orchestration_id=orchestration_id,
+        step_id=task_id,
+        tenant_id=current.get("tenant_id") or "unknown",
+        agent_id=matched.get("assigned_agent_id") or "",
+        result_type="cross_agent_task_result",
+        result_summary=str(result or "")[:500],
+        payload=result or {},
+    )
+    record_orchestration_event(
+        orchestration_id=orchestration_id,
+        step_id=task_id,
+        tenant_id=current.get("tenant_id") or "unknown",
+        event_type="task_completed",
+        payload={**(result or {}), "status": "completed"},
+    )
 
     updated = get_cross_agent_orchestration(orchestration_id)
     executable_tasks = [
@@ -371,19 +324,21 @@ def complete_cross_agent_task(
     all_done = bool(executable_tasks) and all(task["status"] == "completed" for task in executable_tasks)
 
     if all_done:
-        with _connect() as conn:
-            conn.execute("""
-                UPDATE cross_agent_orchestrations
-                SET status = ?, updated_at = ?, final_result_json = ?
-                WHERE orchestration_id = ?
-            """, ("completed", utc_now_iso(), _json({"all_executable_tasks_completed": True}), orchestration_id))
-            conn.commit()
-
-        _record_event(
-            orchestration_id,
-            "orchestration_completed",
-            "completed",
-            details={"all_executable_tasks_completed": True},
+        plan_payload = {
+            **((get_orchestration_plan(orchestration_id).get("plan") or {}).get("payload") or {}),
+            "final_result": {"all_executable_tasks_completed": True},
+        }
+        update_orchestration_plan_status(
+            orchestration_id=orchestration_id,
+            status="completed",
+            payload=plan_payload,
+            completed=True,
+        )
+        record_orchestration_event(
+            orchestration_id=orchestration_id,
+            tenant_id=current.get("tenant_id") or "unknown",
+            event_type="orchestration_completed",
+            payload={"all_executable_tasks_completed": True, "status": "completed"},
         )
 
     return get_cross_agent_orchestration(orchestration_id)
@@ -406,31 +361,39 @@ def fail_cross_agent_task(
             "orchestration_id": orchestration_id,
             "task_id": task_id,
             "governance_preserved": True,
+            "credential_values_exposed": False,
         }
 
     retry_count = int(matched["retry_count"]) + 1
     max_retries = int(matched["max_retries"])
     status = "retry_ready" if retry_count <= max_retries else "failed_manual_review_required"
 
-    with _connect() as conn:
-        conn.execute("""
-            UPDATE cross_agent_tasks
-            SET status = ?, retry_count = ?, updated_at = ?, task_error_json = ?
-            WHERE task_id = ? AND orchestration_id = ?
-        """, (status, retry_count, utc_now_iso(), _json(error), task_id, orchestration_id))
-        conn.execute("""
-            UPDATE cross_agent_orchestrations
-            SET status = ?, updated_at = ?
-            WHERE orchestration_id = ?
-        """, ("requires_recovery" if status == "retry_ready" else "manual_review_required", utc_now_iso(), orchestration_id))
-        conn.commit()
-
-    _record_event(
-        orchestration_id,
-        "task_failed",
-        status,
-        task_id=task_id,
-        details={"retry_count": retry_count, "max_retries": max_retries, "error": error or {}},
+    update_orchestration_step_status(
+        step_id=task_id,
+        orchestration_id=orchestration_id,
+        tenant_id=current.get("tenant_id") or "unknown",
+        status=status,
+        last_error=str(error or {}),
+        increment_attempt=True,
+    )
+    update_orchestration_plan_status(
+        orchestration_id=orchestration_id,
+        status="requires_recovery" if status == "retry_ready" else "manual_review_required",
+        failed=status != "retry_ready",
+    )
+    record_orchestration_event(
+        orchestration_id=orchestration_id,
+        step_id=task_id,
+        tenant_id=current.get("tenant_id") or "unknown",
+        event_type="task_failed",
+        payload={"retry_count": retry_count, "max_retries": max_retries, "error": error or {}, "status": status},
+    )
+    create_recovery_checkpoint(
+        orchestration_id=orchestration_id,
+        tenant_id=current.get("tenant_id") or "unknown",
+        checkpoint_type="cross_agent_task_failure",
+        recoverable_status=status,
+        payload={"task_id": task_id, "retry_count": retry_count, "max_retries": max_retries, "error": error or {}},
     )
 
     return get_cross_agent_orchestration(orchestration_id)
@@ -439,10 +402,11 @@ def fail_cross_agent_task(
 def readiness() -> Dict[str, Any]:
     store = init_cross_agent_orchestration_store()
     return {
-        "success": True,
-        "status": "cross_agent_workflow_orchestration_ready",
+        "success": store.get("success", False),
+        "status": "cross_agent_workflow_orchestration_ready" if store.get("success") else store.get("status"),
         "store_status": store["status"],
         "db_path": store["db_path"],
+        "storage_mode": store.get("storage_mode"),
         "head_agent_ids": sorted(HEAD_AGENT_IDS),
         "specialist_agent_count": len(SPECIALIST_AGENT_ALLOWLIST),
         "supports_head_agent_delegation": True,
@@ -451,4 +415,5 @@ def readiness() -> Dict[str, Any]:
         "spend_scaling_contracts_owner_gated": True,
         "governance_preserved": True,
         "owner_approval_controls_preserved": True,
+        "credential_values_exposed": False,
     }

@@ -6,6 +6,11 @@ from typing import Any, Dict, List
 from uuid import uuid4
 
 from backend.app.runtime.real_action_execution_bridge import execute_real_action_packet
+from backend.app.runtime.durable_orchestration_state_runtime import (
+    create_recovery_checkpoint,
+    record_orchestration_event,
+    record_orchestration_result_memory,
+)
 
 
 OWNER_APPROVAL_KEYWORDS = {
@@ -149,8 +154,24 @@ def route_autonomous_governed_packet(
     )
 
     routing_id = f"auto_route_{uuid4().hex[:12]}"
+    orchestration_id = str(packet.get("orchestration_id") or packet.get("plan_id") or "")
+    step_id = str(packet.get("step_id") or packet.get("packet_id") or "") or None
+
+    def _record_route_event(status: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        if not orchestration_id:
+            return {"success": True, "status": "not_orchestration_linked"}
+        return record_orchestration_event(
+            orchestration_id=orchestration_id,
+            step_id=step_id,
+            tenant_id=tenant_id,
+            event_type="autonomous_governed_action_routed",
+            payload={"routing_id": routing_id, "routing_status": status, **payload},
+        )
 
     if governance["route"] == "recommendation_only_not_owned":
+        persisted = _record_route_event("recommendation_only", {"governance": governance})
+        if not persisted.get("success"):
+            return persisted
         return {
             "success": True,
             "routing_id": routing_id,
@@ -162,6 +183,19 @@ def route_autonomous_governed_packet(
         }
 
     if governance["owner_approval_required"] and not owner_approved:
+        persisted = _record_route_event("queued_for_owner_approval", {"governance": governance})
+        if not persisted.get("success"):
+            return persisted
+        if orchestration_id:
+            checkpoint = create_recovery_checkpoint(
+                orchestration_id=orchestration_id,
+                tenant_id=tenant_id,
+                checkpoint_type="owner_approval_queue",
+                recoverable_status="queued_for_owner_approval",
+                payload={"routing_id": routing_id, "packet_id": packet.get("packet_id")},
+            )
+            if not checkpoint.get("success"):
+                return checkpoint
         return {
             "success": True,
             "routing_id": routing_id,
@@ -173,6 +207,12 @@ def route_autonomous_governed_packet(
         }
 
     if governance["autonomous_allowed"] or owner_approved:
+        pre_persisted = _record_route_event(
+            "execution_started",
+            {"governance": governance, "owner_approved": bool(owner_approved)},
+        )
+        if not pre_persisted.get("success"):
+            return pre_persisted
         execution = execute_real_action_packet(
             packet={
                 **packet,
@@ -183,6 +223,24 @@ def route_autonomous_governed_packet(
             tenant_id=tenant_id,
             connected_integrations=connected_integrations or [],
         )
+        persisted = _record_route_event(
+            "autonomously_executed" if governance["autonomous_allowed"] else "owner_approved_executed",
+            {"governance": governance, "performed_actual_action": execution.get("performed_actual_action", False)},
+        )
+        if not persisted.get("success"):
+            return persisted
+        if orchestration_id and execution.get("deliverable"):
+            memory = record_orchestration_result_memory(
+                orchestration_id=orchestration_id,
+                step_id=step_id,
+                tenant_id=tenant_id,
+                agent_id=str(governance["assigned_agent"]),
+                result_type="autonomous_governed_action_result",
+                result_summary=str(execution.get("customer_safe_message") or execution.get("deliverable") or "")[:500],
+                payload={"deliverable": execution.get("deliverable"), "routing_id": routing_id},
+            )
+            if not memory.get("success"):
+                return memory
 
         return {
             "success": execution.get("success", False),
@@ -196,6 +254,19 @@ def route_autonomous_governed_packet(
             "created_at": _now(),
         }
 
+    persisted = _record_route_event("manual_review_required", {"governance": governance})
+    if not persisted.get("success"):
+        return persisted
+    if orchestration_id:
+        checkpoint = create_recovery_checkpoint(
+            orchestration_id=orchestration_id,
+            tenant_id=tenant_id,
+            checkpoint_type="manual_review_required",
+            recoverable_status="manual_review_required",
+            payload={"routing_id": routing_id, "packet_id": packet.get("packet_id")},
+        )
+        if not checkpoint.get("success"):
+            return checkpoint
     return {
         "success": True,
         "routing_id": routing_id,

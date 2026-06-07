@@ -16,6 +16,15 @@ from backend.app.runtime.intelligent_action_packet_normalizer import (
 from backend.app.runtime.durable_external_action_records import (
     record_external_actions,
 )
+from backend.app.runtime.durable_orchestration_state_runtime import (
+    create_orchestration_plan,
+    create_orchestration_step,
+    create_recovery_checkpoint,
+    record_orchestration_event,
+    record_orchestration_result_memory,
+    update_orchestration_plan_status,
+    update_orchestration_step_status,
+)
 
 
 def _now_ms() -> int:
@@ -87,14 +96,52 @@ def execute_delegated_workforce_plan(
     package_tier = (package_tier or "starter").lower()
 
     enterprise_access = package_tier == "enterprise"
+    execution_id = f"delegated_exec_{uuid.uuid4().hex[:12]}"
+    orchestration_id = str(
+        implementation_plan.get("orchestration_id")
+        or implementation_plan.get("plan_id")
+        or execution_id
+    )
+
+    plan_persistence = create_orchestration_plan(
+        orchestration_id=orchestration_id,
+        tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+        project_id=str(implementation_plan.get("project_id") or orchestration_id),
+        root_agent_id=str(implementation_plan.get("lead_agent") or "orchestration_agent"),
+        status="in_progress",
+        plan_type="delegated_workforce_execution",
+        payload={
+            "normalization": implementation_plan.get("normalization"),
+            "packet_count": len(implementation_plan.get("action_packets", [])),
+            "package_tier": package_tier,
+            "connected_integrations": connected_integrations,
+            "execution_id": execution_id,
+        },
+    )
+    if not plan_persistence.get("success"):
+        return plan_persistence
 
     execution_results = []
     queued_results = []
     blocked_results = []
 
+    previous_step_id = None
     for packet in implementation_plan.get("action_packets", []):
 
         assigned_agent = packet.get("recommended_agent", "orchestration_agent")
+        packet_id = str(packet.get("packet_id") or f"{orchestration_id}_packet_{len(execution_results) + len(queued_results) + len(blocked_results) + 1:03d}")
+        step_created = create_orchestration_step(
+            step_id=packet_id,
+            orchestration_id=orchestration_id,
+            tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+            agent_id=assigned_agent,
+            action_type=str(packet.get("implementation_action") or packet.get("title") or "delegated_workforce_action"),
+            status="prepared",
+            dependency_step_ids=[previous_step_id] if previous_step_id else [],
+        )
+        if not step_created.get("success"):
+            return step_created
+        previous_step_id = packet_id
 
         agent_owned = (
             enterprise_access
@@ -107,7 +154,9 @@ def execute_delegated_workforce_plan(
         )
 
         packet_result = {
-            "packet_id": packet.get("packet_id"),
+            "packet_id": packet_id,
+            "orchestration_id": orchestration_id,
+            "execution_id": execution_id,
             "assigned_agent": assigned_agent,
             "deliverable_type": specialist["deliverable_type"],
             "risk_level": packet.get("risk_level", "medium"),
@@ -129,6 +178,19 @@ def execute_delegated_workforce_plan(
                 "performed_actual_action": False,
                 "real_execution": False,
             })
+            update_orchestration_step_status(
+                step_id=packet_id,
+                orchestration_id=orchestration_id,
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+                status="blocked_agent_not_owned",
+            )
+            record_orchestration_event(
+                orchestration_id=orchestration_id,
+                step_id=packet_id,
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+                event_type="delegated_packet_blocked",
+                payload={"reason": "agent_not_owned", "assigned_agent": assigned_agent},
+            )
             blocked_results.append(packet_result)
             continue
 
@@ -138,12 +200,27 @@ def execute_delegated_workforce_plan(
                 "delegate_execution": "blocked",
                 "completed_output": None,
             })
+            update_orchestration_step_status(
+                step_id=packet_id,
+                orchestration_id=orchestration_id,
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+                status="queued_for_owner_approval",
+            )
+            create_recovery_checkpoint(
+                orchestration_id=orchestration_id,
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+                checkpoint_type="owner_approval_queue",
+                recoverable_status="queued_for_owner_approval",
+                payload={"packet_id": packet_id, "assigned_agent": assigned_agent},
+            )
             queued_results.append(packet_result)
             continue
 
         autonomous_route_result = route_autonomous_governed_packet(
             {
-                "packet_id": packet.get("packet_id"),
+                "packet_id": packet_id,
+                "step_id": packet_id,
+                "orchestration_id": orchestration_id,
                 "assigned_agent": assigned_agent,
                 "recommended_agent": assigned_agent,
                 "implementation_action": (
@@ -160,6 +237,8 @@ def execute_delegated_workforce_plan(
             owner_approved=owner_approved,
             connected_integrations=connected_integrations,
         )
+        if not autonomous_route_result.get("success", False):
+            return autonomous_route_result
 
         packet_result.update({
             "execution_status": autonomous_route_result.get("routing_status"),
@@ -193,10 +272,44 @@ def execute_delegated_workforce_plan(
             "queued_for_owner_approval",
             "manual_review_required",
         }:
+            update_orchestration_step_status(
+                step_id=packet_id,
+                orchestration_id=orchestration_id,
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+                status=str(autonomous_route_result.get("routing_status")),
+            )
+            create_recovery_checkpoint(
+                orchestration_id=orchestration_id,
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+                checkpoint_type=str(autonomous_route_result.get("routing_status")),
+                recoverable_status=str(autonomous_route_result.get("routing_status")),
+                payload={"packet_id": packet_id, "assigned_agent": assigned_agent},
+            )
             queued_results.append(packet_result)
         elif autonomous_route_result.get("routing_status") == "recommendation_only":
+            update_orchestration_step_status(
+                step_id=packet_id,
+                orchestration_id=orchestration_id,
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+                status="recommendation_only",
+            )
             blocked_results.append(packet_result)
         else:
+            update_orchestration_step_status(
+                step_id=packet_id,
+                orchestration_id=orchestration_id,
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+                status="completed",
+            )
+            record_orchestration_result_memory(
+                orchestration_id=orchestration_id,
+                step_id=packet_id,
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+                agent_id=assigned_agent,
+                result_type="delegated_workforce_packet_result",
+                result_summary=str(packet_result.get("completed_output") or packet_result.get("execution_status") or "")[:500],
+                payload=packet_result,
+            )
             history_record = record_action_execution(
                 tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
                 packet_id=packet_result.get("packet_id"),
@@ -219,11 +332,33 @@ def execute_delegated_workforce_plan(
 
             execution_results.append(packet_result)
 
+    final_status = "completed" if execution_results and not queued_results and not blocked_results else "requires_review"
+    if not execution_results and blocked_results and not queued_results:
+        final_status = "blocked"
+    update_orchestration_plan_status(
+        orchestration_id=orchestration_id,
+        status=final_status,
+        completed=final_status == "completed",
+        failed=final_status == "blocked",
+    )
+    record_orchestration_event(
+        orchestration_id=orchestration_id,
+        tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+        event_type="delegated_workforce_execution_finished",
+        payload={
+            "completed_count": len(execution_results),
+            "queued_count": len(queued_results),
+            "blocked_count": len(blocked_results),
+            "status": final_status,
+        },
+    )
+
     return {
         "success": True,
         "profile": "delegated_workforce_execution_runtime_v1",
         "normalization": implementation_plan.get("normalization"),
-        "execution_id": f"delegated_exec_{uuid.uuid4().hex[:12]}",
+        "execution_id": execution_id,
+        "orchestration_id": orchestration_id,
         "completed_count": len(execution_results),
         "queued_count": len(queued_results),
         "blocked_count": len(blocked_results),
