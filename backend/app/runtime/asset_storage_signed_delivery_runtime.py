@@ -6,8 +6,17 @@ import mimetypes
 import os
 import time
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+from backend.app.runtime.canonical_media_asset_metadata_runtime import (
+    get_media_asset as canonical_get_media_asset,
+    list_asset_delivery_packets as canonical_list_asset_delivery_packets,
+    record_asset_access_event,
+    record_asset_delivery_packet,
+    record_media_asset,
+)
 
 
 _ASSET_RECORDS: Dict[str, Dict[str, Any]] = {}
@@ -116,7 +125,61 @@ def create_asset_record(
     }
 
     _ASSET_RECORDS[asset_id] = record
+    canonical = record_media_asset(
+        asset_id=asset_id,
+        tenant_id=tenant_id,
+        execution_id=request_id,
+        provider_job_id=request_id,
+        agent_id=str((metadata or {}).get("agent_id") or ""),
+        asset_type=asset_type,
+        media_type=asset_type,
+        status=asset_status,
+        storage_provider="provider_url" if _is_browser_url(source_url) else "local_runtime_file" if _is_local_runtime_path(source_url) else "metadata_only",
+        object_key=record["storage_key"],
+        local_path=record["local_file_path"],
+        provider_url=record["source_url"],
+        preview_url=record["source_url"] or record["local_file_path"],
+        download_url=record["source_url"] or record["local_file_path"],
+        preview_ready=bool(record["source_url"] or record["local_file_path"]),
+        download_ready=bool(record["source_url"] or record["local_file_path"]),
+        playable=bool(record["source_url"] or record["local_file_path"]),
+        metadata_only=not bool(record["source_url"] or record["local_file_path"]),
+        source_runtime="asset_storage_signed_delivery_runtime",
+        payload=record,
+    )
+    record["authority"] = "backend_canonical"
+    record["canonical_storage_mode"] = canonical.get("storage_mode")
+    record["fallback_used"] = bool(canonical.get("dev_only"))
+    record["dev_only"] = bool(canonical.get("dev_only"))
+    record["production_fail_closed"] = bool(canonical.get("production_fail_closed"))
     return record
+
+
+def _canonical_asset_to_record(asset: Dict[str, Any]) -> Dict[str, Any]:
+    payload = asset.get("payload") if isinstance(asset.get("payload"), dict) else {}
+    source_url = asset.get("provider_url") or asset.get("preview_url") or asset.get("download_url") or ""
+    local_file_path = asset.get("local_path") or ""
+    return {
+        "asset_id": asset.get("asset_id"),
+        "tenant_id": asset.get("tenant_id") or "owner_admin",
+        "request_id": asset.get("provider_job_id") or asset.get("execution_id") or payload.get("request_id") or "canonical_media_asset_metadata",
+        "provider_key": payload.get("provider_key") or payload.get("provider") or "internal",
+        "asset_type": asset.get("asset_type") or asset.get("media_type") or "creative_asset",
+        "asset_status": asset.get("status") or "persisted",
+        "metadata_only": bool(asset.get("metadata_only")),
+        "playable": bool(asset.get("playable")),
+        "source_url_present": bool(source_url),
+        "source_url": source_url if _is_browser_url(source_url) else "",
+        "local_file_path": local_file_path,
+        "storage_key": asset.get("object_key") or f"canonical_media/{asset.get('asset_id')}",
+        "metadata": _safe_metadata(payload),
+        "created_at_ms": _now_ms(),
+        "updated_at_ms": _now_ms(),
+        "authority": "backend_canonical",
+        "canonical_storage_mode": asset.get("storage_mode"),
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
 
 
 def _registry_asset_to_record(asset_id: str) -> Dict[str, Any]:
@@ -200,6 +263,19 @@ def _registry_asset_to_record(asset_id: str) -> Dict[str, Any]:
 
 
 def get_asset_record(asset_id: str) -> Dict[str, Any]:
+    canonical = canonical_get_media_asset(asset_id)
+    if canonical.get("production_fail_closed"):
+        return {
+            "status": "canonical_media_metadata_unavailable",
+            "asset_id": asset_id,
+            "reason": canonical.get("reason"),
+            "production_fail_closed": True,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+    if canonical.get("success") and canonical.get("asset"):
+        return _canonical_asset_to_record(canonical.get("asset") or {})
+
     record = _ASSET_RECORDS.get(asset_id)
     if record:
         return record
@@ -264,6 +340,14 @@ def create_signed_asset_delivery_packet(
     expires_in_seconds: int = 86400,
 ) -> Dict[str, Any]:
     record = get_asset_record(asset_id)
+    if record.get("production_fail_closed"):
+        return {
+            "status": "canonical_media_metadata_unavailable",
+            "asset_id": asset_id,
+            "production_fail_closed": True,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
     if record.get("status") == "not_found":
         return {
             "status": "not_found",
@@ -320,6 +404,25 @@ def create_signed_asset_delivery_packet(
         "credential_values_exposed": False,
         "customer_safe": True,
     })
+    record_asset_delivery_packet(
+        tenant_id=record_tenant,
+        asset_id=asset_id,
+        delivery_packet_id=f"asset_delivery_packet_{nonce}",
+        delivery_status="ready",
+        preview_ready=delivery_type == "preview",
+        download_ready=delivery_type == "download",
+        signed_preview_url=packet["delivery_url"] if delivery_type == "preview" else "",
+        signed_download_url=packet["delivery_url"] if delivery_type == "download" else "",
+        expires_at=datetime.fromtimestamp(expires_at_ms / 1000, timezone.utc),
+        payload=packet,
+    )
+    record_asset_access_event(
+        tenant_id=record_tenant,
+        asset_id=asset_id,
+        event_type="signed_delivery_packet_created",
+        actor_role="system",
+        payload={"delivery_type": delivery_type, "expires_at_ms": expires_at_ms},
+    )
 
     return packet
 
@@ -401,6 +504,18 @@ def build_customer_safe_delivery_response(
 ) -> Dict[str, Any]:
     record = get_asset_record(asset_id)
 
+    if record.get("production_fail_closed"):
+        return {
+            "success": False,
+            "status": "canonical_media_metadata_unavailable",
+            "reason": record.get("reason"),
+            "asset_id": asset_id,
+            "http_status": 503,
+            "production_fail_closed": True,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
     if record.get("status") == "not_found":
         return {
             "success": False,
@@ -459,6 +574,13 @@ def build_customer_safe_delivery_response(
         }
 
     if local_file_path and Path(local_file_path).exists():
+        record_asset_access_event(
+            tenant_id=tenant_id,
+            asset_id=asset_id,
+            event_type=f"{delivery_type}_local_file_served",
+            actor_role="client",
+            payload={"delivery_type": delivery_type},
+        )
         return {
             "success": True,
             "status": "ready",
@@ -479,6 +601,13 @@ def build_customer_safe_delivery_response(
         }
 
     if source_url:
+        record_asset_access_event(
+            tenant_id=tenant_id,
+            asset_id=asset_id,
+            event_type=f"{delivery_type}_provider_url_redirect",
+            actor_role="client",
+            payload={"delivery_type": delivery_type},
+        )
         return {
             "success": True,
             "status": "ready",
@@ -524,6 +653,27 @@ def list_asset_delivery_events(
     asset_id: Optional[str] = None,
     limit: int = 100,
 ) -> Dict[str, Any]:
+    canonical = canonical_list_asset_delivery_packets(tenant_id=tenant_id or "", asset_id=asset_id or "", limit=limit)
+    if canonical.get("success") and canonical.get("delivery_packets"):
+        return {
+            "events": canonical.get("delivery_packets", []),
+            "count": canonical.get("count", 0),
+            "authority": "backend_canonical",
+            "fallback_used": False,
+            "dev_only": bool(canonical.get("dev_only")),
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+    if canonical.get("production_fail_closed"):
+        return {
+            "events": [],
+            "count": 0,
+            "authority": "backend_canonical",
+            "production_fail_closed": True,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
     events = list(_ASSET_DELIVERY_EVENTS)
 
     if tenant_id:

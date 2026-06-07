@@ -22,6 +22,15 @@ except Exception:
     upload_json_to_supabase = None
     download_json_from_supabase = None
 
+try:
+    from backend.app.runtime.canonical_media_asset_metadata_runtime import (
+        list_media_assets as canonical_list_media_assets,
+        record_media_asset as record_canonical_media_asset,
+    )
+except Exception:
+    canonical_list_media_assets = None
+    record_canonical_media_asset = None
+
 ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_REGISTRY_DIR = ROOT / "runtime_outputs" / "creative_asset_registry"
 REGISTRY_DIR = Path(os.getenv("CREATIVE_MEDIA_PERSISTENCE_DIR", str(DEFAULT_REGISTRY_DIR)))
@@ -472,6 +481,47 @@ def persist_creative_asset(asset_packet: dict):
         "created_at": created_at,
     }
 
+    canonical = {"success": True, "storage_mode": "unavailable"}
+    if record_canonical_media_asset is not None:
+        canonical = record_canonical_media_asset(
+            asset_id=stored["asset_id"],
+            tenant_id=packet.get("tenant_id") or "owner_admin",
+            project_id=packet.get("project_id") or "default_project",
+            execution_id=packet.get("execution_id") or packet.get("run_id") or "",
+            provider_job_id=packet.get("provider_job_id") or packet.get("job_id") or "",
+            provider_execution_id=packet.get("provider_execution_id") or "",
+            orchestration_id=packet.get("orchestration_id") or "",
+            agent_id=agent_id or "",
+            asset_type=asset_type,
+            media_type=packet.get("media_type") or asset_type,
+            status=stored["status"],
+            storage_provider=storage_provider,
+            bucket=stored.get("storage_bucket") or "",
+            object_key=stored.get("storage_object_key") or "",
+            local_path=local_url,
+            provider_url=provider_url,
+            preview_url=playable_url,
+            download_url=playable_url,
+            mime_type=mimetypes.guess_type(str(local_path))[0] if local_path is not None else "",
+            preview_ready=playable,
+            download_ready=playable,
+            playable=playable,
+            metadata_only=metadata_only,
+            source_runtime="creative_asset_persistence_bridge",
+            payload=stored,
+        )
+        if not canonical.get("success") and canonical.get("production_fail_closed"):
+            return {
+                "success": False,
+                "status": canonical.get("status", "canonical_media_metadata_unavailable"),
+                "asset_id": stored["asset_id"],
+                "asset_type": stored["asset_type"],
+                "authority": "backend_canonical",
+                "production_fail_closed": True,
+                "credential_values_exposed": False,
+                "customer_safe": True,
+            }
+
     existing_ids = {item.get("asset_id") for item in registry if isinstance(item, dict)}
     if stored["asset_id"] not in existing_ids:
         registry.insert(0, _lightweight_index_record(stored))
@@ -496,6 +546,11 @@ def persist_creative_asset(asset_packet: dict):
         "download_ready": stored["download_ready"],
         "playable": stored["playable"],
         "metadata_only": stored["metadata_only"],
+        "authority": "backend_canonical",
+        "canonical_storage_mode": canonical.get("storage_mode"),
+        "fallback_used": bool(canonical.get("dev_only")),
+        "dev_only": bool(canonical.get("dev_only")),
+        "production_fail_closed": False,
         "storage_upload_status": storage_upload.get("status") if isinstance(storage_upload, dict) else None,
         "storage_upload_http_status": storage_upload.get("http_status") if isinstance(storage_upload, dict) else None,
         "credential_values_exposed": False,
@@ -576,6 +631,83 @@ def persist_creative_agent_output(agent_id: str, output_packet: dict):
 
 
 def get_persisted_creative_assets(limit=100):
+    if canonical_list_media_assets is not None:
+        canonical = canonical_list_media_assets(limit=int(limit or 100))
+        if canonical.get("production_fail_closed"):
+            return {
+                "success": False,
+                "status": canonical.get("status", "canonical_media_metadata_unavailable"),
+                "asset_count": 0,
+                "total_asset_count": 0,
+                "assets": [],
+                "authority": "backend_canonical",
+                "production_fail_closed": True,
+                "credential_values_exposed": False,
+                "customer_safe": True,
+            }
+        canonical_assets = [
+            item for item in canonical.get("assets", [])
+            if isinstance(item, dict) and item.get("source_runtime") == "creative_asset_persistence_bridge"
+        ]
+        if canonical.get("success") and canonical_assets:
+            safe_assets = []
+            for item in canonical_assets[: int(limit or 100)]:
+                clean = {
+                    "asset_id": item.get("asset_id"),
+                    "agent_id": item.get("agent_id"),
+                    "agent_label": item.get("agent_id"),
+                    "provider": (item.get("payload") or {}).get("provider") or "internal",
+                    "provider_key": (item.get("payload") or {}).get("provider") or "internal",
+                    "asset_type": item.get("asset_type"),
+                    "media_type": item.get("media_type"),
+                    "title": (item.get("payload") or {}).get("title") or str(item.get("asset_type") or "Creative asset").replace("_", " ").title(),
+                    "test_label": (item.get("payload") or {}).get("test_label"),
+                    "provider_asset_id": (item.get("payload") or {}).get("provider_asset_id"),
+                    "provider_asset_url": item.get("provider_url") or item.get("preview_url") or item.get("local_path"),
+                    "preview_url": item.get("preview_url"),
+                    "download_url": item.get("download_url"),
+                    "original_preview_url": (item.get("payload") or {}).get("original_preview_url"),
+                    "original_download_url": (item.get("payload") or {}).get("original_download_url"),
+                    "preview_ready": bool(item.get("preview_ready")),
+                    "download_ready": bool(item.get("download_ready")),
+                    "playable": bool(item.get("playable")),
+                    "metadata_only": bool(item.get("metadata_only")),
+                    "storage_provider": item.get("storage_provider"),
+                    "storage_bucket": item.get("bucket"),
+                    "storage_object_key": item.get("object_key"),
+                    "content": (item.get("payload") or {}).get("content"),
+                    "summary": (item.get("payload") or {}).get("summary"),
+                    "status": item.get("status"),
+                    "created_at": item.get("created_at"),
+                    "authority": "backend_canonical",
+                    "canonical_storage_mode": canonical.get("storage_mode"),
+                    "fallback_used": False,
+                    "dev_only": bool(canonical.get("dev_only")),
+                    "credential_values_exposed": False,
+                    "customer_safe": True,
+                }
+                safe_assets.append(clean)
+
+            storage = supabase_storage_status()
+            return {
+                "success": True,
+                "asset_count": len(safe_assets),
+                "total_asset_count": len(canonical_assets),
+                "assets": safe_assets,
+                "providers_checked": ["elevenlabs", "runway", "heygen", "kling", "sync", "internal"],
+                "storage_provider": storage.get("storage_provider"),
+                "durable_storage_ready": storage.get("durable_storage_ready"),
+                "storage_bucket": media_output_bucket(),
+                "authority": "backend_canonical",
+                "canonical_storage_mode": canonical.get("storage_mode"),
+                "fallback_used": False,
+                "dev_only": bool(canonical.get("dev_only")),
+                "last_supabase_registry_read": LAST_SUPABASE_REGISTRY_READ,
+                "last_supabase_registry_write": LAST_SUPABASE_REGISTRY_WRITE,
+                "last_supabase_media_upload": LAST_SUPABASE_MEDIA_UPLOAD,
+                "credential_values_exposed": False,
+            }
+
     registry = _load_registry()
     safe_assets = []
 
@@ -597,6 +729,10 @@ def get_persisted_creative_assets(limit=100):
         "storage_provider": storage.get("storage_provider"),
         "durable_storage_ready": storage.get("durable_storage_ready"),
         "storage_bucket": media_output_bucket(),
+        "authority": "frontend_advisory",
+        "fallback_used": True,
+        "dev_only": True,
+        "production_fail_closed": False,
         "last_supabase_registry_read": LAST_SUPABASE_REGISTRY_READ,
         "last_supabase_registry_write": LAST_SUPABASE_REGISTRY_WRITE,
         "last_supabase_media_upload": LAST_SUPABASE_MEDIA_UPLOAD,

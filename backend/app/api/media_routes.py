@@ -56,12 +56,26 @@ def register_asset(payload: RegisterAssetRequest, x_tenant_id: Optional[str] = H
         size=payload.size,
         metadata=payload.metadata,
     )
+    if asset.get("success") is False or asset.get("production_fail_closed"):
+        raise HTTPException(status_code=503, detail=asset)
     return {"success": True, "asset": asset}
 
 
 @router.get("/assets")
 def list_assets(x_tenant_id: Optional[str] = Header(default=None)):
-    return {"success": True, "assets": list_media_assets(_tenant(x_tenant_id))}
+    status = media_persistence_status()
+    if status.get("production_fail_closed"):
+        raise HTTPException(status_code=503, detail=status)
+    assets = list_media_assets(_tenant(x_tenant_id))
+    return {
+        "success": True,
+        "authority": "backend_canonical",
+        "fallback_used": bool(status.get("fallback_used")),
+        "dev_only": bool(status.get("dev_only")),
+        "production_fail_closed": False,
+        "assets": assets,
+        "credential_values_exposed": False,
+    }
 
 
 @router.post("/deliverables/persist")
@@ -72,14 +86,23 @@ def persist(payload: PersistDeliverableRequest, x_tenant_id: Optional[str] = Hea
         deliverable=payload.deliverable,
         assets=payload.assets,
     )
+    if record.get("success") is False or record.get("production_fail_closed"):
+        raise HTTPException(status_code=503, detail=record)
     return {"success": True, "record": record, "deliverable": record["deliverable"]}
 
 
 @router.get("/deliverables/latest")
 def latest(x_tenant_id: Optional[str] = Header(default=None)):
     record = latest_deliverable(_tenant(x_tenant_id))
+    if isinstance(record, dict) and record.get("production_fail_closed"):
+        raise HTTPException(status_code=503, detail=record)
     return {
         "success": True,
+        "authority": "backend_canonical" if record else "backend_canonical",
+        "fallback_used": bool(record.get("fallback_used")) if isinstance(record, dict) else False,
+        "dev_only": bool(record.get("dev_only")) if isinstance(record, dict) else False,
+        "production_fail_closed": False,
         "record": record,
         "deliverable": record.get("deliverable") if record else None,
+        "credential_values_exposed": False,
     }
