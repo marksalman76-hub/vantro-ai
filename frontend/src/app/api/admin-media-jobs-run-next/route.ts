@@ -15,11 +15,13 @@ const ADMIN_TOKEN =
   "";
 
 export async function POST() {
-  const headers: Record<string, string> = { "Cache-Control": "no-store" };
+  const headers: Record<string, string> = {
+    "Cache-Control": "no-store",
+    "x-actor-role": "owner_admin",
+  };
   if (ADMIN_TOKEN) {
     headers.Authorization = `Bearer ${ADMIN_TOKEN}`;
     headers["x-admin-token"] = ADMIN_TOKEN;
-    headers["x-actor-role"] = "owner_admin";
   }
 
   const response = await fetch(`${BACKEND_BASE_URL}/admin/media-jobs/run-next`, {

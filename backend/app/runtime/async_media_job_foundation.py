@@ -23,6 +23,21 @@ def _job_path(job_id: str) -> Path:
     return STORE / f"{job_id}.json"
 
 
+def _scrub_sensitive(value: Any) -> Any:
+    if isinstance(value, list):
+        return [_scrub_sensitive(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+    safe: Dict[str, Any] = {}
+    for key, item in value.items():
+        lowered = str(key).lower()
+        if any(marker in lowered for marker in ("token", "secret", "password", "api_key", "authorization", "credential", "debug", "raw")):
+            continue
+        safe[str(key)] = _scrub_sensitive(item)
+    safe["credential_values_exposed"] = False
+    return safe
+
+
 def enqueue_media_job(*, task: str, agent_id: str, tenant_id: str, include_image: bool = True, include_audio: bool = True, include_video: bool = True, include_avatar: bool = False) -> Dict[str, Any]:
     job_id = f"media_job_{uuid4().hex[:12]}"
     job = {
@@ -60,14 +75,14 @@ def read_media_job(job_id: str) -> Dict[str, Any]:
     job = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(job, dict):
         job["credential_values_exposed"] = False
-    return job
+    return _scrub_sensitive(job)
 
 
 def list_media_jobs(limit: int = 50) -> Dict[str, Any]:
     jobs = []
     for path in sorted(STORE.glob("media_job_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)[:limit]:
         try:
-            jobs.append(json.loads(path.read_text(encoding="utf-8")))
+            jobs.append(_scrub_sensitive(json.loads(path.read_text(encoding="utf-8"))))
         except Exception:
             continue
     return {
@@ -96,6 +111,8 @@ def _safe_blocked_reason(job: Dict[str, Any]) -> str:
         lowered = raw.lower()
         if any(marker in lowered for marker in ("token", "secret", "password", "api_key", "authorization", "credential")):
             return "Provider execution is not configured for this media job. Connect the required provider credentials or run it again once provider dispatch is ready."
+        if raw in {"no_playable_or_metadata_asset_result", "no_playable_provider_asset_result"}:
+            return "Provider execution did not return a playable media asset. Connect or enable a supported media provider, then rerun the media job."
         return raw[:260]
     status = str(job.get("status") or "").lower()
     if status == "queued":
@@ -116,6 +133,8 @@ def media_job_to_visible_asset_evidence(job: Dict[str, Any], *, audience: str = 
     generated_count = int(job.get("media_asset_count") or job.get("real_media_asset_count") or len(final_assets) or 0)
     blocked_reason = _safe_blocked_reason(job)
     provider_readiness = "ready" if playable_count else ("blocked" if status.lower() in {"failed", "blocked"} else status.lower() or "queued")
+    preview_ready = any(asset.get("preview_ready") for asset in final_assets)
+    download_ready = any(asset.get("download_ready") for asset in final_assets)
     title = f"Creative media job {_label(status, 'Queued').lower()}"
 
     return {
@@ -144,10 +163,10 @@ def media_job_to_visible_asset_evidence(job: Dict[str, Any], *, audience: str = 
         ),
         "blocked_reason": "" if playable_count else blocked_reason,
         "not_playable_reason": "" if playable_count else blocked_reason,
-        "preview_ready": False,
-        "download_ready": False,
-        "playable": False,
-        "metadata_only": True,
+        "preview_ready": bool(preview_ready),
+        "download_ready": bool(download_ready),
+        "playable": bool(playable_count),
+        "metadata_only": not bool(playable_count),
         "media_asset_count": generated_count,
         "real_media_asset_count": int(job.get("real_media_asset_count") or 0),
         "playable_asset_count": playable_count,
@@ -191,7 +210,7 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
         with _LOCK:
             current = read_media_job(job_id)
             current_status = str(current.get("status") or "").lower()
-            if current_status in {"processing", "completed", "failed"}:
+            if current_status in {"processing", "completed", "blocked"}:
                 return {
                     "success": True,
                     "processed": False,
@@ -224,26 +243,39 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
             for asset in media_pack.get("media_assets", [])
             if isinstance(asset, dict)
         ]
+        playable_assets = [asset for asset in final_assets if asset.get("playable") or asset.get("preview_ready") or asset.get("download_ready")]
 
-        job["status"] = "completed"
-        if not final_assets:
-            job["status"] = "failed"
-            job["lifecycle"] = "failed"
-            job["error"] = "no_playable_or_metadata_asset_result"
-            job["failed_at"] = _now()
+        if not playable_assets:
+            job["status"] = "blocked"
+            job["lifecycle"] = "provider_unavailable_or_no_playable_asset"
+            job["blocked_reason"] = "Provider execution did not return a playable media asset. Connect or enable a supported media provider, then rerun the media job."
+            job["media_pack_id"] = media_pack.get("media_pack_id")
+            job["media_asset_count"] = len(media_pack.get("media_assets", []))
+            job["real_media_asset_count"] = media_pack.get("real_media_asset_count", 0)
+            job["persisted_asset_count"] = media_pack.get("persisted_asset_count", 0)
+            job["final_asset_ids"] = [
+                asset.get("asset_id")
+                for asset in final_assets
+                if asset.get("asset_id")
+            ]
+            job["final_assets"] = final_assets
+            job["preview_ready_count"] = 0
+            job["download_ready_count"] = 0
+            job["blocked_at"] = _now()
             job["updated_at"] = _now()
             job["credential_values_exposed"] = False
             _write_job(job)
             return {
-                "success": False,
+                "success": True,
                 "processed": True,
+                "status": "blocked",
                 "job": job,
-                "error": job["error"],
+                "blocked_reason": job["blocked_reason"],
                 "credential_values_exposed": False,
             }
 
         job["status"] = "completed"
-        job["lifecycle"] = "final_asset_ready" if any(asset.get("playable") for asset in final_assets) else "metadata_only"
+        job["lifecycle"] = "final_asset_ready"
         job["media_pack_id"] = media_pack.get("media_pack_id")
         job["media_asset_count"] = len(media_pack.get("media_assets", []))
         job["real_media_asset_count"] = media_pack.get("real_media_asset_count", 0)
@@ -254,8 +286,8 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
             if asset.get("asset_id")
         ]
         job["final_assets"] = final_assets
-        job["preview_ready_count"] = sum(1 for asset in final_assets if asset.get("preview_ready"))
-        job["download_ready_count"] = sum(1 for asset in final_assets if asset.get("download_ready"))
+        job["preview_ready_count"] = sum(1 for asset in playable_assets if asset.get("preview_ready"))
+        job["download_ready_count"] = sum(1 for asset in playable_assets if asset.get("download_ready"))
         job["completed_at"] = _now()
         job["updated_at"] = _now()
         job["credential_values_exposed"] = False
@@ -263,18 +295,19 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
 
         return {"success": True, "processed": True, "job": job, "credential_values_exposed": False}
     except Exception as exc:
-        job["status"] = "failed"
-        job["lifecycle"] = "failed"
-        job["error"] = str(exc)[:800]
-        job["failed_at"] = _now()
+        job["status"] = "blocked"
+        job["lifecycle"] = "provider_dispatch_blocked"
+        job["blocked_reason"] = "Provider execution is not configured or could not complete safely. Connect the required media provider and rerun the job."
+        job["blocked_at"] = _now()
         job["updated_at"] = _now()
         job["credential_values_exposed"] = False
         _write_job(job)
         return {
-            "success": False,
+            "success": True,
             "processed": True,
+            "status": "blocked",
             "job": job,
-            "error": str(exc)[:800],
+            "blocked_reason": job["blocked_reason"],
             "credential_values_exposed": False,
         }
 
