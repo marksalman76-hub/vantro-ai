@@ -10,6 +10,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from backend.app.runtime.canonical_product_asset_metadata_runtime import (
+    delete_product_asset as canonical_delete_product_asset,
+    ensure_product_asset_metadata_tables,
+    get_product_asset as canonical_get_product_asset,
+    get_product_asset_metadata_summary,
+    list_product_assets as canonical_list_product_assets,
+    record_product_asset,
+    record_product_asset_event,
+)
+
 try:
     from backend.app.runtime.supabase_creative_storage import (
         supabase_enabled,
@@ -142,6 +152,44 @@ def _safe_metadata(metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     return safe
 
 
+def _is_production() -> bool:
+    values = [
+        os.getenv("ENVIRONMENT"),
+        os.getenv("APP_ENV"),
+        os.getenv("FASTAPI_ENV"),
+        os.getenv("NODE_ENV"),
+        os.getenv("RENDER"),
+        os.getenv("VERCEL_ENV"),
+        os.getenv("PRODUCTION"),
+    ]
+    return any(str(value or "").strip().lower() in {"1", "true", "prod", "production"} for value in values)
+
+
+def _canonical_unavailable_response(readiness: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "success": False,
+        "layer": "creative_product_asset_library",
+        "status": readiness.get("status") or "canonical_product_asset_metadata_unavailable",
+        "authority": "backend_canonical",
+        "production_fail_closed": bool(readiness.get("production_fail_closed")),
+        "credential_values_exposed": False,
+        "customer_safe": True,
+        "error": readiness.get("reason") or readiness.get("error") or "canonical_product_asset_metadata_unavailable",
+    }
+
+
+def _merge_authority(payload: Dict[str, Any], canonical: Dict[str, Any]) -> Dict[str, Any]:
+    merged = dict(payload)
+    merged["authority"] = "backend_canonical"
+    merged["fallback_used"] = bool(canonical.get("dev_only"))
+    merged["dev_only"] = bool(canonical.get("dev_only"))
+    merged["production_fail_closed"] = False
+    merged["canonical_storage_mode"] = canonical.get("storage_mode")
+    merged["credential_values_exposed"] = False
+    merged["customer_safe"] = True
+    return merged
+
+
 def upload_creative_product_asset(
     *,
     tenant_id: str,
@@ -199,13 +247,32 @@ def upload_creative_product_asset(
             "customer_safe": True,
         }
 
+    readiness = ensure_product_asset_metadata_tables()
+    if not readiness.get("success"):
+        return _canonical_unavailable_response(readiness)
+
+    production = _is_production()
+    if production and not supabase_enabled():
+        return {
+            "success": False,
+            "layer": "creative_product_asset_library",
+            "status": "object_storage_unavailable",
+            "authority": "backend_canonical",
+            "production_fail_closed": True,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+            "error": "Product asset uploads require durable object storage in production.",
+        }
+
     asset_id = f"product_asset_{uuid.uuid4().hex[:18]}"
     mime_type = mimetypes.guess_type(safe_filename)[0] or "application/octet-stream"
 
-    asset_dir = _tenant_dir(tenant_id, asset_type)
     stored_filename = f"{asset_id}_{safe_filename}"
-    stored_path = asset_dir / stored_filename
-    stored_path.write_bytes(content)
+    stored_path: Optional[Path] = None
+    if not production:
+        asset_dir = _tenant_dir(tenant_id, asset_type)
+        stored_path = asset_dir / stored_filename
+        stored_path.write_bytes(content)
 
     object_key = f"tenants/{_safe_slug(tenant_id)}/{asset_type}/{stored_filename}"
     storage_upload = None
@@ -221,15 +288,32 @@ def upload_creative_product_asset(
         if storage_upload.get("success"):
             storage_url = storage_upload.get("public_url")
 
+    if production and not storage_url:
+        return {
+            "success": False,
+            "layer": "creative_product_asset_library",
+            "status": "object_storage_upload_failed",
+            "authority": "backend_canonical",
+            "production_fail_closed": True,
+            "storage_upload": storage_upload,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+            "error": "Product asset upload did not receive a durable customer-safe storage URL.",
+        }
+
+    provider = "supabase" if storage_url else "local_runtime_fallback"
+    bucket = product_asset_bucket() if storage_url else None
+    safe_ready = bool(storage_url)
     record = {
         "asset_id": asset_id,
         "tenant_id": tenant_id,
         "asset_type": asset_type,
         "filename": original_filename,
+        "original_filename": original_filename,
         "stored_filename": stored_filename,
-        "stored_path": str(stored_path),
-        "storage_provider": "supabase" if storage_url else "local_runtime_fallback",
-        "storage_bucket": product_asset_bucket() if storage_url else None,
+        "stored_path": str(stored_path) if stored_path else None,
+        "storage_provider": provider,
+        "storage_bucket": bucket,
         "storage_object_key": object_key if storage_url else None,
         "public_url": storage_url,
         "preview_url": storage_url,
@@ -240,13 +324,46 @@ def upload_creative_product_asset(
         "uploaded_by": _safe_text(uploaded_by, "owner_admin"),
         "campaign_id": campaign_id,
         "metadata": _safe_metadata(metadata),
-        "preview_ready": bool(storage_url) or mime_type.startswith(("image/", "video/")) or mime_type == "application/pdf",
-        "download_ready": bool(storage_url) or True,
+        "preview_ready": safe_ready,
+        "download_ready": safe_ready,
         "customer_safe": True,
         "credential_values_exposed": False,
         "created_at": _now(),
         "updated_at": _now(),
     }
+
+    canonical = record_product_asset(
+        asset_id=asset_id,
+        tenant_id=tenant_id,
+        project_id=campaign_id or "default_project",
+        uploaded_by=_safe_text(uploaded_by, "owner_admin"),
+        asset_type=asset_type,
+        filename=original_filename,
+        original_filename=original_filename,
+        mime_type=mime_type,
+        byte_size=len(content),
+        checksum=record["sha256"],
+        storage_provider=provider,
+        bucket=bucket or "",
+        object_key=object_key if storage_url else "",
+        local_path=str(stored_path) if stored_path else "",
+        preview_url=storage_url or "",
+        download_url=storage_url or "",
+        preview_ready=safe_ready,
+        download_ready=safe_ready,
+        status="uploaded",
+        approval_status="pending_review",
+        source_runtime="creative_product_asset_library",
+        payload={
+            **_safe_metadata(metadata),
+            "stored_filename": stored_filename,
+            "storage_upload_success": bool(storage_url),
+        },
+    )
+    if not canonical.get("success"):
+        return _canonical_unavailable_response(canonical)
+
+    record = canonical.get("asset") if isinstance(canonical.get("asset"), dict) else record
 
     registry = _load_registry()
     assets = registry.get("assets", [])
@@ -260,11 +377,11 @@ def upload_creative_product_asset(
         "asset": record,
         "asset_id": asset_id,
         "storage_upload": storage_upload,
-        "storage_provider": record["storage_provider"],
-        "durable_storage_ready": record["storage_provider"] == "supabase",
+        "storage_provider": record.get("storage_provider"),
+        "durable_storage_ready": record.get("storage_provider") == "supabase",
         "credential_values_exposed": False,
         "customer_safe": True,
-    }
+    }, canonical)
 
 
 def list_creative_product_assets(
@@ -274,28 +391,24 @@ def list_creative_product_assets(
     campaign_id: Optional[str] = None,
     limit: int = 100,
 ) -> Dict[str, Any]:
-    registry = _load_registry()
-    records = [r for r in registry.get("assets", []) if isinstance(r, dict)]
+    canonical = canonical_list_product_assets(
+        tenant_id=tenant_id or "",
+        project_id=campaign_id or "",
+        asset_type=_normalise_asset_type(asset_type) if asset_type else "",
+        limit=limit,
+    )
+    if not canonical.get("success"):
+        return _canonical_unavailable_response(canonical)
 
-    if tenant_id:
-        records = [r for r in records if r.get("tenant_id") == tenant_id]
-
-    if asset_type:
-        normalised = _normalise_asset_type(asset_type)
-        records = [r for r in records if r.get("asset_type") == normalised]
-
-    if campaign_id:
-        records = [r for r in records if r.get("campaign_id") == campaign_id]
-
-    records = records[: max(int(limit or 100), 1)]
+    records = [r for r in canonical.get("assets", []) if isinstance(r, dict)]
     storage = supabase_storage_status()
 
-    return {
+    return _merge_authority({
         "success": True,
         "layer": "creative_product_asset_library",
         "status": "ready",
         "asset_count": len(records),
-        "total_asset_count": len(registry.get("assets", [])),
+        "total_asset_count": canonical.get("total_asset_count", len(records)),
         "assets": records,
         "supported_asset_types": sorted(set(ASSET_TYPE_ALIASES.values())),
         "allowed_extensions": sorted(ALLOWED_EXTENSIONS),
@@ -305,25 +418,41 @@ def list_creative_product_assets(
         "credential_values_exposed": False,
         "customer_safe": True,
         "verified_at": _now(),
-    }
+    }, canonical)
 
 
 def get_creative_product_asset(asset_id: str) -> Dict[str, Any]:
-    registry = _load_registry()
-    for record in registry.get("assets", []):
-        if isinstance(record, dict) and record.get("asset_id") == asset_id:
-            return {
+    canonical = canonical_get_product_asset(asset_id)
+    if not canonical.get("success"):
+        if canonical.get("production_fail_closed"):
+            return _canonical_unavailable_response(canonical)
+        return {
+            "success": False,
+            "status": "not_found",
+            "asset_id": asset_id,
+            "authority": "backend_canonical",
+            "fallback_used": bool(canonical.get("dev_only")),
+            "dev_only": bool(canonical.get("dev_only")),
+            "production_fail_closed": False,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
+    record = canonical.get("asset") or canonical.get("record")
+    if isinstance(record, dict):
+        return _merge_authority({
                 "success": True,
                 "status": "found",
                 "asset": record,
                 "credential_values_exposed": False,
                 "customer_safe": True,
-            }
+            }, canonical)
 
     return {
         "success": False,
         "status": "not_found",
         "asset_id": asset_id,
+        "authority": "backend_canonical",
         "credential_values_exposed": False,
         "customer_safe": True,
     }
@@ -334,47 +463,52 @@ def delete_creative_product_asset(
     asset_id: str,
     tenant_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    registry = _load_registry()
-    kept: List[Dict[str, Any]] = []
-    deleted: Optional[Dict[str, Any]] = None
-
-    for record in registry.get("assets", []):
-        if not isinstance(record, dict):
-            continue
-        if record.get("asset_id") != asset_id:
-            kept.append(record)
-            continue
-        if tenant_id and record.get("tenant_id") != tenant_id:
-            kept.append(record)
-            continue
-        deleted = record
-
-    if not deleted:
+    existing = canonical_get_product_asset(asset_id, tenant_id=tenant_id or "")
+    if not existing.get("success"):
+        if existing.get("production_fail_closed"):
+            return _canonical_unavailable_response(existing)
         return {
             "success": False,
             "status": "not_found",
             "asset_id": asset_id,
+            "authority": "backend_canonical",
+            "fallback_used": bool(existing.get("dev_only")),
+            "dev_only": bool(existing.get("dev_only")),
+            "production_fail_closed": False,
             "credential_values_exposed": False,
             "customer_safe": True,
         }
 
-    stored_path = Path(str(deleted.get("stored_path") or ""))
+    deleted_asset = existing.get("asset") or {}
+    deleted = canonical_delete_product_asset(asset_id=asset_id, tenant_id=tenant_id or "", actor_role="owner_admin")
+    if not deleted.get("success"):
+        return _canonical_unavailable_response(deleted)
+
+    stored_path = Path(str(deleted_asset.get("stored_path") or deleted_asset.get("local_path") or ""))
     if stored_path.exists() and stored_path.is_file():
         try:
             stored_path.unlink()
         except Exception:
             pass
 
-    registry["assets"] = kept
-    _save_registry(registry)
+    try:
+        registry = _load_registry()
+        registry["assets"] = [
+            record
+            for record in registry.get("assets", [])
+            if not (isinstance(record, dict) and record.get("asset_id") == asset_id and (not tenant_id or record.get("tenant_id") == tenant_id))
+        ]
+        _save_registry(registry)
+    except Exception:
+        pass
 
-    return {
+    return _merge_authority({
         "success": True,
         "status": "deleted",
         "asset_id": asset_id,
         "credential_values_exposed": False,
         "customer_safe": True,
-    }
+    }, deleted)
 
 
 def build_creative_execution_asset_context(
@@ -406,6 +540,10 @@ def build_creative_execution_asset_context(
     return {
         "success": True,
         "layer": "creative_execution_asset_context",
+        "authority": "backend_canonical",
+        "fallback_used": bool(listed.get("dev_only")),
+        "dev_only": bool(listed.get("dev_only")),
+        "production_fail_closed": False,
         "tenant_id": tenant_id,
         "campaign_id": campaign_id,
         "asset_count": len(assets),
@@ -424,22 +562,28 @@ def build_creative_execution_asset_context(
 
 
 def creative_product_asset_library_status() -> Dict[str, Any]:
+    summary = get_product_asset_metadata_summary()
+    if not summary.get("success"):
+        return _canonical_unavailable_response(summary)
     listed = list_creative_product_assets(limit=1)
     storage = supabase_storage_status()
-    return {
+    return _merge_authority({
         "success": True,
         "layer": "creative_product_asset_library",
         "status": "ready",
+        "product_asset_metadata_ready": bool(summary.get("product_asset_metadata_ready", True)),
         "upload_ready": True,
         "list_ready": True,
         "delete_ready": True,
         "execution_context_ready": True,
-        "total_asset_count": listed.get("total_asset_count", 0),
+        "total_asset_count": summary.get("total_asset_count", listed.get("total_asset_count", 0)),
+        "event_count": summary.get("event_count", 0),
         "allowed_extensions": sorted(ALLOWED_EXTENSIONS),
         "storage_provider": storage.get("storage_provider"),
         "durable_storage_ready": storage.get("durable_storage_ready"),
         "storage_bucket": product_asset_bucket(),
+        "canonical_storage_mode": summary.get("storage_mode"),
         "credential_values_exposed": False,
         "customer_safe": True,
         "verified_at": _now(),
-    }
+    }, summary)
