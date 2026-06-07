@@ -13,6 +13,7 @@ const ADMIN_TOKEN =
   process.env.ADMIN_AUTH_SECRET ||
   process.env.OWNER_ADMIN_TOKEN ||
   "";
+const SECURITY_PROFILE = "priority5_security_audit_enforcement_v1";
 
 function trustedFrontendOrigin(req: NextRequest): string {
   return (
@@ -27,24 +28,52 @@ function adminPortalAuthorised(req: NextRequest): boolean {
   const suppliedAdminToken = req.headers.get("x-admin-token") || req.headers.get("authorization");
   const expectedPortalAccess = process.env.PORTAL_ACCESS_CODE || "";
   const portalAccess = req.cookies.get("portal_access")?.value || "";
-  return Boolean(suppliedAdminToken || (expectedPortalAccess && portalAccess === expectedPortalAccess));
+  const adminSession = req.cookies.get("admin_session")?.value || "";
+  return Boolean(
+    suppliedAdminToken ||
+    (expectedPortalAccess && portalAccess === expectedPortalAccess) ||
+    (expectedPortalAccess && adminSession === expectedPortalAccess)
+  );
+}
+
+function safeCookieNames(req: NextRequest): string[] {
+  return req.cookies.getAll().map((cookie) => cookie.name).filter(Boolean).sort();
+}
+
+function unauthorisedResponse(req: NextRequest): NextResponse {
+  const cookiesPresent = safeCookieNames(req);
+  const expectedPortalAccess = process.env.PORTAL_ACCESS_CODE || "";
+  const hasExpectedCookieName = cookiesPresent.includes("portal_access") || cookiesPresent.includes("admin_session");
+  return NextResponse.json(
+    {
+      success: false,
+      error: "admin_authorisation_required",
+      authorised: false,
+      processor_invoked: false,
+      processed_job_count: 0,
+      final_status_counts: {},
+      security_profile: SECURITY_PROFILE,
+      credential_values_exposed: false,
+      auth_sources_checked: [
+        "cookie:portal_access",
+        "cookie:admin_session",
+        "header:x-admin-token",
+        "header:authorization",
+      ],
+      cookies_present: cookiesPresent,
+      reason: !expectedPortalAccess
+        ? "portal_access_code_not_configured"
+        : hasExpectedCookieName
+          ? "admin_session_cookie_present_but_not_valid"
+          : "missing_expected_admin_session_cookie",
+    },
+    { status: 401, headers: { "Cache-Control": "no-store" } },
+  );
 }
 
 export async function POST(req: NextRequest) {
   if (!adminPortalAuthorised(req)) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: "admin_authorisation_required",
-        authorised: false,
-        processor_invoked: false,
-        processed_job_count: 0,
-        final_status_counts: {},
-        security_profile: "priority5_security_audit_enforcement_v1",
-        credential_values_exposed: false,
-      },
-      { status: 401, headers: { "Cache-Control": "no-store" } },
-    );
+    return unauthorisedResponse(req);
   }
 
   const auth = req.headers.get("authorization");

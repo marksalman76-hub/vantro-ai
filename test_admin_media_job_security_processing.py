@@ -205,14 +205,52 @@ def test_admin_run_delegated_workforce_click_chain_is_observable() -> None:
     run_all_route = Path("frontend/src/app/api/admin-media-jobs-run-all/route.ts").read_text(encoding="utf-8")
     assert "adminPortalAuthorised(req)" in run_all_route
     assert 'req.cookies.get("portal_access")' in run_all_route
+    assert 'req.cookies.get("admin_session")' in run_all_route
     assert "ADMIN_AUTH_SECRET" in run_all_route
     assert '"x-admin-token"' in run_all_route
     assert "admin_authorisation_required" in run_all_route
+    assert "auth_sources_checked" in run_all_route
+    assert "cookies_present" in run_all_route
+    assert "missing_expected_admin_session_cookie" in run_all_route
+
+
+def test_admin_login_session_cookie_matches_media_runner_auth_sources() -> None:
+    login_route = Path("frontend/src/app/api/login/route.ts").read_text(encoding="utf-8")
+    admin_login_route = Path("frontend/src/app/api/admin-login/route.ts").read_text(encoding="utf-8")
+    logout_route = Path("frontend/src/app/api/logout/route.ts").read_text(encoding="utf-8")
+    admin_logout_route = Path("frontend/src/app/api/admin-logout/route.ts").read_text(encoding="utf-8")
+    run_all_route = Path("frontend/src/app/api/admin-media-jobs-run-all/route.ts").read_text(encoding="utf-8")
+    run_next_route = Path("frontend/src/app/api/admin-media-jobs-run-next/route.ts").read_text(encoding="utf-8")
+    delegated_route = Path("frontend/src/app/api/delegated-workforce-execution/route.ts").read_text(encoding="utf-8")
+
+    for route_text in [login_route, admin_login_route]:
+        assert 'cookies.set("portal_access"' in route_text
+        assert 'cookies.set("admin_session"' in route_text
+        assert "PORTAL_ACCESS_CODE" in route_text
+
+    for route_text in [logout_route, admin_logout_route]:
+        assert 'cookies.set("portal_access", ""' in route_text
+        assert 'cookies.set("admin_session", ""' in route_text
+
+    for route_text in [run_all_route, run_next_route, delegated_route]:
+        assert 'req.cookies.get("portal_access")' in route_text
+        assert 'req.cookies.get("admin_session")' in route_text
+        assert "expectedPortalAccess && portalAccess === expectedPortalAccess" in route_text
+        assert "expectedPortalAccess && adminSession === expectedPortalAccess" in route_text
+
+    for route_text in [run_all_route, run_next_route]:
+        assert "cookie:portal_access" in route_text
+        assert "cookie:admin_session" in route_text
+        assert "header:x-admin-token" in route_text
+        assert "header:authorization" in route_text
+        assert "cookies_present" in route_text
+        assert ".value" not in route_text.split("cookies_present", 1)[1].split("reason", 1)[0]
 
 
 if __name__ == "__main__":
     test_admin_media_job_processing_security_path()
     test_admin_run_delegated_workforce_click_chain_is_observable()
+    test_admin_login_session_cookie_matches_media_runner_auth_sources()
     print("ADMIN_MEDIA_JOB_SECURITY_PROCESSING_PASSED")
     sys.stdout.flush()
     os._exit(0)

@@ -18,6 +18,13 @@ export async function POST(request: NextRequest) {
     path: "/",
     maxAge: 60 * 60 * 8,
   });
+  response.cookies.set("admin_session", expected, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
+    path: "/",
+    maxAge: 60 * 60 * 8,
+  });
 
   return response;
 }

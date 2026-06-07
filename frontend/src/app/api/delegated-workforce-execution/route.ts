@@ -45,7 +45,12 @@ function adminPortalAuthorised(req: NextRequest): boolean {
   const suppliedAdminToken = req.headers.get("x-admin-token") || req.headers.get("authorization");
   const expectedPortalAccess = process.env.PORTAL_ACCESS_CODE || "";
   const portalAccess = req.cookies.get("portal_access")?.value || "";
-  return Boolean(suppliedAdminToken || (expectedPortalAccess && portalAccess === expectedPortalAccess));
+  const adminSession = req.cookies.get("admin_session")?.value || "";
+  return Boolean(
+    suppliedAdminToken ||
+    (expectedPortalAccess && portalAccess === expectedPortalAccess) ||
+    (expectedPortalAccess && adminSession === expectedPortalAccess)
+  );
 }
 
 function backendProviderQueueHeaders(req: NextRequest, tenantKey: string): Record<string, string> {
@@ -346,6 +351,14 @@ async function runBackendMediaJobsForDelegatedWorkforce(req: NextRequest): Promi
       processed_count: 0,
       final_status_counts: {},
       security_profile: "priority5_security_audit_enforcement_v1",
+      auth_sources_checked: [
+        "cookie:portal_access",
+        "cookie:admin_session",
+        "header:x-admin-token",
+        "header:authorization",
+      ],
+      cookies_present: req.cookies.getAll().map((cookie) => cookie.name).filter(Boolean).sort(),
+      reason: "missing_expected_admin_session_cookie",
       customer_safe: true,
       credential_values_exposed: false,
     };

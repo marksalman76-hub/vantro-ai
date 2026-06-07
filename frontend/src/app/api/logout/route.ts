@@ -12,6 +12,13 @@ function logoutResponse(request: NextRequest) {
     path: "/",
     maxAge: 0,
   });
+  response.cookies.set("admin_session", "", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
+    path: "/",
+    maxAge: 0,
+  });
 
   return response;
 }
