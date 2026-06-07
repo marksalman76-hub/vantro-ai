@@ -13,6 +13,9 @@ from backend.app.runtime.durable_external_action_records import (
 )
 from backend.app.runtime.durable_execution_history_evidence_runtime import (
     get_latest_deliverable,
+    list_execution_evidence,
+    list_execution_history,
+    record_approval_action_audit,
     record_execution_evidence,
     record_execution_history,
     record_latest_deliverable,
@@ -34,6 +37,10 @@ from backend.app.core.client_integrations_runtime import (
     test_client_integration,
     get_client_integration_secret,
     log_email_proof_send,
+)
+from backend.app.core.client_business_profile_runtime import (
+    get_client_business_profile as get_canonical_client_business_profile,
+    save_client_business_profile as save_canonical_client_business_profile,
 )
 from backend.app.api.storage_routes import router as storage_router
 from backend.app.api.media_routes import router as media_router
@@ -97,7 +104,7 @@ behaviour optimisation, and execution stack routing.
 """
 
 from backend.app.runtime.global_execution_evidence_layer import build_execution_evidence_packet
-from fastapi import FastAPI, Header
+from fastapi import FastAPI, Header, Request
 from backend.app.runtime.creative_asset_persistence_bridge import get_persisted_creative_assets, persist_creative_agent_output
 from backend.app.runtime.asset_storage_signed_delivery_runtime import build_customer_safe_delivery_response
 from backend.app.runtime.shared_creative_media_generation_runtime import CREATIVE_MEDIA_AGENTS
@@ -108,7 +115,7 @@ from backend.app.runtime.real_provider_http_execution_layer import controlled_op
 from backend.app.runtime.provider_dispatch_policy_worker_foundation import provider_dispatch_policy_status, evaluate_provider_dispatch_policy, provider_worker_foundation_status
 from backend.app.runtime.safe_provider_action_adapters import evaluate_safe_provider_action, classify_provider_action
 from pydantic import BaseModel
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from backend.app.agents.agent_registry import agent_exists, normalize_agent_id
 from backend.app.approval.owner_approval_gateway import (
@@ -2016,6 +2023,334 @@ async def durable_login_client_account(payload: dict):
 @app.get("/client/me")
 async def durable_client_me(session_token: str):
     return pg_get_session_account(session_token)
+
+
+def _client_session_token(request: Request, explicit_token: str = "") -> str:
+    auth_header = request.headers.get("authorization") or ""
+    bearer = auth_header[7:].strip() if auth_header.lower().startswith("bearer ") else ""
+    return (
+        str(explicit_token or "").strip()
+        or bearer
+        or str(request.headers.get("x-client-token") or "").strip()
+        or str(request.cookies.get("client_token") or "").strip()
+    )
+
+
+def _client_tenant_id(request: Request, payload: dict | None = None, fallback: str = "client_demo_001") -> str:
+    payload = payload or {}
+    return str(
+        payload.get("tenant_id")
+        or payload.get("tenant_key")
+        or request.headers.get("x-tenant-id")
+        or request.headers.get("x-tenant-key")
+        or request.cookies.get("tenant_id")
+        or fallback
+    ).strip() or fallback
+
+
+def _client_safe_error(error: str, status: str = "backend_canonical_unavailable") -> Dict[str, Any]:
+    return {
+        "success": False,
+        "status": status,
+        "error": error,
+        "authority": "backend_canonical",
+        "fallback_used": False,
+        "dev_only": False,
+        "production_fail_closed": True,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+def _normalise_review_action(value: Any) -> str:
+    lowered = str(value or "").strip().lower()
+    if "reject" in lowered:
+        return "rejected"
+    if "revision" in lowered or "revise" in lowered or "change" in lowered:
+        return "revision_requested"
+    return "approved"
+
+
+def _normalise_execution_state_payload(tenant_id: str, payload: dict) -> Dict[str, Any]:
+    has_real_output = bool(payload.get("has_real_output"))
+    display_status = str(
+        payload.get("client_safe_status")
+        or payload.get("display_status")
+        or payload.get("execution_status")
+        or payload.get("workflow_status")
+        or ("Completed" if has_real_output else "Output pending")
+    )
+    return {
+        "tenant_key": tenant_id,
+        "tenant_id": tenant_id,
+        "updated_at": payload.get("updated_at"),
+        "execution_id": payload.get("execution_id") or payload.get("run_id") or payload.get("job_id"),
+        "workflow_status": payload.get("workflow_status") or ("completed_with_output" if has_real_output else "awaiting_output"),
+        "execution_status": payload.get("execution_status") or ("completed_with_output" if has_real_output else "awaiting_output"),
+        "display_status": display_status,
+        "client_safe_status": display_status,
+        "has_real_output": has_real_output,
+        "deliverable_persisted": bool(payload.get("deliverable_persisted")),
+        "latest_deliverable_id": payload.get("persisted_deliverable_id") or payload.get("deliverable_id") or payload.get("latest_deliverable_id"),
+        "latest_review_action": payload.get("latest_review_action"),
+        "profile_completed": bool(payload.get("profile_completed")),
+        "current_agent": payload.get("agent_key") or payload.get("agent") or payload.get("assigned_agent") or payload.get("requested_agent") or "",
+        "current_task": payload.get("task") or payload.get("prompt") or payload.get("request") or "",
+        "output_truth_reason": payload.get("output_truth_reason") or "Execution state synchronised.",
+        "authority": "backend_canonical",
+        "fallback_used": False,
+        "dev_only": False,
+        "production_fail_closed": False,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+@app.get("/client-business-profile")
+async def canonical_client_business_profile(request: Request, session_token: str = ""):
+    token = _client_session_token(request, session_token)
+    if not token:
+        return _client_safe_error("client_session_token_required", "client_profile_auth_required")
+    result = get_canonical_client_business_profile(token)
+    if not result.get("success"):
+        return {
+            **result,
+            "authority": "backend_canonical",
+            "fallback_used": False,
+            "dev_only": False,
+            "production_fail_closed": False,
+            "credential_values_exposed": False,
+        }
+    return {
+        **result,
+        "authority": "backend_canonical",
+        "fallback_used": False,
+        "dev_only": False,
+        "production_fail_closed": False,
+        "credential_values_exposed": False,
+    }
+
+
+@app.post("/client-business-profile")
+async def canonical_save_client_business_profile(request: Request, payload: dict, session_token: str = ""):
+    token = _client_session_token(request, session_token or str(payload.get("session_token") or ""))
+    if not token:
+        return _client_safe_error("client_session_token_required", "client_profile_auth_required")
+    result = save_canonical_client_business_profile(token, payload)
+    if not result.get("success"):
+        return {
+            **result,
+            "authority": "backend_canonical",
+            "fallback_used": False,
+            "dev_only": False,
+            "production_fail_closed": False,
+            "credential_values_exposed": False,
+        }
+    return {
+        **result,
+        "authority": "backend_canonical",
+        "fallback_used": False,
+        "dev_only": False,
+        "production_fail_closed": False,
+        "credential_values_exposed": False,
+    }
+
+
+@app.post("/client-review-action")
+async def canonical_client_review_action(request: Request, payload: dict):
+    tenant_id = _client_tenant_id(request, payload)
+    action = _normalise_review_action(
+        payload.get("mapped_review_action")
+        or payload.get("review_action")
+        or payload.get("action")
+        or payload.get("status")
+        or payload.get("decision")
+    )
+    execution_id = str(payload.get("execution_id") or payload.get("run_id") or payload.get("job_id") or "")
+    project_id = str(payload.get("project_id") or payload.get("project") or "default_project")
+    comment = str(payload.get("comment") or payload.get("feedback") or payload.get("revision_notes") or "")[:2000]
+    deliverable_id = str(payload.get("deliverable_id") or payload.get("latest_deliverable_id") or "")
+
+    review_record = {
+        "action": action,
+        "actor_type": "client",
+        "comment": comment,
+        "deliverable_id": deliverable_id or None,
+        "deliverable_status": action,
+    }
+    audit = record_approval_action_audit(
+        tenant_id=tenant_id,
+        project_id=project_id,
+        execution_id=execution_id,
+        action_id=deliverable_id,
+        action_type="client_review_action",
+        decision=action,
+        actor_role="client",
+        payload=review_record,
+    )
+    if not audit.get("success"):
+        return audit
+
+    history = record_execution_history(
+        tenant_id=tenant_id,
+        project_id=project_id,
+        execution_id=execution_id,
+        action_type="client_review_action",
+        status=action,
+        summary=f"Client review action recorded: {action}",
+        payload=review_record,
+        completed=True,
+    )
+    if not history.get("success"):
+        return history
+
+    evidence = record_execution_evidence(
+        tenant_id=tenant_id,
+        project_id=project_id,
+        execution_id=execution_id,
+        evidence_type="client_review_action",
+        title="Client review action",
+        summary=f"Client review action recorded: {action}",
+        source_type="client_review_action",
+        source_id=str(audit.get("audit_id") or ""),
+        status=action,
+        payload=review_record,
+    )
+    if not evidence.get("success"):
+        return evidence
+
+    latest_review_action = {
+        "id": evidence.get("evidence_id") or audit.get("audit_id"),
+        "tenant_key": tenant_id,
+        "created_at": (evidence.get("evidence") or {}).get("created_at"),
+        **review_record,
+        "authority": "backend_canonical",
+        "credential_values_exposed": False,
+    }
+    return {
+        "success": True,
+        "status": "client_review_action_recorded",
+        "authority": "backend_canonical",
+        "fallback_used": False,
+        "dev_only": False,
+        "production_fail_closed": False,
+        "approval_revision_event_saved": True,
+        "approval_revision_event_id": latest_review_action["id"],
+        "latest_review_action": latest_review_action,
+        "audit_id": audit.get("audit_id"),
+        "history_id": history.get("history_id"),
+        "evidence_id": evidence.get("evidence_id"),
+        "client_safe_status": "Approved" if action == "approved" else "Rejected" if action == "rejected" else "Revision requested",
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+@app.get("/client-review-action")
+async def canonical_client_review_history(request: Request, tenant_id: str = "", limit: int = 50):
+    safe_tenant_id = tenant_id or _client_tenant_id(request)
+    evidence = list_execution_evidence(tenant_id=safe_tenant_id, limit=limit)
+    if not evidence.get("success"):
+        return evidence
+    review_items = [
+        item for item in evidence.get("evidence_items", [])
+        if item.get("evidence_type") == "client_review_action"
+    ]
+    history = []
+    for item in review_items:
+        payload = item.get("payload") or {}
+        history.append({
+            "id": item.get("evidence_id"),
+            "tenant_key": safe_tenant_id,
+            "created_at": item.get("created_at"),
+            "action": payload.get("action") or item.get("status"),
+            "actor_type": payload.get("actor_type") or "client",
+            "comment": payload.get("comment") or "",
+            "deliverable_id": payload.get("deliverable_id"),
+            "deliverable_status": payload.get("deliverable_status") or item.get("status"),
+            "authority": "backend_canonical",
+            "credential_values_exposed": False,
+        })
+    return {
+        "success": True,
+        "status": "client_review_history_listed",
+        "authority": "backend_canonical",
+        "fallback_used": False,
+        "dev_only": False,
+        "production_fail_closed": False,
+        "approval_revision_history": history,
+        "latest_review_action": history[0] if history else None,
+        "count": len(history),
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+@app.post("/client-execution-state")
+async def canonical_client_execution_state(request: Request, payload: dict):
+    tenant_id = _client_tenant_id(request, payload)
+    state = _normalise_execution_state_payload(tenant_id, payload)
+    evidence = record_execution_evidence(
+        tenant_id=tenant_id,
+        project_id=str(payload.get("project_id") or payload.get("project") or "default_project"),
+        execution_id=str(state.get("execution_id") or ""),
+        evidence_type="client_execution_state_summary",
+        title="Client execution state summary",
+        summary=str(state.get("client_safe_status") or "Execution state synchronised."),
+        source_type="client_execution_state",
+        source_id=str(state.get("execution_id") or tenant_id),
+        status=str(state.get("execution_status") or "recorded"),
+        payload=state,
+    )
+    if not evidence.get("success"):
+        return evidence
+    state["updated_at"] = (evidence.get("evidence") or {}).get("created_at") or state.get("updated_at")
+    return {
+        "success": True,
+        "status": "client_execution_state_recorded",
+        "authority": "backend_canonical",
+        "fallback_used": False,
+        "dev_only": False,
+        "production_fail_closed": False,
+        "execution_state_synchronised": True,
+        "execution_state": state,
+        "evidence_id": evidence.get("evidence_id"),
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+@app.get("/client-execution-state")
+async def canonical_get_client_execution_state(request: Request, tenant_id: str = "", limit: int = 50):
+    safe_tenant_id = tenant_id or _client_tenant_id(request)
+    evidence = list_execution_evidence(tenant_id=safe_tenant_id, limit=limit)
+    history = list_execution_history(tenant_id=safe_tenant_id, limit=1)
+    latest_deliverable = get_latest_deliverable(tenant_id=safe_tenant_id)
+    if not evidence.get("success"):
+        return evidence
+    state_items = [
+        item for item in evidence.get("evidence_items", [])
+        if item.get("evidence_type") == "client_execution_state_summary"
+    ]
+    latest_state = None
+    if state_items:
+        latest_state = (state_items[0].get("payload") or {}).copy()
+        latest_state["updated_at"] = state_items[0].get("created_at") or latest_state.get("updated_at")
+    return {
+        "success": True,
+        "status": "client_execution_state_listed",
+        "authority": "backend_canonical",
+        "fallback_used": False,
+        "dev_only": False,
+        "production_fail_closed": False,
+        "execution_state_synchronised": bool(latest_state),
+        "execution_state": latest_state,
+        "latest_history_record": (history.get("records") or [None])[0],
+        "latest_deliverable": latest_deliverable.get("latest_deliverable"),
+        "has_real_output": bool(latest_deliverable.get("has_real_output") or (latest_state or {}).get("has_real_output")),
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
 
 
 @app.get("/admin/client-account-security-events")

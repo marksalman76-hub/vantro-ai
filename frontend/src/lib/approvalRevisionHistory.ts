@@ -10,6 +10,11 @@ export type ApprovalRevisionEvent = {
   comment: string;
   deliverable_id?: string | null;
   deliverable_status: string;
+  authority?: "backend_canonical" | "frontend_advisory";
+  fallback_used?: boolean;
+  dev_only?: boolean;
+  production_fail_closed?: boolean;
+  credential_values_exposed?: false;
 };
 
 const STORE_DIR = path.join(process.cwd(), ".runtime", "approval-history");
@@ -76,6 +81,11 @@ export function persistApprovalRevisionEvent(
     comment: payload.comment || "",
     deliverable_id: payload.deliverable_id || null,
     deliverable_status: payload.deliverable_status || payload.action,
+    authority: "frontend_advisory",
+    fallback_used: true,
+    dev_only: true,
+    production_fail_closed: false,
+    credential_values_exposed: false,
   };
 
   const store = safeReadStore();

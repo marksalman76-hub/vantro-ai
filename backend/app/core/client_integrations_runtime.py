@@ -115,6 +115,27 @@ def _db_available() -> bool:
     return bool(DATABASE_URL)
 
 
+def _is_production() -> bool:
+    return str(os.getenv("ENVIRONMENT") or os.getenv("NODE_ENV") or "").strip().lower() in {
+        "prod",
+        "production",
+    }
+
+
+def _production_fail_closed(reason: str = "DATABASE_URL_missing") -> Dict[str, Any]:
+    return {
+        "success": False,
+        "status": "canonical_integration_store_unavailable",
+        "error": reason,
+        "authority": "backend_canonical",
+        "fallback_used": False,
+        "dev_only": False,
+        "production_fail_closed": True,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
 def _conn():
     if not DATABASE_URL:
         raise RuntimeError("DATABASE_URL_missing")
@@ -244,6 +265,31 @@ def list_client_integrations(tenant_id: str) -> Dict[str, Any]:
                         "credential_hint": credential_hint,
                         "last_tested_at": last_tested_at.isoformat() if last_tested_at else None,
                     }
+    elif _is_production():
+        failure = _production_fail_closed()
+        return {
+            **failure,
+            "tenant_id": tenant_id,
+            "storage_mode": "postgres_required",
+            "integrations": [
+                {
+                    "integration_key": key,
+                    "name": meta["name"],
+                    "providers": meta["providers"],
+                    "used_by_agents": meta["used_by_agents"],
+                    "recommended_auth": meta["recommended_auth"],
+                    "high_risk_actions": meta["high_risk_actions"],
+                    "connected": False,
+                    "provider": None,
+                    "status": "canonical_store_unavailable",
+                    "last_tested_at": None,
+                    "credential_hint": None,
+                }
+                for key, meta in SUPPORTED_INTEGRATIONS.items()
+            ],
+            "connected_count": 0,
+            "total_count": len(SUPPORTED_INTEGRATIONS),
+        }
     else:
         data = _load_file_state()
         records = data.get("tenants", {}).get(tenant_id, {}).get("connections", {})
@@ -269,9 +315,14 @@ def list_client_integrations(tenant_id: str) -> Dict[str, Any]:
         "success": True,
         "tenant_id": tenant_id,
         "storage_mode": "postgres" if _db_available() else "file_fallback",
+        "authority": "backend_canonical" if _db_available() else "frontend_advisory",
+        "fallback_used": not _db_available(),
+        "dev_only": not _db_available(),
+        "production_fail_closed": False,
         "integrations": items,
         "connected_count": sum(1 for item in items if item["connected"]),
         "total_count": len(items),
+        "credential_values_exposed": False,
     }
 
 
@@ -317,6 +368,8 @@ def save_client_integration(tenant_id: str, payload: Dict[str, Any]) -> Dict[str
                     (tenant_id, key, provider, mode, "connected_pending_test", _encrypt_credential(credential), credential_hint),
                 )
             conn.commit()
+    elif _is_production():
+        return _production_fail_closed()
     else:
         data = _load_file_state()
         tenant = data["tenants"].setdefault(tenant_id, {"connections": {}})
@@ -349,7 +402,12 @@ def save_client_integration(tenant_id: str, payload: Dict[str, Any]) -> Dict[str
         "credential_stored": True,
         "credential_hint": credential_hint,
         "credential_exposed": False,
+        "credential_values_exposed": False,
         "storage_mode": "postgres" if _db_available() else "file_fallback",
+        "authority": "backend_canonical" if _db_available() else "frontend_advisory",
+        "fallback_used": not _db_available(),
+        "dev_only": not _db_available(),
+        "production_fail_closed": False,
     }
 
 
@@ -376,6 +434,8 @@ def test_client_integration(tenant_id: str, integration_key: str) -> Dict[str, A
         if not row:
             return {"success": False, "error": "integration_not_connected"}
         provider = row[0]
+    elif _is_production():
+        return _production_fail_closed()
     else:
         data = _load_file_state()
         connection = data["tenants"].get(tenant_id, {}).get("connections", {}).get(integration_key)
@@ -394,6 +454,11 @@ def test_client_integration(tenant_id: str, integration_key: str) -> Dict[str, A
         "status": "test_passed",
         "live_automation_ready": True,
         "storage_mode": "postgres" if _db_available() else "file_fallback",
+        "authority": "backend_canonical" if _db_available() else "frontend_advisory",
+        "fallback_used": not _db_available(),
+        "dev_only": not _db_available(),
+        "production_fail_closed": False,
+        "credential_values_exposed": False,
     }
 
 
@@ -411,6 +476,8 @@ def disconnect_client_integration(tenant_id: str, integration_key: str) -> Dict[
                     (tenant_id, integration_key),
                 )
             conn.commit()
+    elif _is_production():
+        return _production_fail_closed()
     else:
         data = _load_file_state()
         tenant = data["tenants"].setdefault(tenant_id, {"connections": {}})
@@ -427,6 +494,11 @@ def disconnect_client_integration(tenant_id: str, integration_key: str) -> Dict[
         "integration_key": integration_key,
         "status": "disconnected",
         "storage_mode": "postgres" if _db_available() else "file_fallback",
+        "authority": "backend_canonical" if _db_available() else "frontend_advisory",
+        "fallback_used": not _db_available(),
+        "dev_only": not _db_available(),
+        "production_fail_closed": False,
+        "credential_values_exposed": False,
     }
 
 
@@ -457,7 +529,15 @@ def get_client_integration_secret(tenant_id: str, integration_key: str) -> Dict[
             "credential_hint": credential_hint,
             "credential_value": _decrypt_credential(credential_value),
             "storage_mode": "postgres",
+            "authority": "backend_canonical",
+            "fallback_used": False,
+            "dev_only": False,
+            "production_fail_closed": False,
+            "credential_values_exposed": False,
         }
+
+    if _is_production():
+        return _production_fail_closed()
 
     data = _load_file_state()
     connection = data.get("tenants", {}).get(tenant_id, {}).get("connections", {}).get(integration_key)
@@ -472,6 +552,11 @@ def get_client_integration_secret(tenant_id: str, integration_key: str) -> Dict[
         "credential_hint": connection.get("credential_hint"),
         "credential_value": connection.get("credential_value"),
         "storage_mode": "file_fallback",
+        "authority": "frontend_advisory",
+        "fallback_used": True,
+        "dev_only": True,
+        "production_fail_closed": False,
+        "credential_values_exposed": False,
     }
 
 
@@ -514,6 +599,9 @@ def integration_audit(limit: int = 50) -> Dict[str, Any]:
                     for row in cur.fetchall()
                 ]
         return {"success": True, "events": events, "count": len(events), "storage_mode": "postgres"}
+
+    if _is_production():
+        return _production_fail_closed()
 
     data = _load_file_state()
     audit = list(reversed(data.get("audit", [])))[:limit]

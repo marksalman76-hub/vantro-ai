@@ -17,6 +17,11 @@ export type ClientExecutionState = {
   current_agent: string;
   current_task: string;
   output_truth_reason: string;
+  authority?: "backend_canonical" | "frontend_advisory";
+  fallback_used?: boolean;
+  dev_only?: boolean;
+  production_fail_closed?: boolean;
+  credential_values_exposed?: false;
 };
 
 const STORE_DIR = path.join(process.cwd(), ".runtime", "execution-state");
@@ -100,6 +105,11 @@ export function normaliseExecutionState(
       text(payload.output_truth_reason) ||
       previous?.output_truth_reason ||
       "Execution state synchronised.",
+    authority: text(payload.authority) === "backend_canonical" ? "backend_canonical" : "frontend_advisory",
+    fallback_used: payload.fallback_used === false ? false : true,
+    dev_only: payload.dev_only === false ? false : true,
+    production_fail_closed: Boolean(payload.production_fail_closed),
+    credential_values_exposed: false,
   };
 }
 

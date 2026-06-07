@@ -16,6 +16,11 @@ export type BusinessProfileRecord = {
   offer_summary: string;
   notes: string;
   profile_completed: boolean;
+  authority?: "backend_canonical" | "frontend_advisory";
+  fallback_used?: boolean;
+  dev_only?: boolean;
+  production_fail_closed?: boolean;
+  credential_values_exposed?: false;
 };
 
 const STORE_DIR = path.join(process.cwd(), ".runtime", "business-profiles");
@@ -101,6 +106,11 @@ export function normaliseBusinessProfile(
         text(payload.primary_goal || payload.primaryGoal)
       )
     ),
+    authority: "frontend_advisory",
+    fallback_used: true,
+    dev_only: true,
+    production_fail_closed: false,
+    credential_values_exposed: false,
   };
 
   return record;

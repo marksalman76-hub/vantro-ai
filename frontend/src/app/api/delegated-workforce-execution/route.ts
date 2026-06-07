@@ -17,6 +17,10 @@ function backendBaseUrl(): string {
   ).replace(/\/$/, "");
 }
 
+function isProductionRuntime(): boolean {
+  return process.env.NODE_ENV === "production";
+}
+
 function backendProviderQueueHeaders(req: NextRequest, tenantKey: string): Record<string, string> {
   const headers: Record<string, string> = {
     "content-type": "application/json",
@@ -28,6 +32,26 @@ function backendProviderQueueHeaders(req: NextRequest, tenantKey: string): Recor
   const cookie = req.headers.get("cookie");
 
   if (auth) headers.authorization = auth;
+  if (adminToken) headers["x-admin-token"] = adminToken;
+  if (cookie) headers.cookie = cookie;
+
+  return headers;
+}
+
+function backendCanonicalHeaders(req: NextRequest, tenantKey: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    "x-tenant-id": String(req.headers.get("x-tenant-id") || req.cookies.get("tenant_id")?.value || tenantKey),
+    "x-tenant-key": tenantKey,
+  };
+
+  const auth = req.headers.get("authorization");
+  const adminToken = req.headers.get("x-admin-token");
+  const cookie = req.headers.get("cookie");
+  const clientToken = req.cookies.get("client_token")?.value;
+
+  if (auth) headers.authorization = auth;
+  if (!auth && clientToken) headers.authorization = `Bearer ${clientToken}`;
   if (adminToken) headers["x-admin-token"] = adminToken;
   if (cookie) headers.cookie = cookie;
 
@@ -188,6 +212,63 @@ async function attachDurableProviderQueueRetryFailover(
   }
 }
 
+async function syncBackendCanonicalExecutionState(
+  req: NextRequest,
+  tenantKey: string,
+  payload: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  try {
+    const response = await fetch(`${backendBaseUrl()}/client-execution-state`, {
+      method: "POST",
+      headers: backendCanonicalHeaders(req, tenantKey),
+      body: JSON.stringify({
+        ...payload,
+        tenant_id: String(payload.tenant_id || payload.tenant_key || tenantKey),
+        tenant_key: tenantKey,
+      }),
+      cache: "no-store",
+    });
+
+    const text = await response.text();
+    const result = text ? JSON.parse(text) as Record<string, unknown> : {};
+
+    if (response.status < 500 && result.success !== false) {
+      return {
+        ...result,
+        execution_state_authority: "backend_canonical",
+        execution_state_backend_status: response.status,
+        fallback_used: false,
+        dev_only: false,
+        production_fail_closed: false,
+        credential_values_exposed: false,
+      };
+    }
+
+    return {
+      success: false,
+      status: result.status || "backend_execution_state_unavailable",
+      error: result.error || "backend_execution_state_unavailable",
+      execution_state_backend_status: response.status,
+      authority: "backend_canonical",
+      fallback_used: false,
+      dev_only: false,
+      production_fail_closed: isProductionRuntime(),
+      credential_values_exposed: false,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      status: "backend_execution_state_unavailable",
+      error: error instanceof Error ? error.message : String(error),
+      authority: "backend_canonical",
+      fallback_used: false,
+      dev_only: false,
+      production_fail_closed: isProductionRuntime(),
+      credential_values_exposed: false,
+    };
+  }
+}
+
 async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   const body = await req.text();
   const headers: Record<string, string> = {
@@ -245,9 +326,39 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   normalised.media_assets_persisted = persistedMediaAssets.length;
   const lifecyclePayload = attachMediaAssetLifecycle(stateTenantKey, normalised);
   Object.assign(normalised, lifecyclePayload);
-  const executionState = persistExecutionState(stateTenantKey, normalised);
-  normalised.execution_state_synchronised = true;
-  normalised.execution_state = executionState;
+  const backendExecutionState = await syncBackendCanonicalExecutionState(req, stateTenantKey, normalised);
+  if (backendExecutionState.success !== false) {
+    normalised.execution_state_synchronised = true;
+    normalised.execution_state = backendExecutionState.execution_state;
+    normalised.execution_state_authority = "backend_canonical";
+    normalised.execution_state_backend_status = backendExecutionState.execution_state_backend_status;
+    normalised.execution_state_fallback_used = false;
+    normalised.execution_state_dev_only = false;
+    normalised.execution_state_production_fail_closed = false;
+  } else if (isProductionRuntime()) {
+    normalised.execution_state_synchronised = false;
+    normalised.execution_state = null;
+    normalised.execution_state_authority = "backend_canonical";
+    normalised.execution_state_status = backendExecutionState.status;
+    normalised.execution_state_error = backendExecutionState.error;
+    normalised.execution_state_fallback_used = false;
+    normalised.execution_state_dev_only = false;
+    normalised.execution_state_production_fail_closed = true;
+  } else {
+    const executionState = persistExecutionState(stateTenantKey, {
+      ...normalised,
+      authority: "frontend_advisory",
+      fallback_used: true,
+      dev_only: true,
+    });
+    normalised.execution_state_synchronised = true;
+    normalised.execution_state = executionState;
+    normalised.execution_state_authority = "frontend_advisory";
+    normalised.execution_state_status = backendExecutionState.status;
+    normalised.execution_state_fallback_used = true;
+    normalised.execution_state_dev_only = true;
+    normalised.execution_state_production_fail_closed = false;
+  }
 
   return NextResponse.json(normalised, {
     status: response.status,
