@@ -26,6 +26,7 @@ type CreativeMediaAssetsResponse = {
 
 
 import { useEffect, useState } from "react";
+import { extractLiveActionDeliverableText } from "../../lib/liveActionResultExtraction";
 
 const ADMIN_AGENT_OPTIONS: [string, string][] = [
   ["head_agent", "Head Agent"],
@@ -475,8 +476,7 @@ const [activeNav, setActiveNav] = useState("Overview");
         const data = wrapper?.data || wrapper;
         const execution = data?.execution || {};
         const adapter = execution?.adapter_result || {};
-        const normalised = adapter?.normalised_response || {};
-        const safeOutput = normalised?.safe_output || {};
+        const liveDeliverable = extractLiveActionDeliverableText(wrapper);
 
         results.push({
           agent_id: agentId,
@@ -493,15 +493,7 @@ const [activeNav, setActiveNav] = useState("Overview");
           latency_ms: wrapper?.latency_ms || adapter?.latency_ms || null,
           credential_values_exposed: wrapper?.credential_values_exposed === true || adapter?.credential_values_exposed === true,
           customer_safe: wrapper?.customer_safe === true || adapter?.customer_safe === true,
-          output:
-            wrapper?.normalized_output ||
-            safeOutput?.text ||
-            data?.output?.generated_output ||
-            data?.output?.output ||
-            data?.output?.content ||
-            data?.generated_output ||
-            data?.result ||
-            "",
+          output: liveDeliverable,
           message:
             data?.message ||
             data?.summary ||
@@ -628,6 +620,7 @@ const [activeNav, setActiveNav] = useState("Overview");
 
   async function approveOutcomeAndCreatePlan(item: any) {
     const outcomeText =
+      extractLiveActionDeliverableText(item) ||
       item?.output ||
       item?.generated_output ||
       item?.response ||
@@ -752,8 +745,7 @@ const [activeNav, setActiveNav] = useState("Overview");
       const data = wrapper?.data || wrapper;
       const execution = data?.execution || {};
       const adapter = execution?.adapter_result || {};
-      const normalised = adapter?.normalised_response || {};
-      const safeOutput = normalised?.safe_output || {};
+      const liveDeliverable = extractLiveActionDeliverableText(wrapper);
 
       const completedRun = {
         packet_id: packet?.packet_id,
@@ -763,16 +755,7 @@ const [activeNav, setActiveNav] = useState("Overview");
         provider: adapter?.provider_key || "openai",
         live_external_call_executed: adapter?.live_external_call_executed === true,
         latency_ms: adapter?.latency_ms || null,
-        output:
-          wrapper?.normalized_output ||
-          safeOutput?.text ||
-          data?.output?.generated_output ||
-          data?.output?.output ||
-          data?.output?.content ||
-          data?.generated_output ||
-          data?.result ||
-          data?.message ||
-          "No output returned.",
+        output: liveDeliverable || "No output returned.",
         completed_at: new Date().toLocaleString(),
       };
 
@@ -1007,6 +990,7 @@ const [activeNav, setActiveNav] = useState("Overview");
                             : "Needs review";
 
                           const liveOutput =
+                            extractLiveActionDeliverableText(item) ||
                             item?.output ||
                             item?.generated_output ||
                             item?.response ||

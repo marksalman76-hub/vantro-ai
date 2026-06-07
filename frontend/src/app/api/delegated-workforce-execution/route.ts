@@ -5,6 +5,7 @@ import { persistMediaAssets, attachMediaAssetLifecycle } from "@/lib/mediaAssetL
 import { attachRealMediaProviderDecision } from "@/lib/realMediaGenerationProviders";
 import { attachAgentOutputContract } from "@/lib/allAgentOutputContracts";
 import { attachPackageCreditEnforcement } from "@/lib/packageCreditEnforcement";
+import { extractLiveActionDeliverableText } from "@/lib/liveActionResultExtraction";
 
 export const dynamic = "force-dynamic";
 
@@ -87,8 +88,10 @@ function pickOutputCandidates(payload: Record<string, unknown>): unknown[] {
   const result = (payload.result || {}) as Record<string, unknown>;
   const data = (payload.data || {}) as Record<string, unknown>;
   const asset = (payload.asset || result.asset || data.asset || {}) as Record<string, unknown>;
+  const extractedLiveDeliverable = extractLiveActionDeliverableText(payload, { customerSafe: true });
 
   return [
+    extractedLiveDeliverable,
     payload.output,
     payload.deliverable,
     payload.deliverables,
@@ -130,6 +133,20 @@ function normaliseClientExecutionTruth(raw: unknown): unknown {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
 
   const payload = { ...(raw as Record<string, unknown>) };
+  const extractedLiveDeliverable = extractLiveActionDeliverableText(payload, { customerSafe: true });
+  if (extractedLiveDeliverable) {
+    payload.live_action_deliverable = extractedLiveDeliverable;
+    payload.output = payload.output || extractedLiveDeliverable;
+    payload.generated_output = payload.generated_output || extractedLiveDeliverable;
+    payload.deliverable = payload.deliverable || {
+      title: "Client deliverable",
+      summary: "Live provider result ready for review.",
+      output: extractedLiveDeliverable,
+      generated_output: extractedLiveDeliverable,
+      credential_values_exposed: false,
+      customer_safe: true,
+    };
+  }
   const hasRealOutput = hasRealClientOutput(payload);
 
   payload.has_real_output = hasRealOutput;

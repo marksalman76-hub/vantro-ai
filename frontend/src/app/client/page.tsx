@@ -1,5 +1,7 @@
 "use client";
 
+import { extractLiveActionDeliverableText } from "../../lib/liveActionResultExtraction";
+
 function renderMediaPackSummary(result: any) {
   const mediaPack = result?.media_pack || result?.deliverable?.media_pack || {};
   const jobs = result?.generation_jobs || mediaPack?.generation_jobs || [];
@@ -77,19 +79,7 @@ function normalizeExecutionPacket(raw: any) {
     adapter?.agent_id ||
     "";
 
-  const output = customerPortalSafeText(
-    adapter?.output ||
-      adapter?.result?.output ||
-      data?.output ||
-      data?.generated_output ||
-      first?.completed_output ||
-      first?.deliverable?.content?.body ||
-      first?.deliverable?.content ||
-      first?.deliverable?.output ||
-      first?.deliverable?.generated_output ||
-      first?.deliverable?.summary ||
-      ""
-  );
+  const output = customerPortalSafeText(extractLiveActionDeliverableText(raw, { customerSafe: true }));
 
   const status =
     adapter?.execution_status ||
@@ -468,6 +458,7 @@ function clientDynamicExecutionMetrics(params: {
 }) {
   const source = params.liveDeliverable || params.latestDeliverable || {};
   const outputText =
+    extractLiveActionDeliverableText(source, { customerSafe: true }) ||
     source?.output_text ||
     source?.output ||
     source?.generated_output ||
@@ -557,6 +548,7 @@ function extractAutonomousDeliverable(result: any): string {
   const performed = first?.performed_actual_action === true || first?.delegate_execution === "executed";
   const status = first?.execution_status || first?.autonomous_route || data?.profile || "autonomous_execution_processed";
   const output =
+    customerPortalSafeText(extractLiveActionDeliverableText(result, { customerSafe: true })) ||
     first?.completed_output ||
     first?.deliverable?.content?.body ||
     first?.deliverable?.summary ||
@@ -889,6 +881,7 @@ useEffect(() => {
   ].filter(Boolean).join("\n\n");
 
   const visibleClientOutcomeText =
+    customerPortalSafeText(extractLiveActionDeliverableText(liveDeliverableAny, { customerSafe: true })) ||
     customerPortalSafeText(liveDeliverableAny?.output) ||
     customerPortalSafeText(liveDeliverableAny?.generated_output) ||
     customerPortalSafeText(liveDeliverableAny?.content) ||
