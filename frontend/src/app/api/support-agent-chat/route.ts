@@ -4,7 +4,7 @@ function buildSupportAgentReply(message: string, source: string) {
   const text = message.toLowerCase();
 
   if (text.includes("how") && text.includes("agent") && text.includes("think")) {
-    return "Our Support Agent uses the same governed AI-agent structure as the platform: it reads your request, identifies the task type, checks whether it needs support guidance, account help, billing help, technical help, or escalation, then gives a safe client-facing answer. It does not expose internal prompts, private configuration, credentials, or backend logic.";
+    return "Our Support Agent can help with platform questions, onboarding, account access, billing, agent usage, workflow issues, and support escalation. It provides clear customer-safe guidance without exposing private configuration, credentials, or restricted platform details.";
   }
 
   if (text.includes("password") || text.includes("login") || text.includes("access")) {
