@@ -379,9 +379,13 @@ def upload_creative_product_asset(
         "storage_upload": storage_upload,
         "storage_provider": record.get("storage_provider"),
         "durable_storage_ready": record.get("storage_provider") == "supabase",
+        "authority": "backend_canonical",
+        "fallback_used": False,
+        "dev_only": False,
+        "production_fail_closed": False,
         "credential_values_exposed": False,
         "customer_safe": True,
-    }, canonical)
+    }
 
 
 def list_creative_product_assets(
