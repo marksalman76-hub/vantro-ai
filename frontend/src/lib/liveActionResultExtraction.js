@@ -46,6 +46,108 @@ function scrubSensitive(value) {
   return safe;
 }
 
+function humanLabel(value, fallback = "") {
+  const text = String(value || fallback).trim();
+  if (!text) return fallback;
+  return text
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function yesNo(value) {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  return "";
+}
+
+function firstPresent(record, keys) {
+  for (const key of keys) {
+    const value = record?.[key];
+    if (value !== null && value !== undefined && String(value).trim() !== "") return value;
+  }
+  return "";
+}
+
+function safeLine(label, value) {
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+  return `${label}: ${text}`;
+}
+
+function hasAnyKey(record, keys) {
+  return keys.some((key) => record?.[key] !== null && record?.[key] !== undefined && String(record?.[key]).trim() !== "");
+}
+
+function summarizeMediaJob(value) {
+  const record = scrubSensitive(value);
+  const jobId = firstPresent(record, ["media_job_id", "job_id", "provider_job_id", "execution_id"]);
+  const status = firstPresent(record, ["media_job_status", "job_status", "workflow_status", "execution_status", "status"]);
+  const agent = firstPresent(record, ["agent_id", "assigned_agent", "requested_agent", "agent"]);
+  const generatedAssets = firstPresent(record, ["generated_asset_count", "media_asset_count", "asset_count", "assets_generated"]);
+  const playableAssets = firstPresent(record, ["playable_asset_count", "playable_assets", "ready_asset_count"]);
+  const customerSafe = yesNo(record.customer_safe);
+  const lines = [
+    "Creative media job queued",
+    safeLine("Status", humanLabel(status, "Queued")),
+    safeLine("Agent", humanLabel(agent)),
+    safeLine("Job ID", jobId),
+    safeLine("Generated assets", generatedAssets || "0"),
+    safeLine("Playable assets", playableAssets || "0"),
+    safeLine("Customer-safe", customerSafe || "Yes"),
+    safeLine("Next step", "Run delegated workforce or wait for generated media assets."),
+  ];
+  return lines.filter(Boolean).join("\n");
+}
+
+function summarizeCompletedAction(value) {
+  const record = scrubSensitive(value);
+  const status = firstPresent(record, ["execution_status", "workflow_status", "status", "action_status"]);
+  const agent = firstPresent(record, ["agent_id", "assigned_agent", "requested_agent", "agent"]);
+  const actionType = firstPresent(record, ["action_type", "execution_action", "adapter", "target_system"]);
+  const actionId = firstPresent(record, ["action_id", "external_action_id", "record_id", "execution_id"]);
+  const performed = yesNo(
+    record.performed_actual_action === true ||
+      record.external_action_performed === true ||
+      record.delegate_execution === "executed"
+  );
+  const historySaved = yesNo(record.history_persisted);
+  const customerSafe = yesNo(record.customer_safe);
+  const lines = [
+    "Completed action evidence",
+    safeLine("Status", humanLabel(status, "Completed")),
+    safeLine("Agent", humanLabel(agent)),
+    safeLine("Action", humanLabel(actionType)),
+    safeLine("Action ID", actionId),
+    safeLine("Performed actual action", performed || "Yes"),
+    safeLine("Execution history saved", historySaved),
+    safeLine("Customer-safe", customerSafe || "Yes"),
+  ];
+  return lines.filter(Boolean).join("\n");
+}
+
+function summarizeObject(value) {
+  const record = scrubSensitive(value);
+
+  if (
+    hasAnyKey(record, ["media_job_id", "media_job_status", "media_asset_count", "playable_asset_count"]) ||
+    String(record?.action_type || "").toLowerCase().includes("media")
+  ) {
+    return summarizeMediaJob(record);
+  }
+
+  if (
+    record?.performed_actual_action === true ||
+    record?.external_action_performed === true ||
+    record?.delegate_execution === "executed" ||
+    hasAnyKey(record, ["external_action_id", "external_action_record_count", "completed_output"])
+  ) {
+    return summarizeCompletedAction(record);
+  }
+
+  return "Live action result received. No customer-facing deliverable was attached yet.";
+}
+
 function toText(value) {
   if (value === null || value === undefined) return "";
 
@@ -77,7 +179,7 @@ function toText(value) {
       if (directText) return directText;
     }
 
-    return JSON.stringify(scrubSensitive(value), null, 2);
+    return summarizeObject(value);
   }
 
   return "";
