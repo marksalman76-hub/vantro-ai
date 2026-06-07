@@ -22,6 +22,32 @@ function isProductionRuntime(): boolean {
   return process.env.NODE_ENV === "production";
 }
 
+function serverAdminToken(): string {
+  return (
+    process.env.ADMIN_PLATFORM_TOKEN ||
+    process.env.ADMIN_AUTH_SECRET ||
+    process.env.ADMIN_TOKEN ||
+    process.env.OWNER_ADMIN_TOKEN ||
+    ""
+  );
+}
+
+function trustedFrontendOrigin(req: NextRequest): string {
+  return (
+    req.headers.get("origin") ||
+    process.env.FRONTEND_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    "https://app.trance-formation.com.au"
+  ).replace(/\/$/, "");
+}
+
+function adminPortalAuthorised(req: NextRequest): boolean {
+  const suppliedAdminToken = req.headers.get("x-admin-token") || req.headers.get("authorization");
+  const expectedPortalAccess = process.env.PORTAL_ACCESS_CODE || "";
+  const portalAccess = req.cookies.get("portal_access")?.value || "";
+  return Boolean(suppliedAdminToken || (expectedPortalAccess && portalAccess === expectedPortalAccess));
+}
+
 function backendProviderQueueHeaders(req: NextRequest, tenantKey: string): Record<string, string> {
   const headers: Record<string, string> = {
     "content-type": "application/json",
@@ -60,14 +86,18 @@ function backendCanonicalHeaders(req: NextRequest, tenantKey: string): Record<st
 }
 
 function backendAdminMediaJobHeaders(req: NextRequest): Record<string, string> {
+  const origin = trustedFrontendOrigin(req);
   const headers: Record<string, string> = {
     "content-type": "application/json",
     "cache-control": "no-store",
     "x-actor-role": "owner_admin",
+    "x-tenant-id": "owner_admin",
+    "origin": origin,
+    "referer": req.headers.get("referer") || `${origin}/admin`,
   };
 
   const auth = req.headers.get("authorization");
-  const adminToken = req.headers.get("x-admin-token") || process.env.ADMIN_PLATFORM_TOKEN || process.env.ADMIN_TOKEN || "";
+  const adminToken = req.headers.get("x-admin-token") || serverAdminToken();
   const cookie = req.headers.get("cookie");
 
   if (auth) headers.authorization = auth;
@@ -305,6 +335,22 @@ async function syncBackendCanonicalExecutionState(
 }
 
 async function runBackendMediaJobsForDelegatedWorkforce(req: NextRequest): Promise<Record<string, unknown>> {
+  if (!adminPortalAuthorised(req)) {
+    return {
+      success: false,
+      authorised: false,
+      processor_invoked: false,
+      media_job_runner_triggered: false,
+      media_job_runner_status: "admin_authorisation_required",
+      processed_job_count: 0,
+      processed_count: 0,
+      final_status_counts: {},
+      security_profile: "priority5_security_audit_enforcement_v1",
+      customer_safe: true,
+      credential_values_exposed: false,
+    };
+  }
+
   try {
     const response = await fetch(`${backendBaseUrl()}/admin/media-jobs/run-all`, {
       method: "POST",
@@ -339,11 +385,20 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   };
 
   const auth = req.headers.get("authorization");
-  const adminToken = req.headers.get("x-admin-token");
+  const portalAdminAuthorised = adminPortalAuthorised(req);
+  const adminToken = portalAdminAuthorised ? (req.headers.get("x-admin-token") || serverAdminToken()) : req.headers.get("x-admin-token");
   const cookie = req.headers.get("cookie");
+  const origin = trustedFrontendOrigin(req);
 
   if (auth) headers.authorization = auth;
-  if (adminToken) headers["x-admin-token"] = adminToken;
+  if (!auth && portalAdminAuthorised && adminToken) headers.authorization = `Bearer ${adminToken}`;
+  if (portalAdminAuthorised && adminToken) headers["x-admin-token"] = adminToken;
+  if (portalAdminAuthorised) {
+    headers["x-actor-role"] = "owner_admin";
+    headers["x-tenant-id"] = "owner_admin";
+    headers.origin = origin;
+    headers.referer = req.headers.get("referer") || `${origin}/admin`;
+  }
   if (cookie) headers.cookie = cookie;
 
   const response = await fetch(`${backendBaseUrl()}/delegated-workforce-execution`, {

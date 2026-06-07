@@ -135,6 +135,7 @@ def test_delegated_workforce_processes_global_creative_media_jobs() -> None:
                     package_tier="enterprise",
                     connected_integrations=[],
                     tenant_id="client_demo_001",
+                    media_job_processing_authorized=True,
                 )
 
             assert delegated_result["success"] is True

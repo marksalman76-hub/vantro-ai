@@ -87,6 +87,7 @@ def execute_delegated_workforce_plan(
     package_tier: str = "starter",
     connected_integrations: List[str] | None = None,
     tenant_id: str = "owner_admin",
+    media_job_processing_authorized: bool = False,
 ) -> Dict[str, Any]:
 
     client_owned_agents = client_owned_agents or []
@@ -428,17 +429,27 @@ def execute_delegated_workforce_plan(
         },
     )
 
-    try:
-        from backend.app.runtime.async_media_job_foundation import process_queued_creative_media_jobs
+    if media_job_processing_authorized:
+        try:
+            from backend.app.runtime.async_media_job_foundation import process_queued_creative_media_jobs
 
-        media_job_runner = process_queued_creative_media_jobs(limit=25)
-    except Exception as exc:
+            media_job_runner = process_queued_creative_media_jobs(limit=25)
+        except Exception as exc:
+            media_job_runner = {
+                "success": False,
+                "status": "unavailable",
+                "processed_count": 0,
+                "results": [],
+                "error": str(exc)[:500],
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            }
+    else:
         media_job_runner = {
-            "success": False,
-            "status": "unavailable",
+            "success": True,
+            "status": "not_authorized",
             "processed_count": 0,
             "results": [],
-            "error": str(exc)[:500],
             "customer_safe": True,
             "credential_values_exposed": False,
         }
@@ -455,7 +466,8 @@ def execute_delegated_workforce_plan(
         "completed_results": execution_results,
         "queued_results": queued_results,
         "blocked_results": blocked_results,
-        "media_job_runner_triggered": bool(media_job_runner.get("success") is not False),
+        "media_job_processing_authorized": bool(media_job_processing_authorized),
+        "media_job_runner_triggered": bool(media_job_processing_authorized and media_job_runner.get("success") is not False),
         "media_job_runner_status": media_job_runner.get("status", "unknown"),
         "media_job_processed_count": int(media_job_runner.get("processed_count") or 0),
         "media_job_runner_results": media_job_runner.get("results", []),

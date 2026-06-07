@@ -27,6 +27,8 @@ from backend.app.core.integration_live_adapter_registry import (
 import urllib.request
 import urllib.error
 import json
+import hmac
+import os
 from fastapi.middleware.cors import CORSMiddleware
 from backend.app.core.client_integrations_runtime import (
     disconnect_client_integration,
@@ -3398,9 +3400,16 @@ async def admin_outcome_action_decision(payload: dict):
 
 
 @app.post("/delegated-workforce-execution")
-async def delegated_workforce_execution(payload: dict):
+async def delegated_workforce_execution(
+    payload: dict,
+    x_admin_token: str | None = Header(default=None),
+    x_actor_role: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+):
 
     implementation_plan = payload.get("implementation_plan") or {}
+    actor_role = x_actor_role or payload.get("actor_role") or "client"
+    media_job_processing_authorized = _admin_media_job_authorized(actor_role, x_admin_token, authorization)
 
     result = execute_delegated_workforce_plan(
         implementation_plan=implementation_plan,
@@ -3409,7 +3418,14 @@ async def delegated_workforce_execution(payload: dict):
         package_tier=payload.get("package_tier", "starter"),
         connected_integrations=payload.get("connected_integrations", []),
         tenant_id=payload.get("tenant_id") or "owner_admin",
+        media_job_processing_authorized=media_job_processing_authorized,
     )
+    result["authorised"] = bool(media_job_processing_authorized)
+    result["processor_invoked"] = bool(result.get("media_job_runner_triggered"))
+    result["processed_job_count"] = int(result.get("media_job_processed_count") or 0)
+    result["final_status_counts"] = _media_job_final_status_counts({"results": result.get("media_job_runner_results", [])})
+    result["security_profile"] = MEDIA_JOB_SECURITY_PROFILE
+    result["credential_values_exposed"] = False
 
     return result
 
@@ -4961,33 +4977,107 @@ def admin_read_media_job(
     return read_media_job(job_id)
 
 
+MEDIA_JOB_SECURITY_PROFILE = "priority5_security_audit_enforcement_v1"
+
+
+def _admin_media_job_token_valid(token: str | None, authorization: str | None = None) -> bool:
+    supplied = str(token or "").strip()
+    if not supplied and authorization:
+        supplied = str(authorization or "").replace("Bearer ", "").strip()
+    expected = [
+        os.getenv("ADMIN_PLATFORM_TOKEN", ""),
+        os.getenv("ADMIN_AUTH_SECRET", ""),
+        os.getenv("ADMIN_TOKEN", ""),
+        os.getenv("PLATFORM_ADMIN_TOKEN", ""),
+        os.getenv("OWNER_ADMIN_TOKEN", ""),
+    ]
+    expected_tokens = [str(value).strip().strip(chr(34)).strip(chr(39)) for value in expected if str(value).strip()]
+    if not expected_tokens:
+        return os.getenv("APP_ENV", "development").lower() not in {"production", "prod"}
+    supplied = supplied.strip().strip(chr(34)).strip(chr(39))
+    return bool(supplied and any(hmac.compare_digest(supplied, expected_token) for expected_token in expected_tokens))
+
+
+def _admin_media_job_authorized(
+    x_actor_role: str | None,
+    x_admin_token: str | None,
+    authorization: str | None = None,
+) -> bool:
+    role = str(x_actor_role or "").strip().lower()
+    return role in {"owner", "admin", "owner_admin", "system"} and _admin_media_job_token_valid(x_admin_token, authorization)
+
+
+def _media_job_final_status_counts(result: dict) -> dict:
+    counts: dict[str, int] = {}
+    for item in result.get("results", []) if isinstance(result, dict) else []:
+        if not isinstance(item, dict):
+            continue
+        job = item.get("job") if isinstance(item.get("job"), dict) else {}
+        status = str(job.get("status") or item.get("status") or "unknown")
+        counts[status] = counts.get(status, 0) + 1
+    return counts
+
+
+def _media_job_blocked_response():
+    from fastapi.responses import JSONResponse
+
+    return JSONResponse(
+        status_code=403,
+        content={
+            "success": False,
+            "error": "admin_authorisation_required",
+            "authorised": False,
+            "processor_invoked": False,
+            "processed_job_count": 0,
+            "final_status_counts": {},
+            "security_profile": MEDIA_JOB_SECURITY_PROFILE,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        },
+    )
+
+
+def _media_job_processor_response(result: dict, *, authorised: bool, processor_invoked: bool) -> dict:
+    processed_count = int(result.get("processed_count") or (1 if result.get("processed") else 0) or 0)
+    return {
+        **result,
+        "authorised": bool(authorised),
+        "processor_invoked": bool(processor_invoked),
+        "processed_job_count": processed_count,
+        "final_status_counts": _media_job_final_status_counts(result),
+        "security_profile": MEDIA_JOB_SECURITY_PROFILE,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
 @app.post("/admin/media-jobs/run-next")
 def admin_run_next_media_job(
     x_admin_token: str | None = Header(default=None),
     x_actor_role: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
 ):
-    if x_actor_role not in {"owner_admin", "admin"}:
-        return {
-            "success": False,
-            "error": "admin_only",
-            "customer_safe": True,
-            "credential_values_exposed": False,
-        }
+    if not _admin_media_job_authorized(x_actor_role, x_admin_token, authorization):
+        return _media_job_blocked_response()
     from backend.app.runtime.async_media_job_foundation import run_next_media_job
-    return run_next_media_job()
+    return _media_job_processor_response(
+        run_next_media_job(),
+        authorised=True,
+        processor_invoked=True,
+    )
 
 
 @app.post("/admin/media-jobs/run-all")
 def admin_run_all_media_jobs(
     x_admin_token: str | None = Header(default=None),
     x_actor_role: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
 ):
-    if x_actor_role not in {"owner_admin", "admin"}:
-        return {
-            "success": False,
-            "error": "admin_only",
-            "customer_safe": True,
-            "credential_values_exposed": False,
-        }
+    if not _admin_media_job_authorized(x_actor_role, x_admin_token, authorization):
+        return _media_job_blocked_response()
     from backend.app.runtime.async_media_job_foundation import run_all_media_jobs
-    return run_all_media_jobs(limit=25)
+    return _media_job_processor_response(
+        run_all_media_jobs(limit=25),
+        authorised=True,
+        processor_invoked=True,
+    )

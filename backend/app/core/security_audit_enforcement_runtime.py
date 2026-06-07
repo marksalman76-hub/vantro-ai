@@ -30,6 +30,7 @@ LOCKOUT_WINDOW_SECONDS = int(os.getenv("SECURITY_LOCKOUT_WINDOW_SECONDS", "300")
 
 ADMIN_PATH_PREFIXES = ("/admin", "/owner")
 ADMIN_EVIDENCE_PROXY_PATHS = ("/admin/execution-evidence", "/admin/qa-regression-intelligence/evaluate")
+ADMIN_MEDIA_JOB_PROCESSING_PATHS = ("/admin/media-jobs/run-all", "/admin/media-jobs/run-next")
 DEFAULT_TRUSTED_ORIGINS = ("https://app.trance-formation.com.au", "https://trance-formation.com.au")
 STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
@@ -153,6 +154,23 @@ def _admin_evidence_proxy_valid(request: Request) -> bool:
     return True
 
 
+def _admin_media_job_processing_valid(request: Request) -> bool:
+    path = request.url.path.lower()
+    method = request.method.upper()
+    role = _header(request, "x-actor-role", "anonymous").lower()
+
+    if path not in ADMIN_MEDIA_JOB_PROCESSING_PATHS:
+        return False
+
+    if method != "POST":
+        return False
+
+    if role not in {"owner", "admin", "owner_admin", "system"}:
+        return False
+
+    return _admin_token_valid(request)
+
+
 def _lockout_key(request: Request) -> str:
     return _hash("|".join([_client_ip(request), _header(request, "x-actor-role"), _header(request, "x-tenant-id")]), 24)
 
@@ -234,19 +252,20 @@ def assess_audit_enforcement(request: Request) -> Dict[str, Any]:
 
     if _is_admin_path(path):
         evidence_proxy_ok = _admin_evidence_proxy_valid(request)
+        admin_media_job_ok = _admin_media_job_processing_valid(request)
 
         if role not in {"owner", "admin", "owner_admin", "system"}:
             reasons.append("admin_route_invalid_actor")
             severity = "high"
 
-        if not evidence_proxy_ok and not _admin_token_valid(request):
+        if not evidence_proxy_ok and not admin_media_job_ok and not _admin_token_valid(request):
             reasons.append("admin_token_missing_or_invalid")
             severity = "critical" if _is_production() else "high"
             if _is_production():
                 blocked = True
 
     if method in STATE_CHANGING_METHODS and (_is_admin_path(path) or path.startswith("/customer") or path.startswith("/client")):
-        if not _trusted_origin_valid(request):
+        if not _trusted_origin_valid(request) and not _admin_media_job_processing_valid(request):
             reasons.append("trusted_origin_missing_or_invalid")
             severity = "high" if severity in {"none", "medium"} else severity
             if _is_production():
