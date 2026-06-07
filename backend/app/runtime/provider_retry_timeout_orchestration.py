@@ -9,6 +9,7 @@ from backend.app.runtime.provider_job_persistence_runtime import (
     list_provider_jobs,
     update_provider_job_status,
 )
+from backend.app.runtime.durable_provider_execution_ledger import record_provider_retry
 
 
 def _now() -> datetime:
@@ -44,12 +45,21 @@ def schedule_provider_job_retry(
     if attempt_count >= max_attempts:
         exhausted = update_provider_job_status(
             job_id,
-            "failed",
+            "manual_review_required",
             error="provider_retry_attempts_exhausted",
+        )
+        record_provider_retry(
+            provider_job_id=job_id,
+            execution_id=str(job.get("execution_id") or ""),
+            retry_reason="provider_retry_attempts_exhausted",
+            attempt_number=attempt_count,
+            scheduled_for=_now(),
+            retry_allowed=False,
+            next_action="manual_review_required",
         )
         return {
             "success": False,
-            "status": "retry_exhausted",
+            "status": "manual_review_required",
             "job": exhausted.get("job"),
             "reason": "provider_retry_attempts_exhausted",
             "credential_values_exposed": False,
@@ -64,6 +74,17 @@ def schedule_provider_job_retry(
         error=reason,
         next_retry_at=next_retry_at,
     )
+    if scheduled.get("success"):
+        job_after = scheduled.get("job") or job
+        record_provider_retry(
+            provider_job_id=job_id,
+            execution_id=str(job_after.get("execution_id") or job.get("execution_id") or ""),
+            retry_reason=reason,
+            attempt_number=attempt_count + 1,
+            scheduled_for=next_retry_at,
+            retry_allowed=True,
+            next_action="retry_scheduled",
+        )
 
     return {
         "success": True,

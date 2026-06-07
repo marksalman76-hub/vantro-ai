@@ -159,6 +159,21 @@ from backend.app.core.production_security_switch import production_security_swit
 
 from backend.app.core.execution_queue_worker_runtime import queue_worker_health, worker_heartbeat, clear_queue_worker_locks, claim_execution_queue_batch, run_queue_worker_once
 
+from backend.app.runtime.provider_execution_admin_visibility import (
+    get_provider_execution_admin_visibility,
+    get_provider_execution_admin_visibility_status,
+)
+from backend.app.runtime.provider_retry_timeout_orchestration import (
+    schedule_provider_job_retry,
+    requeue_retry_ready_provider_jobs,
+)
+from backend.app.runtime.provider_job_persistence_runtime import update_provider_job_status
+from backend.app.runtime.durable_provider_execution_ledger import (
+    create_provider_execution_record as create_durable_provider_execution_record,
+    create_provider_job as create_durable_provider_job,
+    list_provider_jobs as list_durable_provider_jobs,
+)
+
 from backend.app.core.multi_agent_orchestration_runtime import orchestration_readiness, create_orchestration_plan, orchestration_execution_readiness, enqueue_orchestration_plan
 
 from backend.app.core.orchestration_state_runtime import orchestration_state_readiness, record_orchestration_state, record_orchestration_result, get_orchestration_context, orchestration_recovery_packet
@@ -1192,6 +1207,153 @@ def admin_provider_execution_audit(limit: int = 20):
             "learning_internals_exposed": False,
         },
     }
+
+@app.get("/provider-execution-admin-visibility/status")
+def provider_execution_admin_visibility_status():
+    return get_provider_execution_admin_visibility_status()
+
+
+@app.get("/provider-execution-admin-visibility/summary")
+def provider_execution_admin_visibility_summary(tenant_id: str = "", provider: str = ""):
+    return get_provider_execution_admin_visibility(tenant_id=tenant_id, provider=provider)
+
+
+@app.post("/provider-execution-admin-visibility/actions/retry")
+def provider_execution_admin_visibility_retry(payload: dict):
+    job_id = str((payload or {}).get("job_id") or "")
+    reason = str((payload or {}).get("reason") or "admin_requested_provider_retry")
+    result = schedule_provider_job_retry(job_id, reason=reason, delay_seconds=0)
+    return {
+        "success": bool(result.get("success")),
+        "accepted": bool(result.get("success")),
+        "message": "Governed provider retry request accepted." if result.get("success") else result.get("reason") or result.get("error"),
+        "result": result,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+@app.post("/provider-execution-admin-visibility/actions/requeue")
+def provider_execution_admin_visibility_requeue(payload: dict):
+    job_id = str((payload or {}).get("job_id") or "")
+    result = update_provider_job_status(job_id, "queued", error=None, next_retry_at=None)
+    return {
+        "success": bool(result.get("success")),
+        "accepted": bool(result.get("success")),
+        "message": "Governed provider requeue request accepted." if result.get("success") else result.get("error"),
+        "result": result,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+@app.post("/provider-execution-admin-visibility/actions/cancel")
+def provider_execution_admin_visibility_cancel(payload: dict):
+    job_id = str((payload or {}).get("job_id") or "")
+    reason = str((payload or {}).get("reason") or "admin_requested_provider_cancel")
+    result = update_provider_job_status(job_id, "cancelled", error=reason)
+    return {
+        "success": bool(result.get("success")),
+        "accepted": bool(result.get("success")),
+        "message": "Governed provider cancel request accepted." if result.get("success") else result.get("error"),
+        "result": result,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+@app.get("/provider-queue-retry-failover")
+def provider_queue_retry_failover_status(tenant_id: str = "", provider: str = ""):
+    visibility = get_provider_execution_admin_visibility(tenant_id=tenant_id, provider=provider)
+    if not visibility.get("success", True):
+        return {
+            **visibility,
+            "provider_queue_retry_failover_enabled": False,
+            "provider_queue_count": 0,
+            "provider_queue_jobs": [],
+            "latest_provider_queue_job": None,
+            "live_external_call_executed": False,
+            "external_action_performed": False,
+            "credential_values_exposed": False,
+        }
+    return {
+        "success": bool(visibility.get("success", True)),
+        "tenant_scoped": bool(tenant_id),
+        "client_safe": True,
+        "provider_queue_retry_failover_enabled": True,
+        "provider_queue_count": len(visibility.get("jobs", [])),
+        "provider_queue_jobs": visibility.get("jobs", []),
+        "latest_provider_queue_job": (visibility.get("jobs", []) or [None])[0],
+        "live_external_call_executed": False,
+        "external_action_performed": False,
+        "credential_values_exposed": False,
+    }
+
+
+@app.post("/provider-queue-retry-failover")
+def provider_queue_retry_failover_enqueue(payload: dict):
+    payload = dict(payload or {})
+    tenant_id = str(payload.get("tenant_id") or payload.get("tenant_key") or "tenant_unknown")
+    provider = str(payload.get("provider") or payload.get("primary_provider") or payload.get("provider_key") or "unknown")
+    action_type = str(payload.get("action_type") or payload.get("requested_capability") or payload.get("asset_type") or "provider_queue_retry_failover")
+    execution = create_durable_provider_execution_record(
+        tenant_id=tenant_id,
+        project_id=str(payload.get("project_id") or "default_project"),
+        agent_id=str(payload.get("agent_id") or payload.get("requested_agent") or ""),
+        provider=provider,
+        capability=action_type,
+        action_type=action_type,
+        status="queued",
+        request_payload=payload,
+        idempotency_key=str(payload.get("idempotency_key") or ""),
+    )
+    if not execution.get("success"):
+        return execution
+    if execution.get("idempotent_replay"):
+        existing_jobs = list_durable_provider_jobs(
+            execution_id=str(execution.get("execution_id") or ""),
+            tenant_id=tenant_id,
+            provider=provider,
+            limit=1,
+        ).get("jobs", [])
+        if existing_jobs:
+            return {
+                "success": True,
+                "tenant_scoped": True,
+                "client_safe": True,
+                "provider_queue_retry_failover_enabled": True,
+                "provider_queue_job": existing_jobs[0],
+                "provider_queue_status": existing_jobs[0].get("status"),
+                "idempotent_replay": True,
+                "provider_failover_available": False,
+                "live_external_call_executed": False,
+                "external_action_performed": False,
+                "credential_values_exposed": False,
+            }
+    job = create_durable_provider_job(
+        execution_id=str(execution.get("execution_id")),
+        provider=provider,
+        tenant_id=tenant_id,
+        project_id=str(payload.get("project_id") or "default_project"),
+        status="queued",
+        max_attempts=int(payload.get("max_retries") or payload.get("max_attempts") or 3),
+    )
+    return {
+        "success": bool(job.get("success")),
+        "status": job.get("status"),
+        "tenant_scoped": True,
+        "client_safe": True,
+        "provider_queue_retry_failover_enabled": bool(job.get("success")),
+        "durable_provider_ledger_available": bool(job.get("success")),
+        "production_fail_closed": bool(job.get("production_fail_closed", False)),
+        "provider_queue_job": job.get("job"),
+        "provider_queue_status": job.get("status"),
+        "provider_failover_available": False,
+        "live_external_call_executed": False,
+        "external_action_performed": False,
+        "credential_values_exposed": False,
+    }
+
 
 # Step 70 — Provider Credential Readiness Admin Route
 try:

@@ -1,31 +1,27 @@
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from backend.app.runtime.provider_execution_persistence_ledger import (
-    append_worker_event_ledger_entry,
+from backend.app.runtime.durable_provider_execution_ledger import (
     create_provider_execution_record,
-    list_dispatch_attempt_records,
+    ensure_provider_ledger_tables,
+    get_provider_admin_summary,
+    list_provider_dispatch_attempts,
     list_provider_execution_records,
+    list_provider_job_events,
     list_provider_latency_metrics,
-    list_retry_history_records,
-    list_worker_event_ledger,
-    provider_execution_persistence_status,
-    record_dispatch_attempt,
-    record_provider_latency_metric,
-    record_retry_history,
-    reset_provider_execution_ledger_for_tests,
+    list_provider_retry_history,
+    record_provider_dispatch_attempt,
+    record_provider_job_event,
+    record_provider_latency,
+    record_provider_retry,
+    reset_dev_provider_ledger_for_tests,
 )
 
 
 SQL_SCHEMA_PATH = Path(__file__).resolve().parents[2] / "sql" / "provider_execution_ledger_schema.sql"
-
-
-def _database_url_present() -> bool:
-    return bool(os.getenv("DATABASE_URL"))
 
 
 def _safe_response(**kwargs: Any) -> Dict[str, Any]:
@@ -35,208 +31,108 @@ def _safe_response(**kwargs: Any) -> Dict[str, Any]:
     return payload
 
 
+def _database_url_present() -> bool:
+    return bool(os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL"))
+
+
+def _bridge_mode(mode: str) -> str:
+    return "in_memory_fallback" if mode == "dev_memory" else mode
+
+
+def _compat_event(event: Dict[str, Any]) -> Dict[str, Any]:
+    payload = dict(event.get("payload") or {})
+    return {
+        "ledger_id": event.get("event_id"),
+        "event_id": event.get("event_id"),
+        "tenant_id": payload.get("tenant_id"),
+        "request_id": payload.get("request_id"),
+        "execution_id": event.get("execution_id"),
+        "worker_job_id": event.get("provider_job_id") or event.get("job_id"),
+        "provider_key": payload.get("provider_key"),
+        "event_type": event.get("event_type"),
+        "status": payload.get("status"),
+        "details": dict(payload.get("details") or {}),
+        "payload": payload,
+        "created_at": event.get("created_at"),
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+def _compat_attempt(attempt: Dict[str, Any]) -> Dict[str, Any]:
+    safe = dict(attempt or {})
+    safe["attempt_id"] = safe.get("attempt_id") or safe.get("dispatch_attempt_id")
+    safe["worker_job_id"] = safe.get("worker_job_id") or safe.get("provider_job_id")
+    safe["provider_key"] = safe.get("provider_key") or safe.get("provider")
+    safe["result_status"] = safe.get("result_status") or safe.get("status")
+    safe.setdefault("live_external_call_executed", False)
+    safe["credential_values_exposed"] = False
+    safe["customer_safe"] = True
+    return safe
+
+
+def _compat_retry(retry: Dict[str, Any]) -> Dict[str, Any]:
+    safe = dict(retry or {})
+    safe["worker_job_id"] = safe.get("worker_job_id") or safe.get("provider_job_id")
+    safe["failure_code"] = safe.get("failure_code") or safe.get("retry_reason")
+    safe["credential_values_exposed"] = False
+    safe["customer_safe"] = True
+    return safe
+
+
+def _compat_latency(metric: Dict[str, Any]) -> Dict[str, Any]:
+    safe = dict(metric or {})
+    safe["latency_id"] = safe.get("latency_id") or safe.get("metric_id")
+    safe["provider_key"] = safe.get("provider_key") or safe.get("provider")
+    safe["operation"] = safe.get("operation") or safe.get("capability") or safe.get("status")
+    safe["credential_values_exposed"] = False
+    safe["customer_safe"] = True
+    return safe
+
+
 def provider_postgres_ledger_bridge_status() -> Dict[str, Any]:
+    readiness = ensure_provider_ledger_tables()
     return _safe_response(
-        bridge_ready=True,
+        bridge_ready=bool(readiness.get("success")),
         database_url_present=_database_url_present(),
         postgres_schema_path=str(SQL_SCHEMA_PATH),
-        postgres_binding_mode="safe_fallback_until_db_driver_enabled",
-        in_memory_fallback_enabled=True,
-        current_fallback_status=provider_execution_persistence_status(),
+        postgres_binding_mode="canonical_durable_provider_ledger",
+        in_memory_fallback_enabled=bool(readiness.get("dev_only")),
+        current_fallback_status=readiness,
     )
 
 
 def get_provider_ledger_schema_sql() -> Dict[str, Any]:
     if not SQL_SCHEMA_PATH.exists():
-        return _safe_response(
-            status="missing",
-            schema_sql_present=False,
-            sql="",
-        )
-
-    return _safe_response(
-        status="available",
-        schema_sql_present=True,
-        sql=SQL_SCHEMA_PATH.read_text(encoding="utf-8"),
-    )
+        return _safe_response(status="missing", schema_sql_present=False, sql="")
+    return _safe_response(status="available", schema_sql_present=True, sql=SQL_SCHEMA_PATH.read_text(encoding="utf-8"))
 
 
 def apply_provider_ledger_schema_if_possible() -> Dict[str, Any]:
-    if not _database_url_present():
-        return _safe_response(
-            status="skipped",
-            reason="DATABASE_URL_missing",
-            applied=False,
-            fallback_storage_active=True,
-        )
-
-    # Intentionally not opening DB connection here yet.
-    # This bridge is DB-ready but driver-safe. Actual application should be wired
-    # only after confirming the installed DB driver and production migration policy.
+    readiness = ensure_provider_ledger_tables()
     return _safe_response(
-        status="prepared",
-        reason="DATABASE_URL_present_driver_application_pending",
-        applied=False,
-        fallback_storage_active=True,
+        status="applied" if readiness.get("durable") else readiness.get("status"),
+        reason=readiness.get("reason"),
+        applied=bool(readiness.get("durable")),
+        fallback_storage_active=bool(readiness.get("dev_only")),
     )
 
 
-def persist_provider_execution_record_bridge(
-    *,
-    tenant_id: str,
-    request_id: str,
-    provider_key: str,
-    task_type: str,
-    execution_status: str = "created",
-    worker_job_id: Optional[str] = None,
-    provider_job_id: Optional[str] = None,
-) -> Dict[str, Any]:
-    record = create_provider_execution_record(
-        tenant_id=tenant_id,
-        request_id=request_id,
-        provider_key=provider_key,
-        task_type=task_type,
-        execution_status=execution_status,
-        worker_job_id=worker_job_id,
-        provider_job_id=provider_job_id,
-    )
+def apply_provider_ledger_schema_with_driver() -> Dict[str, Any]:
+    return apply_provider_ledger_schema_if_possible()
 
+
+def provider_postgres_migration_apply_status() -> Dict[str, Any]:
+    readiness = ensure_provider_ledger_tables()
     return _safe_response(
-        persistence_mode="in_memory_fallback",
-        postgres_write_attempted=False,
-        record=record,
+        migration_apply_ready=bool(readiness.get("success")),
+        database_url_present=_database_url_present(),
+        schema_sql_present=True,
+        postgres_driver_available=not bool(readiness.get("postgres_configured_but_driver_unavailable")),
+        postgres_driver="psycopg",
+        fallback_storage_active=bool(readiness.get("dev_only")),
     )
 
-
-def persist_worker_event_bridge(
-    *,
-    tenant_id: str,
-    request_id: str,
-    execution_id: str,
-    worker_job_id: str,
-    provider_key: str,
-    event_type: str,
-    status: str,
-    details: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
-    entry = append_worker_event_ledger_entry(
-        tenant_id=tenant_id,
-        request_id=request_id,
-        execution_id=execution_id,
-        worker_job_id=worker_job_id,
-        provider_key=provider_key,
-        event_type=event_type,
-        status=status,
-        details=details,
-    )
-
-    return _safe_response(
-        persistence_mode="in_memory_fallback",
-        postgres_write_attempted=False,
-        entry=entry,
-    )
-
-
-def persist_dispatch_attempt_bridge(
-    *,
-    tenant_id: str,
-    request_id: str,
-    execution_id: str,
-    worker_job_id: str,
-    provider_key: str,
-    attempt_number: int,
-    allowed_by_policy: bool,
-    result_status: str,
-    reason: Optional[str] = None,
-) -> Dict[str, Any]:
-    attempt = record_dispatch_attempt(
-        tenant_id=tenant_id,
-        request_id=request_id,
-        execution_id=execution_id,
-        worker_job_id=worker_job_id,
-        provider_key=provider_key,
-        attempt_number=attempt_number,
-        allowed_by_policy=allowed_by_policy,
-        result_status=result_status,
-        reason=reason,
-    )
-
-    return _safe_response(
-        persistence_mode="in_memory_fallback",
-        postgres_write_attempted=False,
-        attempt=attempt,
-    )
-
-
-def persist_retry_history_bridge(
-    *,
-    tenant_id: str,
-    request_id: str,
-    execution_id: str,
-    worker_job_id: str,
-    provider_key: str,
-    attempt_number: int,
-    failure_code: str,
-    retry_allowed: bool,
-    next_action: str,
-) -> Dict[str, Any]:
-    retry = record_retry_history(
-        tenant_id=tenant_id,
-        request_id=request_id,
-        execution_id=execution_id,
-        worker_job_id=worker_job_id,
-        provider_key=provider_key,
-        attempt_number=attempt_number,
-        failure_code=failure_code,
-        retry_allowed=retry_allowed,
-        next_action=next_action,
-    )
-
-    return _safe_response(
-        persistence_mode="in_memory_fallback",
-        postgres_write_attempted=False,
-        retry=retry,
-    )
-
-
-def persist_latency_metric_bridge(
-    *,
-    tenant_id: str,
-    request_id: str,
-    execution_id: str,
-    provider_key: str,
-    latency_ms: int,
-    operation: str,
-) -> Dict[str, Any]:
-    metric = record_provider_latency_metric(
-        tenant_id=tenant_id,
-        request_id=request_id,
-        execution_id=execution_id,
-        provider_key=provider_key,
-        latency_ms=latency_ms,
-        operation=operation,
-    )
-
-    return _safe_response(
-        persistence_mode="in_memory_fallback",
-        postgres_write_attempted=False,
-        metric=metric,
-    )
-
-
-def provider_postgres_bridge_summary() -> Dict[str, Any]:
-    return _safe_response(
-        status=provider_postgres_ledger_bridge_status(),
-        execution_records=list_provider_execution_records(limit=10),
-        worker_events=list_worker_event_ledger(limit=10),
-        dispatch_attempts=list_dispatch_attempt_records(limit=10),
-        retry_history=list_retry_history_records(limit=10),
-        latency_metrics=list_provider_latency_metrics(limit=10),
-    )
-
-
-def reset_provider_postgres_bridge_fallback_for_tests() -> Dict[str, Any]:
-    return reset_provider_execution_ledger_for_tests()
 
 def detect_postgres_driver() -> Dict[str, Any]:
     try:
@@ -244,181 +140,12 @@ def detect_postgres_driver() -> Dict[str, Any]:
         return _safe_response(driver_available=True, driver="psycopg")
     except Exception:
         pass
-
     try:
         import psycopg2  # type: ignore
         return _safe_response(driver_available=True, driver="psycopg2")
     except Exception:
         pass
-
     return _safe_response(driver_available=False, driver=None)
-
-
-def apply_provider_ledger_schema_with_driver() -> Dict[str, Any]:
-    if not _database_url_present():
-        return _safe_response(
-            status="skipped",
-            reason="DATABASE_URL_missing",
-            applied=False,
-            fallback_storage_active=True,
-        )
-
-    schema = get_provider_ledger_schema_sql()
-    if not schema.get("schema_sql_present"):
-        return _safe_response(
-            status="failed",
-            reason="schema_sql_missing",
-            applied=False,
-            fallback_storage_active=True,
-        )
-
-    driver = detect_postgres_driver()
-    if not driver.get("driver_available"):
-        return _safe_response(
-            status="skipped",
-            reason="postgres_driver_missing",
-            applied=False,
-            fallback_storage_active=True,
-            database_url_present=True,
-        )
-
-    database_url = os.getenv("DATABASE_URL")
-    sql = schema["sql"]
-
-    try:
-        if driver["driver"] == "psycopg":
-            import psycopg  # type: ignore
-            with psycopg.connect(database_url) as conn:
-                with conn.cursor() as cur:
-                    cur.execute(sql)
-                conn.commit()
-
-        elif driver["driver"] == "psycopg2":
-            import psycopg2  # type: ignore
-            conn = psycopg2.connect(database_url)
-            try:
-                cur = conn.cursor()
-                cur.execute(sql)
-                conn.commit()
-                cur.close()
-            finally:
-                conn.close()
-        else:
-            return _safe_response(
-                status="skipped",
-                reason="unsupported_driver",
-                applied=False,
-                fallback_storage_active=True,
-            )
-
-        return _safe_response(
-            status="applied",
-            reason="schema_applied_successfully",
-            applied=True,
-            fallback_storage_active=True,
-            driver=driver["driver"],
-        )
-
-    except Exception as exc:
-        return _safe_response(
-            status="failed",
-            reason="schema_apply_failed",
-            applied=False,
-            fallback_storage_active=True,
-            driver=driver.get("driver"),
-            safe_error=str(exc)[:300],
-        )
-
-
-def provider_postgres_migration_apply_status() -> Dict[str, Any]:
-    driver = detect_postgres_driver()
-    return _safe_response(
-        migration_apply_ready=True,
-        database_url_present=_database_url_present(),
-        schema_sql_present=get_provider_ledger_schema_sql().get("schema_sql_present", False),
-        postgres_driver_available=driver.get("driver_available", False),
-        postgres_driver=driver.get("driver"),
-        fallback_storage_active=True,
-        credential_values_exposed=False,
-    )
-
-def _get_db_connection():
-    database_url = os.getenv("DATABASE_URL")
-    if not database_url:
-        return None, None
-
-    driver = detect_postgres_driver()
-    if not driver.get("driver_available"):
-        return None, None
-
-    try:
-        if driver["driver"] == "psycopg":
-            import psycopg  # type: ignore
-            return psycopg.connect(database_url), "psycopg"
-
-        if driver["driver"] == "psycopg2":
-            import psycopg2  # type: ignore
-            return psycopg2.connect(database_url), "psycopg2"
-    except Exception:
-        return None, driver.get("driver")
-
-    return None, None
-
-
-def postgres_write_provider_execution_record(record: Dict[str, Any]) -> Dict[str, Any]:
-    conn, driver = _get_db_connection()
-    if conn is None:
-        return _safe_response(written=False, reason="db_unavailable", fallback_required=True)
-
-    sql = """
-    INSERT INTO provider_execution_records (
-        execution_id, tenant_id, request_id, provider_key, task_type,
-        execution_status, worker_job_id, provider_job_id,
-        live_external_call_executed, customer_safe, credential_values_exposed,
-        created_at_ms, updated_at_ms
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ON CONFLICT (execution_id) DO UPDATE SET
-        execution_status = EXCLUDED.execution_status,
-        worker_job_id = EXCLUDED.worker_job_id,
-        provider_job_id = EXCLUDED.provider_job_id,
-        updated_at_ms = EXCLUDED.updated_at_ms
-    """
-
-    values = (
-        record.get("execution_id"),
-        record.get("tenant_id"),
-        record.get("request_id"),
-        record.get("provider_key"),
-        record.get("task_type"),
-        record.get("execution_status"),
-        record.get("worker_job_id"),
-        record.get("provider_job_id"),
-        False,
-        True,
-        False,
-        record.get("created_at_ms"),
-        record.get("updated_at_ms"),
-    )
-
-    try:
-        cur = conn.cursor()
-        cur.execute(sql, values)
-        conn.commit()
-        cur.close()
-        conn.close()
-        return _safe_response(written=True, reason="postgres_write_success", driver=driver)
-    except Exception as exc:
-        try:
-            conn.close()
-        except Exception:
-            pass
-        return _safe_response(
-            written=False,
-            reason="postgres_write_failed",
-            fallback_required=True,
-            safe_error=str(exc)[:300],
-            driver=driver,
-        )
 
 
 def persist_provider_execution_record_bridge(
@@ -431,266 +158,30 @@ def persist_provider_execution_record_bridge(
     worker_job_id: Optional[str] = None,
     provider_job_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    record = create_provider_execution_record(
+    result = create_provider_execution_record(
         tenant_id=tenant_id,
-        request_id=request_id,
-        provider_key=provider_key,
-        task_type=task_type,
-        execution_status=execution_status,
-        worker_job_id=worker_job_id,
-        provider_job_id=provider_job_id,
+        provider=provider_key,
+        capability=task_type,
+        action_type=task_type,
+        status=execution_status,
+        request_payload={"request_id": request_id, "worker_job_id": worker_job_id, "provider_job_id": provider_job_id},
+        idempotency_key=f"{tenant_id}:{provider_key}:{request_id}:{task_type}",
+        worker_job_id=worker_job_id or "",
+        provider_job_id=provider_job_id or "",
     )
-
-    write_result = postgres_write_provider_execution_record(record)
-
+    record = dict(result.get("record") or {})
+    record["provider_key"] = record.get("provider")
+    record["task_type"] = task_type
+    record["execution_status"] = record.get("status")
+    record["worker_job_id"] = worker_job_id
+    record["provider_job_id"] = provider_job_id
+    record["request_id"] = request_id
     return _safe_response(
-        persistence_mode="postgres" if write_result.get("written") else "in_memory_fallback",
-        postgres_write_attempted=bool(os.getenv("DATABASE_URL")),
-        postgres_write_result=write_result,
+        persistence_mode=_bridge_mode(str(result.get("storage_mode") or "")),
+        postgres_write_attempted=_database_url_present(),
+        postgres_write_result={"written": bool(result.get("durable")), "reason": result.get("status")},
         record=record,
     )
-
-
-def postgres_read_provider_execution_records(
-    *,
-    tenant_id: Optional[str] = None,
-    provider_key: Optional[str] = None,
-    limit: int = 50,
-) -> Dict[str, Any]:
-    conn, driver = _get_db_connection()
-    db_url_present = bool(os.getenv("DATABASE_URL"))
-    if conn is None:
-        fallback = list_provider_execution_records(
-            tenant_id=tenant_id,
-            provider_key=provider_key,
-            limit=limit,
-        )
-        return _safe_response(
-            read_mode="in_memory_fallback",
-            postgres_read_attempted=db_url_present,
-            postgres_connection_available=False,
-            records=fallback["records"],
-            count=fallback["count"],
-        )
-
-    clauses = []
-    values = []
-
-    if tenant_id:
-        clauses.append("tenant_id = %s")
-        values.append(tenant_id)
-    if provider_key:
-        clauses.append("provider_key = %s")
-        values.append(provider_key)
-
-    where_clause = ("WHERE " + " AND ".join(clauses)) if clauses else ""
-    values.append(limit)
-
-    sql = f"""
-    SELECT execution_id, tenant_id, request_id, provider_key, task_type,
-           execution_status, worker_job_id, provider_job_id,
-           live_external_call_executed, customer_safe, credential_values_exposed,
-           created_at_ms, updated_at_ms
-    FROM provider_execution_records
-    {where_clause}
-    ORDER BY created_at_ms DESC
-    LIMIT %s
-    """
-
-    try:
-        cur = conn.cursor()
-        cur.execute(sql, tuple(values))
-        rows = cur.fetchall()
-        cur.close()
-        conn.close()
-
-        records = []
-        for row in rows:
-            records.append({
-                "execution_id": row[0],
-                "tenant_id": row[1],
-                "request_id": row[2],
-                "provider_key": row[3],
-                "task_type": row[4],
-                "execution_status": row[5],
-                "worker_job_id": row[6],
-                "provider_job_id": row[7],
-                "live_external_call_executed": bool(row[8]),
-                "customer_safe": bool(row[9]),
-                "credential_values_exposed": False,
-                "created_at_ms": row[11],
-                "updated_at_ms": row[12],
-            })
-
-        return _safe_response(
-            read_mode="postgres",
-            postgres_read_attempted=True,
-            driver=driver,
-            records=records,
-            count=len(records),
-        )
-
-    except Exception as exc:
-        try:
-            conn.close()
-        except Exception:
-            pass
-
-        fallback = list_provider_execution_records(
-            tenant_id=tenant_id,
-            provider_key=provider_key,
-            limit=limit,
-        )
-        return _safe_response(
-            read_mode="in_memory_fallback",
-            postgres_read_attempted=True,
-            postgres_read_failed=True,
-            safe_error=str(exc)[:300],
-            records=fallback["records"],
-            count=fallback["count"],
-        )
-
-
-def provider_postgres_read_write_status() -> Dict[str, Any]:
-    driver = detect_postgres_driver()
-    return _safe_response(
-        read_write_bridge_ready=True,
-        database_url_present=_database_url_present(),
-        postgres_driver_available=driver.get("driver_available", False),
-        postgres_driver=driver.get("driver"),
-        provider_execution_record_postgres_write_enabled=True,
-        provider_execution_record_postgres_read_enabled=True,
-        fallback_storage_active=True,
-    )
-
-def _postgres_execute_write(sql: str, values: tuple) -> Dict[str, Any]:
-    conn, driver = _get_db_connection()
-    if conn is None:
-        return _safe_response(written=False, reason="db_unavailable", fallback_required=True)
-
-    try:
-        cur = conn.cursor()
-        cur.execute(sql, values)
-        conn.commit()
-        cur.close()
-        conn.close()
-        return _safe_response(written=True, reason="postgres_write_success", driver=driver)
-    except Exception as exc:
-        try:
-            conn.close()
-        except Exception:
-            pass
-        return _safe_response(
-            written=False,
-            reason="postgres_write_failed",
-            fallback_required=True,
-            safe_error=str(exc)[:300],
-            driver=driver,
-        )
-
-
-def postgres_write_worker_event(entry: Dict[str, Any]) -> Dict[str, Any]:
-    sql = """
-    INSERT INTO provider_worker_event_ledger (
-        ledger_id, tenant_id, request_id, execution_id, worker_job_id,
-        provider_key, event_type, status, details_json,
-        customer_safe, credential_values_exposed, created_at_ms
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ON CONFLICT (ledger_id) DO NOTHING
-    """
-    values = (
-        entry.get("ledger_id"),
-        entry.get("tenant_id"),
-        entry.get("request_id"),
-        entry.get("execution_id"),
-        entry.get("worker_job_id"),
-        entry.get("provider_key"),
-        entry.get("event_type"),
-        entry.get("status"),
-        json.dumps(entry.get("details") or {}),
-        True,
-        False,
-        entry.get("created_at_ms"),
-    )
-    return _postgres_execute_write(sql, values)
-
-
-def postgres_write_dispatch_attempt(attempt: Dict[str, Any]) -> Dict[str, Any]:
-    sql = """
-    INSERT INTO provider_dispatch_attempt_records (
-        attempt_id, tenant_id, request_id, execution_id, worker_job_id,
-        provider_key, attempt_number, allowed_by_policy, result_status, reason,
-        live_external_call_executed, customer_safe, credential_values_exposed, created_at_ms
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ON CONFLICT (attempt_id) DO NOTHING
-    """
-    values = (
-        attempt.get("attempt_id"),
-        attempt.get("tenant_id"),
-        attempt.get("request_id"),
-        attempt.get("execution_id"),
-        attempt.get("worker_job_id"),
-        attempt.get("provider_key"),
-        int(attempt.get("attempt_number", 1) or 1),
-        bool(attempt.get("allowed_by_policy", False)),
-        attempt.get("result_status"),
-        attempt.get("reason"),
-        False,
-        True,
-        False,
-        attempt.get("created_at_ms"),
-    )
-    return _postgres_execute_write(sql, values)
-
-
-def postgres_write_retry_history(retry: Dict[str, Any]) -> Dict[str, Any]:
-    sql = """
-    INSERT INTO provider_retry_history_records (
-        retry_id, tenant_id, request_id, execution_id, worker_job_id,
-        provider_key, attempt_number, failure_code, retry_allowed, next_action,
-        customer_safe, credential_values_exposed, created_at_ms
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ON CONFLICT (retry_id) DO NOTHING
-    """
-    values = (
-        retry.get("retry_id"),
-        retry.get("tenant_id"),
-        retry.get("request_id"),
-        retry.get("execution_id"),
-        retry.get("worker_job_id"),
-        retry.get("provider_key"),
-        int(retry.get("attempt_number", 1) or 1),
-        retry.get("failure_code"),
-        bool(retry.get("retry_allowed", False)),
-        retry.get("next_action"),
-        True,
-        False,
-        retry.get("created_at_ms"),
-    )
-    return _postgres_execute_write(sql, values)
-
-
-def postgres_write_latency_metric(metric: Dict[str, Any]) -> Dict[str, Any]:
-    sql = """
-    INSERT INTO provider_latency_metric_records (
-        latency_id, tenant_id, request_id, execution_id, provider_key,
-        latency_ms, operation, customer_safe, credential_values_exposed, created_at_ms
-    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ON CONFLICT (latency_id) DO NOTHING
-    """
-    values = (
-        metric.get("latency_id"),
-        metric.get("tenant_id"),
-        metric.get("request_id"),
-        metric.get("execution_id"),
-        metric.get("provider_key"),
-        int(metric.get("latency_ms", 0) or 0),
-        metric.get("operation"),
-        True,
-        False,
-        metric.get("created_at_ms"),
-    )
-    return _postgres_execute_write(sql, values)
 
 
 def persist_worker_event_bridge(
@@ -704,24 +195,17 @@ def persist_worker_event_bridge(
     status: str,
     details: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    entry = append_worker_event_ledger_entry(
-        tenant_id=tenant_id,
-        request_id=request_id,
+    result = record_provider_job_event(
+        provider_job_id=worker_job_id,
         execution_id=execution_id,
-        worker_job_id=worker_job_id,
-        provider_key=provider_key,
         event_type=event_type,
-        status=status,
-        details=details,
+        payload={"tenant_id": tenant_id, "request_id": request_id, "provider_key": provider_key, "status": status, "details": details or {}},
     )
-
-    write_result = postgres_write_worker_event(entry)
-
     return _safe_response(
-        persistence_mode="postgres" if write_result.get("written") else "in_memory_fallback",
-        postgres_write_attempted=bool(os.getenv("DATABASE_URL")),
-        postgres_write_result=write_result,
-        entry=entry,
+        persistence_mode=_bridge_mode(str(result.get("storage_mode") or "")),
+        postgres_write_attempted=_database_url_present(),
+        postgres_write_result={"written": bool(result.get("durable")), "reason": result.get("status")},
+        entry=_compat_event(result.get("event") or {}),
     )
 
 
@@ -737,25 +221,22 @@ def persist_dispatch_attempt_bridge(
     result_status: str,
     reason: Optional[str] = None,
 ) -> Dict[str, Any]:
-    attempt = record_dispatch_attempt(
-        tenant_id=tenant_id,
-        request_id=request_id,
+    result = record_provider_dispatch_attempt(
         execution_id=execution_id,
-        worker_job_id=worker_job_id,
-        provider_key=provider_key,
+        provider_job_id=worker_job_id,
+        provider=provider_key,
+        status=result_status,
+        idempotency_key=f"{tenant_id}:{provider_key}:{request_id}:{attempt_number}",
+        error=reason,
+        reason=reason,
         attempt_number=attempt_number,
         allowed_by_policy=allowed_by_policy,
-        result_status=result_status,
-        reason=reason,
     )
-
-    write_result = postgres_write_dispatch_attempt(attempt)
-
     return _safe_response(
-        persistence_mode="postgres" if write_result.get("written") else "in_memory_fallback",
-        postgres_write_attempted=bool(os.getenv("DATABASE_URL")),
-        postgres_write_result=write_result,
-        attempt=attempt,
+        persistence_mode=_bridge_mode(str(result.get("storage_mode") or "")),
+        postgres_write_attempted=_database_url_present(),
+        postgres_write_result={"written": bool(result.get("durable")), "reason": result.get("status")},
+        attempt=_compat_attempt(result.get("attempt") or {}),
     )
 
 
@@ -771,25 +252,19 @@ def persist_retry_history_bridge(
     retry_allowed: bool,
     next_action: str,
 ) -> Dict[str, Any]:
-    retry = record_retry_history(
-        tenant_id=tenant_id,
-        request_id=request_id,
+    result = record_provider_retry(
+        provider_job_id=worker_job_id,
         execution_id=execution_id,
-        worker_job_id=worker_job_id,
-        provider_key=provider_key,
+        retry_reason=failure_code,
         attempt_number=attempt_number,
-        failure_code=failure_code,
         retry_allowed=retry_allowed,
         next_action=next_action,
     )
-
-    write_result = postgres_write_retry_history(retry)
-
     return _safe_response(
-        persistence_mode="postgres" if write_result.get("written") else "in_memory_fallback",
-        postgres_write_attempted=bool(os.getenv("DATABASE_URL")),
-        postgres_write_result=write_result,
-        retry=retry,
+        persistence_mode=_bridge_mode(str(result.get("storage_mode") or "")),
+        postgres_write_attempted=_database_url_present(),
+        postgres_write_result={"written": bool(result.get("durable")), "reason": result.get("status")},
+        retry=_compat_retry(result.get("retry") or {}),
     )
 
 
@@ -802,78 +277,118 @@ def persist_latency_metric_bridge(
     latency_ms: int,
     operation: str,
 ) -> Dict[str, Any]:
-    metric = record_provider_latency_metric(
+    result = record_provider_latency(
+        provider=provider_key,
+        capability=operation,
+        latency_ms=latency_ms,
+        status=operation,
         tenant_id=tenant_id,
         request_id=request_id,
         execution_id=execution_id,
-        provider_key=provider_key,
-        latency_ms=latency_ms,
-        operation=operation,
     )
-
-    write_result = postgres_write_latency_metric(metric)
-
     return _safe_response(
-        persistence_mode="postgres" if write_result.get("written") else "in_memory_fallback",
-        postgres_write_attempted=bool(os.getenv("DATABASE_URL")),
-        postgres_write_result=write_result,
-        metric=metric,
+        persistence_mode=_bridge_mode(str(result.get("storage_mode") or "")),
+        postgres_write_attempted=_database_url_present(),
+        postgres_write_result={"written": bool(result.get("durable")), "reason": result.get("status")},
+        metric=_compat_latency(result.get("metric") or {}),
     )
 
 
-def provider_postgres_extended_ledger_write_status() -> Dict[str, Any]:
-    driver = detect_postgres_driver()
-    return _safe_response(
-        extended_ledger_write_ready=True,
-        database_url_present=_database_url_present(),
-        postgres_driver_available=driver.get("driver_available", False),
-        postgres_driver=driver.get("driver"),
-        worker_event_postgres_write_enabled=True,
-        dispatch_attempt_postgres_write_enabled=True,
-        retry_history_postgres_write_enabled=True,
-        latency_metric_postgres_write_enabled=True,
-        fallback_storage_active=True,
-    )
+def provider_postgres_bridge_summary() -> Dict[str, Any]:
+    return _safe_response(status=provider_postgres_ledger_bridge_status(), summary=get_provider_admin_summary())
 
-def provider_postgres_extended_ledger_read_status() -> Dict[str, Any]:
-    driver = detect_postgres_driver()
+
+def reset_provider_postgres_bridge_fallback_for_tests() -> Dict[str, Any]:
+    return reset_dev_provider_ledger_for_tests()
+
+
+def postgres_read_provider_execution_records(*, tenant_id: Optional[str] = None, provider_key: Optional[str] = None, limit: int = 50) -> Dict[str, Any]:
+    listed = list_provider_execution_records(tenant_id=tenant_id or "", provider=provider_key or "", limit=limit)
     return _safe_response(
-        extended_ledger_read_ready=True,
-        database_url_present=_database_url_present(),
-        postgres_driver_available=driver.get("driver_available", False),
-        postgres_driver=driver.get("driver"),
-        worker_event_postgres_read_enabled=True,
-        dispatch_attempt_postgres_read_enabled=True,
-        retry_history_postgres_read_enabled=True,
-        latency_metric_postgres_read_enabled=True,
-        fallback_storage_active=True,
+        read_mode=_bridge_mode(str(listed.get("storage_mode") or "")),
+        postgres_read_attempted=_database_url_present(),
+        records=listed.get("records", []),
+        count=listed.get("count", 0),
     )
 
 
 def postgres_read_worker_events(*, tenant_id: Optional[str] = None, execution_id: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
-    fallback = list_worker_event_ledger(tenant_id=tenant_id, execution_id=execution_id, limit=limit)
-    return _safe_response(read_mode="in_memory_fallback", postgres_read_attempted=bool(os.getenv("DATABASE_URL")), entries=fallback["entries"], count=fallback["count"])
+    listed = list_provider_job_events(tenant_id=tenant_id or "", execution_id=execution_id or "", limit=limit)
+    entries = [_compat_event(event) for event in listed.get("events", [])]
+    return _safe_response(read_mode=_bridge_mode(str(listed.get("storage_mode") or "")), postgres_read_attempted=_database_url_present(), entries=entries, count=len(entries))
 
 
 def postgres_read_dispatch_attempts(*, tenant_id: Optional[str] = None, execution_id: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
-    fallback = list_dispatch_attempt_records(tenant_id=tenant_id, execution_id=execution_id, limit=limit)
-    return _safe_response(read_mode="in_memory_fallback", postgres_read_attempted=bool(os.getenv("DATABASE_URL")), records=fallback["records"], count=fallback["count"])
+    listed = list_provider_dispatch_attempts(tenant_id=tenant_id or "", execution_id=execution_id or "", limit=limit)
+    records = [_compat_attempt(attempt) for attempt in listed.get("records", [])]
+    return _safe_response(read_mode=_bridge_mode(str(listed.get("storage_mode") or "")), postgres_read_attempted=_database_url_present(), records=records, count=len(records))
 
 
 def postgres_read_retry_history(*, tenant_id: Optional[str] = None, execution_id: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
-    fallback = list_retry_history_records(tenant_id=tenant_id, execution_id=execution_id, limit=limit)
-    return _safe_response(read_mode="in_memory_fallback", postgres_read_attempted=bool(os.getenv("DATABASE_URL")), records=fallback["records"], count=fallback["count"])
+    listed = list_provider_retry_history(tenant_id=tenant_id or "", execution_id=execution_id or "", limit=limit)
+    records = [_compat_retry(retry) for retry in listed.get("records", [])]
+    return _safe_response(read_mode=_bridge_mode(str(listed.get("storage_mode") or "")), postgres_read_attempted=_database_url_present(), records=records, count=len(records))
 
 
 def postgres_read_latency_metrics(*, tenant_id: Optional[str] = None, provider_key: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
-    fallback = list_provider_latency_metrics(tenant_id=tenant_id, provider_key=provider_key, limit=limit)
+    listed = list_provider_latency_metrics(tenant_id=tenant_id or "", provider=provider_key or "", limit=limit)
+    records = [_compat_latency(metric) for metric in listed.get("records", [])]
     return _safe_response(
-        read_mode="in_memory_fallback",
-        postgres_read_attempted=bool(os.getenv("DATABASE_URL")),
-        records=fallback["records"],
-        count=fallback["count"],
-        average_latency_ms=fallback.get("average_latency_ms"),
-        max_latency_ms=fallback.get("max_latency_ms"),
-        min_latency_ms=fallback.get("min_latency_ms"),
+        read_mode=_bridge_mode(str(listed.get("storage_mode") or "")),
+        postgres_read_attempted=_database_url_present(),
+        records=records,
+        count=len(records),
+        average_latency_ms=listed.get("average_latency_ms"),
+        max_latency_ms=listed.get("max_latency_ms"),
+        min_latency_ms=listed.get("min_latency_ms"),
     )
 
+
+def provider_postgres_read_write_status() -> Dict[str, Any]:
+    readiness = ensure_provider_ledger_tables()
+    driver = detect_postgres_driver()
+    return _safe_response(read_write_bridge_ready=bool(readiness.get("success")), database_url_present=_database_url_present(), postgres_driver_available=driver.get("driver_available", False), postgres_driver=driver.get("driver"), provider_execution_record_postgres_write_enabled=True, provider_execution_record_postgres_read_enabled=True, fallback_storage_active=bool(readiness.get("dev_only")))
+
+
+def provider_postgres_extended_ledger_write_status() -> Dict[str, Any]:
+    base = provider_postgres_read_write_status()
+    base.update(
+        extended_ledger_write_ready=bool(base.get("read_write_bridge_ready")),
+        worker_event_postgres_write_enabled=True,
+        dispatch_attempt_postgres_write_enabled=True,
+        retry_history_postgres_write_enabled=True,
+        latency_metric_postgres_write_enabled=True,
+    )
+    return base
+
+
+def provider_postgres_extended_ledger_read_status() -> Dict[str, Any]:
+    base = provider_postgres_read_write_status()
+    base.update(
+        extended_ledger_read_ready=bool(base.get("read_write_bridge_ready")),
+        worker_event_postgres_read_enabled=True,
+        dispatch_attempt_postgres_read_enabled=True,
+        retry_history_postgres_read_enabled=True,
+        latency_metric_postgres_read_enabled=True,
+    )
+    return base
+
+
+def postgres_write_provider_execution_record(record: Dict[str, Any]) -> Dict[str, Any]:
+    return _safe_response(written=False, reason="use_persist_provider_execution_record_bridge", fallback_required=False)
+
+
+def postgres_write_worker_event(entry: Dict[str, Any]) -> Dict[str, Any]:
+    return _safe_response(written=False, reason="use_persist_worker_event_bridge", fallback_required=False)
+
+
+def postgres_write_dispatch_attempt(attempt: Dict[str, Any]) -> Dict[str, Any]:
+    return _safe_response(written=False, reason="use_persist_dispatch_attempt_bridge", fallback_required=False)
+
+
+def postgres_write_retry_history(retry: Dict[str, Any]) -> Dict[str, Any]:
+    return _safe_response(written=False, reason="use_persist_retry_history_bridge", fallback_required=False)
+
+
+def postgres_write_latency_metric(metric: Dict[str, Any]) -> Dict[str, Any]:
+    return _safe_response(written=False, reason="use_persist_latency_metric_bridge", fallback_required=False)

@@ -11,10 +11,12 @@ from backend.app.runtime.asset_storage_signed_delivery_runtime import (
     update_asset_status,
 )
 from backend.app.runtime.provider_execution_postgres_ledger_bridge import (
+    persist_dispatch_attempt_bridge,
     persist_latency_metric_bridge,
     persist_provider_execution_record_bridge,
     persist_worker_event_bridge,
 )
+from backend.app.runtime.durable_provider_execution_ledger import record_provider_result
 from backend.app.runtime.live_provider_adapters import (
     check_provider_gate,
     create_signed_asset_delivery_packet,
@@ -159,8 +161,39 @@ def execute_real_provider_http_request(
     )
 
     request_packet = build_provider_http_request_packet(provider_key, payload)
+    tenant_id = payload.get("tenant_id") or "unknown-tenant"
+    request_id = payload.get("request_id") or f"provider_request_{started_at}"
+    dispatch_status = "ready_for_real_http_dispatch" if gate["execution_allowed"] else "blocked"
 
     if not gate["execution_allowed"]:
+        latency_ms = _now_ms() - started_at
+        execution_bridge = persist_provider_execution_record_bridge(
+            tenant_id=tenant_id,
+            request_id=request_id,
+            provider_key=provider_key,
+            task_type=str(payload.get("task_type") or payload.get("action_type") or "provider_http_dispatch"),
+            execution_status="blocked",
+        )
+        execution_id = execution_bridge.get("record", {}).get("execution_id", request_id)
+        persist_dispatch_attempt_bridge(
+            tenant_id=tenant_id,
+            request_id=request_id,
+            execution_id=execution_id,
+            worker_job_id=str(payload.get("worker_job_id") or execution_id),
+            provider_key=provider_key,
+            attempt_number=int(payload.get("attempt_number") or 1),
+            allowed_by_policy=False,
+            result_status="blocked",
+            reason=gate["reason"],
+        )
+        persist_latency_metric_bridge(
+            tenant_id=tenant_id,
+            request_id=request_id,
+            execution_id=execution_id,
+            provider_key=provider_key,
+            latency_ms=latency_ms,
+            operation="provider_http_dispatch_blocked",
+        )
         return {
             "provider_key": provider_key,
             "status": "blocked",
@@ -168,11 +201,39 @@ def execute_real_provider_http_request(
             "gate": gate,
             "request_packet": request_packet,
             "live_external_call_executed": False,
-            "latency_ms": _now_ms() - started_at,
+            "latency_ms": latency_ms,
             "credential_values_exposed": False,
             "customer_safe": True,
         }
 
+    latency_ms = _now_ms() - started_at
+    execution_bridge = persist_provider_execution_record_bridge(
+        tenant_id=tenant_id,
+        request_id=request_id,
+        provider_key=provider_key,
+        task_type=str(payload.get("task_type") or payload.get("action_type") or "provider_http_dispatch"),
+        execution_status=dispatch_status,
+    )
+    execution_id = execution_bridge.get("record", {}).get("execution_id", request_id)
+    persist_dispatch_attempt_bridge(
+        tenant_id=tenant_id,
+        request_id=request_id,
+        execution_id=execution_id,
+        worker_job_id=str(payload.get("worker_job_id") or execution_id),
+        provider_key=provider_key,
+        attempt_number=int(payload.get("attempt_number") or 1),
+        allowed_by_policy=True,
+        result_status=dispatch_status,
+        reason="dispatch_ready",
+    )
+    persist_latency_metric_bridge(
+        tenant_id=tenant_id,
+        request_id=request_id,
+        execution_id=execution_id,
+        provider_key=provider_key,
+        latency_ms=latency_ms,
+        operation="provider_http_dispatch_ready",
+    )
     return {
         "provider_key": provider_key,
         "status": "ready_for_real_http_dispatch",
@@ -181,7 +242,7 @@ def execute_real_provider_http_request(
         "timeout_policy": provider_timeout_policy(provider_key),
         "live_external_call_executed": False,
         "dispatch_blocked_until_provider_credentials_and_final_policy_enablement": True,
-        "latency_ms": _now_ms() - started_at,
+        "latency_ms": latency_ms,
         "credential_values_exposed": False,
         "customer_safe": True,
     }
@@ -332,6 +393,15 @@ def execute_controlled_openai_live_request(payload: Optional[Dict[str, Any]] = N
             campaign_context=payload.get("campaign_context") or payload.get("task"),
             target_audience=payload.get("target_audience"),
         )
+        record_provider_result(
+            provider_job_id=response_id,
+            execution_id=audit_asset.get("execution_id") or response_id,
+            provider="openai",
+            result_status="completed",
+            result_summary=(output_text or "")[:1000],
+            asset_id=(audit_asset.get("asset") or {}).get("asset_id", ""),
+            metadata={"source": "controlled_openai_live_execution"},
+        )
 
         return {
             "provider_key": "openai",
@@ -352,6 +422,14 @@ def execute_controlled_openai_live_request(payload: Optional[Dict[str, Any]] = N
             status_code=None,
         )
         failure["safe_error"] = str(exc)[:300]
+        record_provider_result(
+            provider_job_id=f"openai_failed_{uuid.uuid4().hex[:12]}",
+            execution_id=payload.get("request_id") or f"openai_failed_{uuid.uuid4().hex[:12]}",
+            provider="openai",
+            result_status="failed",
+            result_summary="Controlled OpenAI execution failed safely.",
+            metadata={"failure": failure},
+        )
         return {
             "provider_key": "openai",
             "status": "failed",

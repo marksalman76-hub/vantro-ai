@@ -1,33 +1,103 @@
 from __future__ import annotations
 
-import time
-import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
+
+from backend.app.runtime.durable_provider_execution_ledger import (
+    create_provider_execution_record as durable_create_execution,
+    get_provider_execution_record as durable_get_execution_record,
+    get_provider_admin_summary,
+    list_provider_dispatch_attempts,
+    list_provider_execution_records as durable_list_execution_records,
+    list_provider_job_events,
+    list_provider_latency_metrics as durable_list_latency_metrics,
+    list_provider_retry_history,
+    record_provider_dispatch_attempt,
+    record_provider_job_event,
+    record_provider_latency,
+    record_provider_retry,
+    update_provider_execution_status,
+    reset_dev_provider_ledger_for_tests,
+)
 
 
-_PROVIDER_EXECUTION_RECORDS: Dict[str, Dict[str, Any]] = {}
-_WORKER_EVENT_LEDGER: List[Dict[str, Any]] = []
-_DISPATCH_ATTEMPT_RECORDS: List[Dict[str, Any]] = []
-_RETRY_HISTORY_RECORDS: List[Dict[str, Any]] = []
-_PROVIDER_LATENCY_RECORDS: List[Dict[str, Any]] = []
+def _safe_storage_mode(mode: str) -> str:
+    return "in_memory_safe_fallback" if mode == "dev_memory" else mode
 
 
-def _now_ms() -> int:
-    return int(time.time() * 1000)
+def _compat_execution_record(record: Dict[str, Any]) -> Dict[str, Any]:
+    safe = dict(record or {})
+    safe["provider_key"] = safe.get("provider_key") or safe.get("provider")
+    safe["task_type"] = safe.get("task_type") or safe.get("capability") or safe.get("action_type")
+    safe["execution_status"] = safe.get("execution_status") or safe.get("status")
+    safe.setdefault("worker_job_id", "")
+    safe.setdefault("provider_job_id", "")
+    safe.setdefault("live_external_call_executed", False)
+    safe.setdefault("customer_safe", True)
+    safe["credential_values_exposed"] = False
+    return safe
 
 
-def reset_provider_execution_ledger_for_tests() -> Dict[str, Any]:
-    _PROVIDER_EXECUTION_RECORDS.clear()
-    _WORKER_EVENT_LEDGER.clear()
-    _DISPATCH_ATTEMPT_RECORDS.clear()
-    _RETRY_HISTORY_RECORDS.clear()
-    _PROVIDER_LATENCY_RECORDS.clear()
-
+def _compat_event(event: Dict[str, Any]) -> Dict[str, Any]:
+    payload = dict(event.get("payload") or {})
+    details = dict(payload.get("details") or {})
     return {
-        "reset": True,
+        "ledger_id": event.get("event_id"),
+        "event_id": event.get("event_id"),
+        "tenant_id": payload.get("tenant_id"),
+        "request_id": payload.get("request_id"),
+        "execution_id": event.get("execution_id"),
+        "worker_job_id": event.get("provider_job_id") or event.get("job_id"),
+        "provider_key": payload.get("provider_key"),
+        "event_type": event.get("event_type"),
+        "status": payload.get("status"),
+        "details": details,
+        "payload": payload,
+        "created_at": event.get("created_at"),
         "credential_values_exposed": False,
         "customer_safe": True,
     }
+
+
+def _compat_attempt(attempt: Dict[str, Any], *, tenant_id: str = "", request_id: str = "") -> Dict[str, Any]:
+    safe = dict(attempt or {})
+    safe["attempt_id"] = safe.get("attempt_id") or safe.get("dispatch_attempt_id")
+    safe["worker_job_id"] = safe.get("worker_job_id") or safe.get("provider_job_id")
+    safe["provider_key"] = safe.get("provider_key") or safe.get("provider")
+    safe["result_status"] = safe.get("result_status") or safe.get("status")
+    safe.setdefault("tenant_id", tenant_id)
+    safe.setdefault("request_id", request_id)
+    safe.setdefault("allowed_by_policy", None)
+    safe.setdefault("live_external_call_executed", False)
+    safe["credential_values_exposed"] = False
+    safe["customer_safe"] = True
+    return safe
+
+
+def _compat_retry(retry: Dict[str, Any], *, tenant_id: str = "", request_id: str = "") -> Dict[str, Any]:
+    safe = dict(retry or {})
+    safe["worker_job_id"] = safe.get("worker_job_id") or safe.get("provider_job_id")
+    safe["failure_code"] = safe.get("failure_code") or safe.get("retry_reason")
+    safe.setdefault("tenant_id", tenant_id)
+    safe.setdefault("request_id", request_id)
+    safe.setdefault("retry_allowed", None)
+    safe.setdefault("next_action", "")
+    safe["credential_values_exposed"] = False
+    safe["customer_safe"] = True
+    return safe
+
+
+def _compat_latency(metric: Dict[str, Any]) -> Dict[str, Any]:
+    safe = dict(metric or {})
+    safe["latency_id"] = safe.get("latency_id") or safe.get("metric_id")
+    safe["provider_key"] = safe.get("provider_key") or safe.get("provider")
+    safe["operation"] = safe.get("operation") or safe.get("capability") or safe.get("status")
+    safe["credential_values_exposed"] = False
+    safe["customer_safe"] = True
+    return safe
+
+
+def reset_provider_execution_ledger_for_tests() -> Dict[str, Any]:
+    return reset_dev_provider_ledger_for_tests()
 
 
 def create_provider_execution_record(
@@ -40,26 +110,27 @@ def create_provider_execution_record(
     worker_job_id: Optional[str] = None,
     provider_job_id: Optional[str] = None,
 ) -> Dict[str, Any]:
-    execution_id = f"provider_execution_{uuid.uuid4().hex[:16]}"
-    now = _now_ms()
-
-    record = {
-        "execution_id": execution_id,
-        "tenant_id": tenant_id,
-        "request_id": request_id,
-        "provider_key": provider_key,
-        "task_type": task_type,
-        "execution_status": execution_status,
-        "worker_job_id": worker_job_id,
-        "provider_job_id": provider_job_id,
-        "created_at_ms": now,
-        "updated_at_ms": now,
-        "live_external_call_executed": False,
-        "credential_values_exposed": False,
-        "customer_safe": True,
-    }
-
-    _PROVIDER_EXECUTION_RECORDS[execution_id] = record
+    result = durable_create_execution(
+        tenant_id=tenant_id,
+        provider=provider_key,
+        action_type=task_type,
+        capability=task_type,
+        status=execution_status,
+        request_payload={
+            "request_id": request_id,
+            "worker_job_id": worker_job_id,
+            "provider_job_id": provider_job_id,
+        },
+        idempotency_key=f"{tenant_id}:{provider_key}:{request_id}:{task_type}",
+        worker_job_id=worker_job_id or "",
+        provider_job_id=provider_job_id or "",
+    )
+    record = _compat_execution_record(result.get("record") or {})
+    record["task_type"] = task_type
+    record["execution_status"] = record.get("status")
+    record["worker_job_id"] = worker_job_id
+    record["provider_job_id"] = provider_job_id
+    record["request_id"] = request_id
     return record
 
 
@@ -71,7 +142,14 @@ def update_provider_execution_record(
     provider_job_id: Optional[str] = None,
     extra: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    record = _PROVIDER_EXECUTION_RECORDS.get(execution_id)
+    result = update_provider_execution_status(
+        execution_id,
+        execution_status or "updated",
+        worker_job_id=worker_job_id,
+        provider_job_id=provider_job_id,
+        extra=extra,
+    )
+    record = dict(result.get("record") or {})
     if not record:
         return {
             "status": "not_found",
@@ -79,30 +157,15 @@ def update_provider_execution_record(
             "credential_values_exposed": False,
             "customer_safe": True,
         }
-
-    if execution_status is not None:
-        record["execution_status"] = execution_status
-    if worker_job_id is not None:
-        record["worker_job_id"] = worker_job_id
-    if provider_job_id is not None:
-        record["provider_job_id"] = provider_job_id
-    if extra:
-        safe_extra = {
-            k: v for k, v in extra.items()
-            if "secret" not in str(k).lower()
-            and "token" not in str(k).lower()
-            and "key" not in str(k).lower()
-        }
-        record["extra"] = safe_extra
-
-    record["updated_at_ms"] = _now_ms()
-    record["credential_values_exposed"] = False
-    record["customer_safe"] = True
-    return record
+    record["execution_status"] = record.get("status", result.get("status"))
+    return _compat_execution_record(record)
 
 
 def get_provider_execution_record(execution_id: str) -> Dict[str, Any]:
-    return _PROVIDER_EXECUTION_RECORDS.get(execution_id) or {
+    result = durable_get_execution_record(execution_id)
+    if result.get("success"):
+        return _compat_execution_record(result.get("record") or {})
+    return {
         "status": "not_found",
         "execution_id": execution_id,
         "credential_values_exposed": False,
@@ -116,21 +179,9 @@ def list_provider_execution_records(
     provider_key: Optional[str] = None,
     limit: int = 50,
 ) -> Dict[str, Any]:
-    records = list(_PROVIDER_EXECUTION_RECORDS.values())
-
-    if tenant_id:
-        records = [r for r in records if r.get("tenant_id") == tenant_id]
-    if provider_key:
-        records = [r for r in records if r.get("provider_key") == provider_key]
-
-    records = sorted(records, key=lambda r: r.get("created_at_ms", 0), reverse=True)[:limit]
-
-    return {
-        "records": records,
-        "count": len(records),
-        "credential_values_exposed": False,
-        "customer_safe": True,
-    }
+    listed = durable_list_execution_records(tenant_id=tenant_id or "", provider=provider_key or "", limit=limit)
+    records = [_compat_execution_record(record) for record in listed.get("records", [])]
+    return {"records": records, "count": len(records), "credential_values_exposed": False, "customer_safe": True}
 
 
 def append_worker_event_ledger_entry(
@@ -144,53 +195,19 @@ def append_worker_event_ledger_entry(
     status: str,
     details: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    safe_details = {}
-    for k, v in (details or {}).items():
-        key_lower = str(k).lower()
-        if "secret" in key_lower or "token" in key_lower or "api_key" in key_lower:
-            continue
-        safe_details[k] = v
-
-    entry = {
-        "ledger_id": f"provider_ledger_{uuid.uuid4().hex[:16]}",
-        "tenant_id": tenant_id,
-        "request_id": request_id,
-        "execution_id": execution_id,
-        "worker_job_id": worker_job_id,
-        "provider_key": provider_key,
-        "event_type": event_type,
-        "status": status,
-        "details": safe_details,
-        "created_at_ms": _now_ms(),
-        "credential_values_exposed": False,
-        "customer_safe": True,
-    }
-
-    _WORKER_EVENT_LEDGER.append(entry)
-    return entry
+    result = record_provider_job_event(
+        provider_job_id=worker_job_id,
+        execution_id=execution_id,
+        event_type=event_type,
+        payload={"tenant_id": tenant_id, "request_id": request_id, "provider_key": provider_key, "status": status, "details": details or {}},
+    )
+    return _compat_event(result.get("event") or {})
 
 
-def list_worker_event_ledger(
-    *,
-    tenant_id: Optional[str] = None,
-    execution_id: Optional[str] = None,
-    limit: int = 100,
-) -> Dict[str, Any]:
-    entries = list(_WORKER_EVENT_LEDGER)
-
-    if tenant_id:
-        entries = [e for e in entries if e.get("tenant_id") == tenant_id]
-    if execution_id:
-        entries = [e for e in entries if e.get("execution_id") == execution_id]
-
-    entries = sorted(entries, key=lambda e: e.get("created_at_ms", 0), reverse=True)[:limit]
-
-    return {
-        "entries": entries,
-        "count": len(entries),
-        "credential_values_exposed": False,
-        "customer_safe": True,
-    }
+def list_worker_event_ledger(*, tenant_id: Optional[str] = None, execution_id: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
+    result = list_provider_job_events(tenant_id=tenant_id or "", execution_id=execution_id or "", limit=limit)
+    entries = [_compat_event(event) for event in result.get("events", [])]
+    return {"entries": entries, "count": len(entries), "credential_values_exposed": False, "customer_safe": True}
 
 
 def record_dispatch_attempt(
@@ -205,47 +222,24 @@ def record_dispatch_attempt(
     result_status: str,
     reason: Optional[str] = None,
 ) -> Dict[str, Any]:
-    attempt = {
-        "attempt_id": f"provider_attempt_{uuid.uuid4().hex[:16]}",
-        "tenant_id": tenant_id,
-        "request_id": request_id,
-        "execution_id": execution_id,
-        "worker_job_id": worker_job_id,
-        "provider_key": provider_key,
-        "attempt_number": attempt_number,
-        "allowed_by_policy": bool(allowed_by_policy),
-        "result_status": result_status,
-        "reason": reason,
-        "live_external_call_executed": False,
-        "created_at_ms": _now_ms(),
-        "credential_values_exposed": False,
-        "customer_safe": True,
-    }
-    _DISPATCH_ATTEMPT_RECORDS.append(attempt)
-    return attempt
+    result = record_provider_dispatch_attempt(
+        execution_id=execution_id,
+        provider_job_id=worker_job_id,
+        provider=provider_key,
+        status=result_status,
+        idempotency_key=f"{tenant_id}:{provider_key}:{request_id}:{attempt_number}",
+        error=reason,
+        reason=reason,
+        attempt_number=attempt_number,
+        allowed_by_policy=allowed_by_policy,
+    )
+    return _compat_attempt(result.get("attempt") or {}, tenant_id=tenant_id, request_id=request_id)
 
 
-def list_dispatch_attempt_records(
-    *,
-    tenant_id: Optional[str] = None,
-    execution_id: Optional[str] = None,
-    limit: int = 100,
-) -> Dict[str, Any]:
-    records = list(_DISPATCH_ATTEMPT_RECORDS)
-
-    if tenant_id:
-        records = [r for r in records if r.get("tenant_id") == tenant_id]
-    if execution_id:
-        records = [r for r in records if r.get("execution_id") == execution_id]
-
-    records = sorted(records, key=lambda r: r.get("created_at_ms", 0), reverse=True)[:limit]
-
-    return {
-        "records": records,
-        "count": len(records),
-        "credential_values_exposed": False,
-        "customer_safe": True,
-    }
+def list_dispatch_attempt_records(*, tenant_id: Optional[str] = None, execution_id: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
+    result = list_provider_dispatch_attempts(tenant_id=tenant_id or "", execution_id=execution_id or "", limit=limit)
+    records = [_compat_attempt(attempt, tenant_id=tenant_id or "") for attempt in result.get("records", [])]
+    return {"records": records, "count": len(records), "credential_values_exposed": False, "customer_safe": True}
 
 
 def record_retry_history(
@@ -260,46 +254,21 @@ def record_retry_history(
     retry_allowed: bool,
     next_action: str,
 ) -> Dict[str, Any]:
-    record = {
-        "retry_id": f"provider_retry_{uuid.uuid4().hex[:16]}",
-        "tenant_id": tenant_id,
-        "request_id": request_id,
-        "execution_id": execution_id,
-        "worker_job_id": worker_job_id,
-        "provider_key": provider_key,
-        "attempt_number": attempt_number,
-        "failure_code": failure_code,
-        "retry_allowed": bool(retry_allowed),
-        "next_action": next_action,
-        "created_at_ms": _now_ms(),
-        "credential_values_exposed": False,
-        "customer_safe": True,
-    }
-    _RETRY_HISTORY_RECORDS.append(record)
-    return record
+    result = record_provider_retry(
+        provider_job_id=worker_job_id,
+        execution_id=execution_id,
+        retry_reason=failure_code,
+        attempt_number=attempt_number,
+        retry_allowed=retry_allowed,
+        next_action=next_action,
+    )
+    return _compat_retry(result.get("retry") or {}, tenant_id=tenant_id, request_id=request_id)
 
 
-def list_retry_history_records(
-    *,
-    tenant_id: Optional[str] = None,
-    execution_id: Optional[str] = None,
-    limit: int = 100,
-) -> Dict[str, Any]:
-    records = list(_RETRY_HISTORY_RECORDS)
-
-    if tenant_id:
-        records = [r for r in records if r.get("tenant_id") == tenant_id]
-    if execution_id:
-        records = [r for r in records if r.get("execution_id") == execution_id]
-
-    records = sorted(records, key=lambda r: r.get("created_at_ms", 0), reverse=True)[:limit]
-
-    return {
-        "records": records,
-        "count": len(records),
-        "credential_values_exposed": False,
-        "customer_safe": True,
-    }
+def list_retry_history_records(*, tenant_id: Optional[str] = None, execution_id: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
+    result = list_provider_retry_history(tenant_id=tenant_id or "", execution_id=execution_id or "", limit=limit)
+    records = [_compat_retry(retry, tenant_id=tenant_id or "") for retry in result.get("records", [])]
+    return {"records": records, "count": len(records), "credential_values_exposed": False, "customer_safe": True}
 
 
 def record_provider_latency_metric(
@@ -311,67 +280,45 @@ def record_provider_latency_metric(
     latency_ms: int,
     operation: str,
 ) -> Dict[str, Any]:
-    record = {
-        "latency_id": f"provider_latency_{uuid.uuid4().hex[:16]}",
-        "tenant_id": tenant_id,
-        "request_id": request_id,
-        "execution_id": execution_id,
-        "provider_key": provider_key,
-        "latency_ms": int(latency_ms),
-        "operation": operation,
-        "created_at_ms": _now_ms(),
-        "credential_values_exposed": False,
-        "customer_safe": True,
-    }
-    _PROVIDER_LATENCY_RECORDS.append(record)
-    return record
+    result = record_provider_latency(
+        provider=provider_key,
+        capability=operation,
+        latency_ms=latency_ms,
+        status=operation,
+        tenant_id=tenant_id,
+        request_id=request_id,
+        execution_id=execution_id,
+    )
+    return _compat_latency(result.get("metric") or {})
 
 
-def list_provider_latency_metrics(
-    *,
-    tenant_id: Optional[str] = None,
-    provider_key: Optional[str] = None,
-    limit: int = 100,
-) -> Dict[str, Any]:
-    records = list(_PROVIDER_LATENCY_RECORDS)
-
-    if tenant_id:
-        records = [r for r in records if r.get("tenant_id") == tenant_id]
-    if provider_key:
-        records = [r for r in records if r.get("provider_key") == provider_key]
-
-    records = sorted(records, key=lambda r: r.get("created_at_ms", 0), reverse=True)[:limit]
-
-    if records:
-        avg_latency = round(sum(r["latency_ms"] for r in records) / len(records))
-        max_latency = max(r["latency_ms"] for r in records)
-        min_latency = min(r["latency_ms"] for r in records)
-    else:
-        avg_latency = None
-        max_latency = None
-        min_latency = None
-
+def list_provider_latency_metrics(*, tenant_id: Optional[str] = None, provider_key: Optional[str] = None, limit: int = 100) -> Dict[str, Any]:
+    result = durable_list_latency_metrics(tenant_id=tenant_id or "", provider=provider_key or "", limit=limit)
+    records = [_compat_latency(metric) for metric in result.get("records", [])]
     return {
         "records": records,
         "count": len(records),
-        "average_latency_ms": avg_latency,
-        "max_latency_ms": max_latency,
-        "min_latency_ms": min_latency,
+        "average_latency_ms": result.get("average_latency_ms"),
+        "max_latency_ms": result.get("max_latency_ms"),
+        "min_latency_ms": result.get("min_latency_ms"),
         "credential_values_exposed": False,
         "customer_safe": True,
     }
 
 
 def provider_execution_persistence_status() -> Dict[str, Any]:
+    summary = get_provider_admin_summary()
+    events = list_worker_event_ledger(limit=500)
     return {
-        "persistence_runtime_ready": True,
-        "storage_mode": "in_memory_safe_fallback",
-        "postgres_binding_ready": False,
-        "execution_record_count": len(_PROVIDER_EXECUTION_RECORDS),
-        "worker_event_count": len(_WORKER_EVENT_LEDGER),
-        "dispatch_attempt_count": len(_DISPATCH_ATTEMPT_RECORDS),
-        "retry_history_count": len(_RETRY_HISTORY_RECORDS),
-        "latency_metric_count": len(_PROVIDER_LATENCY_RECORDS),
+        "persistence_runtime_ready": bool(summary.get("success")),
+        "storage_mode": _safe_storage_mode(str(summary.get("storage_mode") or "")),
+        "postgres_binding_ready": summary.get("durable", False),
+        "canonical_durable_provider_ledger": True,
+        "execution_record_count": summary.get("summary", {}).get("execution_record_count", 0),
+        "worker_event_count": events.get("count", 0),
+        "dispatch_attempt_count": summary.get("summary", {}).get("dispatch_attempt_count", 0),
+        "retry_history_count": summary.get("summary", {}).get("retry_history_count", 0),
+        "latency_metric_count": summary.get("summary", {}).get("latency_metric_count", 0),
         "credential_values_exposed": False,
         "customer_safe": True,
     }

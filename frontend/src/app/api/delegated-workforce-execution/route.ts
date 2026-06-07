@@ -3,7 +3,6 @@ import { persistLatestDeliverable, resolveTenantKey } from "@/lib/deliverablePer
 import { persistExecutionState } from "@/lib/executionStateSync";
 import { persistMediaAssets, attachMediaAssetLifecycle } from "@/lib/mediaAssetLifecycle";
 import { attachRealMediaProviderDecision } from "@/lib/realMediaGenerationProviders";
-import { attachProviderQueueRetryFailover } from "@/lib/providerQueueRetryFailover";
 import { attachAgentOutputContract } from "@/lib/allAgentOutputContracts";
 import { attachPackageCreditEnforcement } from "@/lib/packageCreditEnforcement";
 
@@ -16,6 +15,23 @@ function backendBaseUrl(): string {
     process.env.NEXT_PUBLIC_API_BASE_URL ||
     "https://api.trance-formation.com.au"
   ).replace(/\/$/, "");
+}
+
+function backendProviderQueueHeaders(req: NextRequest, tenantKey: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    "x-tenant-key": tenantKey,
+  };
+
+  const auth = req.headers.get("authorization");
+  const adminToken = req.headers.get("x-admin-token") || process.env.ADMIN_PLATFORM_TOKEN || "";
+  const cookie = req.headers.get("cookie");
+
+  if (auth) headers.authorization = auth;
+  if (adminToken) headers["x-admin-token"] = adminToken;
+  if (cookie) headers.cookie = cookie;
+
+  return headers;
 }
 
 function isMeaningfulValue(value: unknown): boolean {
@@ -113,6 +129,65 @@ function normaliseClientExecutionTruth(raw: unknown): unknown {
   return payload;
 }
 
+async function attachDurableProviderQueueRetryFailover(
+  req: NextRequest,
+  tenantKey: string,
+  payload: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const decision = (payload.real_media_provider_decision || {}) as Record<string, unknown>;
+  const provider = decision.provider_selected || payload.provider_selected || payload.provider || "unknown";
+  const requestedCapability =
+    payload.requested_media_capability ||
+    decision.requested_capability ||
+    payload.requested_capability ||
+    payload.asset_type ||
+    "provider_execution";
+
+  try {
+    const response = await fetch(`${backendBaseUrl()}/provider-queue-retry-failover`, {
+      method: "POST",
+      headers: backendProviderQueueHeaders(req, tenantKey),
+      body: JSON.stringify({
+        ...payload,
+        tenant_id: String(payload.tenant_id || payload.tenant_key || tenantKey),
+        tenant_key: tenantKey,
+        provider,
+        primary_provider: provider,
+        requested_capability: requestedCapability,
+        action_type: String(payload.action_type || requestedCapability),
+        live_external_call_executed: false,
+        external_action_performed: false,
+      }),
+      cache: "no-store",
+    });
+    const text = await response.text();
+    const result = text ? JSON.parse(text) as Record<string, unknown> : {};
+    const { success, ...providerQueueResult } = result;
+
+    return {
+      ...providerQueueResult,
+      provider_queue_success: Boolean(success),
+      provider_queue_retry_failover_enabled: Boolean(result.provider_queue_retry_failover_enabled ?? result.success),
+      durable_provider_ledger_authority: "backend",
+      live_external_call_executed: false,
+      external_action_performed: false,
+      credential_values_exposed: false,
+    };
+  } catch {
+    return {
+      provider_queue_success: false,
+      provider_queue_retry_failover_enabled: false,
+      durable_provider_ledger_available: false,
+      durable_provider_ledger_authority: "backend",
+      provider_queue_status: "provider_queue_backend_unavailable",
+      client_safe: true,
+      credential_values_exposed: false,
+      live_external_call_executed: false,
+      external_action_performed: false,
+    };
+  }
+}
+
 async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   const body = await req.text();
   const headers: Record<string, string> = {
@@ -164,7 +239,7 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   normalised.package_credit_enforcement_authority = "frontend_advisory_only";
   Object.assign(normalised, attachAgentOutputContract(normalised));
   Object.assign(normalised, attachRealMediaProviderDecision(stateTenantKey, normalised));
-  Object.assign(normalised, attachProviderQueueRetryFailover(stateTenantKey, normalised));
+  Object.assign(normalised, await attachDurableProviderQueueRetryFailover(req, stateTenantKey, normalised));
   const persistedMediaAssets = persistMediaAssets(stateTenantKey, normalised, "delegated_workforce_execution");
   normalised.media_asset_lifecycle_enabled = true;
   normalised.media_assets_persisted = persistedMediaAssets.length;
