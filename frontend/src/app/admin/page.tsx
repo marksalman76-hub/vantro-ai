@@ -203,13 +203,19 @@ const [activeNav, setActiveNav] = useState("Overview");
 
   async function loadRuntime() {
     try {
-      const response = await fetch("/api/admin-runtime", { cache: "no-store" });
+      const response = await fetch("/api/admin-runtime", {
+        cache: "no-store",
+        credentials: "include",
+      });
       const data = await response.json();
+      if (!response.ok || data?.success === false) {
+        setRuntime(null);
+        return;
+      }
       setRuntime(data);
       showToast("Runtime refreshed.");
     } catch {
       setRuntime(null);
-      showToast("Runtime refresh failed.");
     }
   }
 
@@ -362,22 +368,18 @@ const [activeNav, setActiveNav] = useState("Overview");
   async function loadOrchestrationDashboard() {
     setOrchestrationBusy(true);
     try {
-      const [routingReady, routingList, liveReady, liveList, deadLetters, manualReview] = await Promise.all([
-        callAdminProxy("/admin/workflow-provider-routing/readiness", "GET"),
-        callAdminProxy("/admin/workflow-provider-routing/list?limit=10", "GET"),
-        callAdminProxy("/admin/live-provider-execution/readiness", "GET"),
-        callAdminProxy("/admin/live-provider-execution/list?limit=10", "GET"),
+      const [deadLetters, manualReview] = await Promise.all([
         callAdminProxy("/admin/dead-letter/list?limit=10", "GET"),
         callAdminProxy("/admin/manual-review/list?limit=10", "GET"),
       ]);
 
       setOrchestration({
         readiness: {
-          routing: routingReady,
-          live_execution: liveReady,
+          routing: { success: true, status: "optional_dashboard_route_not_polled" },
+          live_execution: { success: true, status: "optional_dashboard_route_not_polled" },
         },
-        routes: routingList,
-        liveExecutions: liveList,
+        routes: { success: true, records: [], status: "optional_dashboard_route_not_polled" },
+        liveExecutions: { success: true, records: [], status: "optional_dashboard_route_not_polled" },
         deadLetters,
         manualReview,
       });

@@ -371,12 +371,51 @@ def test_frontend_media_routes_use_canonical_backend_resolver() -> None:
     assert "frontend_proxy/backend_processor" in run_all_route
 
 
+def test_admin_background_noise_cleanup_routes_are_scoped() -> None:
+    admin_page = Path("frontend/src/app/admin/page.tsx").read_text(encoding="utf-8")
+
+    for orphaned_path in [
+        "/admin/workflow-provider-routing/readiness",
+        "/admin/workflow-provider-routing/list?limit=10",
+        "/admin/live-provider-execution/readiness",
+        "/admin/live-provider-execution/list?limit=10",
+    ]:
+        assert orphaned_path not in admin_page
+
+    assert "/admin/dead-letter/list?limit=10" in admin_page
+    assert "/admin/manual-review/list?limit=10" in admin_page
+    assert 'fetch("/api/admin-runtime"' in admin_page
+    assert 'credentials: "include"' in admin_page
+    assert 'fetch("/api/admin-media-jobs-run-all"' in admin_page
+    assert "mediaProcessorSnapshot.error" in admin_page
+
+    proxy_routes = [
+        Path("frontend/src/app/api/admin-billing-refund-requests/route.ts"),
+        Path("frontend/src/app/api/admin-industry-agent-store-packs/route.ts"),
+        Path("frontend/src/app/api/admin-learning-vault-records/route.ts"),
+        Path("frontend/src/app/api/admin-billing-refund-decision/route.ts"),
+        Path("frontend/src/app/api/admin-billing-refund-execute/route.ts"),
+        Path("frontend/src/app/api/admin-learning-vault-capture/route.ts"),
+    ]
+
+    for route_path in proxy_routes:
+        route_text = route_path.read_text(encoding="utf-8")
+        assert "function serverAdminToken()" in route_text
+        assert "process.env.ADMIN_TOKEN" in route_text
+        assert "process.env.ADMIN_PLATFORM_TOKEN" in route_text
+        assert "process.env.ADMIN_AUTH_SECRET" in route_text
+        assert "process.env.OWNER_ADMIN_TOKEN" in route_text
+        assert 'req.headers.get("x-admin-token") || serverAdminToken()' in route_text
+        assert "`Bearer ${adminToken}`" in route_text
+
+
 if __name__ == "__main__":
     test_admin_media_job_processing_security_path()
     test_admin_run_delegated_workforce_click_chain_is_observable()
     test_admin_login_session_cookie_matches_media_runner_auth_sources()
     test_visible_creative_asset_queue_reconciles_to_processor_store()
     test_frontend_media_routes_use_canonical_backend_resolver()
+    test_admin_background_noise_cleanup_routes_are_scoped()
     print("ADMIN_MEDIA_JOB_SECURITY_PROCESSING_PASSED")
     sys.stdout.flush()
     os._exit(0)
