@@ -12,6 +12,7 @@ from typing import Dict, List, Optional
 from backend.app.integrations.execution_adapters import ExecutionAdapters, adapter_summary
 from backend.app.core.integration_live_adapter_registry import execute_integration_action
 from backend.app.runtime.real_provider_http_execution_layer import execute_controlled_openai_live_request
+from backend.app.runtime.durable_manual_review_recovery_runtime import create_manual_review_item
 
 
 SUPPORTED_EXECUTION_ACTIONS = [
@@ -67,8 +68,48 @@ class ExecutionStack:
     def __init__(self) -> None:
         self.adapters = ExecutionAdapters()
 
+    def _create_blocked_review(self, request: ExecutionRequest, *, status: str, reason: str) -> Dict[str, object]:
+        payload = dict(request.payload or {})
+        result = create_manual_review_item(
+            tenant_id=request.tenant_id,
+            project_id=str(payload.get("project_id") or "default_project"),
+            source_type="execution_stack",
+            source_id=str(
+                payload.get("review_source_id")
+                or payload.get("execution_id")
+                or payload.get("packet_id")
+                or f"{request.tenant_id}:{request.action_type}:{status}"
+            ),
+            provider_job_id=str(payload.get("provider_job_id") or ""),
+            provider_execution_id=str(payload.get("provider_execution_id") or ""),
+            orchestration_id=str(payload.get("orchestration_id") or ""),
+            orchestration_step_id=str(payload.get("orchestration_step_id") or payload.get("step_id") or ""),
+            queue_job_id=str(payload.get("queue_job_id") or ""),
+            packet_id=str(payload.get("packet_id") or ""),
+            routing_id=str(payload.get("routing_id") or ""),
+            execution_id=str(payload.get("execution_id") or ""),
+            review_type="execution_stack_blocked_action",
+            status=status,
+            priority="high" if status == "queued_for_owner_approval" else "medium",
+            reason=reason,
+            summary="Execution stack blocked this action pending owner/admin review.",
+            payload={"action_type": request.action_type, "execution_payload": payload},
+        )
+        return {
+            "success": bool(result.get("success")),
+            "review_item": result.get("item"),
+            "status": result.get("status"),
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
     def route(self, request: ExecutionRequest) -> ExecutionResult:
         if request.action_type in BLOCKED_WITHOUT_APPROVAL_ACTIONS and not request.owner_approved:
+            review = self._create_blocked_review(
+                request,
+                status="queued_for_owner_approval",
+                reason="owner_approval_required_for_high_risk_execution",
+            )
             return ExecutionResult(
                 success=False,
                 execution_status="blocked_pending_owner_approval",
@@ -77,9 +118,16 @@ class ExecutionStack:
                 execution_notes=[
                     "Owner approval is mandatory for spending, budget, scaling, contracts, and major financial commitments."
                 ],
+                adapter="manual_review_adapter",
+                adapter_result=review,
             )
 
         if not request.quality_passed:
+            review = self._create_blocked_review(
+                request,
+                status="manual_review_required",
+                reason="quality_gate_required_before_execution",
+            )
             return ExecutionResult(
                 success=False,
                 execution_status="blocked_quality_gate_required",
@@ -88,6 +136,8 @@ class ExecutionStack:
                 execution_notes=[
                     "Client-facing or real-world execution requires approved quality status."
                 ],
+                adapter="manual_review_adapter",
+                adapter_result=review,
             )
 
         if request.action_type == "admin_owner_execution":
@@ -113,6 +163,11 @@ class ExecutionStack:
             )
 
         if request.action_type not in SUPPORTED_EXECUTION_ACTIONS and request.action_type not in BLOCKED_WITHOUT_APPROVAL_ACTIONS:
+            review = self._create_blocked_review(
+                request,
+                status="manual_review_required",
+                reason="unsupported_execution_action",
+            )
             return ExecutionResult(
                 success=False,
                 execution_status="unsupported_execution_action",
@@ -121,6 +176,8 @@ class ExecutionStack:
                 execution_notes=[
                     "Add a controlled adapter before allowing this action."
                 ],
+                adapter="manual_review_adapter",
+                adapter_result=review,
             )
 
 

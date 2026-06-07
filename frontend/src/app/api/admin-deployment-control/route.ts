@@ -25,6 +25,20 @@ function safePath(path: string) {
     return path;
   }
 
+  const exactAdminReviewPaths = [
+    "/admin/manual-review/list",
+    "/admin/dead-letter/list",
+    "/admin/manual-review/summary",
+    "/admin/manual-review/decision",
+    "/admin/dead-letter/resolve",
+  ];
+
+  for (const allowed of exactAdminReviewPaths) {
+    if (path === allowed || path.startsWith(`${allowed}?`)) {
+      return path;
+    }
+  }
+
   return "";
 }
 

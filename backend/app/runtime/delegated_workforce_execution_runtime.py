@@ -25,6 +25,10 @@ from backend.app.runtime.durable_orchestration_state_runtime import (
     update_orchestration_plan_status,
     update_orchestration_step_status,
 )
+from backend.app.runtime.durable_manual_review_recovery_runtime import (
+    create_manual_review_item,
+    create_recovery_action,
+)
 
 
 def _now_ms() -> int:
@@ -125,6 +129,44 @@ def execute_delegated_workforce_plan(
     queued_results = []
     blocked_results = []
 
+    def _record_review_link(
+        *,
+        packet_id: str,
+        assigned_agent: str,
+        status: str,
+        reason: str,
+        packet: Dict[str, Any],
+        review_type: str = "delegated_workforce_review",
+        priority: str = "medium",
+    ) -> Dict[str, Any]:
+        review = create_manual_review_item(
+            tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+            project_id=str(implementation_plan.get("project_id") or orchestration_id),
+            source_type="delegated_workforce_execution",
+            source_id=f"{orchestration_id}:{packet_id}:{status}",
+            orchestration_id=orchestration_id,
+            orchestration_step_id=packet_id,
+            packet_id=packet_id,
+            execution_id=execution_id,
+            review_type=review_type,
+            status=status,
+            priority=priority,
+            reason=reason,
+            summary="Delegated workforce execution requires owner/admin review before recovery.",
+            payload={"packet": packet, "assigned_agent": assigned_agent},
+        )
+        if review.get("success"):
+            create_recovery_action(
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+                project_id=str(implementation_plan.get("project_id") or orchestration_id),
+                review_id=str(review.get("review_id") or ""),
+                orchestration_id=orchestration_id,
+                action_type=status,
+                status="requested",
+                payload={"packet_id": packet_id, "reason": reason, "assigned_agent": assigned_agent},
+            )
+        return review
+
     previous_step_id = None
     for packet in implementation_plan.get("action_packets", []):
 
@@ -191,6 +233,15 @@ def execute_delegated_workforce_plan(
                 event_type="delegated_packet_blocked",
                 payload={"reason": "agent_not_owned", "assigned_agent": assigned_agent},
             )
+            review = _record_review_link(
+                packet_id=packet_id,
+                assigned_agent=assigned_agent,
+                status="manual_review_required",
+                reason="agent_not_owned",
+                packet=packet,
+                review_type="delegated_agent_not_owned",
+            )
+            packet_result["review_item"] = review.get("item")
             blocked_results.append(packet_result)
             continue
 
@@ -213,6 +264,16 @@ def execute_delegated_workforce_plan(
                 recoverable_status="queued_for_owner_approval",
                 payload={"packet_id": packet_id, "assigned_agent": assigned_agent},
             )
+            review = _record_review_link(
+                packet_id=packet_id,
+                assigned_agent=assigned_agent,
+                status="queued_for_owner_approval",
+                reason="owner_approval_required_for_delegated_packet",
+                packet=packet,
+                review_type="owner_approval",
+                priority="high",
+            )
+            packet_result["review_item"] = review.get("item")
             queued_results.append(packet_result)
             continue
 
@@ -283,6 +344,20 @@ def execute_delegated_workforce_plan(
                 tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
                 checkpoint_type=str(autonomous_route_result.get("routing_status")),
                 recoverable_status=str(autonomous_route_result.get("routing_status")),
+                payload={
+                    "packet_id": packet_id,
+                    "assigned_agent": assigned_agent,
+                    "review_id": (autonomous_route_result.get("review_item") or {}).get("review_id"),
+                },
+            )
+            packet_result["review_item"] = autonomous_route_result.get("review_item")
+            create_recovery_action(
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+                project_id=str(implementation_plan.get("project_id") or orchestration_id),
+                review_id=str((autonomous_route_result.get("review_item") or {}).get("review_id") or ""),
+                orchestration_id=orchestration_id,
+                action_type=str(autonomous_route_result.get("routing_status")),
+                status="requested",
                 payload={"packet_id": packet_id, "assigned_agent": assigned_agent},
             )
             queued_results.append(packet_result)

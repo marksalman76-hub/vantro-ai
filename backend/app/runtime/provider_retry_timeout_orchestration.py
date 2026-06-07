@@ -10,6 +10,7 @@ from backend.app.runtime.provider_job_persistence_runtime import (
     update_provider_job_status,
 )
 from backend.app.runtime.durable_provider_execution_ledger import record_provider_retry
+from backend.app.runtime.durable_manual_review_recovery_runtime import create_manual_review_item
 
 
 def _now() -> datetime:
@@ -57,10 +58,32 @@ def schedule_provider_job_retry(
             retry_allowed=False,
             next_action="manual_review_required",
         )
+        review = create_manual_review_item(
+            tenant_id=str(job.get("tenant_id") or "unknown"),
+            project_id=str(job.get("project_id") or "default_project"),
+            source_type="provider_job",
+            source_id=job_id,
+            provider_job_id=job_id,
+            provider_execution_id=str(job.get("execution_id") or ""),
+            execution_id=str(job.get("execution_id") or ""),
+            review_type="provider_retry_exhausted",
+            status="manual_review_required",
+            priority="high",
+            reason="provider_retry_attempts_exhausted",
+            summary="Provider retry attempts are exhausted and require owner/admin review.",
+            payload={
+                "provider_job_id": job_id,
+                "attempt_count": attempt_count,
+                "max_attempts": max_attempts,
+                "last_error": job.get("last_error"),
+                "next_action": "manual_review_required",
+            },
+        )
         return {
             "success": False,
             "status": "manual_review_required",
             "job": exhausted.get("job"),
+            "review_item": review.get("item"),
             "reason": "provider_retry_attempts_exhausted",
             "credential_values_exposed": False,
             "customer_safe": True,

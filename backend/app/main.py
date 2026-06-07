@@ -173,6 +173,13 @@ from backend.app.runtime.durable_provider_execution_ledger import (
     create_provider_job as create_durable_provider_job,
     list_provider_jobs as list_durable_provider_jobs,
 )
+from backend.app.runtime.durable_manual_review_recovery_runtime import (
+    get_review_recovery_summary,
+    list_manual_review_items,
+    list_dead_letter_records,
+    record_manual_review_decision as record_durable_manual_review_decision,
+    resolve_dead_letter_record,
+)
 
 from backend.app.core.multi_agent_orchestration_runtime import orchestration_readiness, create_orchestration_plan, orchestration_execution_readiness, enqueue_orchestration_plan
 
@@ -1216,6 +1223,43 @@ def provider_execution_admin_visibility_status():
 @app.get("/provider-execution-admin-visibility/summary")
 def provider_execution_admin_visibility_summary(tenant_id: str = "", provider: str = ""):
     return get_provider_execution_admin_visibility(tenant_id=tenant_id, provider=provider)
+
+
+@app.get("/admin/manual-review/summary")
+def admin_manual_review_summary(tenant_id: str = ""):
+    return get_review_recovery_summary(tenant_id=tenant_id)
+
+
+@app.get("/admin/manual-review/list")
+def admin_manual_review_list(tenant_id: str = "", status: str = "", limit: int = 50):
+    return list_manual_review_items(tenant_id=tenant_id, status=status, limit=limit)
+
+
+@app.get("/admin/dead-letter/list")
+def admin_dead_letter_list(tenant_id: str = "", status: str = "", limit: int = 50):
+    return list_dead_letter_records(tenant_id=tenant_id, status=status, limit=limit)
+
+
+@app.post("/admin/manual-review/decision")
+def admin_manual_review_decision(payload: dict):
+    payload = dict(payload or {})
+    return record_durable_manual_review_decision(
+        review_id=str(payload.get("review_id") or ""),
+        decision=str(payload.get("decision") or ""),
+        decided_by=str(payload.get("decided_by") or payload.get("actor") or "admin"),
+        actor_role=str(payload.get("actor_role") or "admin"),
+        reason=str(payload.get("reason") or payload.get("notes") or ""),
+        payload=payload.get("payload") if isinstance(payload.get("payload"), dict) else payload,
+    )
+
+
+@app.post("/admin/dead-letter/resolve")
+def admin_dead_letter_resolve(payload: dict):
+    payload = dict(payload or {})
+    return resolve_dead_letter_record(
+        str(payload.get("dead_letter_id") or ""),
+        reason=str(payload.get("reason") or "admin_resolved_dead_letter"),
+    )
 
 
 @app.post("/provider-execution-admin-visibility/actions/retry")

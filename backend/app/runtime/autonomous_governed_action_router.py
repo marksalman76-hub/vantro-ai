@@ -11,6 +11,7 @@ from backend.app.runtime.durable_orchestration_state_runtime import (
     record_orchestration_event,
     record_orchestration_result_memory,
 )
+from backend.app.runtime.durable_manual_review_recovery_runtime import create_manual_review_item
 
 
 OWNER_APPROVAL_KEYWORDS = {
@@ -168,6 +169,26 @@ def route_autonomous_governed_packet(
             payload={"routing_id": routing_id, "routing_status": status, **payload},
         )
 
+    def _create_review_item(status: str, review_type: str, reason: str) -> Dict[str, Any]:
+        source_id = orchestration_id and step_id and f"{orchestration_id}:{step_id}:{status}"
+        return create_manual_review_item(
+            tenant_id=tenant_id,
+            project_id=str(packet.get("project_id") or orchestration_id or "default_project"),
+            source_type="autonomous_governed_action",
+            source_id=str(source_id or routing_id),
+            orchestration_id=orchestration_id,
+            orchestration_step_id=str(step_id or ""),
+            packet_id=str(packet.get("packet_id") or packet.get("id") or ""),
+            routing_id=routing_id,
+            execution_id=str(packet.get("execution_id") or ""),
+            review_type=review_type,
+            status=status,
+            priority="high" if review_type == "owner_approval" else "medium",
+            reason=reason,
+            summary="Governed action requires owner/admin review before execution.",
+            payload={"packet": packet, "governance": governance},
+        )
+
     if governance["route"] == "recommendation_only_not_owned":
         persisted = _record_route_event("recommendation_only", {"governance": governance})
         if not persisted.get("success"):
@@ -186,13 +207,20 @@ def route_autonomous_governed_packet(
         persisted = _record_route_event("queued_for_owner_approval", {"governance": governance})
         if not persisted.get("success"):
             return persisted
+        review = _create_review_item(
+            "queued_for_owner_approval",
+            "owner_approval",
+            "owner_approval_required_for_governed_action",
+        )
+        if not review.get("success"):
+            return review
         if orchestration_id:
             checkpoint = create_recovery_checkpoint(
                 orchestration_id=orchestration_id,
                 tenant_id=tenant_id,
                 checkpoint_type="owner_approval_queue",
                 recoverable_status="queued_for_owner_approval",
-                payload={"routing_id": routing_id, "packet_id": packet.get("packet_id")},
+                payload={"routing_id": routing_id, "packet_id": packet.get("packet_id"), "review_id": review.get("review_id")},
             )
             if not checkpoint.get("success"):
                 return checkpoint
@@ -202,6 +230,7 @@ def route_autonomous_governed_packet(
             "routing_status": "queued_for_owner_approval",
             "performed_actual_action": False,
             "governance": governance,
+            "review_item": review.get("item"),
             "customer_safe_message": "Action queued for owner approval under governance policy.",
             "created_at": _now(),
         }
@@ -257,13 +286,20 @@ def route_autonomous_governed_packet(
     persisted = _record_route_event("manual_review_required", {"governance": governance})
     if not persisted.get("success"):
         return persisted
+    review = _create_review_item(
+        "manual_review_required",
+        "manual_review",
+        "manual_review_required_for_governed_action",
+    )
+    if not review.get("success"):
+        return review
     if orchestration_id:
         checkpoint = create_recovery_checkpoint(
             orchestration_id=orchestration_id,
             tenant_id=tenant_id,
             checkpoint_type="manual_review_required",
             recoverable_status="manual_review_required",
-            payload={"routing_id": routing_id, "packet_id": packet.get("packet_id")},
+            payload={"routing_id": routing_id, "packet_id": packet.get("packet_id"), "review_id": review.get("review_id")},
         )
         if not checkpoint.get("success"):
             return checkpoint
@@ -273,6 +309,7 @@ def route_autonomous_governed_packet(
         "routing_status": "manual_review_required",
         "performed_actual_action": False,
         "governance": governance,
+        "review_item": review.get("item"),
         "customer_safe_message": "Action requires manual review before execution.",
         "created_at": _now(),
     }

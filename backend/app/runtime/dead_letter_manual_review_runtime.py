@@ -1,65 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from datetime import datetime, timezone
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-import json
-import uuid
+from typing import Any, Dict, Optional
 
-DATA_DIR = Path("data") / "manual_review"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-DEAD_LETTER_EVENTS = DATA_DIR / "dead_letter_events.jsonl"
-MANUAL_REVIEW_QUEUE = DATA_DIR / "manual_review_queue.jsonl"
-MANUAL_REVIEW_DECISIONS = DATA_DIR / "manual_review_decisions.jsonl"
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def _append_jsonl(path: Path, payload: Dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as f:
-        f.write(json.dumps(payload, ensure_ascii=False, sort_keys=True) + "\n")
-
-
-def _read_jsonl(path: Path) -> List[Dict[str, Any]]:
-    if not path.exists():
-        return []
-    rows: List[Dict[str, Any]] = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            rows.append(json.loads(line))
-        except json.JSONDecodeError:
-            rows.append({
-                "record_type": "corrupt_jsonl_line",
-                "raw": line,
-                "loaded_at": _now(),
-            })
-    return rows
-
-
-@dataclass
-class DeadLetterRecord:
-    dead_letter_id: str
-    tenant_id: str
-    workflow_id: Optional[str]
-    agent_id: str
-    action_type: str
-    failure_reason: str
-    payload: Dict[str, Any]
-    retry_count: int
-    severity: str
-    status: str
-    created_at: str
-    owner_review_required: bool
-    governance_preserved: bool
-    no_autonomous_spend_or_scaling: bool
+from backend.app.runtime.durable_manual_review_recovery_runtime import (
+    create_dead_letter_record as durable_create_dead_letter_record,
+    create_manual_review_item,
+    ensure_manual_review_recovery_tables,
+    list_dead_letter_records,
+    list_manual_review_items,
+    record_manual_review_decision as durable_record_manual_review_decision,
+)
 
 
 def create_dead_letter_record(
@@ -73,46 +23,63 @@ def create_dead_letter_record(
     retry_count: int = 0,
     severity: str = "medium",
 ) -> Dict[str, Any]:
-    record = DeadLetterRecord(
-        dead_letter_id=f"dlq_{uuid.uuid4().hex[:16]}",
+    result = durable_create_dead_letter_record(
         tenant_id=tenant_id,
-        workflow_id=workflow_id,
-        agent_id=agent_id,
-        action_type=action_type,
-        failure_reason=failure_reason,
-        payload=payload or {},
-        retry_count=retry_count,
-        severity=severity,
-        status="dead_lettered",
-        created_at=_now(),
-        owner_review_required=True,
-        governance_preserved=True,
-        no_autonomous_spend_or_scaling=True,
+        project_id=str((payload or {}).get("project_id") or workflow_id or "default_project"),
+        source_type="legacy_dead_letter",
+        source_id=str((payload or {}).get("source_id") or workflow_id or ""),
+        orchestration_id=str(workflow_id or (payload or {}).get("orchestration_id") or ""),
+        orchestration_step_id=str((payload or {}).get("step_id") or (payload or {}).get("orchestration_step_id") or ""),
+        queue_job_id=str((payload or {}).get("queue_job_id") or ""),
+        provider_job_id=str((payload or {}).get("provider_job_id") or ""),
+        reason=failure_reason,
+        error_summary=failure_reason,
+        payload={
+            **(payload or {}),
+            "agent_id": agent_id,
+            "action_type": action_type,
+            "retry_count": retry_count,
+            "severity": severity,
+            "legacy_runtime": "dead_letter_manual_review_runtime",
+        },
     )
-    item = asdict(record)
-    _append_jsonl(DEAD_LETTER_EVENTS, item)
-    enqueue_manual_review(item)
-    return item
+    dead_letter = dict(result.get("dead_letter") or {})
+    dead_letter.setdefault("agent_id", agent_id)
+    dead_letter.setdefault("action_type", action_type)
+    dead_letter.setdefault("failure_reason", failure_reason)
+    dead_letter.setdefault("severity", severity)
+    dead_letter.setdefault("owner_review_required", True)
+    dead_letter.setdefault("governance_preserved", True)
+    dead_letter.setdefault("no_autonomous_spend_or_scaling", True)
+    return dead_letter if dead_letter else result
 
 
 def enqueue_manual_review(dead_letter_record: Dict[str, Any]) -> Dict[str, Any]:
-    review = {
-        "review_id": f"review_{uuid.uuid4().hex[:16]}",
-        "dead_letter_id": dead_letter_record.get("dead_letter_id"),
-        "tenant_id": dead_letter_record.get("tenant_id"),
-        "agent_id": dead_letter_record.get("agent_id"),
-        "action_type": dead_letter_record.get("action_type"),
-        "failure_reason": dead_letter_record.get("failure_reason"),
-        "severity": dead_letter_record.get("severity", "medium"),
-        "status": "pending_owner_review",
-        "created_at": _now(),
-        "owner_review_required": True,
-        "allowed_decisions": ["retry", "mark_resolved", "reject", "escalate"],
-        "blocked_decisions": ["increase_spend", "scale_campaign", "approve_contract"],
-        "customer_safe_status": "Needs review",
-    }
-    _append_jsonl(MANUAL_REVIEW_QUEUE, review)
-    return review
+    result = create_manual_review_item(
+        tenant_id=str(dead_letter_record.get("tenant_id") or "unknown"),
+        project_id=str(dead_letter_record.get("project_id") or "default_project"),
+        source_type="dead_letter",
+        source_id=str(dead_letter_record.get("dead_letter_id") or dead_letter_record.get("source_id") or ""),
+        provider_job_id=str(dead_letter_record.get("provider_job_id") or ""),
+        orchestration_id=str(dead_letter_record.get("orchestration_id") or dead_letter_record.get("workflow_id") or ""),
+        orchestration_step_id=str(dead_letter_record.get("orchestration_step_id") or dead_letter_record.get("step_id") or ""),
+        queue_job_id=str(dead_letter_record.get("queue_job_id") or ""),
+        review_type="dead_letter_review",
+        status="pending_owner_review",
+        priority=str(dead_letter_record.get("severity") or "medium"),
+        reason=str(dead_letter_record.get("failure_reason") or dead_letter_record.get("reason") or "manual_review_required"),
+        summary=str(dead_letter_record.get("failure_reason") or dead_letter_record.get("error_summary") or "Owner/admin review required."),
+        payload=dead_letter_record,
+    )
+    item = dict(result.get("item") or {})
+    item.setdefault("dead_letter_id", dead_letter_record.get("dead_letter_id"))
+    item.setdefault("failure_reason", dead_letter_record.get("failure_reason") or dead_letter_record.get("reason"))
+    item.setdefault("severity", dead_letter_record.get("severity", "medium"))
+    item.setdefault("owner_review_required", True)
+    item.setdefault("allowed_decisions", ["retry", "mark_resolved", "reject", "escalate"])
+    item.setdefault("blocked_decisions", ["increase_spend", "scale_campaign", "approve_contract"])
+    item.setdefault("customer_safe_status", "Needs review")
+    return item if item else result
 
 
 def list_dead_letters(
@@ -121,16 +88,12 @@ def list_dead_letters(
     status: Optional[str] = None,
     limit: int = 50,
 ) -> Dict[str, Any]:
-    rows = _read_jsonl(DEAD_LETTER_EVENTS)
-    if tenant_id:
-        rows = [r for r in rows if r.get("tenant_id") == tenant_id]
-    if status:
-        rows = [r for r in rows if r.get("status") == status]
-    rows = rows[-limit:]
+    result = list_dead_letter_records(tenant_id=tenant_id or "", status=status or "", limit=limit)
     return {
-        "status": "ok",
-        "count": len(rows),
-        "dead_letters": rows,
+        **result,
+        "status": "ok" if result.get("success", True) else result.get("status"),
+        "count": result.get("count", 0),
+        "dead_letters": result.get("dead_letters", []),
         "governance_preserved": True,
         "owner_review_required": True,
     }
@@ -142,20 +105,12 @@ def list_manual_review_queue(
     status: Optional[str] = None,
     limit: int = 50,
 ) -> Dict[str, Any]:
-    rows = _read_jsonl(MANUAL_REVIEW_QUEUE)
-    decisions = _read_jsonl(MANUAL_REVIEW_DECISIONS)
-    decided_ids = {d.get("review_id") for d in decisions if d.get("review_id")}
-    if tenant_id:
-        rows = [r for r in rows if r.get("tenant_id") == tenant_id]
-    if status:
-        rows = [r for r in rows if r.get("status") == status]
-    if status == "pending_owner_review":
-        rows = [r for r in rows if r.get("review_id") not in decided_ids]
-    rows = rows[-limit:]
+    result = list_manual_review_items(tenant_id=tenant_id or "", status=status or "", limit=limit)
     return {
-        "status": "ok",
-        "count": len(rows),
-        "manual_review_items": rows,
+        **result,
+        "status": "ok" if result.get("success", True) else result.get("status"),
+        "count": result.get("count", 0),
+        "manual_review_items": result.get("manual_review_items", result.get("items", [])),
         "governance_preserved": True,
         "customer_safe_ui_required": True,
     }
@@ -168,47 +123,38 @@ def record_manual_review_decision(
     actor_role: str,
     notes: str = "",
 ) -> Dict[str, Any]:
-    allowed = {"retry", "mark_resolved", "reject", "escalate"}
-    if actor_role not in {"owner", "admin"}:
+    result = durable_record_manual_review_decision(
+        review_id=review_id,
+        decision=decision,
+        actor_role=actor_role,
+        reason=notes,
+        payload={"notes": notes, "legacy_runtime": "dead_letter_manual_review_runtime"},
+    )
+    if not result.get("success"):
         return {
-            "status": "blocked",
-            "reason": "manual_review_decision_requires_owner_or_admin",
-            "governance_preserved": True,
-        }
-    if decision not in allowed:
-        return {
-            "status": "blocked",
-            "reason": "unsupported_or_high_risk_decision",
-            "allowed_decisions": sorted(allowed),
+            **result,
+            "status": result.get("status", "blocked"),
             "governance_preserved": True,
             "no_autonomous_spend_or_scaling": True,
         }
-
-    payload = {
-        "decision_id": f"decision_{uuid.uuid4().hex[:16]}",
-        "review_id": review_id,
-        "decision": decision,
-        "actor_role": actor_role,
-        "notes": notes,
-        "decided_at": _now(),
-        "governance_preserved": True,
-        "owner_approval_gate_preserved": True,
-        "customer_safe_status": "Review updated",
-    }
-    _append_jsonl(MANUAL_REVIEW_DECISIONS, payload)
     return {
         "status": "ok",
-        "decision": payload,
+        "decision": result.get("decision"),
+        "item": result.get("item"),
+        "recovery_action": result.get("recovery_action"),
+        "credential_values_exposed": False,
+        "customer_safe": True,
     }
 
 
 def dead_letter_readiness() -> Dict[str, Any]:
+    readiness = ensure_manual_review_recovery_tables()
     return {
-        "status": "ready",
+        **readiness,
+        "status": "ready" if readiness.get("success") else readiness.get("status"),
         "runtime": "dead_letter_manual_review_runtime",
-        "dead_letter_events_path": str(DEAD_LETTER_EVENTS),
-        "manual_review_queue_path": str(MANUAL_REVIEW_QUEUE),
-        "manual_review_decisions_path": str(MANUAL_REVIEW_DECISIONS),
+        "compatibility_wrapper_only": True,
+        "canonical_runtime": "durable_manual_review_recovery_runtime",
         "owner_review_required": True,
         "governance_preserved": True,
         "entitlement_isolation_preserved": True,
