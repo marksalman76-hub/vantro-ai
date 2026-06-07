@@ -8,6 +8,12 @@ from uuid import uuid4
 import json
 import os
 
+from backend.app.runtime.durable_execution_history_evidence_runtime import (
+    ensure_execution_history_evidence_tables,
+    list_execution_evidence,
+    record_execution_evidence,
+)
+
 
 PROFILE = "durable_external_action_records_v1"
 
@@ -195,12 +201,32 @@ def record_external_actions(
         _write_file_records(records)
         persistence_mode = "jsonl_fallback"
 
+    canonical_records = []
+    for record in records:
+        canonical = record_execution_evidence(
+            tenant_id=str(record.get("tenant_id") or tenant_id or "unknown"),
+            project_id=str((deliverable or {}).get("project_id") or "default_project"),
+            execution_id=str(record.get("execution_id") or ""),
+            evidence_type="external_action_record",
+            title=str(record.get("action_type") or "External action record"),
+            summary=str(record.get("action_status") or "External action recorded."),
+            source_type="external_action",
+            source_id=str(record.get("record_id") or ""),
+            status=str(record.get("action_status") or "recorded"),
+            payload=record,
+            evidence_id=str(record.get("record_id") or ""),
+        )
+        if canonical.get("success"):
+            canonical_records.append(canonical.get("evidence"))
+
     return {
         "success": True,
         "profile": PROFILE,
-        "persistence_mode": persistence_mode,
+        "persistence_mode": "canonical_durable_runtime",
+        "legacy_persistence_mode": persistence_mode,
         "record_count": len(records),
         "records": records,
+        "canonical_records": canonical_records,
         "customer_safe": True,
         "credential_values_exposed": False,
         "created_at": _now(),
@@ -302,11 +328,31 @@ def list_external_action_records(
     tenant_id: str | None = None,
     limit: int = 50,
 ) -> Dict[str, Any]:
-    db_records = _read_db_records(tenant_id=tenant_id, limit=limit)
-    file_records = [] if db_records else _read_file_records(tenant_id=tenant_id, limit=limit)
+    canonical = list_execution_evidence(tenant_id=tenant_id or "", limit=limit)
+    evidence_items = canonical.get("evidence_items", []) if canonical.get("success") else []
+    records = []
+    for item in evidence_items:
+        if item.get("evidence_type") != "external_action_record":
+            continue
+        payload = item.get("payload") or {}
+        record = dict(payload)
+        record.setdefault("record_id", item.get("source_id") or item.get("evidence_id"))
+        record.setdefault("tenant_id", item.get("tenant_id"))
+        record.setdefault("execution_id", item.get("execution_id"))
+        record.setdefault("action_type", item.get("title"))
+        record.setdefault("action_status", item.get("status"))
+        record.setdefault("created_at", item.get("created_at"))
+        record.setdefault("credential_values_exposed", False)
+        record.setdefault("customer_safe", True)
+        records.append(record)
 
-    records = db_records or file_records
-    persistence_mode = "postgres" if db_records or _db_available() else "jsonl_fallback"
+    if records:
+        persistence_mode = "canonical_durable_runtime"
+    else:
+        db_records = _read_db_records(tenant_id=tenant_id, limit=limit)
+        file_records = [] if db_records else _read_file_records(tenant_id=tenant_id, limit=limit)
+        records = db_records or file_records
+        persistence_mode = "postgres" if db_records or _db_available() else "jsonl_fallback"
 
     return {
         "success": True,
@@ -322,10 +368,13 @@ def list_external_action_records(
 
 
 def external_action_records_readiness() -> Dict[str, Any]:
+    readiness = ensure_execution_history_evidence_tables()
     return {
-        "success": True,
+        **readiness,
+        "success": bool(readiness.get("success")),
         "profile": PROFILE,
-        "persistence_mode": "postgres" if _db_available() else "jsonl_fallback",
+        "persistence_mode": "canonical_durable_runtime" if readiness.get("success") else "unavailable",
+        "legacy_persistence_mode": "postgres" if _db_available() else "jsonl_fallback",
         "database_url_configured": bool(_database_url()),
         "postgres_available": _db_available(),
         "record_file": str(EXTERNAL_ACTION_FILE),

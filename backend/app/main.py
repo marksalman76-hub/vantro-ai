@@ -11,6 +11,12 @@ from backend.app.runtime.durable_external_action_records import (
     list_external_action_records,
     external_action_records_readiness,
 )
+from backend.app.runtime.durable_execution_history_evidence_runtime import (
+    get_latest_deliverable,
+    record_execution_evidence,
+    record_execution_history,
+    record_latest_deliverable,
+)
 from backend.app.core.integration_live_adapter_registry import (
     adapter_registry_summary,
     execute_integration_action,
@@ -1102,6 +1108,48 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
         project_id=request.project_id,
         record_type="successful_execution",
     )
+    execution_summary_payload = execution_summary(execution_result) if execution_result else None
+    durable_execution_id = str(
+        (execution_summary_payload or {}).get("execution_id") or ""
+    )
+
+    durable_execution_history = record_execution_history(
+        tenant_id=request.tenant_id,
+        project_id=request.project_id,
+        execution_id=durable_execution_id,
+        agent_id=requested_agent,
+        action_type=execution_action,
+        status="agent_execution_completed",
+        summary=f"{requested_agent} execution completed",
+        payload=successful_payload,
+        completed=True,
+    )
+    durable_execution_evidence = record_execution_evidence(
+        tenant_id=request.tenant_id,
+        project_id=request.project_id,
+        execution_id=durable_execution_id or str(durable_execution_history.get("history_id") or ""),
+        evidence_type="run_agent_execution_result",
+        title=f"{requested_agent} execution evidence",
+        summary="Agent output passed workflow, approval, quality, and governed execution handling.",
+        source_type="run_agent",
+        source_id=durable_execution_history.get("history_id") or "",
+        status="agent_execution_completed",
+        payload=successful_payload,
+    )
+    durable_latest_deliverable = record_latest_deliverable(
+        tenant_id=request.tenant_id,
+        project_id=request.project_id,
+        execution_id=durable_execution_id or str(durable_execution_history.get("history_id") or ""),
+        agent_id=requested_agent,
+        title=f"{requested_agent} latest deliverable",
+        summary=f"{requested_agent} execution completed",
+        deliverable_type="agent_output",
+        status="agent_execution_completed",
+        payload={
+            "output": polished_output,
+            "successful_payload": successful_payload,
+        },
+    )
 
     learning_recommendations = learning_engine.generate_recommendations(
         tenant_id=request.tenant_id,
@@ -1119,9 +1167,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
         "workflow": workflow_summary(workflow_packet),
         "approval": approval_summary(approval_decision),
         "quality": quality_summary(quality_result),
-        "execution": execution_summary(execution_result)
-        if execution_result
-        else None,
+        "execution": execution_summary_payload,
         "memory": {
             "memory_saved": True,
             "latest_memory_id": latest_execution_memory.get("memory_id")
@@ -1133,6 +1179,12 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
             "latest_sqlite_record_id": latest_sqlite_record.get("record_id")
             if latest_sqlite_record
             else None,
+        },
+        "durable_execution_evidence": {
+            "history_id": durable_execution_history.get("history_id"),
+            "evidence_id": durable_execution_evidence.get("evidence_id"),
+            "latest_deliverable_id": durable_latest_deliverable.get("deliverable_id"),
+            "storage_mode": durable_execution_history.get("storage_mode"),
         },
         "learning": learning_recommendation_summary(
             learning_recommendations
@@ -3124,6 +3176,43 @@ def client_execution_evidence(
         limit=limit,
         actor_role="client",
     )
+
+
+@app.get("/client-latest-deliverable")
+def client_latest_deliverable(
+    tenant_id: str = "client_demo_001",
+    project_id: str = "",
+    x_tenant_id: str | None = Header(default=None),
+    x_tenant_key: str | None = Header(default=None),
+):
+    safe_tenant_id = str(x_tenant_id or x_tenant_key or tenant_id or "client_demo_001")
+    result = get_latest_deliverable(
+        tenant_id=safe_tenant_id,
+        project_id=project_id or "",
+    )
+    latest = result.get("latest_deliverable") or {}
+    payload = latest.get("payload") if isinstance(latest, dict) else None
+    output = None
+    if isinstance(payload, dict):
+        output = (
+            payload.get("output")
+            or payload.get("deliverable")
+            or payload.get("generated_output")
+            or payload
+        )
+    return {
+        **result,
+        "success": bool(result.get("success")),
+        "tenant_id": safe_tenant_id,
+        "project_id": project_id or "",
+        "has_real_output": bool(latest),
+        "latest_deliverable": latest or None,
+        "deliverable": payload if isinstance(payload, dict) else latest or None,
+        "output": output,
+        "persistence_source": "canonical_execution_history_evidence_runtime",
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
 
 
 

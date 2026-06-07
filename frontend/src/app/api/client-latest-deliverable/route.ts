@@ -62,10 +62,14 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const auth = req.headers.get("authorization");
   const adminToken = req.headers.get("x-admin-token");
   const cookie = req.headers.get("cookie");
+  const tenantId = req.headers.get("x-tenant-id");
+  const tenantKeyHeader = req.headers.get("x-tenant-key");
 
   if (auth) headers.authorization = auth;
   if (adminToken) headers["x-admin-token"] = adminToken;
   if (cookie) headers.cookie = cookie;
+  if (tenantId) headers["x-tenant-id"] = tenantId;
+  if (tenantKeyHeader) headers["x-tenant-key"] = tenantKeyHeader;
 
   const response = await fetch(`${backendBaseUrl()}/client-latest-deliverable`, {
     method: "GET",
@@ -119,6 +123,8 @@ const normalised = normalise(payload as Record<string, unknown>);
         display_status: "Completed",
         deliverable_persisted: true,
         persistence_source: "latest_deliverable_store",
+        canonical_backend_source_available: false,
+        fallback_advisory_only: true,
       };
       const syncedState = persistExecutionState(tenantKey, persistedPayload);
       return NextResponse.json(attachMediaAssetLifecycle(tenantKey, {

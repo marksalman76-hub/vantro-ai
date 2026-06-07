@@ -17,6 +17,11 @@ from backend.app.runtime.react_website_generation_runtime import generate_react_
 from backend.app.runtime.shared_agent_learning_runtime import load_agent_learning_context, save_agent_learning, hide_proprietary_learning_fields
 from backend.app.runtime.media_generation_orchestrator import create_media_generation_plan
 from backend.app.runtime.async_media_job_foundation import enqueue_media_job
+from backend.app.runtime.durable_execution_history_evidence_runtime import (
+    record_execution_evidence,
+    record_execution_history,
+    record_latest_deliverable,
+)
 
 
 
@@ -197,6 +202,61 @@ Production Notes:
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _record_adapter_execution_evidence(packet: Dict[str, Any], result: Dict[str, Any]) -> None:
+    try:
+        tenant_id = str(result.get("tenant_id") or packet.get("tenant_id") or "unknown")
+        project_id = str(packet.get("project_id") or packet.get("project") or "default_project")
+        execution_id = str(result.get("execution_id") or "")
+        adapter = str(result.get("adapter") or packet.get("execution_adapter_target") or "action_adapter")
+        status = str(result.get("execution_status") or "adapter_action_executed")
+        summary = str(result.get("output") or status)[:1000]
+        payload = {
+            "packet": packet,
+            "result": result,
+        }
+        history = record_execution_history(
+            tenant_id=tenant_id,
+            project_id=project_id,
+            execution_id=execution_id,
+            agent_id=str(packet.get("assigned_agent") or packet.get("agent") or packet.get("recommended_agent") or ""),
+            action_type=adapter,
+            status=status,
+            summary=summary,
+            payload=payload,
+            completed=bool(result.get("success")) and not bool(result.get("owner_approval_required")),
+            failed=not bool(result.get("success")),
+        )
+        result["durable_execution_history_id"] = history.get("history_id")
+        evidence = record_execution_evidence(
+            tenant_id=tenant_id,
+            project_id=project_id,
+            execution_id=execution_id,
+            evidence_type="action_adapter_execution",
+            title=f"{adapter} execution",
+            summary=summary,
+            source_type="action_adapter_execution_layer",
+            source_id=adapter,
+            status=status,
+            payload=payload,
+        )
+        result["durable_execution_evidence_id"] = evidence.get("evidence_id")
+        if result.get("output") or result.get("asset") or result.get("media_pack") or result.get("creative_media_pack"):
+            deliverable = record_latest_deliverable(
+                tenant_id=tenant_id,
+                project_id=project_id,
+                execution_id=execution_id,
+                agent_id=str(packet.get("assigned_agent") or packet.get("agent") or packet.get("recommended_agent") or ""),
+                title=f"{adapter} latest deliverable",
+                summary=summary,
+                deliverable_type=adapter,
+                status=status,
+                payload=result,
+            )
+            result["durable_latest_deliverable_id"] = deliverable.get("deliverable_id")
+    except Exception:
+        result.setdefault("durable_execution_evidence_id", None)
 
 
 def _text(packet: Dict[str, Any]) -> str:
@@ -403,7 +463,7 @@ def execute_action_adapter(
         )
         ugc_output = _generate_ugc_creative_deliverable(str(packet.get("user_requested_task") or action_text))
 
-        return {
+        result = {
             "success": True,
             "execution_id": execution_id,
             "adapter": "ugc_creative_deliverable_adapter",
@@ -463,6 +523,8 @@ def execute_action_adapter(
             },
             "created_at": _now(),
         }
+        _record_adapter_execution_evidence(packet, result)
+        return result
 
 
     assigned_agent = str(packet.get("assigned_agent") or packet.get("agent") or packet.get("recommended_agent") or "").strip()
@@ -769,7 +831,7 @@ Call To Action:
 Shop the Collection"""
 
     elif adapter in {"approval_gated_campaign_adapter", "approval_gated_communication_adapter"}:
-        return {
+        result = {
             "success": True,
             "execution_id": execution_id,
             "adapter": adapter,
@@ -786,6 +848,8 @@ Shop the Collection"""
             "output": "Action requires owner approval before live campaign, send, publish, or spend execution.",
             "created_at": _now(),
         }
+        _record_adapter_execution_evidence(packet, result)
+        return result
 
     else:
         actions = [
@@ -826,7 +890,7 @@ Shop the Collection"""
         source="action_adapter_execution",
     )
 
-    return {
+    result = {
         "success": True,
         "execution_id": execution_id,
         "adapter": adapter,
@@ -894,3 +958,5 @@ Shop the Collection"""
         },
         "created_at": _now(),
     }
+    _record_adapter_execution_evidence(packet, result)
+    return result

@@ -6,6 +6,11 @@ from typing import Any, Dict, List
 from uuid import uuid4
 
 from backend.app.runtime.action_adapter_execution_layer import execute_action_adapter
+from backend.app.runtime.durable_execution_history_evidence_runtime import (
+    record_execution_evidence,
+    record_execution_history,
+    record_latest_deliverable,
+)
 
 
 HIGH_RISK_ACTION_KEYWORDS = {
@@ -129,6 +134,55 @@ def _extract_primary_creative_deliverable(packet: dict, result: dict) -> str:
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _record_real_action_evidence(result: Dict[str, Any], deliverable: Dict[str, Any] | None = None) -> None:
+    try:
+        tenant_id = str(result.get("tenant_id") or "unknown")
+        execution_id = str(result.get("execution_id") or "")
+        agent_id = str(result.get("assigned_agent") or "")
+        action_type = str(result.get("action_type") or "real_action")
+        status = str(result.get("execution_status") or result.get("status") or "recorded")
+        summary = str(result.get("customer_safe_message") or (deliverable or {}).get("summary") or status)
+        history = record_execution_history(
+            tenant_id=tenant_id,
+            project_id=str(result.get("project_id") or "default_project"),
+            execution_id=execution_id,
+            agent_id=agent_id,
+            action_type=action_type,
+            status=status,
+            summary=summary,
+            payload=result,
+            completed=bool(result.get("performed_actual_action")),
+            failed=not bool(result.get("success", True)),
+        )
+        record_execution_evidence(
+            tenant_id=tenant_id,
+            project_id=str(result.get("project_id") or "default_project"),
+            execution_id=execution_id,
+            evidence_type="real_action_execution",
+            title=f"{action_type} execution",
+            summary=summary,
+            source_type="real_action_execution_bridge",
+            source_id=str(history.get("history_id") or ""),
+            status=status,
+            payload=result,
+        )
+        if deliverable:
+            record_latest_deliverable(
+                tenant_id=tenant_id,
+                project_id=str(result.get("project_id") or "default_project"),
+                execution_id=execution_id,
+                agent_id=agent_id,
+                title=str(deliverable.get("title") or f"{agent_id} deliverable"),
+                summary=str(deliverable.get("summary") or summary),
+                deliverable_type=str(deliverable.get("type") or action_type),
+                status="ready",
+                payload=deliverable,
+                deliverable_id=str(deliverable.get("deliverable_id") or ""),
+            )
+    except Exception:
+        return
 
 
 def _contains_high_risk_action(packet: Dict[str, Any]) -> bool:
@@ -348,7 +402,7 @@ def execute_real_action_packet(
     source_packet_id = packet.get("packet_id") or packet.get("id") or packet.get("action_packet_id")
 
     if high_risk and not owner_approved:
-        return {
+        blocked = {
             "success": False,
             "execution_id": execution_id,
             "tenant_id": tenant_id,
@@ -361,6 +415,8 @@ def execute_real_action_packet(
             "customer_safe_message": "This action requires owner approval before execution.",
             "created_at": _now(),
         }
+        _record_real_action_evidence(blocked)
+        return blocked
 
     adapter = SAFE_ACTION_ADAPTERS.get(action_type, "client_deliverable_adapter")
 
@@ -387,7 +443,7 @@ def execute_real_action_packet(
     )
 
     if adapter_execution.get("owner_approval_required") and not owner_approved:
-        return {
+        blocked = {
             "success": True,
             "execution_id": execution_id,
             "tenant_id": tenant_id,
@@ -404,6 +460,8 @@ def execute_real_action_packet(
             "actions_performed": adapter_execution.get("actions_performed", []),
             "created_at": _now(),
         }
+        _record_real_action_evidence(blocked)
+        return blocked
 
     adapter_asset = adapter_execution.get("asset") or {}
     preview_url = adapter_execution.get("preview_url") or adapter_execution.get("asset_url") or adapter_execution.get("media_url") or adapter_asset.get("preview_url") or adapter_asset.get("asset_url") or ""
@@ -441,7 +499,7 @@ def execute_real_action_packet(
         },
     }
 
-    return {
+    result = {
         "success": True,
         "execution_id": execution_id,
         "tenant_id": tenant_id,
@@ -463,6 +521,8 @@ def execute_real_action_packet(
         "deliverable": deliverable,
         "created_at": _now(),
     }
+    _record_real_action_evidence(result, deliverable)
+    return result
 
 
 def execute_real_action_packets(

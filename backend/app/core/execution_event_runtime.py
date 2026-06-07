@@ -1,50 +1,16 @@
 from __future__ import annotations
 
-import json
-import os
 from datetime import datetime, timezone
-from typing import Any, Dict, List
+from typing import Any, Dict
 
-import psycopg
-
-DATABASE_URL = os.getenv("DATABASE_URL")
+from backend.app.runtime.durable_execution_history_evidence_runtime import (
+    list_execution_events as durable_list_execution_events,
+    record_execution_event,
+)
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
-
-
-def _db_available() -> bool:
-    return bool(DATABASE_URL)
-
-
-def _conn():
-    if not DATABASE_URL:
-        raise RuntimeError("DATABASE_URL_missing")
-    return psycopg.connect(DATABASE_URL)
-
-
-def _ensure_tables() -> None:
-    if not _db_available():
-        return
-
-    with _conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS execution_event_log (
-                    id BIGSERIAL PRIMARY KEY,
-                    tenant_id TEXT NOT NULL,
-                    project_id TEXT NOT NULL,
-                    event_type TEXT NOT NULL,
-                    title TEXT,
-                    agent_id TEXT,
-                    payload JSONB DEFAULT '{}'::jsonb,
-                    created_at TIMESTAMPTZ DEFAULT NOW()
-                )
-                """
-            )
-        conn.commit()
 
 
 def add_execution_event(
@@ -55,51 +21,32 @@ def add_execution_event(
     agent_id: str = "",
     payload: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
-    payload = payload or {}
-
-    if not _db_available():
-        return {
-            "success": False,
-            "error": "DATABASE_URL_missing",
-        }
-
-    _ensure_tables()
-
-    with _conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO execution_event_log
-                (
-                    tenant_id,
-                    project_id,
-                    event_type,
-                    title,
-                    agent_id,
-                    payload
-                )
-                VALUES (%s, %s, %s, %s, %s, %s)
-                RETURNING id, created_at
-                """,
-                (
-                    tenant_id,
-                    project_id,
-                    event_type,
-                    title,
-                    agent_id,
-                    json.dumps(payload),
-                ),
-            )
-
-            row = cur.fetchone()
-
-        conn.commit()
-
+    payload = dict(payload or {})
+    result = record_execution_event(
+        tenant_id=tenant_id,
+        project_id=project_id or "default_project",
+        execution_id=str(payload.get("execution_id") or payload.get("run_id") or ""),
+        event_type=event_type,
+        source_type="execution_event_runtime",
+        source_id=str(payload.get("source_id") or payload.get("history_id") or ""),
+        payload={
+            **payload,
+            "title": title,
+            "agent_id": agent_id,
+            "compatibility_wrapper": "execution_event_runtime",
+        },
+    )
+    if not result.get("success"):
+        return result
+    event = result.get("event") or {}
     return {
         "success": True,
-        "event_id": row[0],
-        "created_at": row[1].isoformat() if row and row[1] else _now(),
-        "storage_mode": "postgres",
+        "event_id": event.get("event_id") or result.get("event_id"),
+        "created_at": event.get("created_at") or _now(),
+        "storage_mode": result.get("storage_mode"),
+        "durable": result.get("durable", False),
+        "credential_values_exposed": False,
+        "customer_safe": True,
     }
 
 
@@ -108,61 +55,17 @@ def list_execution_events(
     project_id: str,
     limit: int = 20,
 ) -> Dict[str, Any]:
-    if not _db_available():
-        return {
-            "success": True,
-            "tenant_id": tenant_id,
-            "project_id": project_id,
-            "count": 0,
-            "events": [],
-            "storage_mode": "no_database",
-        }
-
-    _ensure_tables()
-
-    with _conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT
-                    event_type,
-                    title,
-                    agent_id,
-                    payload,
-                    created_at
-                FROM execution_event_log
-                WHERE tenant_id = %s
-                AND project_id = %s
-                ORDER BY created_at DESC
-                LIMIT %s
-                """,
-                (
-                    tenant_id,
-                    project_id,
-                    limit,
-                ),
-            )
-
-            rows = cur.fetchall()
-
-    events: List[Dict[str, Any]] = []
-
-    for row in rows:
-        events.append(
-            {
-                "event_type": row[0],
-                "title": row[1],
-                "agent_id": row[2],
-                "payload": row[3] or {},
-                "created_at": row[4].isoformat() if row[4] else None,
-            }
-        )
-
+    result = durable_list_execution_events(
+        tenant_id=tenant_id,
+        project_id=project_id or "default_project",
+        limit=limit,
+    )
     return {
-        "success": True,
+        **result,
         "tenant_id": tenant_id,
         "project_id": project_id,
-        "count": len(events),
-        "events": events,
-        "storage_mode": "postgres",
+        "count": result.get("count", 0),
+        "events": result.get("events", []),
+        "credential_values_exposed": False,
+        "customer_safe": True,
     }
