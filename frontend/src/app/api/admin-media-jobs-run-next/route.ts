@@ -3,10 +3,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const BACKEND_BASE_URL =
-  process.env.BACKEND_BASE_URL ||
-  process.env.NEXT_PUBLIC_BACKEND_BASE_URL ||
-  "https://api.trance-formation.com.au";
+function backendBaseUrl(): string {
+  return (
+    process.env.BACKEND_API_URL ||
+    process.env.BACKEND_BASE_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_BASE_URL ||
+    "https://api.trance-formation.com.au"
+  ).replace(/\/$/, "");
+}
 
 const ADMIN_TOKEN =
   process.env.ADMIN_TOKEN ||
@@ -97,12 +103,22 @@ export async function POST(req: NextRequest) {
     headers.cookie = cookie;
   }
 
-  const response = await fetch(`${BACKEND_BASE_URL}/admin/media-jobs/run-next`, {
+  const backendUrl = backendBaseUrl();
+  const response = await fetch(`${backendUrl}/admin/media-jobs/run-next`, {
     method: "POST",
     cache: "no-store",
     headers,
   });
 
   const data = await response.json();
-  return NextResponse.json(data, { status: response.status, headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json(
+    {
+      ...data,
+      canonical_store: data?.canonical_store || "backend:runtime_outputs/media_jobs",
+      store_paths_match: data?.store_paths_match ?? true,
+      environment_context: "frontend_proxy/backend_processor",
+      credential_values_exposed: false,
+    },
+    { status: response.status, headers: { "Cache-Control": "no-store" } }
+  );
 }

@@ -13,6 +13,7 @@ from starlette.responses import JSONResponse
 
 from backend.app.core.security_audit_enforcement_runtime import assess_audit_enforcement
 from backend.app.runtime import async_media_job_foundation as media_jobs
+from backend.app.runtime import creative_asset_persistence_bridge as creative_assets
 from backend.app.runtime import shared_creative_media_generation_runtime as shared_media
 from backend.app.runtime.admin_creative_media_asset_viewer import get_admin_creative_media_assets
 from backend.app import main as backend_main
@@ -247,10 +248,135 @@ def test_admin_login_session_cookie_matches_media_runner_auth_sources() -> None:
         assert ".value" not in route_text.split("cookies_present", 1)[1].split("reason", 1)[0]
 
 
+def test_visible_creative_asset_queue_reconciles_to_processor_store() -> None:
+    old_store = media_jobs.STORE
+    old_get_persisted = creative_assets.get_persisted_creative_assets
+
+    visible_job_id = "media_job_visible_queue_001"
+
+    def fake_get_persisted_creative_assets(limit: int = 100) -> Dict[str, Any]:
+        return {
+            "success": True,
+            "asset_count": 1,
+            "total_asset_count": 1,
+            "assets": [
+                {
+                    "asset_id": visible_job_id,
+                    "media_job_id": visible_job_id,
+                    "tenant_id": "client_demo_001",
+                    "agent_id": "ugc_creative_agent",
+                    "provider": "creative_media_queue",
+                    "provider_key": "creative_media_queue",
+                    "asset_type": "creative_media_job_evidence",
+                    "media_type": "creative_media_job_evidence",
+                    "title": "Creative media job queued",
+                    "status": "queued",
+                    "summary": "Existing visible queued creative media evidence.",
+                    "preview_ready": False,
+                    "download_ready": False,
+                    "playable": False,
+                    "metadata_only": True,
+                    "credential_values_exposed": False,
+                }
+            ],
+            "providers_checked": ["elevenlabs", "runway", "heygen", "kling", "sync", "internal"],
+            "credential_values_exposed": False,
+        }
+
+    with production_admin_env(), TemporaryDirectory() as temp_dir:
+        media_jobs.STORE = Path(temp_dir)
+        media_jobs.STORE.mkdir(parents=True, exist_ok=True)
+        creative_assets.get_persisted_creative_assets = fake_get_persisted_creative_assets
+        try:
+            assert not (media_jobs.STORE / f"{visible_job_id}.json").exists()
+
+            admin_assets_before = get_admin_creative_media_assets(limit=10)
+            visible_before = [
+                asset for asset in admin_assets_before["assets"] if asset.get("asset_id") == visible_job_id
+            ]
+            assert visible_before
+            assert visible_before[0]["status"] == "queued"
+            assert admin_assets_before["canonical_store"] == "backend:runtime_outputs/media_jobs"
+            assert admin_assets_before["store_paths_match"] is True
+
+            media_jobs_before = backend_main.admin_list_media_jobs(x_actor_role="owner_admin")
+            listed_before = [
+                job for job in media_jobs_before["jobs"] if job.get("job_id") == visible_job_id
+            ]
+            assert listed_before
+            assert listed_before[0]["status"] == "queued"
+            assert media_jobs_before["queued_job_count"] == 1
+            assert (media_jobs.STORE / f"{visible_job_id}.json").exists()
+
+            with provider_unavailable_media_generation():
+                result = backend_main.admin_run_all_media_jobs(
+                    x_admin_token="test-admin-token",
+                    x_actor_role="owner_admin",
+                    authorization=None,
+                )
+
+            assert result["success"] is True
+            assert result["authorised"] is True
+            assert result["processor_invoked"] is True
+            assert result["canonical_store"] == "backend:runtime_outputs/media_jobs"
+            assert result["visible_queued_job_count_before"] == 1
+            assert result["processor_queued_job_count_before"] == 1
+            assert result["processed_job_count"] == 1
+            assert result["store_paths_match"] is True
+            assert result["final_status_counts"].get("provider_unavailable") == 1
+            assert result["credential_values_exposed"] is False
+            assert not contains_unsafe(result)
+
+            media_jobs_after = backend_main.admin_list_media_jobs(x_actor_role="owner_admin")
+            assert media_jobs_after["queued_job_count"] == 0
+            assert media_jobs_after["status_counts"].get("provider_unavailable") == 1
+
+            admin_assets_after = get_admin_creative_media_assets(limit=10)
+            visible_after = [
+                asset for asset in admin_assets_after["assets"] if asset.get("asset_id") == visible_job_id
+            ]
+            assert visible_after
+            assert visible_after[0]["status"] == "provider_unavailable"
+            assert visible_after[0]["status"] != "queued"
+            assert admin_assets_after["processor_queued_job_count"] == 0
+            assert admin_assets_after["credential_values_exposed"] is False
+            assert not contains_unsafe(admin_assets_after)
+        finally:
+            creative_assets.get_persisted_creative_assets = old_get_persisted
+            media_jobs.STORE = old_store
+
+
+def test_frontend_media_routes_use_canonical_backend_resolver() -> None:
+    route_paths = [
+        Path("frontend/src/app/api/admin-creative-media-assets/route.ts"),
+        Path("frontend/src/app/api/admin-media-jobs/route.ts"),
+        Path("frontend/src/app/api/admin-media-jobs-run-all/route.ts"),
+        Path("frontend/src/app/api/admin-media-jobs-run-next/route.ts"),
+    ]
+
+    for route_path in route_paths:
+        route_text = route_path.read_text(encoding="utf-8")
+        assert "function backendBaseUrl()" in route_text
+        assert "process.env.BACKEND_API_URL" in route_text
+        assert "process.env.BACKEND_BASE_URL" in route_text
+        assert "process.env.NEXT_PUBLIC_BACKEND_API_URL" in route_text
+        assert "process.env.NEXT_PUBLIC_API_BASE_URL" in route_text
+        assert "process.env.NEXT_PUBLIC_BACKEND_BASE_URL" in route_text
+        assert "https://api.trance-formation.com.au" in route_text
+
+    run_all_route = route_paths[2].read_text(encoding="utf-8")
+    assert "/admin/media-jobs" in run_all_route
+    assert "visible_queued_job_count_before" in run_all_route
+    assert "processor_queued_job_count_before" in run_all_route
+    assert "frontend_proxy/backend_processor" in run_all_route
+
+
 if __name__ == "__main__":
     test_admin_media_job_processing_security_path()
     test_admin_run_delegated_workforce_click_chain_is_observable()
     test_admin_login_session_cookie_matches_media_runner_auth_sources()
+    test_visible_creative_asset_queue_reconciles_to_processor_store()
+    test_frontend_media_routes_use_canonical_backend_resolver()
     print("ADMIN_MEDIA_JOB_SECURITY_PROCESSING_PASSED")
     sys.stdout.flush()
     os._exit(0)

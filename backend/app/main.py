@@ -5018,6 +5018,42 @@ def _media_job_final_status_counts(result: dict) -> dict:
     return counts
 
 
+def _media_job_store_snapshot() -> dict:
+    from backend.app.runtime.async_media_job_foundation import list_media_jobs
+
+    jobs_result = list_media_jobs(limit=500)
+    jobs = jobs_result.get("jobs", []) if isinstance(jobs_result, dict) else []
+    status_counts: dict[str, int] = {}
+    queued_count = 0
+    for job in jobs:
+        if not isinstance(job, dict):
+            continue
+        status = str(job.get("status") or "unknown")
+        status_counts[status] = status_counts.get(status, 0) + 1
+        if status == "queued":
+            queued_count += 1
+    return {
+        **jobs_result,
+        "status_counts": status_counts,
+        "queued_job_count": queued_count,
+    }
+
+
+def _media_job_skipped_summary(result: dict) -> dict:
+    skipped_reasons: dict[str, int] = {}
+    skipped_count = 0
+    for item in result.get("results", []) if isinstance(result, dict) else []:
+        if not isinstance(item, dict) or item.get("processed"):
+            continue
+        status = str(item.get("status") or item.get("reason") or "unknown")
+        if status == "empty":
+            continue
+        reason = str(item.get("reason") or status)
+        skipped_reasons[reason] = skipped_reasons.get(reason, 0) + 1
+        skipped_count += 1
+    return {"skipped_job_count": skipped_count, "skipped_reasons": skipped_reasons}
+
+
 def _media_job_blocked_response():
     from fastapi.responses import JSONResponse
 
@@ -5037,14 +5073,31 @@ def _media_job_blocked_response():
     )
 
 
-def _media_job_processor_response(result: dict, *, authorised: bool, processor_invoked: bool) -> dict:
+def _media_job_processor_response(
+    result: dict,
+    *,
+    authorised: bool,
+    processor_invoked: bool,
+    before_snapshot: dict | None = None,
+    after_snapshot: dict | None = None,
+) -> dict:
     processed_count = int(result.get("processed_count") or (1 if result.get("processed") else 0) or 0)
+    before = before_snapshot or {}
+    after = after_snapshot or {}
+    skipped = _media_job_skipped_summary(result)
     return {
         **result,
+        "canonical_store": result.get("canonical_store") or before.get("canonical_store") or after.get("canonical_store") or "backend:runtime_outputs/media_jobs",
+        "visible_queued_job_count_before": int(before.get("visible_queued_job_count") or before.get("queued_job_count") or 0),
+        "processor_queued_job_count_before": int(before.get("processor_queued_job_count") or before.get("queued_job_count") or 0),
         "authorised": bool(authorised),
         "processor_invoked": bool(processor_invoked),
         "processed_job_count": processed_count,
-        "final_status_counts": _media_job_final_status_counts(result),
+        "skipped_job_count": skipped["skipped_job_count"],
+        "skipped_reasons": skipped["skipped_reasons"],
+        "final_status_counts": after.get("status_counts") or _media_job_final_status_counts(result),
+        "store_paths_match": bool(result.get("store_paths_match", before.get("store_paths_match", after.get("store_paths_match", True)))),
+        "environment_context": "backend_processor",
         "security_profile": MEDIA_JOB_SECURITY_PROFILE,
         "credential_values_exposed": False,
         "customer_safe": True,
@@ -5060,10 +5113,15 @@ def admin_run_next_media_job(
     if not _admin_media_job_authorized(x_actor_role, x_admin_token, authorization):
         return _media_job_blocked_response()
     from backend.app.runtime.async_media_job_foundation import run_next_media_job
+    before = _media_job_store_snapshot()
+    result = run_next_media_job()
+    after = _media_job_store_snapshot()
     return _media_job_processor_response(
-        run_next_media_job(),
+        result,
         authorised=True,
         processor_invoked=True,
+        before_snapshot=before,
+        after_snapshot=after,
     )
 
 
@@ -5076,8 +5134,13 @@ def admin_run_all_media_jobs(
     if not _admin_media_job_authorized(x_actor_role, x_admin_token, authorization):
         return _media_job_blocked_response()
     from backend.app.runtime.async_media_job_foundation import run_all_media_jobs
+    before = _media_job_store_snapshot()
+    result = run_all_media_jobs(limit=25)
+    after = _media_job_store_snapshot()
     return _media_job_processor_response(
-        run_all_media_jobs(limit=25),
+        result,
         authorised=True,
         processor_invoked=True,
+        before_snapshot=before,
+        after_snapshot=after,
     )

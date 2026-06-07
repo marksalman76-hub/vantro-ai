@@ -113,6 +113,26 @@ def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _asset_media_job_id(asset: Dict[str, Any]) -> str:
+    return str(asset.get("media_job_id") or asset.get("job_id") or asset.get("asset_id") or asset.get("id") or "").strip()
+
+
+def _is_creative_media_queue_asset(asset: Dict[str, Any]) -> bool:
+    status = str(asset.get("status") or asset.get("media_job_status") or asset.get("delivery_status") or "").lower()
+    provider = str(asset.get("provider") or asset.get("provider_key") or "").lower()
+    asset_type = str(asset.get("asset_type") or asset.get("media_type") or asset.get("type") or "").lower()
+    job_id = _asset_media_job_id(asset)
+    return bool(
+        job_id
+        and "queued" in status
+        and (
+            provider == "creative_media_queue"
+            or asset_type == "creative_media_job_evidence"
+            or job_id.startswith("media_job_")
+        )
+    )
+
+
 def get_admin_creative_media_asset_viewer_status() -> Dict[str, Any]:
     return {
         "success": True,
@@ -142,14 +162,27 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
         registry = get_persisted_creative_assets(limit=max(int(limit or 50), 1))
         raw_assets = registry.get("assets", []) if isinstance(registry, dict) else []
 
-        assets: List[Dict[str, Any]] = []
-        for asset in raw_assets:
-            if isinstance(asset, dict):
-                assets.append(_safe_asset(asset))
+        jobs_result = list_media_jobs(limit=max(int(limit or 50), 1))
+        jobs = jobs_result.get("jobs", [])
+        jobs_by_id = {
+            str(job.get("job_id") or job.get("media_job_id") or ""): job
+            for job in jobs
+            if isinstance(job, dict)
+        }
 
-        jobs = list_media_jobs(limit=max(int(limit or 50), 1)).get("jobs", [])
-        existing_ids = {str(asset.get("asset_id") or "") for asset in assets}
+        assets: List[Dict[str, Any]] = []
         job_evidence = []
+        for asset in raw_assets:
+            if not isinstance(asset, dict):
+                continue
+            job_id = _asset_media_job_id(asset)
+            if _is_creative_media_queue_asset(asset) and job_id in jobs_by_id:
+                evidence = media_job_to_visible_asset_evidence(jobs_by_id[job_id], audience="admin")
+                assets.append(evidence)
+                continue
+            assets.append(_safe_asset(asset))
+
+        existing_ids = {str(asset.get("asset_id") or "") for asset in assets}
         for job in jobs:
             if not isinstance(job, dict):
                 continue
@@ -169,6 +202,11 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
             "asset_count": len(visible_assets),
             "total_asset_count": (registry.get("total_asset_count", len(assets)) if isinstance(registry, dict) else len(assets)) + len(job_evidence),
             "job_evidence_count": len(job_evidence),
+            "canonical_store": jobs_result.get("canonical_store", "backend:runtime_outputs/media_jobs"),
+            "visible_queued_job_count": jobs_result.get("visible_queued_job_count", 0),
+            "processor_queued_job_count": jobs_result.get("processor_queued_job_count", 0),
+            "store_paths_match": jobs_result.get("store_paths_match", True),
+            "environment_context": "backend_processor",
             "assets": visible_assets,
             "providers_checked": registry.get("providers_checked", PROVIDERS_CHECKED) if isinstance(registry, dict) else PROVIDERS_CHECKED,
             "credential_values_exposed": False,

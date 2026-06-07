@@ -56,6 +56,129 @@ def _job_path(job_id: str) -> Path:
     return STORE / f"{job_id}.json"
 
 
+def media_job_store_context() -> Dict[str, Any]:
+    return {
+        "canonical_store": "backend:runtime_outputs/media_jobs",
+        "store_path": "runtime_outputs/media_jobs",
+        "environment_context": "backend_processor",
+        "store_paths_match": True,
+        "credential_values_exposed": False,
+    }
+
+
+def _safe_job_id(value: Any) -> str:
+    raw = str(value or "").strip()
+    safe = "".join(ch for ch in raw if ch.isalnum() or ch in {"_", "-", "."})
+    return safe[:160]
+
+
+def _asset_media_job_id(asset: Dict[str, Any]) -> str:
+    return _safe_job_id(asset.get("media_job_id") or asset.get("job_id") or asset.get("asset_id") or asset.get("id"))
+
+
+def _is_visible_queued_media_asset(asset: Dict[str, Any]) -> bool:
+    if not isinstance(asset, dict):
+        return False
+    job_id = _asset_media_job_id(asset)
+    status = str(asset.get("status") or asset.get("media_job_status") or asset.get("delivery_status") or "").lower()
+    provider = str(asset.get("provider") or asset.get("provider_key") or "").lower()
+    asset_type = str(asset.get("asset_type") or asset.get("media_type") or asset.get("type") or "").lower()
+    return bool(
+        job_id
+        and "queued" in status
+        and (
+            provider == "creative_media_queue"
+            or asset_type == "creative_media_job_evidence"
+            or job_id.startswith("media_job_")
+        )
+    )
+
+
+def _job_from_visible_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
+    now = _now()
+    job_id = _asset_media_job_id(asset)
+    return {
+        "success": True,
+        "job_id": job_id,
+        "status": "queued",
+        "task": asset.get("task") or asset.get("summary") or asset.get("content") or asset.get("title") or "Create a premium creative media asset.",
+        "agent_id": asset.get("agent_id") or asset.get("agent_key") or asset.get("requested_agent") or "creative_media_agent",
+        "tenant_id": asset.get("tenant_id") or "owner_admin",
+        "include_image": True,
+        "include_audio": True,
+        "include_video": True,
+        "include_avatar": False,
+        "lifecycle": "queued",
+        "media_asset_count": 0,
+        "real_media_asset_count": 0,
+        "persisted_asset_count": 0,
+        "preview_ready_count": 0,
+        "download_ready_count": 0,
+        "final_asset_ids": [],
+        "final_assets": [],
+        "reconciled_from_visible_asset": True,
+        "source_runtime": "creative_asset_registry_visible_queue_reconciliation",
+        "created_at": asset.get("created_at") or now,
+        "updated_at": now,
+        "credential_values_exposed": False,
+    }
+
+
+def reconcile_visible_queued_media_asset_jobs(limit: int = 100) -> Dict[str, Any]:
+    reconciled = 0
+    skipped_reasons: Dict[str, int] = {}
+    job_ids: List[str] = []
+
+    try:
+        from backend.app.runtime.creative_asset_persistence_bridge import get_persisted_creative_assets
+
+        registry = get_persisted_creative_assets(limit=max(int(limit or 100), 1))
+        assets = registry.get("assets", []) if isinstance(registry, dict) else []
+    except Exception as exc:
+        return {
+            **media_job_store_context(),
+            "success": False,
+            "status": "reconciliation_unavailable",
+            "reconciled_job_count": 0,
+            "skipped_reasons": {"asset_registry_unavailable": 1},
+            "error": str(exc)[:500],
+            "credential_values_exposed": False,
+        }
+
+    with _LOCK:
+        STORE.mkdir(parents=True, exist_ok=True)
+        for asset in assets:
+            if not isinstance(asset, dict):
+                skipped_reasons["invalid_asset_record"] = skipped_reasons.get("invalid_asset_record", 0) + 1
+                continue
+            if not _is_visible_queued_media_asset(asset):
+                continue
+
+            job_id = _asset_media_job_id(asset)
+            if not job_id:
+                skipped_reasons["missing_media_job_id"] = skipped_reasons.get("missing_media_job_id", 0) + 1
+                continue
+
+            path = _job_path(job_id)
+            if path.exists():
+                skipped_reasons["job_already_in_processor_store"] = skipped_reasons.get("job_already_in_processor_store", 0) + 1
+                continue
+
+            path.write_text(json.dumps(_job_from_visible_asset(asset), indent=2), encoding="utf-8")
+            reconciled += 1
+            job_ids.append(job_id)
+
+    return {
+        **media_job_store_context(),
+        "success": True,
+        "status": "reconciled",
+        "reconciled_job_count": reconciled,
+        "reconciled_job_ids": job_ids,
+        "skipped_reasons": skipped_reasons,
+        "credential_values_exposed": False,
+    }
+
+
 def _scrub_sensitive(value: Any) -> Any:
     if isinstance(value, list):
         return [_scrub_sensitive(item) for item in value]
@@ -112,16 +235,27 @@ def read_media_job(job_id: str) -> Dict[str, Any]:
 
 
 def list_media_jobs(limit: int = 50) -> Dict[str, Any]:
+    reconcile_visible_queued_media_asset_jobs(limit=max(int(limit or 50), 1))
     jobs = []
     for path in sorted(STORE.glob("media_job_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)[:limit]:
         try:
             jobs.append(_scrub_sensitive(json.loads(path.read_text(encoding="utf-8"))))
         except Exception:
             continue
+    status_counts: Dict[str, int] = {}
+    for job in jobs:
+        status = str(job.get("status") or "unknown")
+        status_counts[status] = status_counts.get(status, 0) + 1
+    queued_count = status_counts.get("queued", 0)
     return {
+        **media_job_store_context(),
         "success": True,
         "status": "ready",
         "job_count": len(jobs),
+        "queued_job_count": queued_count,
+        "visible_queued_job_count": queued_count,
+        "processor_queued_job_count": queued_count,
+        "status_counts": status_counts,
         "jobs": jobs,
         "credential_values_exposed": False,
     }
@@ -424,6 +558,7 @@ def run_all_media_jobs(limit: int = 25) -> Dict[str, Any]:
 
 
 def process_queued_creative_media_jobs(limit: int = 25) -> Dict[str, Any]:
+    reconciliation = reconcile_visible_queued_media_asset_jobs(limit=max(int(limit or 25), 1))
     results: List[Dict[str, Any]] = []
     processed = 0
 
@@ -437,9 +572,11 @@ def process_queued_creative_media_jobs(limit: int = 25) -> Dict[str, Any]:
             break
 
     return {
+        **media_job_store_context(),
         "success": True,
         "status": "completed" if processed else "empty",
         "processed_count": processed,
+        "reconciliation": reconciliation,
         "results": results,
         "credential_values_exposed": False,
     }

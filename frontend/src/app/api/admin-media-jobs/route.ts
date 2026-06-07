@@ -3,10 +3,16 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-const BACKEND_BASE_URL =
-  process.env.BACKEND_BASE_URL ||
-  process.env.NEXT_PUBLIC_BACKEND_BASE_URL ||
-  "https://api.trance-formation.com.au";
+function backendBaseUrl(): string {
+  return (
+    process.env.BACKEND_API_URL ||
+    process.env.BACKEND_BASE_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_BACKEND_BASE_URL ||
+    "https://api.trance-formation.com.au"
+  ).replace(/\/$/, "");
+}
 
 const ADMIN_TOKEN =
   process.env.ADMIN_TOKEN ||
@@ -24,7 +30,7 @@ export async function GET() {
     headers["x-admin-token"] = ADMIN_TOKEN;
   }
 
-  const response = await fetch(`${BACKEND_BASE_URL}/admin/media-jobs`, {
+  const response = await fetch(`${backendBaseUrl()}/admin/media-jobs`, {
     method: "GET",
     cache: "no-store",
     headers,
