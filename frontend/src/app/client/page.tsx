@@ -3618,7 +3618,7 @@ const primaryAssetUrl =
                   {selectedAsset?.title || selectedAsset?.name || liveDeliverable?.title || "Client deliverable"}
                 </h3>
                 <p style={{ margin: "6px 0 0", color: "#64748b", fontSize: 12.5 }}>
-                  Real generated/uploaded media and runtime deliverables only.
+                  Real generated or uploaded media and completed deliverables only.
                 </p>
               </div>
 
@@ -3690,7 +3690,7 @@ const primaryAssetUrl =
                     <div style={{ fontSize: 34, marginBottom: 10 }}>🖼️</div>
                     <h4 style={{ margin: 0, fontSize: 16, color: "#0f172a" }}>No media asset generated yet</h4>
                     <p style={{ margin: "8px auto 0", maxWidth: 420, color: "#64748b", fontSize: 13, lineHeight: 1.55 }}>
-                      Real generated media, uploaded brand files, previews, and deliverable assets will appear here once attached to the runtime result.
+                      Real generated media, uploaded brand files, previews, and deliverable assets will appear here once ready.
                     </p>
                   </div>
                 </div>
@@ -3854,7 +3854,7 @@ const primaryAssetUrl =
                     <div style={{ fontSize: 36, marginBottom: 10 }}>🖼️</div>
                     <h4 style={{ margin: 0, fontSize: 17, color: "#0f172a" }}>No media asset generated yet</h4>
                     <p style={{ margin: "8px auto 0", maxWidth: 430, color: "#64748b", fontSize: 13, lineHeight: 1.55 }}>
-                      Real generated media, uploaded brand files, previews, and deliverable assets will appear here once attached to the runtime result.
+                      Real generated media, uploaded brand files, previews, and deliverable assets will appear here once ready.
                     </p>
                   </div>
                 </div>
@@ -4143,7 +4143,7 @@ const primaryAssetUrl =
                   <div style={{ fontSize: 36, marginBottom: 10 }}>🖼️</div>
                   <h4 style={{ margin: 0, fontSize: 17, color: "#0f172a" }}>No media asset generated yet</h4>
                   <p style={{ margin: "8px auto 0", maxWidth: 430, color: "#64748b", fontSize: 13, lineHeight: 1.55 }}>
-                    Real generated media, uploaded brand files, previews, and deliverable assets will appear here once attached to the runtime result.
+                    Real generated media, uploaded brand files, previews, and deliverable assets will appear here once ready.
                   </p>
                 </div>
               </div>
@@ -4158,14 +4158,14 @@ const primaryAssetUrl =
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Execution proof</p>
             <h2 className="text-lg font-semibold text-slate-950">Completed action evidence</h2>
-            <p className="mt-1 text-sm text-slate-600">Customer-safe proof of completed actions without exposing internal routing or credentials.</p>
+            <p className="mt-1 text-sm text-slate-600">Clear proof of completed actions and delivered results.</p>
           </div>
           <button
             type="button"
             onClick={async () => {
               const res = await fetch("/api/client-execution-evidence?tenant_id=client_demo_001&limit=10", { cache: "no-store" });
               const json = await res.json();
-              alert(JSON.stringify(json?.data || json, null, 2));
+              alert("Completed action evidence loaded successfully.");
             }}
             className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
           >

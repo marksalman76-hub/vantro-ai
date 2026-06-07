@@ -1471,7 +1471,7 @@ const [activeNav, setActiveNav] = useState("Overview");
             onClick={async () => {
               const res = await fetch("/api/admin-execution-evidence?tenant_id=client_demo_001&limit=10", { cache: "no-store" });
               const json = await res.json();
-              alert(JSON.stringify(json?.data || json, null, 2));
+              alert("Execution evidence loaded successfully.");
             }}
             className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-slate-800"
           >
