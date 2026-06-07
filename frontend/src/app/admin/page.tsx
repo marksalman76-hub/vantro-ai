@@ -134,6 +134,7 @@ const [activeNav, setActiveNav] = useState("Overview");
   const [queuedImplementationPackets, setQueuedImplementationPackets] = useState<any[]>([]);
   const [completedImplementationRuns, setCompletedImplementationRuns] = useState<any[]>([]);
   const [delegatedWorkforceResults, setDelegatedWorkforceResults] = useState<any[]>([]);
+  const [latestMediaProcessorResult, setLatestMediaProcessorResult] = useState<any>(null);
   const [actionExecutionHistory, setActionExecutionHistory] = useState<any[]>([]);
   const [actionHistorySummary, setActionHistorySummary] = useState<any>(null);
   const [deployTenant, setDeployTenant] = useState("client_manual_001");
@@ -783,6 +784,7 @@ const [activeNav, setActiveNav] = useState("Overview");
 
     try {
       showToast("Running delegated workforce execution...");
+      setLatestMediaProcessorResult(null);
 
       const response = await fetch("/api/delegated-workforce-execution", {
         method: "POST",
@@ -798,16 +800,46 @@ const [activeNav, setActiveNav] = useState("Overview");
 
       const wrapper = await response.json();
       const result = wrapper?.data || wrapper;
+      const delegatedWorkforceCalled = true;
+
+      const mediaJobsResponse = await fetch("/api/admin-media-jobs-run-all", {
+        method: "POST",
+        cache: "no-store",
+      });
+      const mediaJobsResult = await mediaJobsResponse.json().catch(() => ({
+        success: false,
+        error: "media_processor_response_not_json",
+        authorised: false,
+        processor_invoked: false,
+        processed_job_count: 0,
+        final_status_counts: {},
+        credential_values_exposed: false,
+      }));
+      const mediaProcessorSnapshot = {
+        delegated_workforce_called: delegatedWorkforceCalled,
+        media_processor_called: true,
+        authorised: Boolean(mediaJobsResult?.authorised),
+        processor_invoked: Boolean(mediaJobsResult?.processor_invoked),
+        processed_job_count: Number(mediaJobsResult?.processed_job_count ?? mediaJobsResult?.processed_count ?? 0),
+        final_status_counts: mediaJobsResult?.final_status_counts || {},
+        security_profile: mediaJobsResult?.security_profile || "priority5_security_audit_enforcement_v1",
+        error: mediaJobsResponse.ok && mediaJobsResult?.success !== false ? "" : String(mediaJobsResult?.error || mediaJobsResult?.message || `media_processor_http_${mediaJobsResponse.status}`),
+        status: mediaJobsResult?.status || mediaJobsResult?.media_job_runner_status || mediaJobsResponse.status,
+        credential_values_exposed: false,
+      };
+      setLatestMediaProcessorResult(mediaProcessorSnapshot);
+      const combinedResult = {
+        ...result,
+        delegated_workforce_called: delegatedWorkforceCalled,
+        media_processor_called: true,
+        media_processor: mediaProcessorSnapshot,
+      };
 
       if (!result?.success) {
-        setDelegatedWorkforceResults((prev) => [result, ...prev].slice(0, 10));
+        setDelegatedWorkforceResults((prev) => [combinedResult, ...prev].slice(0, 10));
         await loadActionExecutionHistory();
-        await fetch("/api/admin-media-jobs-run-all", {
-          method: "POST",
-          cache: "no-store",
-        }).catch(() => null);
         await refreshCreativeMediaAssets();
-        showToast("Delegated workforce execution returned review status.");
+        showToast(mediaProcessorSnapshot.error || "Delegated workforce execution returned review status.");
         return;
       }
 
@@ -816,21 +848,18 @@ const [activeNav, setActiveNav] = useState("Overview");
       const blockedCount = Number(result.blocked_count || 0);
       const performedCount = (result.completed_results || []).filter((item: any) => item?.performed_actual_action === true).length;
 
-      setDelegatedWorkforceResults((prev) => [result, ...prev].slice(0, 10));
+      setDelegatedWorkforceResults((prev) => [combinedResult, ...prev].slice(0, 10));
       await loadActionExecutionHistory();
-      const mediaJobsResponse = await fetch("/api/admin-media-jobs-run-all", {
-        method: "POST",
-        cache: "no-store",
-      });
-      const mediaJobsResult = await mediaJobsResponse.json().catch(() => ({}));
       await refreshCreativeMediaAssets();
 
-      if (performedCount > 0) {
-        showToast(`Delegated workforce executed ${performedCount} action(s). Media jobs processed ${mediaJobsResult?.processed_count ?? 0}.`);
+      if (mediaProcessorSnapshot.error) {
+        showToast(`Media processor blocked: ${mediaProcessorSnapshot.error}`);
+      } else if (performedCount > 0) {
+        showToast(`Delegated workforce executed ${performedCount} action(s). Media jobs processed ${mediaProcessorSnapshot.processed_job_count}.`);
       } else if (queuedCount > 0 || blockedCount > 0) {
-        showToast(`Delegated workforce needs review. Queued ${queuedCount}, blocked ${blockedCount}.`);
+        showToast(`Delegated workforce needs review. Queued ${queuedCount}, blocked ${blockedCount}. Media jobs processed ${mediaProcessorSnapshot.processed_job_count}.`);
       } else {
-        showToast(`Delegated workforce completed ${completedCount} packet(s). Media jobs processed ${mediaJobsResult?.processed_count ?? 0}.`);
+        showToast(`Delegated workforce completed ${completedCount} packet(s). Media jobs processed ${mediaProcessorSnapshot.processed_job_count}.`);
       }
     } catch {
       showToast("Delegated workforce execution failed before reaching backend.");
@@ -1057,6 +1086,34 @@ const [activeNav, setActiveNav] = useState("Overview");
                                   <div className="packetActions" style={{ marginBottom: 12 }}>
                                     <button onClick={runDelegatedWorkforcePlan}>Run delegated workforce</button>
                                   </div>
+                                  {latestMediaProcessorResult ? (
+                                    <div className="implementationPacket">
+                                      <div>
+                                        <small>Delegated workforce</small>
+                                        <b>{latestMediaProcessorResult.delegated_workforce_called ? "Called" : "Not called"}</b>
+                                      </div>
+                                      <div>
+                                        <small>Media processor</small>
+                                        <span>
+                                          called: {latestMediaProcessorResult.media_processor_called ? "true" : "false"} · invoked: {latestMediaProcessorResult.processor_invoked ? "true" : "false"}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <small>Authorisation</small>
+                                        <em>{latestMediaProcessorResult.authorised ? "authorised" : "blocked"} · processed {latestMediaProcessorResult.processed_job_count || 0}</em>
+                                      </div>
+                                      <div>
+                                        <small>Final statuses</small>
+                                        <span>{JSON.stringify(latestMediaProcessorResult.final_status_counts || {})}</span>
+                                      </div>
+                                      {latestMediaProcessorResult.error ? (
+                                        <div>
+                                          <small>Processor error</small>
+                                          <span>{latestMediaProcessorResult.error}</span>
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  ) : null}
                                   {(latestImplementationPlan.action_packets || []).slice(0, 10).map((packet: any) => {
                                     const recommendedAgent = String(packet.recommended_agent || "agent");
                                     const isAdminOrEnterprise = true;

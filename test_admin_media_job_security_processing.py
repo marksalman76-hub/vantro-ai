@@ -173,8 +173,46 @@ def test_admin_media_job_processing_security_path() -> None:
             media_jobs.STORE = old_store
 
 
+def test_admin_run_delegated_workforce_click_chain_is_observable() -> None:
+    admin_page = Path("frontend/src/app/admin/page.tsx").read_text(encoding="utf-8")
+
+    handler_start = admin_page.index("async function runDelegatedWorkforcePlan()")
+    handler_end = admin_page.index("const navItems", handler_start)
+    handler = admin_page[handler_start:handler_end]
+
+    delegated_call = handler.index('fetch("/api/delegated-workforce-execution"')
+    media_call = handler.index('fetch("/api/admin-media-jobs-run-all"')
+    assert delegated_call < media_call
+    assert "const mediaJobsResponse = await fetch" in handler
+    assert "const mediaJobsResult = await mediaJobsResponse.json()" in handler
+    assert "setLatestMediaProcessorResult(mediaProcessorSnapshot)" in handler
+    assert "mediaProcessorSnapshot.error" in handler
+    assert "media_processor_called: true" in handler
+    assert "processor_invoked" in handler
+    assert "processed_job_count" in handler
+    assert "final_status_counts" in handler
+
+    rendered_fields = [
+        "Delegated workforce",
+        "Media processor",
+        "Authorisation",
+        "Final statuses",
+        "Processor error",
+    ]
+    for field in rendered_fields:
+        assert field in admin_page
+
+    run_all_route = Path("frontend/src/app/api/admin-media-jobs-run-all/route.ts").read_text(encoding="utf-8")
+    assert "adminPortalAuthorised(req)" in run_all_route
+    assert 'req.cookies.get("portal_access")' in run_all_route
+    assert "ADMIN_AUTH_SECRET" in run_all_route
+    assert '"x-admin-token"' in run_all_route
+    assert "admin_authorisation_required" in run_all_route
+
+
 if __name__ == "__main__":
     test_admin_media_job_processing_security_path()
+    test_admin_run_delegated_workforce_click_chain_is_observable()
     print("ADMIN_MEDIA_JOB_SECURITY_PROCESSING_PASSED")
     sys.stdout.flush()
     os._exit(0)
