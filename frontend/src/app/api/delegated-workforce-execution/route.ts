@@ -452,7 +452,19 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   Object.assign(normalised, attachAgentOutputContract(normalised));
   Object.assign(normalised, attachRealMediaProviderDecision(stateTenantKey, normalised));
   Object.assign(normalised, await attachDurableProviderQueueRetryFailover(req, stateTenantKey, normalised));
-  const mediaJobRunner = await runBackendMediaJobsForDelegatedWorkforce(req);
+  const mediaJobRunner: Record<string, unknown> = {
+    success: true,
+    media_job_runner_triggered: false,
+    media_job_runner_status: "explicit_admin_processor_route_required",
+    authorised: portalAdminAuthorised,
+    processor_invoked: false,
+    processed_job_count: 0,
+    processed_count: 0,
+    final_status_counts: {},
+    security_profile: "priority5_security_audit_enforcement_v1",
+    customer_safe: true,
+    credential_values_exposed: false,
+  };
   normalised.media_job_runner_triggered = Boolean(mediaJobRunner.media_job_runner_triggered);
   normalised.media_job_runner_status = mediaJobRunner.status || mediaJobRunner.media_job_runner_status || "unknown";
   normalised.media_job_processed_count = Number(mediaJobRunner.processed_count || 0);

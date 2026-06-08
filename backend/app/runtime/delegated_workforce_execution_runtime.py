@@ -78,6 +78,116 @@ SPECIALIST_OUTPUTS = {
     }
 }
 
+CREATIVE_MEDIA_TASK_KEYWORDS = {
+    "creative media",
+    "media asset",
+    "video",
+    "image",
+    "avatar",
+    "ugc",
+    "ad creative",
+    "product photo",
+    "product image",
+    "visual",
+    "audio",
+    "voiceover",
+}
+
+
+def _creative_media_agent_ids() -> set[str]:
+    try:
+        from backend.app.runtime.shared_creative_media_generation_runtime import CREATIVE_MEDIA_AGENTS
+
+        return set(CREATIVE_MEDIA_AGENTS)
+    except Exception:
+        return {
+            "ugc_creative_agent",
+            "paid_ads_agent",
+            "product_image_agent",
+            "social_media_manager_content_creator_agent",
+            "brand_strategy_agent",
+            "marketing_specialist_agent",
+            "website_landing_apps_agent",
+            "creative_rotation_agent",
+        }
+
+
+def _packet_action_text(packet: Dict[str, Any], fallback: str = "") -> str:
+    return str(
+        packet.get("user_requested_task")
+        or packet.get("implementation_action")
+        or packet.get("action")
+        or packet.get("title")
+        or packet.get("description")
+        or fallback
+        or "Create a premium customer-safe creative media asset."
+    )
+
+
+def _is_creative_media_packet(packet: Dict[str, Any], assigned_agent: str) -> bool:
+    agent_id = str(assigned_agent or "").strip()
+    if agent_id in _creative_media_agent_ids():
+        return True
+
+    haystack = " ".join(
+        [
+            agent_id,
+            str(packet.get("implementation_action") or ""),
+            str(packet.get("action") or ""),
+            str(packet.get("title") or ""),
+            str(packet.get("description") or ""),
+            str(packet.get("deliverable_type") or ""),
+        ]
+    ).lower().replace("_", " ")
+    return any(keyword in haystack for keyword in CREATIVE_MEDIA_TASK_KEYWORDS)
+
+
+def _enqueue_canonical_creative_media_job(
+    *,
+    packet: Dict[str, Any],
+    packet_result: Dict[str, Any],
+    assigned_agent: str,
+    tenant_id: str,
+) -> Dict[str, Any]:
+    if not _is_creative_media_packet(packet, assigned_agent):
+        return {
+            "canonical_job_created": False,
+            "canonical_job_id": None,
+            "canonical_store": "backend:runtime_outputs/media_jobs",
+            "status": "not_creative_media_packet",
+            "credential_values_exposed": False,
+        }
+
+    try:
+        from backend.app.runtime.async_media_job_foundation import enqueue_media_job, media_job_store_context
+
+        media_job = enqueue_media_job(
+            task=_packet_action_text(packet, str(packet_result.get("completed_output") or "")),
+            agent_id=str(assigned_agent or "creative_media_agent"),
+            tenant_id=str(tenant_id or "owner_admin"),
+            include_image=True,
+            include_audio=True,
+            include_video=True,
+            include_avatar=True,
+        )
+        context = media_job_store_context()
+        return {
+            "canonical_job_created": True,
+            "canonical_job_id": media_job.get("job_id"),
+            "canonical_store": context.get("canonical_store", "backend:runtime_outputs/media_jobs"),
+            "media_job_status": media_job.get("status"),
+            "credential_values_exposed": False,
+        }
+    except Exception as exc:
+        return {
+            "canonical_job_created": False,
+            "canonical_job_id": None,
+            "canonical_store": "backend:runtime_outputs/media_jobs",
+            "status": "canonical_media_job_create_failed",
+            "error": str(exc)[:260],
+            "credential_values_exposed": False,
+        }
+
 
 def execute_delegated_workforce_plan(
     *,
@@ -406,6 +516,20 @@ def execute_delegated_workforce_plan(
             packet_result["external_action_records_persisted"] = external_records.get("record_count", 0) > 0
             packet_result["external_action_records"] = external_records.get("records", [])
 
+            canonical_media_job = _enqueue_canonical_creative_media_job(
+                packet=packet,
+                packet_result=packet_result,
+                assigned_agent=assigned_agent,
+                tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
+            )
+            packet_result.update({
+                "canonical_job_created": bool(canonical_media_job.get("canonical_job_created")),
+                "canonical_job_id": canonical_media_job.get("canonical_job_id"),
+                "canonical_store": canonical_media_job.get("canonical_store", "backend:runtime_outputs/media_jobs"),
+                "media_job_created": bool(canonical_media_job.get("canonical_job_created")),
+                "media_job_id": canonical_media_job.get("canonical_job_id"),
+            })
+
             execution_results.append(packet_result)
 
     final_status = "completed" if execution_results and not queued_results and not blocked_results else "requires_review"
@@ -454,6 +578,12 @@ def execute_delegated_workforce_plan(
             "credential_values_exposed": False,
         }
 
+    canonical_jobs = [
+        result
+        for result in execution_results
+        if result.get("canonical_job_created") is True and result.get("canonical_job_id")
+    ]
+
     return {
         "success": True,
         "profile": "delegated_workforce_execution_runtime_v1",
@@ -466,6 +596,10 @@ def execute_delegated_workforce_plan(
         "completed_results": execution_results,
         "queued_results": queued_results,
         "blocked_results": blocked_results,
+        "canonical_job_created": bool(canonical_jobs),
+        "canonical_job_id": canonical_jobs[0].get("canonical_job_id") if canonical_jobs else None,
+        "canonical_job_ids": [result.get("canonical_job_id") for result in canonical_jobs],
+        "canonical_store": "backend:runtime_outputs/media_jobs",
         "media_job_processing_authorized": bool(media_job_processing_authorized),
         "media_job_runner_triggered": bool(media_job_processing_authorized and media_job_runner.get("success") is not False),
         "media_job_runner_status": media_job_runner.get("status", "unknown"),

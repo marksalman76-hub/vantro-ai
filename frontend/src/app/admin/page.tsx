@@ -224,10 +224,12 @@ const [activeNav, setActiveNav] = useState("Overview");
       const listResponse = await fetch("/api/admin-deployment-control", {
         method: "POST",
         cache: "no-store",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           path: "/admin/deployment-control/list?limit=25",
           method: "GET",
+          optional: true,
         }),
       });
       const listData = await listResponse.json();
@@ -240,10 +242,12 @@ const [activeNav, setActiveNav] = useState("Overview");
       const summaryResponse = await fetch("/api/admin-deployment-control", {
         method: "POST",
         cache: "no-store",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           path: "/admin/deployment-control/summary",
           method: "GET",
+          optional: true,
         }),
       });
       const summaryData = await summaryResponse.json();
@@ -328,23 +332,32 @@ const [activeNav, setActiveNav] = useState("Overview");
 
   useEffect(() => {
     loadRuntime();
-    loadClientRegistry();
-    loadOrchestrationDashboard();
-    loadActionExecutionHistory();
     loadOperationsStorePanels();
   }, []);
 
+  useEffect(() => {
+    if (activeNav === "Deploy Clients" || activeNav === "Client Registry") {
+      loadClientRegistry();
+    }
 
-  async function callAdminProxy(path: string, method: "GET" | "POST" = "GET", payload: any = null) {
+    if (activeNav === "Orchestration") {
+      loadOrchestrationDashboard();
+      loadActionExecutionHistory();
+    }
+  }, [activeNav]);
+
+
+  async function callAdminProxy(path: string, method: "GET" | "POST" = "GET", payload: any = null, optional = false) {
     const response = await fetch("/api/admin-deployment-control", {
       method: "POST",
       cache: "no-store",
+      credentials: "include",
       headers: {
         "Content-Type": "application/json",
         "x-actor-role": "owner",
         "x-tenant-id": "owner",
       },
-      body: JSON.stringify({ path, method, payload }),
+      body: JSON.stringify({ path, method, payload, optional }),
     });
     return response.json();
   }
@@ -354,6 +367,7 @@ const [activeNav, setActiveNav] = useState("Overview");
       const response = await fetch("/api/action-execution-history?tenant_id=owner_admin&limit=10", {
         method: "GET",
         cache: "no-store",
+        credentials: "include",
       });
       const wrapper = await response.json();
       const data = wrapper?.data || wrapper;
@@ -369,8 +383,8 @@ const [activeNav, setActiveNav] = useState("Overview");
     setOrchestrationBusy(true);
     try {
       const [deadLetters, manualReview] = await Promise.all([
-        callAdminProxy("/admin/dead-letter/list?limit=10", "GET"),
-        callAdminProxy("/admin/manual-review/list?limit=10", "GET"),
+        callAdminProxy("/admin/dead-letter/list?limit=10", "GET", null, true),
+        callAdminProxy("/admin/manual-review/list?limit=10", "GET", null, true),
       ]);
 
       setOrchestration({
@@ -791,6 +805,7 @@ const [activeNav, setActiveNav] = useState("Overview");
       const response = await fetch("/api/delegated-workforce-execution", {
         method: "POST",
         cache: "no-store",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           implementation_plan: latestImplementationPlan,
@@ -807,6 +822,7 @@ const [activeNav, setActiveNav] = useState("Overview");
       const mediaJobsResponse = await fetch("/api/admin-media-jobs-run-all", {
         method: "POST",
         cache: "no-store",
+        credentials: "include",
       });
       const mediaJobsResult = await mediaJobsResponse.json().catch(() => ({
         success: false,
@@ -820,10 +836,14 @@ const [activeNav, setActiveNav] = useState("Overview");
       const mediaProcessorSnapshot = {
         delegated_workforce_called: delegatedWorkforceCalled,
         media_processor_called: true,
+        canonical_job_created: Boolean(result?.canonical_job_created),
+        canonical_job_id: result?.canonical_job_id || (Array.isArray(result?.canonical_job_ids) ? result.canonical_job_ids[0] : null) || null,
+        canonical_store: mediaJobsResult?.canonical_store || result?.canonical_store || "backend:runtime_outputs/media_jobs",
         authorised: Boolean(mediaJobsResult?.authorised),
         processor_invoked: Boolean(mediaJobsResult?.processor_invoked),
         processed_job_count: Number(mediaJobsResult?.processed_job_count ?? mediaJobsResult?.processed_count ?? 0),
         final_status_counts: mediaJobsResult?.final_status_counts || {},
+        skipped_reasons: mediaJobsResult?.skipped_reasons || {},
         security_profile: mediaJobsResult?.security_profile || "priority5_security_audit_enforcement_v1",
         error: mediaJobsResponse.ok && mediaJobsResult?.success !== false ? "" : String(mediaJobsResult?.error || mediaJobsResult?.message || `media_processor_http_${mediaJobsResponse.status}`),
         status: mediaJobsResult?.status || mediaJobsResult?.media_job_runner_status || mediaJobsResponse.status,
@@ -834,6 +854,14 @@ const [activeNav, setActiveNav] = useState("Overview");
         ...result,
         delegated_workforce_called: delegatedWorkforceCalled,
         media_processor_called: true,
+        canonical_job_created: mediaProcessorSnapshot.canonical_job_created,
+        canonical_job_id: mediaProcessorSnapshot.canonical_job_id,
+        canonical_store: mediaProcessorSnapshot.canonical_store,
+        authorised: mediaProcessorSnapshot.authorised,
+        processor_invoked: mediaProcessorSnapshot.processor_invoked,
+        processed_job_count: mediaProcessorSnapshot.processed_job_count,
+        final_status_counts: mediaProcessorSnapshot.final_status_counts,
+        skipped_reasons: mediaProcessorSnapshot.skipped_reasons,
         media_processor: mediaProcessorSnapshot,
       };
 
@@ -1105,8 +1133,22 @@ const [activeNav, setActiveNav] = useState("Overview");
                                         <em>{latestMediaProcessorResult.authorised ? "authorised" : "blocked"} · processed {latestMediaProcessorResult.processed_job_count || 0}</em>
                                       </div>
                                       <div>
+                                        <small>Canonical job</small>
+                                        <span>
+                                          created: {latestMediaProcessorResult.canonical_job_created ? "true" : "false"} - {latestMediaProcessorResult.canonical_job_id || "none"}
+                                        </span>
+                                      </div>
+                                      <div>
+                                        <small>Canonical store</small>
+                                        <span>{latestMediaProcessorResult.canonical_store || "backend:runtime_outputs/media_jobs"}</span>
+                                      </div>
+                                      <div>
                                         <small>Final statuses</small>
                                         <span>{JSON.stringify(latestMediaProcessorResult.final_status_counts || {})}</span>
+                                      </div>
+                                      <div>
+                                        <small>Skipped reasons</small>
+                                        <span>{JSON.stringify(latestMediaProcessorResult.skipped_reasons || {})}</span>
                                       </div>
                                       {latestMediaProcessorResult.error ? (
                                         <div>

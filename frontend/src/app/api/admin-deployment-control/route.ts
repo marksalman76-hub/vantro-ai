@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
     const path = safePath(body.path || "");
     const method = String(body.method || "POST").toUpperCase();
     const payload = body.payload || undefined;
+    const optionalDashboardCall = body.optional === true && method === "GET";
 
     if (!path) {
       return NextResponse.json(
@@ -99,6 +100,20 @@ export async function POST(request: NextRequest) {
       error: "backend_response_not_json",
       status: response.status,
     }));
+
+    if (optionalDashboardCall && !response.ok) {
+      return NextResponse.json(
+        {
+          success: false,
+          status: "optional_dashboard_data_unavailable",
+          backend_status: response.status,
+          data,
+          customer_safe: true,
+          credential_values_exposed: false,
+        },
+        { status: 200 }
+      );
+    }
 
     return NextResponse.json(data, { status: response.status });
   } catch (error) {

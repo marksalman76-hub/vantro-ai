@@ -3418,7 +3418,7 @@ async def delegated_workforce_execution(
         package_tier=payload.get("package_tier", "starter"),
         connected_integrations=payload.get("connected_integrations", []),
         tenant_id=payload.get("tenant_id") or "owner_admin",
-        media_job_processing_authorized=media_job_processing_authorized,
+        media_job_processing_authorized=False,
     )
     result["authorised"] = bool(media_job_processing_authorized)
     result["processor_invoked"] = bool(result.get("media_job_runner_triggered"))

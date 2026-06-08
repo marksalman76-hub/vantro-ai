@@ -55,7 +55,10 @@ export async function GET(req: NextRequest) {
       success: response.ok && data?.success === true,
       backend_status: response.status,
       data,
+      optional_dashboard_data: true,
+      customer_safe: true,
+      credential_values_exposed: false,
     },
-    { status: response.ok ? 200 : response.status }
+    { status: 200 }
   );
 }
