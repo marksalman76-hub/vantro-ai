@@ -4,6 +4,7 @@ import json
 import os
 import hashlib
 import mimetypes
+import base64
 
 try:
     from backend.app.runtime.supabase_creative_storage import (
@@ -311,6 +312,7 @@ def classify_creative_asset(packet):
 
 def _candidate_local_path(packet):
     for key in [
+        "materialized_local_path",
         "composed_video_path",
         "final_synced_video_path",
         "audio_path",
@@ -328,6 +330,54 @@ def _candidate_local_path(packet):
         path = Path(text)
         if path.exists() and path.is_file():
             return path
+    return None
+
+
+def _extension_for_embedded_content(content_type, asset_type):
+    lowered = str(content_type or "").lower()
+    if "video/mp4" in lowered or "video" in lowered or "video" in str(asset_type or "").lower():
+        return ".mp4"
+    if "audio/mpeg" in lowered or "audio/mp3" in lowered:
+        return ".mp3"
+    if "audio/" in lowered or "voice" in str(asset_type or "").lower() or "audio" in str(asset_type or "").lower():
+        return ".m4a"
+    if "image/png" in lowered:
+        return ".png"
+    if "image/jpeg" in lowered:
+        return ".jpg"
+    if "image/webp" in lowered:
+        return ".webp"
+    return ".bin"
+
+
+def _materialize_embedded_media_file(packet, asset_id, asset_type):
+    candidate_keys = [
+        "provider_asset_url",
+        "preview_url",
+        "download_url",
+        "asset_url",
+        "media_url",
+    ]
+
+    for key in candidate_keys:
+        value = str(packet.get(key) or "").strip()
+        if not value.startswith("data:") or ";base64," not in value:
+            continue
+
+        try:
+            header, encoded = value.split(",", 1)
+            content_type = header[5:].split(";", 1)[0] if header.startswith("data:") else "application/octet-stream"
+            payload = base64.b64decode(encoded)
+        except Exception:
+            continue
+
+        ASSET_RECORD_DIR.mkdir(parents=True, exist_ok=True)
+        embedded_dir = ASSET_RECORD_DIR / "embedded"
+        embedded_dir.mkdir(parents=True, exist_ok=True)
+        path = embedded_dir / f"{_safe_slug(asset_id)}{_extension_for_embedded_content(content_type, asset_type)}"
+        path.write_bytes(payload)
+        return path
+
     return None
 
 
@@ -417,6 +467,10 @@ def persist_creative_asset(asset_packet: dict):
     asset_type = classify_creative_asset(packet)
     created_at = _now()
     asset_id = packet.get("asset_id") or _asset_id(packet)
+
+    materialized_local_path = _materialize_embedded_media_file(packet, asset_id, asset_type)
+    if materialized_local_path is not None:
+        packet["materialized_local_path"] = str(materialized_local_path)
 
     local_path = _candidate_local_path(packet)
     storage_upload = _maybe_upload_media_file(packet, asset_id, asset_type)
@@ -557,6 +611,11 @@ def persist_creative_asset(asset_packet: dict):
         "fallback_used": bool(canonical.get("dev_only")),
         "dev_only": bool(canonical.get("dev_only")),
         "production_fail_closed": False,
+        "persistence_attempted": True,
+        "persistence_input_shape": "embedded_media" if materialized_local_path is not None else "asset_packet",
+        "playable_source_detected": playable,
+        "signed_delivery_attempted": playable,
+        "signed_delivery_created": playable,
         "storage_upload_status": storage_upload.get("status") if isinstance(storage_upload, dict) else None,
         "storage_upload_http_status": storage_upload.get("http_status") if isinstance(storage_upload, dict) else None,
         "credential_values_exposed": False,

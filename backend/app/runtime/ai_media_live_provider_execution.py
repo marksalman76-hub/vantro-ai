@@ -190,6 +190,100 @@ def _extract_first_url(value: Any) -> str:
     return ""
 
 
+def _first_string_field(value: Any, keys: List[str]) -> str:
+    if isinstance(value, dict):
+        for key in keys:
+            candidate = value.get(key)
+            if isinstance(candidate, str) and candidate.strip():
+                return candidate.strip()
+        for nested in value.values():
+            found = _first_string_field(nested, keys)
+            if found:
+                return found
+    elif isinstance(value, list):
+        for item in value:
+            found = _first_string_field(item, keys)
+            if found:
+                return found
+    return ""
+
+
+def _response_shape(value: Any) -> str:
+    if isinstance(value, dict):
+        return "dict"
+    if isinstance(value, list):
+        return "list"
+    if isinstance(value, str):
+        return "string"
+    if value is None:
+        return "empty"
+    return type(value).__name__.lower()
+
+
+def _extract_embedded_media_data_url(value: Any, media_type: str = "") -> str:
+    if isinstance(value, dict):
+        for key in ["b64_json", "base64", "audio_base64", "video_base64", "image_base64"]:
+            encoded = value.get(key)
+            if isinstance(encoded, str) and encoded.strip():
+                lowered_key = key.lower()
+                lowered_media = str(media_type or "").lower()
+                content_type = "application/octet-stream"
+                if "audio" in lowered_key or "audio" in lowered_media:
+                    content_type = "audio/mpeg"
+                elif "video" in lowered_key or "video" in lowered_media:
+                    content_type = "video/mp4"
+                elif "image" in lowered_key or "image" in lowered_media or key == "b64_json":
+                    content_type = "image/png"
+                return f"data:{content_type};base64,{encoded.strip()}"
+        for nested in value.values():
+            found = _extract_embedded_media_data_url(nested, media_type)
+            if found:
+                return found
+    elif isinstance(value, list):
+        for item in value:
+            found = _extract_embedded_media_data_url(item, media_type)
+            if found:
+                return found
+    return ""
+
+
+def _provider_error_code(response: Dict[str, Any], execution_status: str) -> str:
+    return (
+        _safe_text(response.get("error_code"))
+        or _safe_text(response.get("code"))
+        or (execution_status if "error" in execution_status or "failed" in execution_status else "")
+    )
+
+
+def _provider_error_safe_message(response: Dict[str, Any], error: Optional[str], execution_status: str) -> str:
+    if "http_error" in execution_status:
+        return "Provider HTTP request failed safely. No credentials or provider secrets were exposed."
+    if "failed" in execution_status or error:
+        return "Provider execution failed safely. No credentials or provider secrets were exposed."
+    if execution_status in {"polling_provider", "processing"}:
+        return "Provider execution is still processing. No playable media asset is available yet."
+    return ""
+
+
+def _has_explicit_output_reference(response: Dict[str, Any]) -> bool:
+    return bool(
+        _first_string_field(
+            response,
+            [
+                "asset_url",
+                "media_url",
+                "video_url",
+                "audio_url",
+                "image_url",
+                "download_url",
+                "preview_url",
+                "output_url",
+                "url",
+            ],
+        )
+    )
+
+
 def _provider_parameters(packet: Dict[str, Any]) -> Dict[str, Any]:
     params = packet.get("provider_parameters")
     return params if isinstance(params, dict) else {}
@@ -343,7 +437,17 @@ def _standard_result(
     media_type: str = "",
 ) -> Dict[str, Any]:
     response = provider_response or {}
-    resolved_asset_url = asset_url or _extract_first_url(response)
+    resolved_asset_url = asset_url or _extract_first_url(response) or _extract_embedded_media_data_url(response, media_type or _media_type(provider_ready_packet))
+    provider_job_id = _first_string_field(response, ["provider_job_id", "job_id", "task_id", "prediction_id", "id"])
+    provider_polling_url = _first_string_field(response, ["status_url", "polling_url", "poll_url", "task_url", "retrieve_url"])
+    if resolved_asset_url and provider_polling_url and resolved_asset_url == provider_polling_url and not _has_explicit_output_reference(response):
+        resolved_asset_url = ""
+    provider_http_status = response.get("status_code") or response.get("http_status")
+    provider_output_url_present = bool(resolved_asset_url and not str(resolved_asset_url).startswith("data:"))
+    provider_output_base64_present = bool(str(resolved_asset_url).startswith("data:"))
+    provider_output_bytes_present = bool(
+        response.get("audio_bytes") or response.get("video_bytes") or response.get("image_bytes") or response.get("bytes")
+    )
 
     return {
         "success": bool(success),
@@ -365,6 +469,21 @@ def _standard_result(
         "governance_controls": provider_ready_packet.get("governance_controls", {}),
         "quality_controls": provider_ready_packet.get("quality_controls", {}),
         "generated_at": _now(),
+        "provider_request_attempted": True,
+        "provider_http_status": provider_http_status,
+        "provider_response_shape": _response_shape(response),
+        "provider_job_id": provider_job_id,
+        "provider_job_id_present": bool(provider_job_id),
+        "provider_polling_required": bool(
+            not resolved_asset_url and execution_status in {"polling_provider", "processing"}
+        ),
+        "provider_polling_url": provider_polling_url,
+        "provider_polling_url_present": bool(provider_polling_url),
+        "provider_output_url_present": provider_output_url_present,
+        "provider_output_bytes_present": provider_output_bytes_present,
+        "provider_output_base64_present": provider_output_base64_present,
+        "provider_error_code": _provider_error_code(response, execution_status),
+        "provider_error_safe_message": _provider_error_safe_message(response, error, execution_status),
         "secret_exposure": False,
         "credential_values_exposed": False,
         "customer_safe": True,
@@ -579,13 +698,26 @@ def _execute_configured_job_provider(packet: Dict[str, Any], provider_id: str) -
         timeout=120,
     )
 
-    response = result.get("response", {})
-    asset_url = _extract_first_url(response)
+    response = dict(result.get("response", {}) or {})
+    response.setdefault("status_code", result.get("status_code"))
+    asset_url = _extract_first_url(response) or _extract_embedded_media_data_url(response, _media_type(packet))
+    provider_job_id = _first_string_field(response, ["provider_job_id", "job_id", "task_id", "prediction_id", "id"])
+    provider_polling_url = _first_string_field(response, ["status_url", "polling_url", "poll_url", "task_url", "retrieve_url"])
+    if asset_url and provider_polling_url and asset_url == provider_polling_url and not _has_explicit_output_reference(response):
+        asset_url = ""
+    if result.get("success") and asset_url:
+        execution_status = "completed"
+    elif result.get("success") and (provider_job_id or provider_polling_url):
+        execution_status = "polling_provider"
+    elif result.get("success"):
+        execution_status = "provider_job_created_or_attempted"
+    else:
+        execution_status = "provider_http_error"
 
     return _standard_result(
         success=bool(result.get("success")),
         provider_id=provider_id,
-        execution_status="completed" if asset_url else "provider_job_created_or_attempted",
+        execution_status=execution_status,
         provider_ready_packet=packet,
         provider_response=response,
         asset_url=asset_url,

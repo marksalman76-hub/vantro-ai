@@ -46,6 +46,7 @@ PROVIDER_FAILED_STATUSES = {
 SAFE_PROVIDER_UNAVAILABLE_REASON = "Provider execution is not currently available. No credentials or provider secrets were exposed."
 SAFE_PROVIDER_BLOCKED_REASON = "Provider execution was blocked by governance or provider safety controls. No credentials or provider secrets were exposed."
 SAFE_PROVIDER_FAILED_REASON = "Provider execution was attempted but did not complete safely. No credentials or provider secrets were exposed."
+SAFE_PROVIDER_PROCESSING_REASON = "Provider execution is still processing. No playable media asset is available yet."
 
 
 def _now() -> str:
@@ -389,6 +390,16 @@ def _resolve_no_playable_terminal_state(media_pack: Dict[str, Any]) -> Dict[str,
     live_generation_available = any(bool(item.get("live_generation_available")) for item in generation_jobs)
     live_execution_attempted = any(bool(item.get("live_provider_execution_attempted")) for item in provider_results + generation_jobs)
     live_attempted_count = int(media_pack.get("live_provider_execution_attempted_count") or 0)
+
+    if any(
+        status in {"polling_provider", "processing", "provider_processing"}
+        for status in statuses
+    ) or any(bool(item.get("provider_polling_required")) for item in provider_results):
+        return {
+            "status": "processing",
+            "lifecycle": "polling_provider",
+            "reason": SAFE_PROVIDER_PROCESSING_REASON,
+        }
 
     if any(status in PROVIDER_BLOCKED_STATUSES or "safety" in status for status in statuses):
         return {

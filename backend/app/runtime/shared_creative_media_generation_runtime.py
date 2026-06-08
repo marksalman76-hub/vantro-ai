@@ -510,11 +510,21 @@ def _has_real_media_url(asset: Dict[str, Any]) -> bool:
 
 def _is_provider_job_metadata_only(asset: Dict[str, Any]) -> bool:
     status = str(asset.get("status") or "").lower()
+    if status in {"polling_provider", "processing", "provider_processing"} or asset.get("provider_polling_required"):
+        return False
     if status in METADATA_ONLY_STATUSES or "provider_job_created_or_attempted" in status:
         return not _has_real_media_url(asset)
     if "metadata_fallback" in status:
         return True
     return False
+
+
+def _is_provider_pending(asset: Dict[str, Any]) -> bool:
+    status = str(asset.get("status") or "").lower()
+    return bool(
+        asset.get("provider_polling_required")
+        or status in {"polling_provider", "processing", "provider_processing"}
+    )
 
 
 def _compose_video_audio_asset(
@@ -616,6 +626,7 @@ def _persist_media_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
                 "asset_id": asset.get("asset_id"),
                 "agent_id": asset.get("agent_id"),
                 "agent_label": asset.get("agent_id"),
+            "tenant_id": asset.get("tenant_id"),
                 "provider": asset.get("provider"),
                 "provider_key": asset.get("provider"),
                 "asset_type": asset.get("asset_type"),
@@ -639,6 +650,9 @@ def _persist_media_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
                 "campaign_context": asset.get("prompt"),
                 "owner_approval_required": True,
                 "governed": True,
+                "provider_job_id": provider_result.get("provider_job_id") or provider_result.get("job_id"),
+                "provider_http_status": provider_result.get("provider_http_status"),
+                "provider_polling_required": bool(asset.get("provider_polling_required") or provider_result.get("provider_polling_required")),
                 "credential_values_exposed": False,
                 "customer_safe": True,
             }
@@ -655,11 +669,40 @@ def _persist_media_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _append_if_persistable(asset: Dict[str, Any], target: List[Dict[str, Any]]) -> Dict[str, Any]:
+    asset["persistence_attempted"] = False
+    asset["persistence_input_shape"] = "provider_result" if isinstance(asset.get("provider_result"), dict) else "asset_packet"
+    asset["playable_source_detected"] = bool(_has_real_media_url(asset))
+    asset["signed_delivery_attempted"] = False
+
+    if _is_provider_pending(asset) and not _has_real_media_url(asset):
+        asset["persistence"] = {
+            "success": False,
+            "persisted": False,
+            "reason": "provider_output_pending",
+            "persistence_attempted": False,
+            "playable_source_detected": False,
+            "signed_delivery_attempted": False,
+            "signed_delivery_created": False,
+            "metadata_only": False,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+        asset["playable"] = False
+        asset["metadata_only"] = False
+        asset["playable_asset_created"] = False
+        asset["signed_delivery_created"] = False
+        target.append(asset)
+        return asset
+
     if _is_provider_job_metadata_only(asset):
         asset["persistence"] = {
             "success": False,
             "persisted": False,
             "reason": "metadata_only_asset_not_persisted",
+            "persistence_attempted": False,
+            "playable_source_detected": False,
+            "signed_delivery_attempted": False,
+            "signed_delivery_created": False,
             "credential_values_exposed": False,
             "customer_safe": True,
         }
@@ -668,8 +711,11 @@ def _append_if_persistable(asset: Dict[str, Any], target: List[Dict[str, Any]]) 
         asset["metadata_only"] = True
         return asset
 
+    asset["persistence_attempted"] = True
+    asset["signed_delivery_attempted"] = True
     asset["persistence"] = _persist_media_asset(asset)
     persistence = asset["persistence"] if isinstance(asset.get("persistence"), dict) else {}
+    asset["playable_source_detected"] = bool(persistence.get("playable") or asset["playable_source_detected"])
     if persistence.get("metadata_only") or not persistence.get("playable"):
         asset["preview_ready"] = False
         asset["download_ready"] = False
