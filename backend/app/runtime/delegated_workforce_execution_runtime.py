@@ -151,6 +151,7 @@ def _enqueue_canonical_creative_media_job(
 ) -> Dict[str, Any]:
     if not _is_creative_media_packet(packet, assigned_agent):
         return {
+            "canonical_job_attempted": False,
             "canonical_job_created": False,
             "canonical_job_id": None,
             "canonical_store": "backend:runtime_outputs/media_jobs",
@@ -158,32 +159,60 @@ def _enqueue_canonical_creative_media_job(
             "credential_values_exposed": False,
         }
 
-    try:
-        from backend.app.runtime.async_media_job_foundation import enqueue_media_job, media_job_store_context
+    existing_job_id = str(
+        packet.get("existing_media_job_id")
+        or packet.get("canonical_job_id")
+        or packet.get("media_job_id")
+        or packet.get("job_id")
+        or ""
+    ).strip()
 
-        media_job = enqueue_media_job(
-            task=_packet_action_text(packet, str(packet_result.get("completed_output") or "")),
-            agent_id=str(assigned_agent or "creative_media_agent"),
-            tenant_id=str(tenant_id or "owner_admin"),
-            include_image=True,
-            include_audio=True,
-            include_video=True,
-            include_avatar=True,
-        )
+    if existing_job_id:
+        try:
+            from backend.app.runtime.async_media_job_foundation import media_job_store_context, read_media_job
+
+            existing_job = read_media_job(existing_job_id)
+            context = media_job_store_context()
+            return {
+                "canonical_job_attempted": True,
+                "canonical_job_created": False,
+                "canonical_job_id": existing_job_id,
+                "canonical_store": context.get("canonical_store", "backend:runtime_outputs/media_jobs"),
+                "media_job_status": existing_job.get("status", "unknown"),
+                "status": "existing_canonical_media_job_linked" if existing_job.get("success") is not False else "existing_canonical_media_job_not_found",
+                "credential_values_exposed": False,
+            }
+        except Exception as exc:
+            return {
+                "canonical_job_attempted": True,
+                "canonical_job_created": False,
+                "canonical_job_id": existing_job_id,
+                "canonical_store": "backend:runtime_outputs/media_jobs",
+                "status": "existing_canonical_media_job_lookup_failed",
+                "error": str(exc)[:260],
+                "credential_values_exposed": False,
+            }
+
+    try:
+        from backend.app.runtime.async_media_job_foundation import media_job_store_context
+
         context = media_job_store_context()
         return {
-            "canonical_job_created": True,
-            "canonical_job_id": media_job.get("job_id"),
+            "canonical_job_attempted": False,
+            "canonical_job_created": False,
+            "canonical_job_id": None,
             "canonical_store": context.get("canonical_store", "backend:runtime_outputs/media_jobs"),
-            "media_job_status": media_job.get("status"),
+            "media_job_status": "missing_existing_media_job_id",
+            "status": "missing_existing_media_job_id",
             "credential_values_exposed": False,
         }
     except Exception as exc:
         return {
+            "canonical_job_attempted": False,
             "canonical_job_created": False,
             "canonical_job_id": None,
             "canonical_store": "backend:runtime_outputs/media_jobs",
-            "status": "canonical_media_job_create_failed",
+            "status": "canonical_media_job_context_unavailable",
             "error": str(exc)[:260],
             "credential_values_exposed": False,
         }
@@ -523,6 +552,7 @@ def execute_delegated_workforce_plan(
                 tenant_id=tenant_id or ("owner_admin" if enterprise_access else "client"),
             )
             packet_result.update({
+                "canonical_job_attempted": bool(canonical_media_job.get("canonical_job_attempted")),
                 "canonical_job_created": bool(canonical_media_job.get("canonical_job_created")),
                 "canonical_job_id": canonical_media_job.get("canonical_job_id"),
                 "canonical_store": canonical_media_job.get("canonical_store", "backend:runtime_outputs/media_jobs"),
@@ -581,7 +611,7 @@ def execute_delegated_workforce_plan(
     canonical_jobs = [
         result
         for result in execution_results
-        if result.get("canonical_job_created") is True and result.get("canonical_job_id")
+        if result.get("canonical_job_id")
     ]
 
     return {
@@ -596,7 +626,8 @@ def execute_delegated_workforce_plan(
         "completed_results": execution_results,
         "queued_results": queued_results,
         "blocked_results": blocked_results,
-        "canonical_job_created": bool(canonical_jobs),
+        "canonical_job_attempted": any(result.get("canonical_job_attempted") is True for result in execution_results),
+        "canonical_job_created": any(result.get("canonical_job_created") is True for result in canonical_jobs),
         "canonical_job_id": canonical_jobs[0].get("canonical_job_id") if canonical_jobs else None,
         "canonical_job_ids": [result.get("canonical_job_id") for result in canonical_jobs],
         "canonical_store": "backend:runtime_outputs/media_jobs",

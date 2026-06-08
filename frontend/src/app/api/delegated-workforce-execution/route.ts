@@ -53,6 +53,78 @@ function adminPortalAuthorised(req: NextRequest): boolean {
   );
 }
 
+function authSourcesChecked() {
+  return [
+    "cookie:portal_access",
+    "cookie:admin_session",
+    "header:x-admin-token",
+    "header:authorization",
+  ];
+}
+
+function cookiesPresent(req: NextRequest): string[] {
+  return req.cookies.getAll().map((cookie) => cookie.name).filter(Boolean).sort();
+}
+
+function missingDelegatedFields(payload: Record<string, unknown>): string[] {
+  const missing: string[] = [];
+  const plan = payload.implementation_plan as Record<string, unknown> | undefined;
+  const packets = Array.isArray(plan?.action_packets) ? plan?.action_packets : [];
+  if (!plan || typeof plan !== "object") missing.push("implementation_plan");
+  if (!packets.length) missing.push("implementation_plan.action_packets");
+  if (payload.owner_approved !== true) missing.push("owner_approved");
+  return missing;
+}
+
+function delegatedPacketShape(payload: Record<string, unknown>): Record<string, unknown> {
+  const plan = payload.implementation_plan as Record<string, unknown> | undefined;
+  const packets = Array.isArray(plan?.action_packets) ? plan?.action_packets as Record<string, unknown>[] : [];
+  const first = packets[0] || {};
+  return {
+    packet_count: packets.length,
+    has_plan_id: Boolean(plan?.plan_id),
+    first_packet_keys: Object.keys(first).filter((key) => !/token|secret|password|api_key|authorization|credential|debug|raw|prompt/i.test(key)).sort(),
+    first_packet_has_media_job_id: Boolean(first.media_job_id || first.existing_media_job_id || first.canonical_job_id || first.job_id),
+    first_packet_agent: first.recommended_agent || first.assigned_agent || null,
+  };
+}
+
+function safeDelegatedFailure(
+  req: NextRequest,
+  payload: Record<string, unknown>,
+  details: Record<string, unknown>,
+  status = 200
+): NextResponse {
+  return NextResponse.json(
+    {
+      success: false,
+      route_called: true,
+      delegated_workforce_called: false,
+      explicit_admin_processor_route_required: true,
+      media_processor_called: false,
+      authorised: adminPortalAuthorised(req),
+      processor_invoked: false,
+      processed_job_count: 0,
+      final_status_counts: {},
+      skipped_reasons: {},
+      auth_sources_checked: authSourcesChecked(),
+      cookies_present: cookiesPresent(req),
+      backend_status: details.backend_status ?? null,
+      backend_error_code: details.backend_error_code ?? details.error_code ?? null,
+      missing_fields: details.missing_fields || missingDelegatedFields(payload),
+      delegated_packet_shape: delegatedPacketShape(payload),
+      canonical_job_attempted: Boolean(details.canonical_job_attempted),
+      canonical_job_created: Boolean(details.canonical_job_created),
+      canonical_job_id: details.canonical_job_id || null,
+      canonical_store: details.canonical_store || "backend:runtime_outputs/media_jobs",
+      safe_error: details.safe_error || "Delegated workforce execution returned a safe bounded failure.",
+      customer_safe: true,
+      credential_values_exposed: false,
+    },
+    { status }
+  );
+}
+
 function backendProviderQueueHeaders(req: NextRequest, tenantKey: string): Record<string, string> {
   const headers: Record<string, string> = {
     "content-type": "application/json",
@@ -392,7 +464,35 @@ async function runBackendMediaJobsForDelegatedWorkforce(req: NextRequest): Promi
 }
 
 async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
-  const body = await req.text();
+  const rawBody = await req.text();
+  let requestPayload: Record<string, unknown> = {};
+  try {
+    requestPayload = rawBody ? JSON.parse(rawBody) as Record<string, unknown> : {};
+  } catch {
+    return safeDelegatedFailure(
+      req,
+      {},
+      {
+        error_code: "request_body_not_json",
+        missing_fields: ["json_body"],
+        safe_error: "Delegated workforce request body must be JSON.",
+      },
+      400
+    );
+  }
+
+  if (!adminPortalAuthorised(req)) {
+    return safeDelegatedFailure(
+      req,
+      requestPayload,
+      {
+        error_code: "admin_authorisation_required",
+        safe_error: "Admin session is required to run delegated workforce execution.",
+      },
+      403
+    );
+  }
+
   const headers: Record<string, string> = {
     "content-type": req.headers.get("content-type") || "application/json",
   };
@@ -417,7 +517,12 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   const response = await fetch(`${backendBaseUrl()}/delegated-workforce-execution`, {
     method: "POST",
     headers,
-    body,
+    body: JSON.stringify({
+      ...requestPayload,
+      tenant_id: requestPayload.tenant_id || "owner_admin",
+      actor_role: requestPayload.actor_role || "owner_admin",
+      owner_approved: requestPayload.owner_approved === true,
+    }),
     cache: "no-store",
   });
 
@@ -427,10 +532,52 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   try {
     payload = JSON.parse(text);
   } catch {
-    return new NextResponse(text, { status: response.status });
+    return safeDelegatedFailure(
+      req,
+      requestPayload,
+      {
+        backend_status: response.status,
+        backend_error_code: "backend_response_not_json",
+        safe_error: "Delegated workforce backend did not return JSON.",
+      },
+      response.status >= 500 ? 200 : response.status
+    );
+  }
+
+  if (response.status >= 500) {
+    const backendPayload = payload && typeof payload === "object" && !Array.isArray(payload) ? payload as Record<string, unknown> : {};
+    return safeDelegatedFailure(
+      req,
+      requestPayload,
+      {
+        backend_status: response.status,
+        backend_error_code: backendPayload.error || backendPayload.error_code || "backend_delegated_workforce_failed",
+        canonical_job_attempted: backendPayload.canonical_job_attempted,
+        canonical_job_created: backendPayload.canonical_job_created,
+        canonical_job_id: backendPayload.canonical_job_id,
+        canonical_store: backendPayload.canonical_store,
+        safe_error: "Delegated workforce backend failed, but the proxy returned safe bounded JSON.",
+      },
+      200
+    );
   }
 
   const normalised = normaliseClientExecutionTruth(payload) as Record<string, unknown>;
+  normalised.route_called = true;
+  normalised.delegated_workforce_called = true;
+  normalised.auth_sources_checked = authSourcesChecked();
+  normalised.cookies_present = cookiesPresent(req);
+  normalised.backend_status = response.status;
+  normalised.backend_error_code = normalised.error || normalised.error_code || null;
+  normalised.missing_fields = missingDelegatedFields(requestPayload);
+  normalised.delegated_packet_shape = delegatedPacketShape(requestPayload);
+  normalised.explicit_admin_processor_route_required = true;
+  normalised.media_processor_called = false;
+  normalised.processor_invoked = false;
+  normalised.processed_job_count = 0;
+  normalised.final_status_counts = normalised.final_status_counts || {};
+  normalised.skipped_reasons = normalised.skipped_reasons || {};
+  normalised.safe_error = normalised.success === false ? String(normalised.error || normalised.status || "delegated_workforce_review_required") : "";
 
   if (normalised.has_real_output === true) {
     const tenantKey = resolveTenantKey(req.headers, normalised);
@@ -510,7 +657,7 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
   }
 
   return NextResponse.json(normalised, {
-    status: response.status,
+    status: response.status >= 500 ? 200 : response.status,
     headers: {
       "cache-control": "no-store, no-cache, must-revalidate",
     },
@@ -518,5 +665,17 @@ async function proxyToBackend(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  return proxyToBackend(req);
+  try {
+    return await proxyToBackend(req);
+  } catch (error) {
+    return safeDelegatedFailure(
+      req,
+      {},
+      {
+        error_code: "delegated_workforce_proxy_exception",
+        safe_error: error instanceof Error ? error.message : "Delegated workforce proxy failed safely.",
+      },
+      200
+    );
+  }
 }

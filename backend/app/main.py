@@ -3411,15 +3411,66 @@ async def delegated_workforce_execution(
     actor_role = x_actor_role or payload.get("actor_role") or "client"
     media_job_processing_authorized = _admin_media_job_authorized(actor_role, x_admin_token, authorization)
 
-    result = execute_delegated_workforce_plan(
-        implementation_plan=implementation_plan,
-        owner_approved=payload.get("owner_approved", False),
-        client_owned_agents=payload.get("client_owned_agents", []),
-        package_tier=payload.get("package_tier", "starter"),
-        connected_integrations=payload.get("connected_integrations", []),
-        tenant_id=payload.get("tenant_id") or "owner_admin",
-        media_job_processing_authorized=False,
-    )
+    try:
+        result = execute_delegated_workforce_plan(
+            implementation_plan=implementation_plan,
+            owner_approved=payload.get("owner_approved", False),
+            client_owned_agents=payload.get("client_owned_agents", []),
+            package_tier=payload.get("package_tier", "starter"),
+            connected_integrations=payload.get("connected_integrations", []),
+            tenant_id=payload.get("tenant_id") or "owner_admin",
+            media_job_processing_authorized=False,
+        )
+    except Exception as exc:
+        packets = implementation_plan.get("action_packets", []) if isinstance(implementation_plan, dict) else []
+        first_packet = packets[0] if packets and isinstance(packets[0], dict) else {}
+        return {
+            "success": False,
+            "route_called": True,
+            "error_code": "delegated_workforce_runtime_exception",
+            "backend_error_code": "delegated_workforce_runtime_exception",
+            "safe_error": str(exc)[:260],
+            "missing_fields": [
+                field
+                for field, missing in {
+                    "implementation_plan": not isinstance(implementation_plan, dict),
+                    "implementation_plan.action_packets": not bool(packets),
+                }.items()
+                if missing
+            ],
+            "delegated_packet_shape": {
+                "packet_count": len(packets) if isinstance(packets, list) else 0,
+                "first_packet_keys": sorted([
+                    key for key in first_packet.keys()
+                    if not any(marker in str(key).lower() for marker in ["token", "secret", "password", "api_key", "authorization", "credential", "debug", "raw", "prompt"])
+                ]),
+                "first_packet_has_media_job_id": bool(
+                    first_packet.get("media_job_id")
+                    or first_packet.get("existing_media_job_id")
+                    or first_packet.get("canonical_job_id")
+                    or first_packet.get("job_id")
+                ),
+            },
+            "delegated_workforce_called": True,
+            "explicit_admin_processor_route_required": True,
+            "media_processor_called": False,
+            "authorised": bool(media_job_processing_authorized),
+            "processor_invoked": False,
+            "processed_job_count": 0,
+            "final_status_counts": {},
+            "skipped_reasons": {},
+            "canonical_job_attempted": False,
+            "canonical_job_created": False,
+            "canonical_job_id": (
+                first_packet.get("media_job_id")
+                or first_packet.get("existing_media_job_id")
+                or first_packet.get("canonical_job_id")
+                or None
+            ),
+            "canonical_store": "backend:runtime_outputs/media_jobs",
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
     result["authorised"] = bool(media_job_processing_authorized)
     result["processor_invoked"] = bool(result.get("media_job_runner_triggered"))
     result["processed_job_count"] = int(result.get("media_job_processed_count") or 0)

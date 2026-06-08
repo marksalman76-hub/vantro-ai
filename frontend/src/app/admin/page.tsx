@@ -500,10 +500,21 @@ const [activeNav, setActiveNav] = useState("Overview");
         const data = wrapper?.data || wrapper;
         const execution = data?.execution || {};
         const adapter = execution?.adapter_result || {};
+        const mediaJobId =
+          data?.media_job_id ||
+          data?.media_job?.job_id ||
+          data?.creative_payload?.media_job_id ||
+          data?.output?.media_job_id ||
+          execution?.media_job_id ||
+          adapter?.media_job_id ||
+          adapter?.creative_media_pack?.media_job_id ||
+          adapter?.asset?.media_job_id ||
+          "";
         const liveDeliverable = extractLiveActionDeliverableText(wrapper);
 
         results.push({
           agent_id: agentId,
+          media_job_id: mediaJobId,
           http_status: response.status,
           success: data?.success === true,
           status:
@@ -643,6 +654,18 @@ const [activeNav, setActiveNav] = useState("Overview");
 
 
   async function approveOutcomeAndCreatePlan(item: any) {
+    const sourceMediaJobId =
+      item?.media_job_id ||
+      item?.job_id ||
+      item?.data?.media_job_id ||
+      item?.data?.media_job?.job_id ||
+      item?.data?.creative_payload?.media_job_id ||
+      item?.data?.output?.media_job_id ||
+      item?.data?.execution?.media_job_id ||
+      item?.data?.execution?.adapter_result?.media_job_id ||
+      item?.data?.execution?.adapter_result?.creative_media_pack?.media_job_id ||
+      item?.data?.execution?.adapter_result?.asset?.media_job_id ||
+      "";
     const outcomeText =
       extractLiveActionDeliverableText(item) ||
       item?.output ||
@@ -679,6 +702,9 @@ const [activeNav, setActiveNav] = useState("Overview");
         title: line.slice(0, 140),
         action: line,
         recommended_agent: item?.agent_id || "orchestration_agent",
+        media_job_id: sourceMediaJobId || null,
+        existing_media_job_id: sourceMediaJobId || null,
+        canonical_job_id: sourceMediaJobId || null,
         risk_level: /budget|spend|contract|legal|security|compliance|payment|client data/i.test(line) ? "high" : "medium",
         approval_required: true,
         owner_approved: true,
@@ -690,6 +716,8 @@ const [activeNav, setActiveNav] = useState("Overview");
         fallback_used: true,
         fallback_reason: reason,
         plan_id: `visible_plan_${Date.now()}`,
+        media_job_id: sourceMediaJobId || null,
+        canonical_job_id: sourceMediaJobId || null,
         action_count: packets.length,
         action_packets: packets,
         approval_summary: {
@@ -703,6 +731,7 @@ const [activeNav, setActiveNav] = useState("Overview");
       const response = await fetch("/api/outcome-action-plan", {
         method: "POST",
         cache: "no-store",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           outcome_text: outcomeText,
@@ -710,6 +739,7 @@ const [activeNav, setActiveNav] = useState("Overview");
           tenant_id: "owner_admin",
           project_id: "admin_outcome_approval",
           owner_approved: true,
+          source_media_job_id: sourceMediaJobId || null,
         }),
       });
 
@@ -724,6 +754,20 @@ const [activeNav, setActiveNav] = useState("Overview");
 
       if (!response.ok || !plan?.success) {
         plan = createVisibleFallbackPlan(`api_failed_${response.status}`);
+      }
+
+      if (sourceMediaJobId) {
+        plan = {
+          ...plan,
+          media_job_id: plan.media_job_id || sourceMediaJobId,
+          canonical_job_id: plan.canonical_job_id || sourceMediaJobId,
+          action_packets: (plan.action_packets || []).map((packet: any) => ({
+            ...packet,
+            media_job_id: packet.media_job_id || sourceMediaJobId,
+            existing_media_job_id: packet.existing_media_job_id || sourceMediaJobId,
+            canonical_job_id: packet.canonical_job_id || sourceMediaJobId,
+          })),
+        };
       }
 
       setLatestImplementationPlan(plan);
@@ -810,6 +854,8 @@ const [activeNav, setActiveNav] = useState("Overview");
         body: JSON.stringify({
           implementation_plan: latestImplementationPlan,
           owner_approved: true,
+          tenant_id: "owner_admin",
+          actor_role: "owner_admin",
           client_owned_agents: ADMIN_AGENT_OPTIONS.map(([id]) => id),
           package_tier: "enterprise",
         }),
@@ -836,6 +882,15 @@ const [activeNav, setActiveNav] = useState("Overview");
       const mediaProcessorSnapshot = {
         delegated_workforce_called: delegatedWorkforceCalled,
         media_processor_called: true,
+        explicit_admin_processor_route_required: Boolean(result?.explicit_admin_processor_route_required ?? true),
+        route_called: Boolean(result?.route_called ?? true),
+        auth_sources_checked: result?.auth_sources_checked || [],
+        cookies_present: result?.cookies_present || [],
+        backend_status: result?.backend_status || null,
+        backend_error_code: result?.backend_error_code || null,
+        missing_fields: result?.missing_fields || [],
+        delegated_packet_shape: result?.delegated_packet_shape || {},
+        canonical_job_attempted: Boolean(result?.canonical_job_attempted),
         canonical_job_created: Boolean(result?.canonical_job_created),
         canonical_job_id: result?.canonical_job_id || (Array.isArray(result?.canonical_job_ids) ? result.canonical_job_ids[0] : null) || null,
         canonical_store: mediaJobsResult?.canonical_store || result?.canonical_store || "backend:runtime_outputs/media_jobs",
@@ -845,7 +900,8 @@ const [activeNav, setActiveNav] = useState("Overview");
         final_status_counts: mediaJobsResult?.final_status_counts || {},
         skipped_reasons: mediaJobsResult?.skipped_reasons || {},
         security_profile: mediaJobsResult?.security_profile || "priority5_security_audit_enforcement_v1",
-        error: mediaJobsResponse.ok && mediaJobsResult?.success !== false ? "" : String(mediaJobsResult?.error || mediaJobsResult?.message || `media_processor_http_${mediaJobsResponse.status}`),
+        safe_error: result?.safe_error || "",
+        error: mediaJobsResponse.ok && mediaJobsResult?.success !== false ? "" : String(result?.safe_error || mediaJobsResult?.error || mediaJobsResult?.message || `media_processor_http_${mediaJobsResponse.status}`),
         status: mediaJobsResult?.status || mediaJobsResult?.media_job_runner_status || mediaJobsResponse.status,
         credential_values_exposed: false,
       };
@@ -854,6 +910,15 @@ const [activeNav, setActiveNav] = useState("Overview");
         ...result,
         delegated_workforce_called: delegatedWorkforceCalled,
         media_processor_called: true,
+        explicit_admin_processor_route_required: mediaProcessorSnapshot.explicit_admin_processor_route_required,
+        route_called: mediaProcessorSnapshot.route_called,
+        auth_sources_checked: mediaProcessorSnapshot.auth_sources_checked,
+        cookies_present: mediaProcessorSnapshot.cookies_present,
+        backend_status: mediaProcessorSnapshot.backend_status,
+        backend_error_code: mediaProcessorSnapshot.backend_error_code,
+        missing_fields: mediaProcessorSnapshot.missing_fields,
+        delegated_packet_shape: mediaProcessorSnapshot.delegated_packet_shape,
+        canonical_job_attempted: mediaProcessorSnapshot.canonical_job_attempted,
         canonical_job_created: mediaProcessorSnapshot.canonical_job_created,
         canonical_job_id: mediaProcessorSnapshot.canonical_job_id,
         canonical_store: mediaProcessorSnapshot.canonical_store,
