@@ -4,7 +4,6 @@ import base64
 import json
 import os
 import time
-import urllib.parse
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -285,31 +284,6 @@ def _has_explicit_output_reference(response: Dict[str, Any]) -> bool:
     )
 
 
-def _provider_output_url_rejection_reason(url: str) -> str:
-    text = str(url or "").strip()
-    if not text.startswith(("http://", "https://")):
-        return ""
-
-    try:
-        parsed = urllib.parse.urlparse(text)
-    except Exception:
-        return "invalid_provider_output_url"
-
-    host = (parsed.hostname or "").lower()
-    path = (parsed.path or "").lower()
-    combined = f"{host}{path}"
-
-    if host in {"example.com", "example.org", "example.net"} or host.endswith(".example.com"):
-        return "placeholder_domain_example"
-    if host in {"localhost", "127.0.0.1", "::1"}:
-        return "placeholder_domain_localhost"
-    if any(marker in combined for marker in ["placeholder", "mock", "test-only", "test_only"]):
-        return "placeholder_or_mock_output_url"
-    if path.endswith("/generated/video.mp4") and any(marker in combined for marker in ["example", "mock", "test"]):
-        return "placeholder_generated_video_url"
-    return ""
-
-
 def _provider_parameters(packet: Dict[str, Any]) -> Dict[str, Any]:
     params = packet.get("provider_parameters")
     return params if isinstance(params, dict) else {}
@@ -463,19 +437,13 @@ def _standard_result(
     media_type: str = "",
 ) -> Dict[str, Any]:
     response = provider_response or {}
-    extracted_output_url = asset_url or _extract_first_url(response)
-    output_url_rejection_reason = _provider_output_url_rejection_reason(extracted_output_url)
-    resolved_asset_url = (
-        ""
-        if output_url_rejection_reason
-        else extracted_output_url or _extract_embedded_media_data_url(response, media_type or _media_type(provider_ready_packet))
-    )
+    resolved_asset_url = asset_url or _extract_first_url(response) or _extract_embedded_media_data_url(response, media_type or _media_type(provider_ready_packet))
     provider_job_id = _first_string_field(response, ["provider_job_id", "job_id", "task_id", "prediction_id", "id"])
     provider_polling_url = _first_string_field(response, ["status_url", "polling_url", "poll_url", "task_url", "retrieve_url"])
     if resolved_asset_url and provider_polling_url and resolved_asset_url == provider_polling_url and not _has_explicit_output_reference(response):
         resolved_asset_url = ""
     provider_http_status = response.get("status_code") or response.get("http_status")
-    provider_output_url_present = bool(extracted_output_url and not str(extracted_output_url).startswith("data:"))
+    provider_output_url_present = bool(resolved_asset_url and not str(resolved_asset_url).startswith("data:"))
     provider_output_base64_present = bool(str(resolved_asset_url).startswith("data:"))
     provider_output_bytes_present = bool(
         response.get("audio_bytes") or response.get("video_bytes") or response.get("image_bytes") or response.get("bytes")
@@ -512,9 +480,6 @@ def _standard_result(
         "provider_polling_url": provider_polling_url,
         "provider_polling_url_present": bool(provider_polling_url),
         "provider_output_url_present": provider_output_url_present,
-        "provider_output_url_rejected": bool(output_url_rejection_reason),
-        "provider_output_url_rejection_reason": output_url_rejection_reason,
-        "placeholder_output_detected": bool(output_url_rejection_reason),
         "provider_output_bytes_present": provider_output_bytes_present,
         "provider_output_base64_present": provider_output_base64_present,
         "provider_error_code": _provider_error_code(response, execution_status),

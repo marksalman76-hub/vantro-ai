@@ -5,7 +5,6 @@ import os
 import hashlib
 import mimetypes
 import base64
-import urllib.parse
 
 try:
     from backend.app.runtime.supabase_creative_storage import (
@@ -196,42 +195,7 @@ def _is_browser_safe_url(value):
     text = _safe_string(value).strip()
     if not text or _is_data_url(text) or len(text) > 2000:
         return False
-    if not (text.startswith("http://") or text.startswith("https://")):
-        return False
-    return not bool(_provider_output_url_rejection_reason(text))
-
-
-def _provider_output_url_rejection_reason(value):
-    text = _safe_string(value).strip()
-    if not (text.startswith("http://") or text.startswith("https://")):
-        return ""
-
-    try:
-        parsed = urllib.parse.urlparse(text)
-    except Exception:
-        return "invalid_provider_output_url"
-
-    host = (parsed.hostname or "").lower()
-    path = (parsed.path or "").lower()
-    combined = f"{host}{path}"
-
-    if host in {"example.com", "example.org", "example.net"} or host.endswith(".example.com"):
-        return "placeholder_domain_example"
-    if host in {"localhost", "127.0.0.1", "::1"}:
-        return "placeholder_domain_localhost"
-    if any(marker in combined for marker in ["placeholder", "mock", "test-only", "test_only"]):
-        return "placeholder_or_mock_output_url"
-    if path.endswith("/generated/video.mp4") and any(marker in combined for marker in ["example", "mock", "test"]):
-        return "placeholder_generated_video_url"
-    return ""
-
-
-def _first_http_url(*values):
-    for value in values:
-        text = _safe_string(value).strip()
-        if text.startswith("http://") or text.startswith("https://"):
-            return text
-    return ""
+    return text.startswith("http://") or text.startswith("https://")
 
 
 def _first_browser_safe_url(*values):
@@ -511,14 +475,6 @@ def persist_creative_asset(asset_packet: dict):
     local_path = _candidate_local_path(packet)
     storage_upload = _maybe_upload_media_file(packet, asset_id, asset_type)
     storage_url = storage_upload.get("public_url") if isinstance(storage_upload, dict) and storage_upload.get("success") else None
-    raw_provider_url = _first_http_url(
-        packet.get("provider_asset_url"),
-        packet.get("preview_url"),
-        packet.get("download_url"),
-        packet.get("asset_url"),
-        packet.get("media_url"),
-    )
-    provider_url_rejection_reason = _provider_output_url_rejection_reason(raw_provider_url)
     provider_url = _first_browser_safe_url(
         packet.get("provider_asset_url"),
         packet.get("preview_url"),
@@ -655,10 +611,6 @@ def persist_creative_asset(asset_packet: dict):
         "fallback_used": bool(canonical.get("dev_only")),
         "dev_only": bool(canonical.get("dev_only")),
         "production_fail_closed": False,
-        "provider_output_url_present": bool(raw_provider_url),
-        "provider_output_url_rejected": bool(raw_provider_url and not provider_url),
-        "provider_output_url_rejection_reason": provider_url_rejection_reason,
-        "placeholder_output_detected": bool(provider_url_rejection_reason),
         "persistence_attempted": True,
         "persistence_input_shape": "embedded_media" if materialized_local_path is not None else "asset_packet",
         "playable_source_detected": playable,

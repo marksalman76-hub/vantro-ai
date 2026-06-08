@@ -162,37 +162,11 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
         from backend.app.runtime.creative_asset_persistence_bridge import get_persisted_creative_assets
         from backend.app.runtime.async_media_job_foundation import list_media_jobs, media_job_to_visible_asset_evidence
 
-        registry = {
-            "success": True,
-            "asset_count": 0,
-            "total_asset_count": 0,
-            "assets": [],
-            "providers_checked": PROVIDERS_CHECKED,
-            "credential_values_exposed": False,
-        }
-        raw_assets = []
-        registry_unavailable = False
-        registry_status = "ready"
+        registry = get_persisted_creative_assets(limit=max(int(limit or 50), 1))
+        raw_assets = registry.get("assets", []) if isinstance(registry, dict) else []
 
-        job_store_unavailable = False
-        try:
-            jobs_result = list_media_jobs(limit=max(int(limit or 50), 1), reconcile_visible_assets=False)
-            jobs = jobs_result.get("jobs", []) if isinstance(jobs_result, dict) else []
-            if not jobs:
-                jobs_result = list_media_jobs(limit=max(int(limit or 50), 1))
-                jobs = jobs_result.get("jobs", []) if isinstance(jobs_result, dict) else []
-        except Exception:
-            jobs_result = {
-                "success": False,
-                "jobs": [],
-                "canonical_store": "backend:runtime_outputs/media_jobs",
-                "visible_queued_job_count": 0,
-                "processor_queued_job_count": 0,
-                "store_paths_match": True,
-                "credential_values_exposed": False,
-            }
-            jobs = []
-            job_store_unavailable = True
+        jobs_result = list_media_jobs(limit=max(int(limit or 50), 1))
+        jobs = jobs_result.get("jobs", [])
         jobs_by_id = {
             str(job.get("job_id") or job.get("media_job_id") or ""): job
             for job in jobs
@@ -201,56 +175,26 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
 
         assets: List[Dict[str, Any]] = []
         job_evidence = []
-        existing_ids = set()
-        for job in jobs:
-            if not isinstance(job, dict):
-                continue
-            try:
-                evidence = media_job_to_visible_asset_evidence(job, audience="admin")
-            except Exception:
-                continue
-            if evidence.get("asset_id") and str(evidence.get("asset_id")) not in existing_ids:
-                job_evidence.append(evidence)
-                existing_ids.add(str(evidence.get("asset_id")))
-
-        if not job_evidence:
-            try:
-                registry = get_persisted_creative_assets(limit=max(int(limit or 50), 1))
-                raw_assets = registry.get("assets", []) if isinstance(registry, dict) else []
-                if isinstance(registry, dict) and registry.get("success") is False:
-                    registry_unavailable = True
-                    registry_status = str(registry.get("status") or registry.get("error") or "creative_asset_registry_unavailable")
-            except Exception:
-                registry = {
-                    "success": False,
-                    "asset_count": 0,
-                    "total_asset_count": 0,
-                    "assets": [],
-                    "providers_checked": PROVIDERS_CHECKED,
-                    "credential_values_exposed": False,
-                }
-                raw_assets = []
-                registry_unavailable = True
-                registry_status = "creative_asset_registry_unavailable"
-
         for asset in raw_assets:
             if not isinstance(asset, dict):
                 continue
             job_id = _asset_media_job_id(asset)
             if _is_creative_media_queue_asset(asset) and job_id in jobs_by_id:
-                try:
-                    evidence = media_job_to_visible_asset_evidence(jobs_by_id[job_id], audience="admin")
-                    assets.append(evidence)
-                except Exception:
-                    pass
+                evidence = media_job_to_visible_asset_evidence(jobs_by_id[job_id], audience="admin")
+                assets.append(evidence)
                 continue
-            try:
-                assets.append(_safe_asset(asset))
-            except Exception:
-                pass
+            assets.append(_safe_asset(asset))
 
-        # Keep job evidence visible at the top so freshly processed jobs are never hidden by older asset history.
-        visible_assets = (job_evidence + assets)[: max(int(limit or 50), 1)]
+        existing_ids = {str(asset.get("asset_id") or "") for asset in assets}
+        for job in jobs:
+            if not isinstance(job, dict):
+                continue
+            evidence = media_job_to_visible_asset_evidence(job, audience="admin")
+            if evidence.get("asset_id") and str(evidence.get("asset_id")) not in existing_ids:
+                job_evidence.append(evidence)
+                existing_ids.add(str(evidence.get("asset_id")))
+
+        visible_assets = (assets + job_evidence)[: max(int(limit or 50), 1)]
 
         return {
             "success": True,
@@ -269,9 +213,6 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
             "assets": visible_assets,
             "providers_checked": registry.get("providers_checked", PROVIDERS_CHECKED) if isinstance(registry, dict) else PROVIDERS_CHECKED,
             "credential_values_exposed": False,
-            "registry_unavailable": registry_unavailable,
-            "registry_status": registry_status,
-            "job_store_unavailable": job_store_unavailable,
             "bridge_asset_count": (locals().get("registry") or {}).get("asset_count"),
             "bridge_total_asset_count": (locals().get("registry") or {}).get("total_asset_count"),
             "last_supabase_registry_read": (locals().get("registry") or {}).get("last_supabase_registry_read"),

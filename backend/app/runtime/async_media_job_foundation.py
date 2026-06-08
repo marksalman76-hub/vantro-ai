@@ -48,21 +48,6 @@ SAFE_PROVIDER_BLOCKED_REASON = "Provider execution was blocked by governance or 
 SAFE_PROVIDER_FAILED_REASON = "Provider execution was attempted but did not complete safely. No credentials or provider secrets were exposed."
 SAFE_PROVIDER_PROCESSING_REASON = "Provider execution is still processing. No playable media asset is available yet."
 
-CREATIVE_MEDIA_FALLBACK_AGENT_IDS = {
-    "ugc_creative_agent",
-    "paid_ads_agent",
-    "product_image_agent",
-    "social_media_manager_content_creator_agent",
-    "brand_strategy_agent",
-    "marketing_specialist_agent",
-    "website_landing_apps_agent",
-    "influencer_collaboration_agent",
-    "creative_rotation_agent",
-    "product_development_agent",
-    "ecommerce_agent",
-    "creative_media_agent",
-}
-
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -250,9 +235,8 @@ def read_media_job(job_id: str) -> Dict[str, Any]:
     return _scrub_sensitive(job)
 
 
-def list_media_jobs(limit: int = 50, reconcile_visible_assets: bool = True) -> Dict[str, Any]:
-    if reconcile_visible_assets:
-        reconcile_visible_queued_media_asset_jobs(limit=max(int(limit or 50), 1))
+def list_media_jobs(limit: int = 50) -> Dict[str, Any]:
+    reconcile_visible_queued_media_asset_jobs(limit=max(int(limit or 50), 1))
     jobs = []
     for path in sorted(STORE.glob("media_job_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)[:limit]:
         try:
@@ -485,89 +469,6 @@ def _provider_diagnostics_from_media_pack(media_pack: Dict[str, Any], *, default
     }
 
 
-def _should_attempt_direct_fallback(job: Dict[str, Any], terminal_state: Dict[str, str]) -> bool:
-    if str(terminal_state.get("status") or "") not in {"failed", "provider_unavailable"}:
-        return False
-    tenant_id = str(job.get("tenant_id") or "").strip().lower()
-    if tenant_id not in {"owner_admin", "owner", "admin"}:
-        return False
-    agent_id = str(job.get("agent_id") or "").strip().lower()
-    if agent_id not in CREATIVE_MEDIA_FALLBACK_AGENT_IDS:
-        return False
-    return bool(job.get("include_video") or job.get("include_audio"))
-
-
-def _direct_fallback_asset_summary(record: Dict[str, Any]) -> Dict[str, Any]:
-    if not isinstance(record, dict):
-        return {
-            "asset_id": "",
-            "media_type": "",
-            "asset_type": "",
-            "status": "fallback_invalid_record",
-            "preview_ready": False,
-            "download_ready": False,
-            "playable": False,
-            "storage_provider": "",
-        }
-    return {
-        "asset_id": record.get("asset_id"),
-        "media_type": record.get("asset_type") or record.get("media_type"),
-        "asset_type": record.get("asset_type") or record.get("media_type"),
-        "status": record.get("status") or "fallback_persisted",
-        "preview_ready": bool(record.get("preview_ready")),
-        "download_ready": bool(record.get("download_ready")),
-        "playable": bool(record.get("playable")),
-        "storage_provider": record.get("storage_provider"),
-    }
-
-
-def _run_direct_fallback_for_job(job: Dict[str, Any]) -> Dict[str, Any]:
-    try:
-        from backend.app.runtime.admin_ugc_live_media_execution_bridge import run_admin_ugc_live_media_execution_fallback
-
-        fallback_result = run_admin_ugc_live_media_execution_fallback(
-            task=str(job.get("task") or "Create a premium creative media asset."),
-            agent_key=str(job.get("agent_id") or "ugc_creative_agent"),
-            owner_approved_live_execution=True,
-            test_label=f"media_job_{str(job.get('job_id') or 'fallback')}",
-        )
-    except Exception as exc:
-        return {
-            "success": False,
-            "status": "direct_fallback_exception",
-            "error": str(exc)[:400],
-            "persisted_asset_records": [],
-            "playable_assets": [],
-            "credential_values_exposed": False,
-        }
-
-    persisted = [
-        item
-        for item in (fallback_result.get("persisted_asset_records") or [])
-        if isinstance(item, dict)
-    ]
-    playable_assets = [
-        _direct_fallback_asset_summary(item)
-        for item in persisted
-        if bool(item.get("playable"))
-    ]
-
-    return {
-        "success": bool(playable_assets),
-        "status": str(fallback_result.get("status") or "direct_fallback_attempted"),
-        "persisted_asset_records": persisted,
-        "playable_assets": playable_assets,
-        "fallback_result": {
-            "status": fallback_result.get("status"),
-            "persisted_asset_count": fallback_result.get("persisted_asset_count"),
-            "playable_asset_count": fallback_result.get("playable_asset_count"),
-            "fallback_runtime": fallback_result.get("fallback_runtime"),
-            "credential_values_exposed": False,
-        },
-        "credential_values_exposed": False,
-    }
-
-
 def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
     job_id = str(job.get("job_id") or "")
     if not job_id:
@@ -621,52 +522,6 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
 
         if not playable_assets:
             terminal_state = _resolve_no_playable_terminal_state(media_pack)
-
-            if _should_attempt_direct_fallback(job, terminal_state):
-                fallback = _run_direct_fallback_for_job(job)
-                fallback_playable_assets = [
-                    item for item in fallback.get("playable_assets", [])
-                    if isinstance(item, dict)
-                ]
-                if fallback_playable_assets:
-                    job["status"] = "completed"
-                    job["lifecycle"] = "final_asset_ready"
-                    job["media_pack_id"] = media_pack.get("media_pack_id")
-                    job["media_asset_count"] = len(media_pack.get("media_assets", []))
-                    job["real_media_asset_count"] = max(
-                        int(media_pack.get("real_media_asset_count") or 0),
-                        len(fallback_playable_assets),
-                    )
-                    job["persisted_asset_count"] = max(
-                        int(media_pack.get("persisted_asset_count") or 0),
-                        len([item for item in fallback.get("persisted_asset_records", []) if isinstance(item, dict)]),
-                    )
-                    job["final_asset_ids"] = [
-                        asset.get("asset_id")
-                        for asset in fallback_playable_assets
-                        if asset.get("asset_id")
-                    ]
-                    job["final_assets"] = fallback_playable_assets
-                    job["preview_ready_count"] = sum(1 for asset in fallback_playable_assets if asset.get("preview_ready"))
-                    job["download_ready_count"] = sum(1 for asset in fallback_playable_assets if asset.get("download_ready"))
-                    job["playable_asset_created"] = True
-                    job["signed_delivery_created"] = bool(job["preview_ready_count"] or job["download_ready_count"])
-                    job["metadata_only"] = False
-                    job["direct_fallback_used"] = True
-                    job["direct_fallback_result"] = fallback.get("fallback_result", {"credential_values_exposed": False})
-                    job.update(provider_diag)
-                    job["provider_unavailable_reason"] = ""
-                    job["completed_at"] = _now()
-                    job["updated_at"] = _now()
-                    job["credential_values_exposed"] = False
-                    _write_job(job)
-                    return {
-                        "success": True,
-                        "processed": True,
-                        "job": job,
-                        "credential_values_exposed": False,
-                    }
-
             job["status"] = terminal_state["status"]
             job["lifecycle"] = terminal_state["lifecycle"]
             job["blocked_reason"] = terminal_state["reason"]
