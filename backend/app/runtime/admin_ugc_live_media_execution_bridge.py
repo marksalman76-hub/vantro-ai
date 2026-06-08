@@ -1,6 +1,5 @@
 from datetime import datetime, timezone
 from pathlib import Path
-import os
 import shutil
 import subprocess
 from typing import Any, Dict, Optional
@@ -185,102 +184,18 @@ def should_route_to_ugc_live_media(task: str, agent_key: str = "") -> bool:
     return bool(creative_agent_match and media_intent_match)
 
 
-def run_admin_ugc_live_media_execution(
+def _run_direct_live_media_execution(
+    *,
     task: str,
-    agent_key: str = "ugc_creative_agent",
-    owner_approved_live_execution: bool = False,
-    test_label: str = "admin_ugc_live_media_execution",
+    agent_key: str,
+    test_label: str,
 ) -> Dict[str, Any]:
-    if not owner_approved_live_execution:
-        return {
-            "success": False,
-            "provider_runtime": "admin_ugc_live_media_execution_bridge",
-            "status": "blocked_owner_approval_required",
-            "reason": "Live creative media execution requires owner_approved_live_execution=True.",
-            "credential_values_exposed": False,
-            "external_actions_performed": False,
-            "live_provider_calls_triggered": False,
-            "media_assets_created": False,
-            "created_at": _now(),
-        }
-
-    try:
-        from backend.app.runtime.async_media_job_foundation import enqueue_media_job
-
-        media_job = enqueue_media_job(
-            task=task or "Create a premium UGC creative media asset.",
-            agent_id=agent_key or "ugc_creative_agent",
-            tenant_id="owner_admin",
-            include_image=True,
-            include_audio=True,
-            include_video=True,
-            include_avatar=False,
-        )
-
-        execution_plan = (
-            create_runtime_creative_execution_plan(
-                creative_goal=task,
-                content_type="ugc video ad",
-                target_platform="TikTok / Instagram Reels / Meta Ads",
-                language="English",
-                quality_priority="high",
-                budget_priority="balanced",
-                requires_avatar=False,
-                requires_lipsync=False,
-                requires_dubbing=False,
-                requires_cinematic=False,
-                requires_ugc_realism=True,
-                requires_voiceover=True,
-                owner_approved_live_execution=True,
-            )
-            if create_runtime_creative_execution_plan is not None
-            else {"success": True, "status": "media_job_queued_without_runtime_plan"}
-        )
-
-        return {
-            "success": True,
-            "provider_runtime": "admin_ugc_live_media_execution_bridge",
-            "status": "media_job_queued",
-            "execution_status": "media_job_queued",
-            "agent_key": agent_key,
-            "task": task,
-            "execution_plan": execution_plan,
-            "media_job_created": True,
-            "media_job_id": media_job.get("job_id"),
-            "media_job_status": media_job.get("status"),
-            "media_assets_created": False,
-            "preview_ready": False,
-            "download_ready": False,
-            "credential_values_exposed": False,
-            "external_actions_performed": False,
-            "live_provider_calls_triggered": False,
-            "customer_safe_summary": {
-                "title": "Creative media job queued",
-                "description": "Live provider execution will run through the governed media job worker.",
-                "audio_created": False,
-                "video_created": False,
-                "final_synced_video_created": False,
-            },
-            "created_at": _now(),
-        }
-    except Exception as exc:
-        return {
-            "success": False,
-            "provider_runtime": "admin_ugc_live_media_execution_bridge",
-            "status": "media_job_queue_failed",
-            "error": str(exc)[:800],
-            "credential_values_exposed": False,
-            "external_actions_performed": False,
-            "live_provider_calls_triggered": False,
-            "media_assets_created": False,
-            "created_at": _now(),
-        }
-
     if create_runtime_creative_execution_plan is None:
         return {
             "success": False,
             "provider_runtime": "admin_ugc_live_media_execution_bridge",
             "status": "runtime_creative_execution_integration_unavailable",
+            "fallback_runtime": "direct_live_media",
             "credential_values_exposed": False,
             "external_actions_performed": False,
             "live_provider_calls_triggered": False,
@@ -415,10 +330,17 @@ def run_admin_ugc_live_media_execution(
                 )
             )
 
+    playable_records = [
+        record
+        for record in persisted_asset_records
+        if isinstance(record, dict) and bool(record.get("playable"))
+    ]
+
     return {
         "success": True,
         "provider_runtime": "admin_ugc_live_media_execution_bridge",
-        "status": "ugc_live_media_execution_completed",
+        "fallback_runtime": "direct_live_media",
+        "status": "ugc_live_media_execution_completed" if playable_records else "ugc_live_media_execution_no_playable_output",
         "agent_key": agent_key,
         "task": task,
         "execution_plan": execution_plan,
@@ -436,6 +358,7 @@ def run_admin_ugc_live_media_execution(
         "video_url_preview": video_result.get("video_url_preview"),
         "persisted_asset_records": persisted_asset_records,
         "persisted_asset_count": len(persisted_asset_records),
+        "playable_asset_count": len(playable_records),
         "primary_deliverable_type": "combined_video" if composition_result.get("composed_video_saved") else "separate_audio_video",
         "credential_values_exposed": False,
         "external_actions_performed": bool(
@@ -455,6 +378,132 @@ def run_admin_ugc_live_media_execution(
         },
         "created_at": _now(),
     }
+
+
+def run_admin_ugc_live_media_execution(
+    task: str,
+    agent_key: str = "ugc_creative_agent",
+    owner_approved_live_execution: bool = False,
+    test_label: str = "admin_ugc_live_media_execution",
+    force_direct_fallback: bool = False,
+) -> Dict[str, Any]:
+    if not owner_approved_live_execution:
+        return {
+            "success": False,
+            "provider_runtime": "admin_ugc_live_media_execution_bridge",
+            "status": "blocked_owner_approval_required",
+            "reason": "Live creative media execution requires owner_approved_live_execution=True.",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "media_assets_created": False,
+            "created_at": _now(),
+        }
+
+    if force_direct_fallback:
+        return _run_direct_live_media_execution(
+            task=task,
+            agent_key=agent_key,
+            test_label=test_label,
+        )
+
+    try:
+        from backend.app.runtime.async_media_job_foundation import enqueue_media_job
+
+        media_job = enqueue_media_job(
+            task=task or "Create a premium UGC creative media asset.",
+            agent_id=agent_key or "ugc_creative_agent",
+            tenant_id="owner_admin",
+            include_image=True,
+            include_audio=True,
+            include_video=True,
+            include_avatar=False,
+        )
+
+        execution_plan = (
+            create_runtime_creative_execution_plan(
+                creative_goal=task,
+                content_type="ugc video ad",
+                target_platform="TikTok / Instagram Reels / Meta Ads",
+                language="English",
+                quality_priority="high",
+                budget_priority="balanced",
+                requires_avatar=False,
+                requires_lipsync=False,
+                requires_dubbing=False,
+                requires_cinematic=False,
+                requires_ugc_realism=True,
+                requires_voiceover=True,
+                owner_approved_live_execution=True,
+            )
+            if create_runtime_creative_execution_plan is not None
+            else {"success": True, "status": "media_job_queued_without_runtime_plan"}
+        )
+
+        return {
+            "success": True,
+            "provider_runtime": "admin_ugc_live_media_execution_bridge",
+            "status": "media_job_queued",
+            "execution_status": "media_job_queued",
+            "agent_key": agent_key,
+            "task": task,
+            "execution_plan": execution_plan,
+            "media_job_created": True,
+            "media_job_id": media_job.get("job_id"),
+            "media_job_status": media_job.get("status"),
+            "media_assets_created": False,
+            "preview_ready": False,
+            "download_ready": False,
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "customer_safe_summary": {
+                "title": "Creative media job queued",
+                "description": "Live provider execution will run through the governed media job worker.",
+                "audio_created": False,
+                "video_created": False,
+                "final_synced_video_created": False,
+            },
+            "created_at": _now(),
+        }
+    except Exception as exc:
+        return {
+            "success": False,
+            "provider_runtime": "admin_ugc_live_media_execution_bridge",
+            "status": "media_job_queue_failed",
+            "error": str(exc)[:800],
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "media_assets_created": False,
+            "created_at": _now(),
+        }
+
+
+def run_admin_ugc_live_media_execution_fallback(
+    task: str,
+    agent_key: str = "ugc_creative_agent",
+    owner_approved_live_execution: bool = False,
+    test_label: str = "admin_ugc_live_media_execution_fallback",
+) -> Dict[str, Any]:
+    if not owner_approved_live_execution:
+        return {
+            "success": False,
+            "provider_runtime": "admin_ugc_live_media_execution_bridge",
+            "status": "blocked_owner_approval_required",
+            "reason": "Live creative media fallback requires owner_approved_live_execution=True.",
+            "credential_values_exposed": False,
+            "external_actions_performed": False,
+            "live_provider_calls_triggered": False,
+            "media_assets_created": False,
+            "created_at": _now(),
+        }
+
+    return _run_direct_live_media_execution(
+        task=task,
+        agent_key=agent_key,
+        test_label=test_label,
+    )
 
 
 def get_admin_ugc_live_media_execution_bridge_status() -> Dict[str, Any]:

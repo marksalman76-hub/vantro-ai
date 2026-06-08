@@ -124,7 +124,7 @@ def test_signed_delivery_packet_exists_for_playable_asset_and_no_credential_leak
         provider_key="elevenlabs",
         asset_type="audio",
         asset_status="completed",
-        source_url="https://example.com/audio.mp3",
+        source_url="https://media.real-provider-cdn.com/audio.mp3",
         metadata={"safe": True, "api_key": "should_be_removed"},
     )
 

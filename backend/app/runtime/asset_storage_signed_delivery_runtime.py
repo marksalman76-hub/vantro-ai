@@ -5,6 +5,7 @@ import hmac
 import mimetypes
 import os
 import time
+import urllib.parse
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -44,7 +45,25 @@ def _safe_metadata(metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
 
 def _is_browser_url(value: Any) -> bool:
     text = str(value or "").strip()
-    return text.startswith(("http://", "https://"))
+    if not text.startswith(("http://", "https://")):
+        return False
+
+    try:
+        parsed = urllib.parse.urlparse(text)
+    except Exception:
+        return False
+
+    host = (parsed.hostname or "").lower()
+    path = (parsed.path or "").lower()
+    combined = f"{host}{path}"
+
+    if host in {"example.com", "example.org", "example.net", "localhost", "127.0.0.1", "::1"}:
+        return False
+    if any(marker in combined for marker in ["placeholder", "mock", "test-only", "test_only"]):
+        return False
+    if path.endswith("/generated/video.mp4") and any(marker in combined for marker in ["example", "mock", "test"]):
+        return False
+    return True
 
 
 def _is_local_runtime_path(value: Any) -> bool:
