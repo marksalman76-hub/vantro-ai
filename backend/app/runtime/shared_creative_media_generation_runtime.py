@@ -64,6 +64,26 @@ def _env_present(names: List[str]) -> bool:
     return any(bool(os.getenv(name, "").strip()) for name in names)
 
 
+def _env_flag_enabled(name: str) -> bool:
+    return str(os.getenv(name, "")).strip().lower() in {"1", "true", "yes", "on", "enabled"}
+
+
+def _provider_dispatch_diagnostics() -> Dict[str, bool]:
+    live_external_calls_enabled = _env_flag_enabled("LIVE_EXTERNAL_CALLS_ENABLED")
+    owner_approved_live_activation = _env_flag_enabled("OWNER_APPROVED_LIVE_ACTIVATION")
+    real_provider_http_dispatch_enabled = _env_flag_enabled("REAL_PROVIDER_HTTP_DISPATCH_ENABLED")
+    return {
+        "provider_dispatch_enabled": bool(
+            live_external_calls_enabled
+            and owner_approved_live_activation
+            and real_provider_http_dispatch_enabled
+        ),
+        "live_external_calls_enabled": live_external_calls_enabled,
+        "owner_approved_live_activation": owner_approved_live_activation,
+        "real_provider_http_dispatch_enabled": real_provider_http_dispatch_enabled,
+    }
+
+
 def _provider_configured(provider: str) -> bool:
     provider = str(provider or "").strip().lower()
 
@@ -174,6 +194,7 @@ def _execute_ai_media_provider_packet(
     pack_id: str,
 ) -> Dict[str, Any]:
     configured = _provider_configured(provider)
+    dispatch = _provider_dispatch_diagnostics()
 
     if not configured:
         return {
@@ -184,6 +205,13 @@ def _execute_ai_media_provider_packet(
             "live_provider_execution_attempted": False,
             "real_media_asset_created": False,
             "reason": "provider_key_missing_or_not_configured_on_runtime",
+            "provider_configured": False,
+            "provider_key_selected": provider,
+            "provider_unavailable_reason": "provider_key_missing_or_not_configured_on_runtime",
+            "playable_asset_created": False,
+            "signed_delivery_created": False,
+            "metadata_only": True,
+            **dispatch,
             "credential_values_exposed": False,
             "customer_safe": True,
         }
@@ -230,6 +258,14 @@ def _execute_ai_media_provider_packet(
         result.setdefault("provider", provider)
         result.setdefault("media_type", media_type)
         result.setdefault("live_provider_execution_attempted", True)
+        result.setdefault("provider_configured", bool(configured))
+        result.setdefault("provider_key_selected", provider)
+        result.setdefault("provider_unavailable_reason", "")
+        result.setdefault("playable_asset_created", bool(result.get("real_media_asset_created")))
+        result.setdefault("signed_delivery_created", False)
+        result.setdefault("metadata_only", not bool(result.get("real_media_asset_created")))
+        for key, value in dispatch.items():
+            result.setdefault(key, value)
         result.setdefault("credential_values_exposed", False)
         result.setdefault("customer_safe", True)
         return result
@@ -242,6 +278,13 @@ def _execute_ai_media_provider_packet(
             "live_provider_execution_attempted": True,
             "real_media_asset_created": False,
             "error": str(exc)[:800],
+            "provider_configured": bool(configured),
+            "provider_key_selected": provider,
+            "provider_unavailable_reason": "provider_bridge_failed",
+            "playable_asset_created": False,
+            "signed_delivery_created": False,
+            "metadata_only": True,
+            **dispatch,
             "credential_values_exposed": False,
             "customer_safe": True,
         }
@@ -620,6 +663,9 @@ def _append_if_persistable(asset: Dict[str, Any], target: List[Dict[str, Any]]) 
             "credential_values_exposed": False,
             "customer_safe": True,
         }
+        asset["playable_asset_created"] = False
+        asset["signed_delivery_created"] = False
+        asset["metadata_only"] = True
         return asset
 
     asset["persistence"] = _persist_media_asset(asset)
@@ -630,11 +676,15 @@ def _append_if_persistable(asset: Dict[str, Any], target: List[Dict[str, Any]]) 
         asset["real_media_asset_created"] = False
         asset["playable"] = False
         asset["metadata_only"] = True
+        asset["playable_asset_created"] = False
+        asset["signed_delivery_created"] = False
     else:
         asset["preview_ready"] = bool(persistence.get("preview_ready"))
         asset["download_ready"] = bool(persistence.get("download_ready"))
         asset["playable"] = True
         asset["metadata_only"] = False
+        asset["playable_asset_created"] = True
+        asset["signed_delivery_created"] = bool(persistence.get("preview_ready") or persistence.get("download_ready"))
     target.append(asset)
     return asset
 

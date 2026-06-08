@@ -433,6 +433,10 @@ def persist_creative_asset(asset_packet: dict):
     playable_url = storage_url or provider_url or local_url
     playable = bool(playable_url)
     metadata_only = not playable
+    raw_status = str(packet.get("status") or "").strip().lower()
+    resolved_status = packet.get("status") or ("persisted" if playable else "metadata_only_not_playable")
+    if metadata_only and raw_status in {"completed", "persisted", "final_asset_ready"}:
+        resolved_status = "metadata_only_not_playable"
 
     if storage_url:
         storage_provider = "supabase"
@@ -469,7 +473,7 @@ def persist_creative_asset(asset_packet: dict):
         "registry_partitioned": True,
         "content": _truncate(packet.get("content"), 1000),
         "summary": _truncate(packet.get("summary"), 1000),
-        "status": packet.get("status") or ("persisted" if playable else "metadata_only_not_playable"),
+        "status": resolved_status,
         "quality_score": packet.get("quality_score"),
         "campaign_context": _truncate(packet.get("campaign_context"), 1000),
         "target_audience": _truncate(packet.get("target_audience"), 500),
@@ -478,6 +482,8 @@ def persist_creative_asset(asset_packet: dict):
         "governed": True,
         "customer_safe": True,
         "credential_values_exposed": False,
+        "playable_asset_created": playable,
+        "signed_delivery_created": playable,
         "created_at": created_at,
     }
 

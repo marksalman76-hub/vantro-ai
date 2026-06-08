@@ -84,6 +84,22 @@ def _live_dispatch_enabled() -> bool:
     )
 
 
+def _dispatch_diagnostics() -> Dict[str, Any]:
+    live_external_calls_enabled = _env_enabled("LIVE_EXTERNAL_CALLS_ENABLED")
+    owner_approved_live_activation = _env_enabled("OWNER_APPROVED_LIVE_ACTIVATION")
+    real_provider_http_dispatch_enabled = _env_enabled("REAL_PROVIDER_HTTP_DISPATCH_ENABLED")
+    return {
+        "provider_dispatch_enabled": bool(
+            live_external_calls_enabled
+            and owner_approved_live_activation
+            and real_provider_http_dispatch_enabled
+        ),
+        "live_external_calls_enabled": live_external_calls_enabled,
+        "owner_approved_live_activation": owner_approved_live_activation,
+        "real_provider_http_dispatch_enabled": real_provider_http_dispatch_enabled,
+    }
+
+
 def _request_json(
     *,
     url: str,
@@ -598,9 +614,17 @@ def execute_ai_media_provider_ready_packet(provider_ready_packet: Dict[str, Any]
 
     route = select_provider_route(provider_ready_packet)
     selected_provider = route.get("selected_provider")
+    dispatch = _dispatch_diagnostics()
+
+    route["provider_available"] = bool(route.get("provider_available"))
+    route["provider_configured"] = bool(selected_provider and _credential_configured(str(selected_provider)))
+    route["provider_dispatch_enabled"] = bool(dispatch.get("provider_dispatch_enabled"))
+    route["live_external_calls_enabled"] = bool(dispatch.get("live_external_calls_enabled"))
+    route["owner_approved_live_activation"] = bool(dispatch.get("owner_approved_live_activation"))
+    route["real_provider_http_dispatch_enabled"] = bool(dispatch.get("real_provider_http_dispatch_enabled"))
 
     if not selected_provider:
-        return build_standard_ai_media_provider_result(
+        result = build_standard_ai_media_provider_result(
             success=True,
             provider_id=None,
             execution_status="prepared_no_live_provider_configured",
@@ -612,9 +636,22 @@ def execute_ai_media_provider_ready_packet(provider_ready_packet: Dict[str, Any]
                 "reason": "no_configured_ai_media_provider",
             },
         )
+        result["route"] = route
+        result["provider_configured"] = False
+        result["provider_available"] = False
+        result["provider_dispatch_enabled"] = bool(dispatch.get("provider_dispatch_enabled"))
+        result["live_external_calls_enabled"] = bool(dispatch.get("live_external_calls_enabled"))
+        result["owner_approved_live_activation"] = bool(dispatch.get("owner_approved_live_activation"))
+        result["real_provider_http_dispatch_enabled"] = bool(dispatch.get("real_provider_http_dispatch_enabled"))
+        result["provider_unavailable_reason"] = "provider_key_missing_or_not_configured_on_runtime"
+        result["playable_asset_created"] = False
+        result["signed_delivery_created"] = False
+        result["metadata_only"] = True
+        result["credential_values_exposed"] = False
+        return result
 
     if not route.get("live_dispatch_enabled"):
-        return build_standard_ai_media_provider_result(
+        result = build_standard_ai_media_provider_result(
             success=True,
             provider_id=selected_provider,
             execution_status="blocked_live_dispatch_not_enabled",
@@ -625,6 +662,19 @@ def execute_ai_media_provider_ready_packet(provider_ready_packet: Dict[str, Any]
                 "reason": "LIVE_EXTERNAL_CALLS_ENABLED, OWNER_APPROVED_LIVE_ACTIVATION, and REAL_PROVIDER_HTTP_DISPATCH_ENABLED must be true.",
             },
         )
+        result["route"] = route
+        result["provider_configured"] = bool(route.get("provider_configured"))
+        result["provider_available"] = bool(route.get("provider_available"))
+        result["provider_dispatch_enabled"] = bool(dispatch.get("provider_dispatch_enabled"))
+        result["live_external_calls_enabled"] = bool(dispatch.get("live_external_calls_enabled"))
+        result["owner_approved_live_activation"] = bool(dispatch.get("owner_approved_live_activation"))
+        result["real_provider_http_dispatch_enabled"] = bool(dispatch.get("real_provider_http_dispatch_enabled"))
+        result["provider_unavailable_reason"] = "blocked_live_dispatch_not_enabled"
+        result["playable_asset_created"] = False
+        result["signed_delivery_created"] = False
+        result["metadata_only"] = True
+        result["credential_values_exposed"] = False
+        return result
 
     if selected_provider == "openai_image":
         result = _execute_openai_image(provider_ready_packet)
@@ -642,6 +692,20 @@ def execute_ai_media_provider_ready_packet(provider_ready_packet: Dict[str, Any]
         )
 
     result["route"] = route
+    result["provider_configured"] = bool(route.get("provider_configured"))
+    result["provider_available"] = bool(route.get("provider_available"))
+    result["provider_dispatch_enabled"] = bool(dispatch.get("provider_dispatch_enabled"))
+    result["live_external_calls_enabled"] = bool(dispatch.get("live_external_calls_enabled"))
+    result["owner_approved_live_activation"] = bool(dispatch.get("owner_approved_live_activation"))
+    result["real_provider_http_dispatch_enabled"] = bool(dispatch.get("real_provider_http_dispatch_enabled"))
+    result["provider_unavailable_reason"] = (
+        ""
+        if result.get("real_media_asset_created")
+        else str(result.get("execution_status") or "provider_unavailable")
+    )
+    result["playable_asset_created"] = bool(result.get("real_media_asset_created"))
+    result["signed_delivery_created"] = bool(result.get("real_media_asset_created"))
+    result["metadata_only"] = not bool(result.get("real_media_asset_created"))
     result["live_generation_attempted"] = True
     result["live_provider_execution_attempted"] = True
     result["credential_values_exposed"] = False

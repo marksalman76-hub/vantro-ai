@@ -423,6 +423,41 @@ def _resolve_no_playable_terminal_state(media_pack: Dict[str, Any]) -> Dict[str,
     }
 
 
+def _provider_diagnostics_from_media_pack(media_pack: Dict[str, Any], *, default_provider: str = "") -> Dict[str, Any]:
+    provider_results = [item for item in media_pack.get("provider_execution_results", []) if isinstance(item, dict)]
+    first = provider_results[0] if provider_results else {}
+    generation_jobs = [item for item in media_pack.get("generation_jobs", []) if isinstance(item, dict)]
+    first_job = generation_jobs[0] if generation_jobs else {}
+
+    provider_selected = str(
+        first.get("provider")
+        or first_job.get("provider")
+        or default_provider
+        or ""
+    ).strip()
+
+    live_external_calls_enabled = bool(first.get("live_external_calls_enabled"))
+    owner_approved_live_activation = bool(first.get("owner_approved_live_activation"))
+    real_provider_http_dispatch_enabled = bool(first.get("real_provider_http_dispatch_enabled"))
+
+    return {
+        "provider_key_selected": provider_selected,
+        "provider_configured": bool(first.get("provider_configured") or first_job.get("live_generation_available")),
+        "provider_dispatch_enabled": bool(
+            first.get("provider_dispatch_enabled")
+            or (
+                live_external_calls_enabled
+                and owner_approved_live_activation
+                and real_provider_http_dispatch_enabled
+            )
+        ),
+        "live_external_calls_enabled": live_external_calls_enabled,
+        "owner_approved_live_activation": owner_approved_live_activation,
+        "real_provider_http_dispatch_enabled": real_provider_http_dispatch_enabled,
+        "provider_unavailable_reason": str(first.get("reason") or first.get("error") or "").strip()[:260],
+    }
+
+
 def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
     job_id = str(job.get("job_id") or "")
     if not job_id:
@@ -472,6 +507,7 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
             if isinstance(asset, dict)
         ]
         playable_assets = [asset for asset in final_assets if asset.get("playable") or asset.get("preview_ready") or asset.get("download_ready")]
+        provider_diag = _provider_diagnostics_from_media_pack(media_pack)
 
         if not playable_assets:
             terminal_state = _resolve_no_playable_terminal_state(media_pack)
@@ -491,6 +527,11 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
             job["final_assets"] = final_assets
             job["preview_ready_count"] = 0
             job["download_ready_count"] = 0
+            job["playable_asset_created"] = False
+            job["signed_delivery_created"] = False
+            job["metadata_only"] = True
+            job.update(provider_diag)
+            job["provider_unavailable_reason"] = job.get("provider_unavailable_reason") or terminal_state["reason"]
             job[f"{terminal_state['status']}_at"] = _now()
             job["updated_at"] = _now()
             job["credential_values_exposed"] = False
@@ -519,6 +560,11 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
         job["final_assets"] = final_assets
         job["preview_ready_count"] = sum(1 for asset in playable_assets if asset.get("preview_ready"))
         job["download_ready_count"] = sum(1 for asset in playable_assets if asset.get("download_ready"))
+        job["playable_asset_created"] = True
+        job["signed_delivery_created"] = bool(job["preview_ready_count"] or job["download_ready_count"])
+        job["metadata_only"] = False
+        job.update(provider_diag)
+        job["provider_unavailable_reason"] = ""
         job["completed_at"] = _now()
         job["updated_at"] = _now()
         job["credential_values_exposed"] = False

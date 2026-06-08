@@ -64,6 +64,7 @@ def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
 
     gateway_preview_url = _signed_gateway_url(asset_id, "preview") if asset_id and playable else ""
     gateway_download_url = _signed_gateway_url(asset_id, "download") if asset_id and downloadable else ""
+    signed_delivery_created = bool(gateway_preview_url or gateway_download_url)
 
     original_preview_url = asset.get("preview_url") or asset.get("provider_asset_url") or asset.get("asset_url") or asset.get("media_url") or ""
     original_download_url = asset.get("download_url") or asset.get("provider_asset_url") or asset.get("asset_url") or asset.get("media_url") or original_preview_url or ""
@@ -93,6 +94,8 @@ def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
         "preview_ready": bool(preview_url and playable),
         "download_ready": bool(download_url and downloadable),
         "playable": playable,
+        "playable_asset_created": playable,
+        "signed_delivery_created": signed_delivery_created,
         "metadata_only": bool(asset.get("metadata_only") or not playable),
         "content": asset.get("content"),
         "summary": asset.get("summary"),
