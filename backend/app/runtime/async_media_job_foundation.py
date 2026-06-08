@@ -235,8 +235,9 @@ def read_media_job(job_id: str) -> Dict[str, Any]:
     return _scrub_sensitive(job)
 
 
-def list_media_jobs(limit: int = 50) -> Dict[str, Any]:
-    reconcile_visible_queued_media_asset_jobs(limit=max(int(limit or 50), 1))
+def list_media_jobs(limit: int = 50, reconcile_visible_assets: bool = True) -> Dict[str, Any]:
+    if reconcile_visible_assets:
+        reconcile_visible_queued_media_asset_jobs(limit=max(int(limit or 50), 1))
     jobs = []
     for path in sorted(STORE.glob("media_job_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)[:limit]:
         try:
