@@ -5155,6 +5155,72 @@ def _media_job_processor_response(
     }
 
 
+def _media_job_trigger_response(
+    result: dict,
+    *,
+    authorised: bool,
+    before_snapshot: dict | None = None,
+    legacy_route: str = "",
+) -> dict:
+    before = before_snapshot or {}
+    return {
+        **result,
+        "success": bool(result.get("success", True)),
+        "triggered": True,
+        "background_processor_scheduled": bool(result.get("background_processor_scheduled")),
+        "queue_name": result.get("queue_name") or "creative_media_generation_queue",
+        "queued_job_count": int(result.get("queued_job_count") or before.get("queued_job_count") or 0),
+        "canonical_store": result.get("canonical_store") or before.get("canonical_store") or "backend:runtime_outputs/media_jobs",
+        "fast_output_packet_available": bool(result.get("fast_output_packet_available", True)),
+        "fast_output_packet": result.get("fast_output_packet"),
+        "fast_output_packets": result.get("fast_output_packets", []),
+        "timing_stage": result.get("timing_stage") or "stage_1_fast_creative_response",
+        "final_provider_media_stage": result.get("final_provider_media_stage") or "stage_2_async_final_render",
+        "final_media_completion_claimed": False,
+        "visible_queued_job_count_before": int(before.get("visible_queued_job_count") or before.get("queued_job_count") or 0),
+        "processor_queued_job_count_before": int(before.get("processor_queued_job_count") or before.get("queued_job_count") or 0),
+        "authorised": bool(authorised),
+        "processor_invoked": False,
+        "processed_job_count": 0,
+        "request_path_safe": True,
+        "web_request_media_execution_blocked": True,
+        "background_worker_required": True,
+        "legacy_route": legacy_route,
+        "environment_context": "backend_trigger_only",
+        "security_profile": MEDIA_JOB_SECURITY_PROFILE,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+@app.post("/admin/media-jobs/trigger-next")
+def admin_trigger_next_media_job(
+    x_admin_token: str | None = Header(default=None),
+    x_actor_role: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+):
+    if not _admin_media_job_authorized(x_actor_role, x_admin_token, authorization):
+        return _media_job_blocked_response()
+    from backend.app.runtime.async_media_job_foundation import trigger_next_creative_media_job
+    before = _media_job_store_snapshot()
+    result = trigger_next_creative_media_job()
+    return _media_job_trigger_response(result, authorised=True, before_snapshot=before)
+
+
+@app.post("/admin/media-jobs/trigger-all")
+def admin_trigger_all_media_jobs(
+    x_admin_token: str | None = Header(default=None),
+    x_actor_role: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+):
+    if not _admin_media_job_authorized(x_actor_role, x_admin_token, authorization):
+        return _media_job_blocked_response()
+    from backend.app.runtime.async_media_job_foundation import trigger_all_creative_media_jobs
+    before = _media_job_store_snapshot()
+    result = trigger_all_creative_media_jobs(limit=25)
+    return _media_job_trigger_response(result, authorised=True, before_snapshot=before)
+
+
 @app.post("/admin/media-jobs/run-next")
 def admin_run_next_media_job(
     x_admin_token: str | None = Header(default=None),
@@ -5163,17 +5229,10 @@ def admin_run_next_media_job(
 ):
     if not _admin_media_job_authorized(x_actor_role, x_admin_token, authorization):
         return _media_job_blocked_response()
-    from backend.app.runtime.async_media_job_foundation import run_next_media_job
+    from backend.app.runtime.async_media_job_foundation import trigger_next_creative_media_job
     before = _media_job_store_snapshot()
-    result = run_next_media_job()
-    after = _media_job_store_snapshot()
-    return _media_job_processor_response(
-        result,
-        authorised=True,
-        processor_invoked=True,
-        before_snapshot=before,
-        after_snapshot=after,
-    )
+    result = trigger_next_creative_media_job()
+    return _media_job_trigger_response(result, authorised=True, before_snapshot=before, legacy_route="/admin/media-jobs/run-next")
 
 
 @app.post("/admin/media-jobs/run-all")
@@ -5184,14 +5243,7 @@ def admin_run_all_media_jobs(
 ):
     if not _admin_media_job_authorized(x_actor_role, x_admin_token, authorization):
         return _media_job_blocked_response()
-    from backend.app.runtime.async_media_job_foundation import run_all_media_jobs
+    from backend.app.runtime.async_media_job_foundation import trigger_all_creative_media_jobs
     before = _media_job_store_snapshot()
-    result = run_all_media_jobs(limit=25)
-    after = _media_job_store_snapshot()
-    return _media_job_processor_response(
-        result,
-        authorised=True,
-        processor_invoked=True,
-        before_snapshot=before,
-        after_snapshot=after,
-    )
+    result = trigger_all_creative_media_jobs(limit=25)
+    return _media_job_trigger_response(result, authorised=True, before_snapshot=before, legacy_route="/admin/media-jobs/run-all")

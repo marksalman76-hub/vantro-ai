@@ -30,7 +30,12 @@ LOCKOUT_WINDOW_SECONDS = int(os.getenv("SECURITY_LOCKOUT_WINDOW_SECONDS", "300")
 
 ADMIN_PATH_PREFIXES = ("/admin", "/owner")
 ADMIN_EVIDENCE_PROXY_PATHS = ("/admin/execution-evidence", "/admin/qa-regression-intelligence/evaluate")
-ADMIN_MEDIA_JOB_PROCESSING_PATHS = ("/admin/media-jobs/run-all", "/admin/media-jobs/run-next")
+ADMIN_MEDIA_JOB_PROCESSING_PATHS = (
+    "/admin/media-jobs/run-all",
+    "/admin/media-jobs/run-next",
+    "/admin/media-jobs/trigger-all",
+    "/admin/media-jobs/trigger-next",
+)
 DEFAULT_TRUSTED_ORIGINS = ("https://app.trance-formation.com.au", "https://trance-formation.com.au")
 STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 

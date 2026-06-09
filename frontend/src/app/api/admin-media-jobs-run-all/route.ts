@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     ? beforeData.jobs.filter((job: Record<string, unknown>) => String(job?.status || "") === "queued").length
     : Number(beforeData?.visible_queued_job_count || beforeData?.queued_job_count || 0);
 
-  const response = await fetch(`${backendUrl}/admin/media-jobs/run-all`, {
+  const response = await fetch(`${backendUrl}/admin/media-jobs/trigger-all`, {
     method: "POST",
     cache: "no-store",
     headers,
@@ -127,7 +127,10 @@ export async function POST(req: NextRequest) {
       visible_queued_job_count_before: data?.visible_queued_job_count_before ?? visibleQueuedJobCountBefore,
       processor_queued_job_count_before: data?.processor_queued_job_count_before ?? visibleQueuedJobCountBefore,
       store_paths_match: data?.store_paths_match ?? true,
-      environment_context: "frontend_proxy/backend_processor",
+      triggered: data?.triggered ?? true,
+      background_processor_scheduled: data?.background_processor_scheduled ?? true,
+      request_path_safe: data?.request_path_safe ?? true,
+      environment_context: "frontend_proxy/backend_trigger_only",
       credential_values_exposed: false,
     },
     { status: response.status, headers: { "Cache-Control": "no-store" } }

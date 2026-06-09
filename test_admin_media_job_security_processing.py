@@ -12,8 +12,10 @@ from typing import Any, Dict, Iterator
 from starlette.responses import JSONResponse
 
 from backend.app.core.security_audit_enforcement_runtime import assess_audit_enforcement
+from backend.app.runtime import background_worker_loop
 from backend.app.runtime import async_media_job_foundation as media_jobs
 from backend.app.runtime import creative_asset_persistence_bridge as creative_assets
+from backend.app.runtime.durable_execution_queue_runtime import reset_dev_execution_queue_for_tests
 from backend.app.runtime import shared_creative_media_generation_runtime as shared_media
 from backend.app.runtime.admin_creative_media_asset_viewer import get_admin_creative_media_assets
 from backend.app import main as backend_main
@@ -54,6 +56,35 @@ def production_admin_env() -> Iterator[None]:
     try:
         yield
     finally:
+        for key, value in original.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+@contextmanager
+def durable_media_worker_test_env() -> Iterator[None]:
+    keys = [
+        "APP_ENV",
+        "DATABASE_URL",
+        "POSTGRES_URL",
+        "RENDER",
+        "PRODUCTION",
+        "WORKER_LIVE_EXECUTION_ENABLED",
+    ]
+    original = {key: os.environ.get(key) for key in keys}
+    os.environ["APP_ENV"] = "development"
+    os.environ["WORKER_LIVE_EXECUTION_ENABLED"] = "true"
+    os.environ.pop("DATABASE_URL", None)
+    os.environ.pop("POSTGRES_URL", None)
+    os.environ.pop("RENDER", None)
+    os.environ.pop("PRODUCTION", None)
+    reset_dev_execution_queue_for_tests()
+    try:
+        yield
+    finally:
+        reset_dev_execution_queue_for_tests()
         for key, value in original.items():
             if value is None:
                 os.environ.pop(key, None)
@@ -143,22 +174,38 @@ def test_admin_media_job_processing_security_path() -> None:
             job["internal_prompt"] = "internal_prompt"
             media_jobs._write_job(job)
 
-            with provider_unavailable_media_generation():
-                result = backend_main.admin_run_all_media_jobs(
+            with durable_media_worker_test_env():
+                result = backend_main.admin_trigger_all_media_jobs(
                     x_admin_token="test-admin-token",
                     x_actor_role="owner_admin",
                     authorization=None,
                 )
 
-            assert isinstance(result, dict)
-            assert result["success"] is True
-            assert result["authorised"] is True
-            assert result["processor_invoked"] is True
-            assert result["processed_job_count"] == 1
-            assert result["final_status_counts"].get("provider_unavailable") == 1
-            assert result["security_profile"] == "priority5_security_audit_enforcement_v1"
-            assert result["credential_values_exposed"] is False
-            assert not contains_unsafe(result)
+                assert isinstance(result, dict)
+                assert result["success"] is True
+                assert result["authorised"] is True
+                assert result["triggered"] is True
+                assert result["background_processor_scheduled"] is True
+                assert result["queue_name"] == "creative_media_generation_queue"
+                assert result["processor_invoked"] is False
+                assert result["processed_job_count"] == 0
+                assert result["request_path_safe"] is True
+                assert result["security_profile"] == "priority5_security_audit_enforcement_v1"
+                assert result["credential_values_exposed"] is False
+                assert not contains_unsafe(result)
+
+                queued_job = media_jobs.read_media_job(job["job_id"])
+                assert queued_job["status"] == "queued"
+                assert queued_job["background_processor_scheduled"] is True
+
+                with provider_unavailable_media_generation():
+                    worker_result = background_worker_loop.process_one_creative_media_generation_job()
+
+                assert worker_result["success"] is True
+                assert worker_result["processor_invoked"] is True
+                assert worker_result["media_job_id"] == job["job_id"]
+                assert worker_result["queue_name"] == "creative_media_generation_queue"
+                assert worker_result["credential_values_exposed"] is False
 
             processed_job = media_jobs.read_media_job(job["job_id"])
             assert processed_job["status"] == "provider_unavailable"
@@ -298,34 +345,57 @@ def test_visible_creative_asset_queue_reconciles_to_processor_store() -> None:
             assert visible_before[0]["status"] == "queued"
             assert admin_assets_before["canonical_store"] == "backend:runtime_outputs/media_jobs"
             assert admin_assets_before["store_paths_match"] is True
+            assert not (media_jobs.STORE / f"{visible_job_id}.json").exists()
 
             media_jobs_before = backend_main.admin_list_media_jobs(x_actor_role="owner_admin")
             listed_before = [
                 job for job in media_jobs_before["jobs"] if job.get("job_id") == visible_job_id
             ]
+            assert not listed_before
+            assert media_jobs_before["queued_job_count"] == 0
+            assert not (media_jobs.STORE / f"{visible_job_id}.json").exists()
+
+            reconciliation = media_jobs.reconcile_visible_queued_media_asset_jobs(limit=10)
+            assert reconciliation["success"] is True
+            assert reconciliation["reconciled_job_count"] == 1
+
+            media_jobs_reconciled = backend_main.admin_list_media_jobs(x_actor_role="owner_admin")
+            listed_before = [
+                job for job in media_jobs_reconciled["jobs"] if job.get("job_id") == visible_job_id
+            ]
             assert listed_before
             assert listed_before[0]["status"] == "queued"
-            assert media_jobs_before["queued_job_count"] == 1
+            assert media_jobs_reconciled["queued_job_count"] == 1
             assert (media_jobs.STORE / f"{visible_job_id}.json").exists()
 
-            with provider_unavailable_media_generation():
-                result = backend_main.admin_run_all_media_jobs(
+            with durable_media_worker_test_env():
+                result = backend_main.admin_trigger_all_media_jobs(
                     x_admin_token="test-admin-token",
                     x_actor_role="owner_admin",
                     authorization=None,
                 )
 
-            assert result["success"] is True
-            assert result["authorised"] is True
-            assert result["processor_invoked"] is True
-            assert result["canonical_store"] == "backend:runtime_outputs/media_jobs"
-            assert result["visible_queued_job_count_before"] == 1
-            assert result["processor_queued_job_count_before"] == 1
-            assert result["processed_job_count"] == 1
-            assert result["store_paths_match"] is True
-            assert result["final_status_counts"].get("provider_unavailable") == 1
-            assert result["credential_values_exposed"] is False
-            assert not contains_unsafe(result)
+                assert result["success"] is True
+                assert result["authorised"] is True
+                assert result["triggered"] is True
+                assert result["background_processor_scheduled"] is True
+                assert result["queue_name"] == "creative_media_generation_queue"
+                assert result["processor_invoked"] is False
+                assert result["canonical_store"] == "backend:runtime_outputs/media_jobs"
+                assert result["visible_queued_job_count_before"] == 1
+                assert result["processor_queued_job_count_before"] == 1
+                assert result["processed_job_count"] == 0
+                assert result["store_paths_match"] is True
+                assert result["request_path_safe"] is True
+                assert result["credential_values_exposed"] is False
+                assert not contains_unsafe(result)
+
+                with provider_unavailable_media_generation():
+                    worker_result = background_worker_loop.process_one_creative_media_generation_job()
+
+                assert worker_result["success"] is True
+                assert worker_result["processor_invoked"] is True
+                assert worker_result["media_job_id"] == visible_job_id
 
             media_jobs_after = backend_main.admin_list_media_jobs(x_actor_role="owner_admin")
             assert media_jobs_after["queued_job_count"] == 0
@@ -368,7 +438,8 @@ def test_frontend_media_routes_use_canonical_backend_resolver() -> None:
     assert "/admin/media-jobs" in run_all_route
     assert "visible_queued_job_count_before" in run_all_route
     assert "processor_queued_job_count_before" in run_all_route
-    assert "frontend_proxy/backend_processor" in run_all_route
+    assert "/admin/media-jobs/trigger-all" in run_all_route
+    assert "frontend_proxy/backend_trigger_only" in run_all_route
 
 
 def test_admin_background_noise_cleanup_routes_are_scoped() -> None:

@@ -12,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[3]
 STORE = ROOT / "runtime_outputs" / "media_jobs"
 STORE.mkdir(parents=True, exist_ok=True)
 
+CREATIVE_MEDIA_GENERATION_QUEUE = "creative_media_generation_queue"
+
 _LOCK = threading.Lock()
 
 TERMINAL_MEDIA_JOB_STATUSES = {"completed", "provider_unavailable", "blocked", "failed"}
@@ -195,6 +197,175 @@ def _scrub_sensitive(value: Any) -> Any:
     return safe
 
 
+def _safe_bool(value: Any) -> bool:
+    return bool(value)
+
+
+def _durable_media_queue_payload(job: Dict[str, Any]) -> Dict[str, Any]:
+    job_id = str(job.get("job_id") or job.get("media_job_id") or "").strip()
+    return {
+        "job_id": job_id,
+        "media_job_id": job_id,
+        "queue_name": CREATIVE_MEDIA_GENERATION_QUEUE,
+        "creative_media_job_type": str(job.get("creative_media_job_type") or job.get("asset_type") or "creative_media_job"),
+        "agent_id": str(job.get("agent_id") or job.get("requested_agent") or "creative_media_agent"),
+        "tenant_id": str(job.get("tenant_id") or "owner_admin"),
+        "task": str(job.get("task") or "Create a premium creative media asset.")[:2000],
+        "include_image": _safe_bool(job.get("include_image")),
+        "include_audio": _safe_bool(job.get("include_audio")),
+        "include_video": _safe_bool(job.get("include_video")),
+        "include_avatar": _safe_bool(job.get("include_avatar")),
+        "source_runtime": "async_media_job_foundation",
+        "credential_values_exposed": False,
+    }
+
+
+def build_fast_creative_output_packet(job: Dict[str, Any]) -> Dict[str, Any]:
+    task = str(job.get("task") or "Create a premium creative media asset.").strip()
+    agent_id = str(job.get("agent_id") or job.get("requested_agent") or "creative_media_agent").strip()
+    include_image = _safe_bool(job.get("include_image"))
+    include_audio = _safe_bool(job.get("include_audio"))
+    include_video = _safe_bool(job.get("include_video"))
+    include_avatar = _safe_bool(job.get("include_avatar"))
+    requested_assets = [
+        label
+        for label, enabled in [
+            ("image", include_image),
+            ("audio", include_audio),
+            ("video", include_video),
+            ("avatar_video", include_avatar),
+        ]
+        if enabled
+    ]
+    hook = f"Lead with the clearest product benefit, then show proof for: {task[:180]}"
+    return {
+        "packet_type": "fast_creative_media_output_packet",
+        "fast_output_packet_available": True,
+        "timing_stage": "stage_1_fast_creative_response",
+        "target_response_seconds": "3-10",
+        "final_provider_media_stage": "stage_2_async_final_render",
+        "final_asset_status": str(job.get("status") or "queued"),
+        "job_status": str(job.get("status") or "queued"),
+        "agent_id": agent_id,
+        "creative_brief": task[:1000],
+        "hook": hook,
+        "caption": f"{hook} Final media render is queued and will appear when provider output is ready.",
+        "scene_directions": [
+            "Open with a direct product or offer reveal.",
+            "Show the main benefit in one clear visual moment.",
+            "Close with a concise call to action and brand-safe proof point.",
+        ],
+        "media_generation_plan": {
+            "requested_assets": requested_assets,
+            "provider_generation_queued": True,
+            "async_final_render_required": bool(requested_assets),
+            "final_media_completion_claimed": False,
+        },
+        "asset_requirements": {
+            "image": include_image,
+            "audio": include_audio,
+            "video": include_video,
+            "avatar_video": include_avatar,
+        },
+        "preview_evidence_status": "queued",
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+def _mark_job_durable_queue_scheduled(job: Dict[str, Any], queue_result: Dict[str, Any]) -> None:
+    if not isinstance(job, dict) or not job.get("job_id"):
+        return
+    updated = dict(job)
+    updated["durable_queue_name"] = CREATIVE_MEDIA_GENERATION_QUEUE
+    updated["durable_queue_scheduled"] = True
+    updated["durable_queue_job_id"] = queue_result.get("queue_id") or queue_result.get("job_id")
+    updated["durable_queue_storage_mode"] = queue_result.get("storage_mode")
+    updated["background_processor_scheduled"] = True
+    updated["fast_output_packet"] = build_fast_creative_output_packet(updated)
+    updated["fast_output_packet_available"] = True
+    updated["updated_at"] = _now()
+    updated["credential_values_exposed"] = False
+    _write_job(updated)
+
+
+def enqueue_creative_media_job_for_worker(job: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Enqueue an existing creative media job for the dedicated worker.
+
+    This is intentionally queue-only. It must not call media processors, provider
+    adapters, local binaries, or persistence routines from a web request path.
+    """
+    safe_job = _scrub_sensitive(job if isinstance(job, dict) else {})
+    job_id = str(safe_job.get("job_id") or safe_job.get("media_job_id") or "").strip()
+    if not job_id:
+        return {
+            **media_job_store_context(),
+            "success": False,
+            "status": "missing_media_job_id",
+            "triggered": False,
+            "background_processor_scheduled": False,
+            "queue_name": CREATIVE_MEDIA_GENERATION_QUEUE,
+            "credential_values_exposed": False,
+        }
+
+    if str(safe_job.get("status") or "").lower() not in {"queued", "retry_scheduled"}:
+        return {
+            **media_job_store_context(),
+            "success": True,
+            "status": "job_not_pending",
+            "triggered": False,
+            "background_processor_scheduled": False,
+            "queue_name": CREATIVE_MEDIA_GENERATION_QUEUE,
+            "media_job_id": job_id,
+            "current_status": safe_job.get("status"),
+            "credential_values_exposed": False,
+        }
+
+    from backend.app.runtime.durable_execution_queue_runtime import enqueue_execution_job
+
+    payload = _durable_media_queue_payload(safe_job)
+    result = enqueue_execution_job(
+        queue_name=CREATIVE_MEDIA_GENERATION_QUEUE,
+        tenant_id=str(payload.get("tenant_id") or "owner_admin"),
+        project_id=str(safe_job.get("project_id") or "creative_media"),
+        agent_id=str(payload.get("agent_id") or "creative_media_agent"),
+        action_type="creative_media_generation_job",
+        payload=payload,
+        idempotency_key=f"creative_media_generation:{job_id}",
+        max_attempts=3,
+    )
+
+    safe_result = _scrub_sensitive(result if isinstance(result, dict) else {})
+    scheduled = bool(safe_result.get("success"))
+    if scheduled:
+        try:
+            _mark_job_durable_queue_scheduled(safe_job, safe_result)
+        except Exception:
+            scheduled = bool(safe_result.get("success"))
+
+    return {
+        **media_job_store_context(),
+        "success": bool(safe_result.get("success")),
+        "status": safe_result.get("status") or ("queued" if scheduled else "durable_queue_unavailable"),
+        "triggered": scheduled,
+        "background_processor_scheduled": scheduled,
+        "queue_name": CREATIVE_MEDIA_GENERATION_QUEUE,
+        "media_job_id": job_id,
+        "fast_output_packet_available": True,
+        "fast_output_packet": build_fast_creative_output_packet(safe_job),
+        "timing_stage": "stage_1_fast_creative_response",
+        "final_provider_media_stage": "stage_2_async_final_render",
+        "final_media_completion_claimed": False,
+        "durable_queue_job_id": safe_result.get("queue_id") or safe_result.get("job_id"),
+        "durable_queue_storage_mode": safe_result.get("storage_mode"),
+        "idempotent_replay": bool(safe_result.get("idempotent_replay")),
+        "request_path_safe": True,
+        "processor_invoked": False,
+        "credential_values_exposed": False,
+    }
+
+
 def enqueue_media_job(*, task: str, agent_id: str, tenant_id: str, include_image: bool = True, include_audio: bool = True, include_video: bool = True, include_avatar: bool = False) -> Dict[str, Any]:
     job_id = f"media_job_{uuid4().hex[:12]}"
     job = {
@@ -220,6 +391,8 @@ def enqueue_media_job(*, task: str, agent_id: str, tenant_id: str, include_image
         "updated_at": _now(),
         "credential_values_exposed": False,
     }
+    job["fast_output_packet"] = build_fast_creative_output_packet(job)
+    job["fast_output_packet_available"] = True
     with _LOCK:
         _job_path(job_id).write_text(json.dumps(job, indent=2), encoding="utf-8")
     return job
@@ -235,7 +408,7 @@ def read_media_job(job_id: str) -> Dict[str, Any]:
     return _scrub_sensitive(job)
 
 
-def list_media_jobs(limit: int = 50, reconcile_visible_assets: bool = True) -> Dict[str, Any]:
+def list_media_jobs(limit: int = 50, reconcile_visible_assets: bool = False) -> Dict[str, Any]:
     if reconcile_visible_assets:
         reconcile_visible_queued_media_asset_jobs(limit=max(int(limit or 50), 1))
     jobs = []
@@ -613,6 +786,87 @@ def run_next_media_job() -> Dict[str, Any]:
 
 def run_all_media_jobs(limit: int = 25) -> Dict[str, Any]:
     return process_queued_creative_media_jobs(limit=limit)
+
+
+def trigger_next_creative_media_job() -> Dict[str, Any]:
+    jobs_result = list_media_jobs(limit=200)
+    jobs = [j for j in jobs_result.get("jobs", []) if isinstance(j, dict) and j.get("status") == "queued"]
+    if not jobs:
+        return {
+            **media_job_store_context(),
+            "success": True,
+            "status": "empty",
+            "triggered": True,
+            "background_processor_scheduled": False,
+            "queue_name": CREATIVE_MEDIA_GENERATION_QUEUE,
+            "queued_job_count": 0,
+            "request_path_safe": True,
+            "processor_invoked": False,
+            "credential_values_exposed": False,
+        }
+
+    result = enqueue_creative_media_job_for_worker(jobs[-1])
+    return {
+        **result,
+        "success": bool(result.get("success")),
+        "triggered": True,
+        "background_processor_scheduled": bool(result.get("background_processor_scheduled")),
+        "queue_name": CREATIVE_MEDIA_GENERATION_QUEUE,
+        "queued_job_count": len(jobs),
+        "fast_output_packet_available": bool(result.get("fast_output_packet_available")),
+        "timing_stage": "stage_1_fast_creative_response",
+        "final_provider_media_stage": "stage_2_async_final_render",
+        "final_media_completion_claimed": False,
+        "request_path_safe": True,
+        "processor_invoked": False,
+        "credential_values_exposed": False,
+    }
+
+
+def trigger_all_creative_media_jobs(limit: int = 25) -> Dict[str, Any]:
+    safe_limit = max(1, min(int(limit or 25), 100))
+    jobs_result = list_media_jobs(limit=max(safe_limit, 100))
+    queued = [j for j in jobs_result.get("jobs", []) if isinstance(j, dict) and j.get("status") == "queued"]
+    selected = queued[:safe_limit]
+    results: List[Dict[str, Any]] = []
+    scheduled_count = 0
+    skipped_reasons: Dict[str, int] = {}
+
+    for job in selected:
+        result = enqueue_creative_media_job_for_worker(job)
+        results.append(result)
+        if result.get("background_processor_scheduled"):
+            scheduled_count += 1
+        else:
+            reason = str(result.get("status") or "not_scheduled")
+            skipped_reasons[reason] = skipped_reasons.get(reason, 0) + 1
+
+    return {
+        **media_job_store_context(),
+        "success": True,
+        "status": "triggered" if scheduled_count else ("empty" if not queued else "not_scheduled"),
+        "triggered": True,
+        "background_processor_scheduled": bool(scheduled_count),
+        "queue_name": CREATIVE_MEDIA_GENERATION_QUEUE,
+        "queued_job_count": len(queued),
+        "scheduled_job_count": scheduled_count,
+        "triggered_job_count": len(results),
+        "fast_output_packet_available": bool(results),
+        "fast_output_packets": [
+            result.get("fast_output_packet")
+            for result in results
+            if isinstance(result, dict) and isinstance(result.get("fast_output_packet"), dict)
+        ][:5],
+        "timing_stage": "stage_1_fast_creative_response",
+        "final_provider_media_stage": "stage_2_async_final_render",
+        "final_media_completion_claimed": False,
+        "durable_queue_results": results,
+        "request_path_safe": True,
+        "processor_invoked": False,
+        "processed_job_count": 0,
+        "skipped_reasons": skipped_reasons,
+        "credential_values_exposed": False,
+    }
 
 
 def process_queued_creative_media_jobs(limit: int = 25) -> Dict[str, Any]:

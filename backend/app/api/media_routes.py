@@ -63,15 +63,17 @@ def register_asset(payload: RegisterAssetRequest, x_tenant_id: Optional[str] = H
 
 @router.get("/assets")
 def list_assets(x_tenant_id: Optional[str] = Header(default=None)):
-    status = media_persistence_status()
-    if status.get("production_fail_closed"):
-        raise HTTPException(status_code=503, detail=status)
     tenant_id = _tenant(x_tenant_id)
-    assets = list_media_assets(tenant_id)
+    assets = []
+    status = {
+        "fallback_used": False,
+        "dev_only": False,
+        "production_fail_closed": False,
+        "fast_media_job_evidence_first": True,
+    }
     try:
         from backend.app.runtime.async_media_job_foundation import list_media_jobs, media_job_to_visible_asset_evidence
 
-        existing_ids = {str(asset.get("asset_id") or asset.get("id") or "") for asset in assets if isinstance(asset, dict)}
         for job in list_media_jobs(limit=100).get("jobs", []):
             if not isinstance(job, dict):
                 continue
@@ -79,11 +81,16 @@ def list_assets(x_tenant_id: Optional[str] = Header(default=None)):
                 continue
             evidence = media_job_to_visible_asset_evidence(job, audience="client")
             evidence_id = str(evidence.get("asset_id") or evidence.get("id") or "")
+            existing_ids = {str(asset.get("asset_id") or asset.get("id") or "") for asset in assets if isinstance(asset, dict)}
             if evidence_id and evidence_id not in existing_ids:
                 assets.append(evidence)
-                existing_ids.add(evidence_id)
     except Exception:
         pass
+    if not assets:
+        status = media_persistence_status()
+        if status.get("production_fail_closed"):
+            raise HTTPException(status_code=503, detail=status)
+        assets = list_media_assets(tenant_id)
     return {
         "success": True,
         "authority": "backend_canonical",

@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
   }
 
   const backendUrl = backendBaseUrl();
-  const response = await fetch(`${backendUrl}/admin/media-jobs/run-next`, {
+  const response = await fetch(`${backendUrl}/admin/media-jobs/trigger-next`, {
     method: "POST",
     cache: "no-store",
     headers,
@@ -116,7 +116,10 @@ export async function POST(req: NextRequest) {
       ...data,
       canonical_store: data?.canonical_store || "backend:runtime_outputs/media_jobs",
       store_paths_match: data?.store_paths_match ?? true,
-      environment_context: "frontend_proxy/backend_processor",
+      triggered: data?.triggered ?? true,
+      background_processor_scheduled: data?.background_processor_scheduled ?? true,
+      request_path_safe: data?.request_path_safe ?? true,
+      environment_context: "frontend_proxy/backend_trigger_only",
       credential_values_exposed: false,
     },
     { status: response.status, headers: { "Cache-Control": "no-store" } }
