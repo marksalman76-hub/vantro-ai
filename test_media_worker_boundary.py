@@ -347,6 +347,53 @@ def test_worker_is_the_media_processor_boundary() -> None:
     assert "provider_result" not in worker_body
 
 
+def test_durable_queue_claim_sql_qualifies_returning_columns_and_claims_queue() -> None:
+    claim_source = _function_source(ROOT / "backend/app/runtime/durable_execution_queue_runtime.py", "claim_next_execution_job")
+    assert "FOR UPDATE SKIP LOCKED" in claim_source
+    assert 'RETURNING {_select_columns_for_alias("job")}' in claim_source
+    assert "RETURNING {_select_columns()}" not in claim_source
+    assert "WHERE job.job_id = candidate.job_id" in claim_source
+    assert durable_queue._select_columns_for_alias("job").split(", ")[0] == "job.job_id"
+
+    durable_queue.reset_dev_execution_queue_for_tests()
+    import os
+
+    original_env = {key: os.environ.get(key) for key in ["APP_ENV", "DATABASE_URL", "POSTGRES_URL", "RENDER", "PRODUCTION"]}
+    os.environ["APP_ENV"] = "development"
+    os.environ.pop("DATABASE_URL", None)
+    os.environ.pop("POSTGRES_URL", None)
+    os.environ.pop("RENDER", None)
+    os.environ.pop("PRODUCTION", None)
+    try:
+        enqueue = durable_queue.enqueue_execution_job(
+            queue_name="creative_media_generation_queue",
+            tenant_id="client_demo",
+            project_id="creative_media",
+            agent_id="creative_media_agent",
+            action_type="creative_media_generation_job",
+            payload={
+                "media_job_id": "media_job_claim_sql_test",
+                "job_id": "media_job_claim_sql_test",
+                "task": "Create one safe creative media status packet.",
+                "credential_values_exposed": False,
+            },
+            idempotency_key="test:media_job_claim_sql_test",
+        )
+        assert enqueue["success"] is True
+        claim = durable_queue.claim_next_execution_job(queue_name="creative_media_generation_queue", worker_id="test_worker")
+        assert claim["success"] is True
+        assert claim["status"] == "leased"
+        assert claim["job"]["queue_name"] == "creative_media_generation_queue"
+        assert claim["job"]["job_id"] == enqueue["job_id"]
+    finally:
+        durable_queue.reset_dev_execution_queue_for_tests()
+        for key, value in original_env.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
 def test_background_worker_entrypoint_defines_media_processor_before_main_runs() -> None:
     worker = _read(WORKER_LOOP)
     processor_index = worker.index("def process_one_creative_media_generation_job")
@@ -564,6 +611,7 @@ if __name__ == "__main__":
     test_trigger_all_is_bounded_and_does_not_build_large_payloads()
     test_web_trigger_response_exposes_fast_packet_not_final_media()
     test_worker_is_the_media_processor_boundary()
+    test_durable_queue_claim_sql_qualifies_returning_columns_and_claims_queue()
     test_background_worker_entrypoint_defines_media_processor_before_main_runs()
     test_render_worker_service_enables_media_worker_loop()
     test_worker_claims_durable_media_queue_and_status_overlay_moves_job_out_of_queued()

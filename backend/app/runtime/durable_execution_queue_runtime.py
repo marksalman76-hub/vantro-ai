@@ -169,6 +169,13 @@ def _columns() -> List[str]:
     ]
 
 
+def _select_columns_for_alias(alias: str) -> str:
+    safe_alias = "".join(ch for ch in str(alias or "") if ch.isalnum() or ch == "_")
+    if not safe_alias:
+        return _select_columns()
+    return ", ".join(f"{safe_alias}.{column}" for column in _columns())
+
+
 def _record_dev_event(job_id: str, event_type: str, details: Optional[Dict[str, Any]] = None) -> None:
     _DEV_EVENTS.append(
         {
@@ -592,7 +599,7 @@ def claim_next_execution_job(
                     updated_at = NOW()
                 FROM candidate
                 WHERE job.job_id = candidate.job_id
-                RETURNING {_select_columns()}
+                RETURNING {_select_columns_for_alias("job")}
                 """,
                 (queue_name, worker_id, lease_expires),
             )
