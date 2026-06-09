@@ -323,6 +323,33 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
         assets = sorted(assets, key=_asset_priority)
         safe_limit = max(int(limit or 50), 1)
         visible_assets = (assets + job_evidence)[:safe_limit]
+        if job_evidence:
+            visible_evidence_ids = {
+                str(asset.get("asset_id") or "")
+                for asset in visible_assets
+                if asset.get("asset_type") == "creative_media_job_evidence"
+            }
+            missing_evidence = [
+                evidence for evidence in job_evidence
+                if str(evidence.get("asset_id") or "") not in visible_evidence_ids
+            ]
+            for evidence in missing_evidence:
+                if len(visible_assets) < safe_limit:
+                    visible_assets.append(evidence)
+                    continue
+                replace_index = None
+                for idx in range(len(visible_assets) - 1, -1, -1):
+                    candidate = visible_assets[idx]
+                    if (
+                        not candidate.get("playable")
+                        and candidate.get("asset_type") != "creative_media_job_evidence"
+                    ):
+                        replace_index = idx
+                        break
+                if replace_index is None and visible_assets:
+                    replace_index = len(visible_assets) - 1
+                if replace_index is not None:
+                    visible_assets[replace_index] = evidence
         visible_playable_count = sum(1 for asset in visible_assets if asset.get("playable") and asset.get("asset_type") != "creative_media_job_evidence")
         evidence_row_count = sum(1 for asset in visible_assets if asset.get("asset_type") == "creative_media_job_evidence")
         metadata_only_count = sum(1 for asset in visible_assets if asset.get("metadata_only"))

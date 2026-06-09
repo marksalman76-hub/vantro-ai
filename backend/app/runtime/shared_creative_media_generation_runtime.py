@@ -652,6 +652,50 @@ def _is_provider_endpoint_placeholder(asset: Dict[str, Any], result: Dict[str, A
     return "live_provider_ready_endpoint_missing" in status or "live_provider_ready_endpoint_missing" in result_status
 
 
+# SHARED_MEDIA_STACK_CONTEXT_HANDOFF_V1
+def _apply_media_job_context_to_asset(
+    asset: Dict[str, Any],
+    *,
+    media_job_id: str = "",
+    durable_queue_job_id: str = "",
+    task_id: str = "",
+    media_pack_id: str = "",
+) -> Dict[str, Any]:
+    if not isinstance(asset, dict):
+        return asset
+
+    safe_media_job_id = str(media_job_id or asset.get("media_job_id") or asset.get("job_id") or "").strip()
+    safe_durable_queue_job_id = str(durable_queue_job_id or asset.get("durable_queue_job_id") or "").strip()
+    safe_task_id = str(task_id or asset.get("task_id") or safe_media_job_id or "").strip()
+    safe_media_pack_id = str(media_pack_id or asset.get("media_pack_id") or asset.get("pack_id") or "").strip()
+
+    if safe_media_job_id:
+        asset["media_job_id"] = safe_media_job_id
+        asset["job_id"] = safe_media_job_id
+    if safe_task_id:
+        asset["task_id"] = safe_task_id
+    if safe_durable_queue_job_id:
+        asset["durable_queue_job_id"] = safe_durable_queue_job_id
+    if safe_media_pack_id:
+        asset["media_pack_id"] = safe_media_pack_id
+        asset["pack_id"] = safe_media_pack_id
+
+    correlation = asset.get("correlation") if isinstance(asset.get("correlation"), dict) else {}
+    if safe_media_job_id:
+        correlation["media_job_id"] = safe_media_job_id
+    if safe_task_id:
+        correlation["task_id"] = safe_task_id
+    if safe_durable_queue_job_id:
+        correlation["durable_queue_job_id"] = safe_durable_queue_job_id
+    if safe_media_pack_id:
+        correlation["media_pack_id"] = safe_media_pack_id
+    if correlation:
+        asset["correlation"] = correlation
+
+    return asset
+
+
+
 def _persist_media_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
     try:
         from backend.app.runtime.creative_asset_persistence_bridge import persist_creative_asset
@@ -670,6 +714,12 @@ def _persist_media_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
                 "agent_id": asset.get("agent_id"),
                 "agent_label": asset.get("agent_id"),
             "tenant_id": asset.get("tenant_id"),
+                "media_job_id": asset.get("media_job_id") or asset.get("job_id"),
+                "job_id": asset.get("job_id") or asset.get("media_job_id"),
+                "task_id": asset.get("task_id") or asset.get("media_job_id") or asset.get("job_id"),
+                "durable_queue_job_id": asset.get("durable_queue_job_id"),
+                "media_pack_id": asset.get("media_pack_id") or asset.get("pack_id"),
+                "correlation": asset.get("correlation") if isinstance(asset.get("correlation"), dict) else {},
                 "provider": asset.get("provider"),
                 "provider_key": asset.get("provider"),
                 "asset_type": asset.get("asset_type"),
@@ -788,13 +838,20 @@ def generate_creative_media_pack(
     task: str,
     agent_id: str,
     tenant_id: str = "owner_admin",
+    media_job_id: str = "",
+    durable_queue_job_id: str = "",
+    task_id: str = "",
     include_image: bool = True,
     include_audio: bool = True,
     include_video: bool = True,
     include_avatar: bool = True,
 ) -> Dict[str, Any]:
     agent_id = str(agent_id or "").strip() or "creative_agent"
+    tenant_id = str(tenant_id or "").strip() or "owner_admin"
     task = str(task or "").strip()
+    media_job_id = str(media_job_id or "").strip()
+    durable_queue_job_id = str(durable_queue_job_id or "").strip()
+    task_id = str(task_id or media_job_id or "").strip()
 
     pack_id = f"creative_media_pack_{uuid.uuid4().hex[:12]}"
 
@@ -847,6 +904,13 @@ def generate_creative_media_pack(
         # Avoid persisting giant embedded data images that slow the viewer.
         image_url = str(image_asset.get("preview_url") or image_asset.get("download_url") or image_asset.get("asset_url") or "")
         if image_asset.get("real_media_asset_created") and not (image_url.startswith("data:image") and len(image_url) > 250_000):
+            _apply_media_job_context_to_asset(
+                image_asset,
+                media_job_id=media_job_id,
+                durable_queue_job_id=durable_queue_job_id,
+                task_id=task_id,
+                media_pack_id=pack_id,
+            )
             _append_if_persistable(image_asset, image_assets)
         elif image_asset.get("real_media_asset_created"):
             image_asset["persistence"] = {
@@ -900,6 +964,13 @@ def generate_creative_media_pack(
             pack_id=pack_id,
             prompt=video_prompt,
         )
+        _apply_media_job_context_to_asset(
+            video_asset,
+            media_job_id=media_job_id,
+            durable_queue_job_id=durable_queue_job_id,
+            task_id=task_id,
+            media_pack_id=pack_id,
+        )
         _append_if_persistable(video_asset, video_assets)
         generation_jobs.append(
             {
@@ -937,6 +1008,13 @@ def generate_creative_media_pack(
             pack_id=pack_id,
             prompt=audio_script,
             script=audio_script,
+        )
+        _apply_media_job_context_to_asset(
+            audio_asset,
+            media_job_id=media_job_id,
+            durable_queue_job_id=durable_queue_job_id,
+            task_id=task_id,
+            media_pack_id=pack_id,
         )
         _append_if_persistable(audio_asset, audio_assets)
         generation_jobs.append(
@@ -1011,6 +1089,13 @@ def generate_creative_media_pack(
             or avatar_asset.get("asset_url")
             or avatar_asset.get("media_url")
         ):
+            _apply_media_job_context_to_asset(
+                avatar_asset,
+                media_job_id=media_job_id,
+                durable_queue_job_id=durable_queue_job_id,
+                task_id=task_id,
+                media_pack_id=pack_id,
+            )
             _append_if_persistable(avatar_asset, avatar_assets)
 
         generation_jobs.append(
@@ -1038,6 +1123,13 @@ def generate_creative_media_pack(
         prompt=task,
     )
     if combined_video_asset.get("success") and combined_video_asset.get("real_media_asset_created"):
+        _apply_media_job_context_to_asset(
+            combined_video_asset,
+            media_job_id=media_job_id,
+            durable_queue_job_id=durable_queue_job_id,
+            task_id=task_id,
+            media_pack_id=pack_id,
+        )
         _append_if_persistable(combined_video_asset, combined_video_assets)
 
     media_assets = [*image_assets, *combined_video_assets, *video_assets, *audio_assets, *avatar_assets]
