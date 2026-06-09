@@ -36,6 +36,16 @@ ADMIN_MEDIA_JOB_PROCESSING_PATHS = (
     "/admin/media-jobs/trigger-all",
     "/admin/media-jobs/trigger-next",
 )
+
+
+# Authenticated read-only owner/admin media job status routes.
+# These are safe for production diagnostics and portal status polling because
+# route output remains customer-safe and does not expose raw provider payloads,
+# prompts, credentials, secrets, or internal configuration.
+ADMIN_MEDIA_JOB_STATUS_READ_PATH_PREFIXES = (
+    "/admin/media-jobs",
+    "/admin/creative/media-assets",
+)
 DEFAULT_TRUSTED_ORIGINS = ("https://app.trance-formation.com.au", "https://trance-formation.com.au")
 STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
@@ -164,13 +174,19 @@ def _admin_media_job_processing_valid(request: Request) -> bool:
     method = request.method.upper()
     role = _header(request, "x-actor-role", "anonymous").lower()
 
+    if role not in {"owner", "admin", "owner_admin", "system"}:
+        return False
+
+    if method == "GET" and any(
+        path == prefix or path.startswith(prefix + "/")
+        for prefix in ADMIN_MEDIA_JOB_STATUS_READ_PATH_PREFIXES
+    ):
+        return _admin_token_valid(request)
+
     if path not in ADMIN_MEDIA_JOB_PROCESSING_PATHS:
         return False
 
     if method != "POST":
-        return False
-
-    if role not in {"owner", "admin", "owner_admin", "system"}:
         return False
 
     return _admin_token_valid(request)
