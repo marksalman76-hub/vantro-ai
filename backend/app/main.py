@@ -2791,6 +2791,61 @@ def admin_session_auth_hardening_readiness():
     return session_auth_hardening_readiness()
 
 
+
+
+@app.get("/admin/security/media-job-read-diagnostics")
+def admin_media_job_read_diagnostics(
+    request: Request,
+    path: str = "/admin/media-jobs/test",
+    x_admin_token: str | None = Header(default=None),
+    x_actor_role: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+):
+    """
+    Owner/admin-only diagnostic for media job read security checks.
+
+    This route does not expose token values, secrets, raw provider payloads,
+    prompts, internal configuration, or media job content. It only reports
+    boolean security decisions needed to verify production-safe media job
+    status polling.
+    """
+    role = str(x_actor_role or "").strip().lower()
+    supplied_path = str(path or "/admin/media-jobs/test").strip() or "/admin/media-jobs/test"
+    supplied_path_lower = supplied_path.lower()
+    method = "GET"
+
+    token_valid = _admin_media_job_token_valid(x_admin_token, authorization)
+    role_allowed = role in {"owner", "admin", "owner_admin", "system"}
+    read_prefix_allowed = supplied_path_lower == "/admin/media-jobs" or supplied_path_lower.startswith("/admin/media-jobs/")
+    creative_assets_allowed = supplied_path_lower == "/admin/creative/media-assets" or supplied_path_lower.startswith("/admin/creative/media-assets/")
+
+    read_allowed = bool(
+        role_allowed
+        and token_valid
+        and method == "GET"
+        and (read_prefix_allowed or creative_assets_allowed)
+    )
+
+    # Keep response intentionally sanitised.
+    return {
+        "success": True,
+        "diagnostic": "media_job_read_security",
+        "security_profile": MEDIA_JOB_SECURITY_PROFILE,
+        "path_checked": supplied_path_lower,
+        "method_checked": method,
+        "role_allowed": role_allowed,
+        "token_valid": token_valid,
+        "media_job_read_prefix_allowed": read_prefix_allowed,
+        "creative_media_assets_prefix_allowed": creative_assets_allowed,
+        "media_job_read_allowed": read_allowed,
+        "credential_values_exposed": False,
+        "token_value_exposed": False,
+        "raw_provider_payload_exposed": False,
+        "internal_prompt_exposed": False,
+        "customer_safe": True,
+    }
+
+
 @app.get("/admin/security-audit-enforcement-readiness")
 def admin_security_audit_enforcement_readiness():
     return security_audit_enforcement_readiness()
