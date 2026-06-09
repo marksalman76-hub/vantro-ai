@@ -45,6 +45,7 @@ ADMIN_MEDIA_JOB_PROCESSING_PATHS = (
 ADMIN_MEDIA_JOB_STATUS_READ_PATH_PREFIXES = (
     "/admin/media-jobs",
     "/admin/creative/media-assets",
+    "/admin/security/media-job-read-diagnostics",
 )
 DEFAULT_TRUSTED_ORIGINS = ("https://app.trance-formation.com.au", "https://trance-formation.com.au")
 STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
