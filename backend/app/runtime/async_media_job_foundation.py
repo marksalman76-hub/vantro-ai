@@ -617,6 +617,96 @@ def _safe_final_asset_ids(value: Any) -> List[str]:
     ]
 
 
+# DURABLE_MEDIA_OUTCOME_ASSET_LINKING_V1
+def _resolve_final_assets_from_registry(final_asset_ids: List[str], *, limit: int = 250) -> List[Dict[str, Any]]:
+    safe_ids = set(_safe_job_id(asset_id) for asset_id in final_asset_ids if _safe_job_id(asset_id))
+    if not safe_ids:
+        return []
+
+    try:
+        from backend.app.runtime.creative_asset_persistence_bridge import get_persisted_creative_assets
+
+        registry = get_persisted_creative_assets(limit=max(1, min(int(limit or 250), 500)))
+        assets = registry.get("assets", []) if isinstance(registry, dict) else []
+    except Exception:
+        return []
+
+    resolved: List[Dict[str, Any]] = []
+    seen: set[str] = set()
+
+    for asset in assets:
+        if not isinstance(asset, dict):
+            continue
+
+        asset_id = _safe_job_id(asset.get("asset_id") or asset.get("id"))
+        if not asset_id or asset_id not in safe_ids or asset_id in seen:
+            continue
+
+        resolved.append(_asset_delivery_summary(asset))
+        seen.add(asset_id)
+
+    return resolved
+
+
+def _apply_durable_outcome_asset_summary(
+    *,
+    status: str,
+    safe_reason: str,
+    asset_count: int,
+    playable_asset_count: int,
+    preview_ready_count: int,
+    download_ready_count: int,
+    final_asset_ids: List[str],
+    final_assets: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    resolved_assets = final_assets if final_assets else _resolve_final_assets_from_registry(final_asset_ids)
+    asset_success = _asset_success_summary(resolved_assets)
+
+    resolved_playable_count = int(asset_success.get("playable_asset_count") or 0)
+    resolved_persisted_count = int(asset_success.get("persisted_asset_count") or 0)
+    resolved_preview_count = int(asset_success.get("preview_ready_count") or 0)
+    resolved_download_count = int(asset_success.get("download_ready_count") or 0)
+
+    visible_status = str(status or "").strip().lower() or "queued"
+    visible_reason = safe_reason
+    partial_success = False
+
+    if visible_status == "provider_unavailable" and resolved_playable_count > 0:
+        visible_status = "partial_success"
+        visible_reason = (
+            "Partial media success: at least one playable asset was created, "
+            "while one or more requested providers were unavailable."
+        )
+        partial_success = True
+
+    final_count = max(int(asset_count or 0), len(resolved_assets), resolved_persisted_count)
+
+    return {
+        "status": visible_status,
+        "safe_visible_reason": visible_reason,
+        "blocked_reason": visible_reason,
+        "media_asset_count": final_count,
+        "asset_count": final_count,
+        "real_media_asset_count": max(final_count, resolved_persisted_count),
+        "persisted_asset_count": max(final_count, resolved_persisted_count),
+        "playable_asset_count": max(int(playable_asset_count or 0), resolved_playable_count),
+        "preview_ready_count": max(int(preview_ready_count or 0), resolved_preview_count),
+        "download_ready_count": max(int(download_ready_count or 0), resolved_download_count),
+        "final_assets": resolved_assets,
+        "playable_asset_created": bool(max(int(playable_asset_count or 0), resolved_playable_count)),
+        "signed_delivery_created": bool(
+            int(preview_ready_count or 0)
+            or int(download_ready_count or 0)
+            or resolved_preview_count
+            or resolved_download_count
+            or asset_success.get("signed_delivery_created")
+        ),
+        "metadata_only": not bool(max(int(playable_asset_count or 0), resolved_playable_count)),
+        "partial_success": partial_success,
+    }
+
+
+
 def _durable_completion_details(durable_queue_job_id: str, durable_status: str) -> Dict[str, Any]:
     try:
         from backend.app.runtime.durable_execution_queue_runtime import get_latest_execution_job_event
@@ -659,7 +749,24 @@ def _synthetic_job_from_durable_media_queue_row(row: Dict[str, Any]) -> Dict[str
     preview_ready_count = _safe_int(details.get("preview_ready_count"))
     download_ready_count = _safe_int(details.get("download_ready_count"))
     final_asset_ids = _safe_final_asset_ids(details.get("final_asset_ids"))
+    final_assets = [
+        _asset_delivery_summary(asset)
+        for asset in details.get("final_assets", [])
+        if isinstance(asset, dict)
+    ]
     safe_reason = _compact_text(details.get("safe_visible_reason") or details.get("error") or "", 500)
+    outcome_asset_summary = _apply_durable_outcome_asset_summary(
+        status=status,
+        safe_reason=safe_reason,
+        asset_count=asset_count,
+        playable_asset_count=playable_asset_count,
+        preview_ready_count=preview_ready_count,
+        download_ready_count=download_ready_count,
+        final_asset_ids=final_asset_ids,
+        final_assets=final_assets,
+    )
+    status = outcome_asset_summary["status"]
+    safe_reason = outcome_asset_summary["safe_visible_reason"]
 
     return {
         "success": True,
@@ -679,20 +786,21 @@ def _synthetic_job_from_durable_media_queue_row(row: Dict[str, Any]) -> Dict[str
         "worker_completed": durable_status == "completed",
         "worker_dead_lettered": durable_status == "dead_letter",
         "provider_status": _compact_text(details.get("provider_status") or status, 160),
-        "safe_visible_reason": safe_reason,
-        "blocked_reason": safe_reason,
-        "media_asset_count": asset_count,
-        "asset_count": asset_count,
-        "real_media_asset_count": asset_count,
-        "persisted_asset_count": asset_count,
-        "playable_asset_count": playable_asset_count,
-        "preview_ready_count": preview_ready_count,
-        "download_ready_count": download_ready_count,
+        "safe_visible_reason": outcome_asset_summary["safe_visible_reason"],
+        "blocked_reason": outcome_asset_summary["blocked_reason"],
+        "media_asset_count": outcome_asset_summary["media_asset_count"],
+        "asset_count": outcome_asset_summary["asset_count"],
+        "real_media_asset_count": outcome_asset_summary["real_media_asset_count"],
+        "persisted_asset_count": outcome_asset_summary["persisted_asset_count"],
+        "playable_asset_count": outcome_asset_summary["playable_asset_count"],
+        "preview_ready_count": outcome_asset_summary["preview_ready_count"],
+        "download_ready_count": outcome_asset_summary["download_ready_count"],
         "final_asset_ids": final_asset_ids,
-        "final_assets": [],
-        "playable_asset_created": bool(playable_asset_count),
-        "signed_delivery_created": bool(preview_ready_count or download_ready_count),
-        "metadata_only": not bool(playable_asset_count),
+        "final_assets": outcome_asset_summary["final_assets"],
+        "playable_asset_created": outcome_asset_summary["playable_asset_created"],
+        "signed_delivery_created": outcome_asset_summary["signed_delivery_created"],
+        "metadata_only": outcome_asset_summary["metadata_only"],
+        "partial_success": outcome_asset_summary["partial_success"],
         "source_runtime": "durable_execution_queue_outcome",
         "created_at": row.get("created_at") or details.get("created_at"),
         "updated_at": row.get("updated_at") or details.get("updated_at") or row.get("completed_at") or row.get("failed_at"),
@@ -1020,6 +1128,7 @@ def _looks_like_real_delivery_url(value: Any) -> bool:
         return False
     blocked = (
         "example.com",
+        "demo.supabase.co",
         "localhost",
         "127.0.0.1",
         "placeholder",
