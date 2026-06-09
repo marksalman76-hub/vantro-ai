@@ -1082,6 +1082,10 @@ def _asset_delivery_summary(asset: Dict[str, Any]) -> Dict[str, Any]:
     signed = asset.get("signed_delivery") if isinstance(asset.get("signed_delivery"), dict) else {}
     return {
         "asset_id": persistence.get("asset_id") or delivery.get("asset_id") or signed.get("asset_id") or asset.get("asset_id"),
+        "media_job_id": asset.get("media_job_id") or asset.get("job_id") or persistence.get("media_job_id") or delivery.get("media_job_id") or signed.get("media_job_id"),
+        "job_id": asset.get("job_id") or asset.get("media_job_id") or persistence.get("job_id") or delivery.get("job_id") or signed.get("job_id"),
+        "task_id": asset.get("task_id") or asset.get("media_job_id") or asset.get("job_id") or persistence.get("task_id") or delivery.get("task_id") or signed.get("task_id"),
+        "durable_queue_job_id": asset.get("durable_queue_job_id") or persistence.get("durable_queue_job_id") or delivery.get("durable_queue_job_id") or signed.get("durable_queue_job_id"),
         "media_type": asset.get("media_type") or asset.get("asset_type"),
         "asset_type": asset.get("asset_type") or asset.get("media_type"),
         "provider": asset.get("provider") or asset.get("provider_key"),
