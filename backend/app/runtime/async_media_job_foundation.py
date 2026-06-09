@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 from uuid import uuid4
 import json
+import os
 import threading
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -13,6 +14,8 @@ STORE = ROOT / "runtime_outputs" / "media_jobs"
 STORE.mkdir(parents=True, exist_ok=True)
 
 CREATIVE_MEDIA_GENERATION_QUEUE = "creative_media_generation_queue"
+TRIGGER_ALL_DEFAULT_SCHEDULE_LIMIT = 3
+FAST_PACKET_LIST_LIMIT = 2
 
 _LOCK = threading.Lock()
 
@@ -201,6 +204,74 @@ def _safe_bool(value: Any) -> bool:
     return bool(value)
 
 
+FAST_PACKET_BLOCKED_MARKERS = (
+    "you are executing as",
+    "platform standard",
+    "output quality requirement",
+    "agent-specific behaviour",
+    "agent specific behaviour",
+    "required structure",
+    "system prompt",
+    "developer prompt",
+    "internal prompt",
+    "backend execution",
+    "governance",
+    "raw provider",
+    "provider payload",
+    "run delegated workforce",
+    "wait for generated media assets",
+    "create operational execution task",
+)
+
+CREATIVE_SOURCE_FIELDS = (
+    "customer_creative_brief",
+    "creative_brief",
+    "user_creative_brief",
+    "campaign_brief",
+    "product_brief",
+    "asset_brief",
+    "customer_request",
+    "user_request",
+    "creative_request",
+    "product_description",
+    "brand_description",
+    "campaign_context",
+    "task",
+)
+
+
+def _compact_text(value: Any, max_len: int = 1000) -> str:
+    text = " ".join(str(value or "").replace("\r", " ").replace("\n", " ").split())
+    return text[:max_len].strip()
+
+
+def _blocked_fast_packet_text(value: str) -> bool:
+    lowered = str(value or "").lower()
+    return any(marker in lowered for marker in FAST_PACKET_BLOCKED_MARKERS) or any(
+        marker in lowered
+        for marker in ("token", "secret", "password", "api_key", "authorization", "credential")
+    )
+
+
+def _customer_safe_creative_source(job: Dict[str, Any]) -> str:
+    for field in CREATIVE_SOURCE_FIELDS:
+        value = _compact_text(job.get(field), 1200)
+        if not value or _blocked_fast_packet_text(value):
+            continue
+        if len(value) < 8:
+            continue
+        return value
+    return ""
+
+
+def _trigger_all_schedule_limit(limit: int) -> int:
+    try:
+        configured = int(os.getenv("CREATIVE_MEDIA_TRIGGER_MAX_JOBS", str(TRIGGER_ALL_DEFAULT_SCHEDULE_LIMIT)))
+    except Exception:
+        configured = TRIGGER_ALL_DEFAULT_SCHEDULE_LIMIT
+    return max(1, min(int(limit or TRIGGER_ALL_DEFAULT_SCHEDULE_LIMIT), configured, 10))
+
+
 def _durable_media_queue_payload(job: Dict[str, Any]) -> Dict[str, Any]:
     job_id = str(job.get("job_id") or job.get("media_job_id") or "").strip()
     return {
@@ -221,7 +292,6 @@ def _durable_media_queue_payload(job: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def build_fast_creative_output_packet(job: Dict[str, Any]) -> Dict[str, Any]:
-    task = str(job.get("task") or "Create a premium creative media asset.").strip()
     agent_id = str(job.get("agent_id") or job.get("requested_agent") or "creative_media_agent").strip()
     include_image = _safe_bool(job.get("include_image"))
     include_audio = _safe_bool(job.get("include_audio"))
@@ -237,7 +307,36 @@ def build_fast_creative_output_packet(job: Dict[str, Any]) -> Dict[str, Any]:
         ]
         if enabled
     ]
-    hook = f"Lead with the clearest product benefit, then show proof for: {task[:180]}"
+    creative_source = _customer_safe_creative_source(job)
+    if not creative_source:
+        return {
+            "packet_type": "fast_creative_media_status_packet",
+            "fast_output_packet_available": False,
+            "timing_stage": "stage_1_fast_status_response",
+            "target_response_seconds": "under_3",
+            "final_provider_media_stage": "stage_2_async_final_render",
+            "final_asset_status": str(job.get("status") or "queued"),
+            "job_status": str(job.get("status") or "queued"),
+            "agent_id": agent_id,
+            "status_summary": "Creative media generation is queued. Final provider-rendered media will appear after async worker completion.",
+            "media_generation_plan": {
+                "requested_assets": requested_assets,
+                "provider_generation_queued": True,
+                "async_final_render_required": bool(requested_assets),
+                "final_media_completion_claimed": False,
+            },
+            "asset_requirements": {
+                "image": include_image,
+                "audio": include_audio,
+                "video": include_video,
+                "avatar_video": include_avatar,
+            },
+            "preview_evidence_status": "queued",
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
+    hook = f"Lead with the clearest customer benefit, then show proof for: {creative_source[:160]}"
     return {
         "packet_type": "fast_creative_media_output_packet",
         "fast_output_packet_available": True,
@@ -247,7 +346,7 @@ def build_fast_creative_output_packet(job: Dict[str, Any]) -> Dict[str, Any]:
         "final_asset_status": str(job.get("status") or "queued"),
         "job_status": str(job.get("status") or "queued"),
         "agent_id": agent_id,
-        "creative_brief": task[:1000],
+        "creative_brief": creative_source[:1000],
         "hook": hook,
         "caption": f"{hook} Final media render is queued and will appear when provider output is ready.",
         "scene_directions": [
@@ -282,8 +381,9 @@ def _mark_job_durable_queue_scheduled(job: Dict[str, Any], queue_result: Dict[st
     updated["durable_queue_job_id"] = queue_result.get("queue_id") or queue_result.get("job_id")
     updated["durable_queue_storage_mode"] = queue_result.get("storage_mode")
     updated["background_processor_scheduled"] = True
-    updated["fast_output_packet"] = build_fast_creative_output_packet(updated)
-    updated["fast_output_packet_available"] = True
+    fast_packet = build_fast_creative_output_packet(updated)
+    updated["fast_output_packet"] = fast_packet
+    updated["fast_output_packet_available"] = bool(fast_packet.get("fast_output_packet_available"))
     updated["updated_at"] = _now()
     updated["credential_values_exposed"] = False
     _write_job(updated)
@@ -344,6 +444,7 @@ def enqueue_creative_media_job_for_worker(job: Dict[str, Any]) -> Dict[str, Any]
         except Exception:
             scheduled = bool(safe_result.get("success"))
 
+    fast_packet = build_fast_creative_output_packet(safe_job)
     return {
         **media_job_store_context(),
         "success": bool(safe_result.get("success")),
@@ -352,8 +453,8 @@ def enqueue_creative_media_job_for_worker(job: Dict[str, Any]) -> Dict[str, Any]
         "background_processor_scheduled": scheduled,
         "queue_name": CREATIVE_MEDIA_GENERATION_QUEUE,
         "media_job_id": job_id,
-        "fast_output_packet_available": True,
-        "fast_output_packet": build_fast_creative_output_packet(safe_job),
+        "fast_output_packet_available": bool(fast_packet.get("fast_output_packet_available")),
+        "fast_output_packet": fast_packet,
         "timing_stage": "stage_1_fast_creative_response",
         "final_provider_media_stage": "stage_2_async_final_render",
         "final_media_completion_claimed": False,
@@ -391,8 +492,9 @@ def enqueue_media_job(*, task: str, agent_id: str, tenant_id: str, include_image
         "updated_at": _now(),
         "credential_values_exposed": False,
     }
-    job["fast_output_packet"] = build_fast_creative_output_packet(job)
-    job["fast_output_packet_available"] = True
+    fast_packet = build_fast_creative_output_packet(job)
+    job["fast_output_packet"] = fast_packet
+    job["fast_output_packet_available"] = bool(fast_packet.get("fast_output_packet_available"))
     with _LOCK:
         _job_path(job_id).write_text(json.dumps(job, indent=2), encoding="utf-8")
     return job
@@ -789,7 +891,7 @@ def run_all_media_jobs(limit: int = 25) -> Dict[str, Any]:
 
 
 def trigger_next_creative_media_job() -> Dict[str, Any]:
-    jobs_result = list_media_jobs(limit=200)
+    jobs_result = list_media_jobs(limit=25)
     jobs = [j for j in jobs_result.get("jobs", []) if isinstance(j, dict) and j.get("status") == "queued"]
     if not jobs:
         return {
@@ -824,8 +926,8 @@ def trigger_next_creative_media_job() -> Dict[str, Any]:
 
 
 def trigger_all_creative_media_jobs(limit: int = 25) -> Dict[str, Any]:
-    safe_limit = max(1, min(int(limit or 25), 100))
-    jobs_result = list_media_jobs(limit=max(safe_limit, 100))
+    safe_limit = _trigger_all_schedule_limit(limit)
+    jobs_result = list_media_jobs(limit=max(safe_limit, 25))
     queued = [j for j in jobs_result.get("jobs", []) if isinstance(j, dict) and j.get("status") == "queued"]
     selected = queued[:safe_limit]
     results: List[Dict[str, Any]] = []
@@ -851,12 +953,14 @@ def trigger_all_creative_media_jobs(limit: int = 25) -> Dict[str, Any]:
         "queued_job_count": len(queued),
         "scheduled_job_count": scheduled_count,
         "triggered_job_count": len(results),
-        "fast_output_packet_available": bool(results),
+        "request_schedule_limit": safe_limit,
+        "bounded_trigger": True,
+        "fast_output_packet_available": any(bool(result.get("fast_output_packet_available")) for result in results if isinstance(result, dict)),
         "fast_output_packets": [
             result.get("fast_output_packet")
             for result in results
             if isinstance(result, dict) and isinstance(result.get("fast_output_packet"), dict)
-        ][:5],
+        ][:FAST_PACKET_LIST_LIMIT],
         "timing_stage": "stage_1_fast_creative_response",
         "final_provider_media_stage": "stage_2_async_final_render",
         "final_media_completion_claimed": False,

@@ -5069,10 +5069,10 @@ def _media_job_final_status_counts(result: dict) -> dict:
     return counts
 
 
-def _media_job_store_snapshot() -> dict:
+def _media_job_store_snapshot(limit: int = 50) -> dict:
     from backend.app.runtime.async_media_job_foundation import list_media_jobs
 
-    jobs_result = list_media_jobs(limit=500)
+    jobs_result = list_media_jobs(limit=max(1, min(int(limit or 50), 50)))
     jobs = jobs_result.get("jobs", []) if isinstance(jobs_result, dict) else []
     status_counts: dict[str, int] = {}
     queued_count = 0
@@ -5171,7 +5171,7 @@ def _media_job_trigger_response(
         "queue_name": result.get("queue_name") or "creative_media_generation_queue",
         "queued_job_count": int(result.get("queued_job_count") or before.get("queued_job_count") or 0),
         "canonical_store": result.get("canonical_store") or before.get("canonical_store") or "backend:runtime_outputs/media_jobs",
-        "fast_output_packet_available": bool(result.get("fast_output_packet_available", True)),
+        "fast_output_packet_available": bool(result.get("fast_output_packet_available", False)),
         "fast_output_packet": result.get("fast_output_packet"),
         "fast_output_packets": result.get("fast_output_packets", []),
         "timing_stage": result.get("timing_stage") or "stage_1_fast_creative_response",
@@ -5202,7 +5202,7 @@ def admin_trigger_next_media_job(
     if not _admin_media_job_authorized(x_actor_role, x_admin_token, authorization):
         return _media_job_blocked_response()
     from backend.app.runtime.async_media_job_foundation import trigger_next_creative_media_job
-    before = _media_job_store_snapshot()
+    before = _media_job_store_snapshot(limit=25)
     result = trigger_next_creative_media_job()
     return _media_job_trigger_response(result, authorised=True, before_snapshot=before)
 
@@ -5216,7 +5216,7 @@ def admin_trigger_all_media_jobs(
     if not _admin_media_job_authorized(x_actor_role, x_admin_token, authorization):
         return _media_job_blocked_response()
     from backend.app.runtime.async_media_job_foundation import trigger_all_creative_media_jobs
-    before = _media_job_store_snapshot()
+    before = _media_job_store_snapshot(limit=25)
     result = trigger_all_creative_media_jobs(limit=25)
     return _media_job_trigger_response(result, authorised=True, before_snapshot=before)
 
@@ -5230,7 +5230,7 @@ def admin_run_next_media_job(
     if not _admin_media_job_authorized(x_actor_role, x_admin_token, authorization):
         return _media_job_blocked_response()
     from backend.app.runtime.async_media_job_foundation import trigger_next_creative_media_job
-    before = _media_job_store_snapshot()
+    before = _media_job_store_snapshot(limit=25)
     result = trigger_next_creative_media_job()
     return _media_job_trigger_response(result, authorised=True, before_snapshot=before, legacy_route="/admin/media-jobs/run-next")
 
@@ -5244,6 +5244,6 @@ def admin_run_all_media_jobs(
     if not _admin_media_job_authorized(x_actor_role, x_admin_token, authorization):
         return _media_job_blocked_response()
     from backend.app.runtime.async_media_job_foundation import trigger_all_creative_media_jobs
-    before = _media_job_store_snapshot()
+    before = _media_job_store_snapshot(limit=25)
     result = trigger_all_creative_media_jobs(limit=25)
     return _media_job_trigger_response(result, authorised=True, before_snapshot=before, legacy_route="/admin/media-jobs/run-all")

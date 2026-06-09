@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from typing import Any
 
 from backend.app.runtime import async_media_job_foundation as media_jobs
 
@@ -35,6 +36,25 @@ def _function_body_source(path: Path, name: str) -> str:
         if isinstance(node, ast.FunctionDef) and node.name == name:
             return "\n".join(ast.get_source_segment(source, item) or "" for item in node.body)
     raise AssertionError(f"Function not found: {name}")
+
+
+def _json_text(value: Any) -> str:
+    return str(value).lower()
+
+
+def _unsafe_fast_packet_markers() -> list[str]:
+    return [
+        "you are executing as",
+        "platform standard",
+        "output quality requirement",
+        "agent-specific behaviour",
+        "required structure",
+        "create operational execution task",
+        "run delegated workforce",
+        "wait for generated media assets",
+        "super_secret",
+        "internal_prompt",
+    ]
 
 
 def test_frontend_uses_trigger_routes_only() -> None:
@@ -164,6 +184,103 @@ def test_durable_queue_bridge_is_global_and_secret_safe() -> None:
     assert "internal_prompt" not in payload_text
 
 
+def test_fast_packet_sanitises_internal_and_operational_text() -> None:
+    unsafe_job = {
+        "job_id": "media_job_internal_prompt",
+        "status": "queued",
+        "agent_id": "paid_ads_agent",
+        "tenant_id": "client_demo",
+        "task": """
+        You are executing as: ugc_creative_agent.
+        Platform standard: internal platform policy.
+        Output quality requirement: hidden rubric.
+        Agent-specific behaviour: private scaffolding.
+        Required structure: internal only.
+        Create operational execution task for: Next step: Run delegated workforce or wait for generated media assets.
+        """,
+        "include_video": True,
+        "internal_prompt": "super_secret_internal_prompt",
+    }
+    packet = media_jobs.build_fast_creative_output_packet(unsafe_job)
+    packet_text = _json_text(packet)
+    assert packet["packet_type"] == "fast_creative_media_status_packet"
+    assert packet["fast_output_packet_available"] is False
+    assert "hook" not in packet
+    assert "caption" not in packet
+    assert "creative_brief" not in packet
+    for marker in _unsafe_fast_packet_markers():
+        assert marker not in packet_text
+
+
+def test_fast_packet_uses_customer_safe_creative_source_globally() -> None:
+    packet = media_jobs.build_fast_creative_output_packet(
+        {
+            "job_id": "media_job_product_image",
+            "status": "queued",
+            "agent_id": "product_image_agent",
+            "tenant_id": "client_demo",
+            "task": "Create a bright product image campaign for a refillable skincare bottle aimed at busy parents.",
+            "include_image": True,
+            "include_video": False,
+        }
+    )
+    packet_text = _json_text(packet)
+    assert packet["packet_type"] == "fast_creative_media_output_packet"
+    assert packet["fast_output_packet_available"] is True
+    assert "refillable skincare bottle" in packet_text
+    assert "product_image_agent" in packet_text
+    for marker in _unsafe_fast_packet_markers():
+        assert marker not in packet_text
+
+
+def test_trigger_all_is_bounded_and_does_not_build_large_payloads() -> None:
+    old_store = media_jobs.STORE
+    old_enqueue = media_jobs.enqueue_creative_media_job_for_worker
+    calls: list[str] = []
+
+    def fake_enqueue(job: dict) -> dict:
+        calls.append(str(job.get("job_id")))
+        return {
+            "success": True,
+            "status": "queued",
+            "triggered": True,
+            "background_processor_scheduled": True,
+            "queue_name": "creative_media_generation_queue",
+            "media_job_id": job.get("job_id"),
+            "fast_output_packet_available": True,
+            "fast_output_packet": media_jobs.build_fast_creative_output_packet(job),
+            "request_path_safe": True,
+            "processor_invoked": False,
+            "credential_values_exposed": False,
+        }
+
+    with TemporaryDirectory() as temp_dir:
+        media_jobs.STORE = Path(temp_dir)
+        media_jobs.enqueue_creative_media_job_for_worker = fake_enqueue
+        try:
+            for index in range(10):
+                media_jobs.enqueue_media_job(
+                    task=f"Create product launch creative asset {index}.",
+                    agent_id="creative_product_asset_agent",
+                    tenant_id="client_demo",
+                    include_image=True,
+                    include_audio=False,
+                    include_video=True,
+                )
+            result = media_jobs.trigger_all_creative_media_jobs(limit=25)
+        finally:
+            media_jobs.enqueue_creative_media_job_for_worker = old_enqueue
+            media_jobs.STORE = old_store
+
+    assert result["success"] is True
+    assert result["request_path_safe"] is True
+    assert result["bounded_trigger"] is True
+    assert result["request_schedule_limit"] <= 3
+    assert result["scheduled_job_count"] == len(calls) <= 3
+    assert len(result["fast_output_packets"]) <= 2
+    assert result["processor_invoked"] is False
+
+
 def test_web_trigger_response_exposes_fast_packet_not_final_media() -> None:
     trigger_response = _function_source(BACKEND_MAIN, "_media_job_trigger_response")
     assert "fast_output_packet_available" in trigger_response
@@ -197,6 +314,9 @@ if __name__ == "__main__":
     test_backend_trigger_routes_are_queue_only()
     test_list_media_jobs_is_fast_local_by_default()
     test_durable_queue_bridge_is_global_and_secret_safe()
+    test_fast_packet_sanitises_internal_and_operational_text()
+    test_fast_packet_uses_customer_safe_creative_source_globally()
+    test_trigger_all_is_bounded_and_does_not_build_large_payloads()
     test_web_trigger_response_exposes_fast_packet_not_final_media()
     test_worker_is_the_media_processor_boundary()
     print("MEDIA_WORKER_BOUNDARY_PASSED")
