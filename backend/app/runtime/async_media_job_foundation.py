@@ -970,18 +970,134 @@ def media_job_to_visible_asset_evidence(job: Dict[str, Any], *, audience: str = 
 
 def _asset_delivery_summary(asset: Dict[str, Any]) -> Dict[str, Any]:
     persistence = asset.get("persistence") if isinstance(asset.get("persistence"), dict) else {}
+    delivery = asset.get("delivery") if isinstance(asset.get("delivery"), dict) else {}
+    signed = asset.get("signed_delivery") if isinstance(asset.get("signed_delivery"), dict) else {}
     return {
-        "asset_id": persistence.get("asset_id") or asset.get("asset_id"),
+        "asset_id": persistence.get("asset_id") or delivery.get("asset_id") or signed.get("asset_id") or asset.get("asset_id"),
         "media_type": asset.get("media_type") or asset.get("asset_type"),
         "asset_type": asset.get("asset_type") or asset.get("media_type"),
+        "provider": asset.get("provider") or asset.get("provider_key"),
+        "provider_key": asset.get("provider_key") or asset.get("provider"),
         "status": asset.get("status"),
-        "preview_ready": bool(persistence.get("preview_ready") or asset.get("preview_ready")),
-        "download_ready": bool(persistence.get("download_ready") or asset.get("download_ready")),
-        "playable": bool(persistence.get("playable") or asset.get("playable")),
-        "metadata_only": bool(persistence.get("metadata_only") or asset.get("metadata_only")),
-        "signed_delivery_created": bool(persistence.get("signed_delivery_created") or asset.get("signed_delivery_created")),
-        "storage_provider": persistence.get("storage_provider"),
+        "provider_asset_url": persistence.get("provider_asset_url") or delivery.get("provider_asset_url") or asset.get("provider_asset_url") or asset.get("asset_url") or asset.get("url"),
+        "preview_url": persistence.get("preview_url") or delivery.get("preview_url") or signed.get("preview_url") or asset.get("preview_url"),
+        "download_url": persistence.get("download_url") or delivery.get("download_url") or signed.get("download_url") or asset.get("download_url"),
+        "original_preview_url": persistence.get("original_preview_url") or delivery.get("original_preview_url") or asset.get("original_preview_url"),
+        "original_download_url": persistence.get("original_download_url") or delivery.get("original_download_url") or asset.get("original_download_url"),
+        "preview_ready": bool(persistence.get("preview_ready") or delivery.get("preview_ready") or signed.get("preview_ready") or asset.get("preview_ready")),
+        "download_ready": bool(persistence.get("download_ready") or delivery.get("download_ready") or signed.get("download_ready") or asset.get("download_ready")),
+        "playable": bool(persistence.get("playable") or delivery.get("playable") or signed.get("playable") or asset.get("playable")),
+        "metadata_only": bool(persistence.get("metadata_only") or delivery.get("metadata_only") or asset.get("metadata_only")),
+        "invalid_or_placeholder_media_source": bool(persistence.get("invalid_or_placeholder_media_source") or delivery.get("invalid_or_placeholder_media_source") or asset.get("invalid_or_placeholder_media_source")),
+        "signed_delivery_created": bool(persistence.get("signed_delivery_created") or delivery.get("signed_delivery_created") or signed.get("signed_delivery_created") or asset.get("signed_delivery_created")),
+        "storage_provider": persistence.get("storage_provider") or delivery.get("storage_provider") or asset.get("storage_provider"),
     }
+
+
+# PARTIAL_MEDIA_SUCCESS_DIRECT_V1
+def _delivery_asset_url_fields(asset: Dict[str, Any]) -> List[str]:
+    urls: List[str] = []
+    for key in (
+        "provider_asset_url",
+        "preview_url",
+        "download_url",
+        "original_preview_url",
+        "original_download_url",
+        "asset_url",
+        "url",
+        "public_url",
+        "storage_url",
+    ):
+        value = asset.get(key)
+        if value:
+            urls.append(str(value))
+    return urls
+
+
+def _looks_like_real_delivery_url(value: Any) -> bool:
+    text = str(value or "").strip().lower()
+    if not text:
+        return False
+    blocked = (
+        "example.com",
+        "localhost",
+        "127.0.0.1",
+        "placeholder",
+        "dummy",
+        "mock",
+        "fake",
+        "test-only",
+        "c:\\",
+        "\\tmp\\",
+        "/tmp/",
+    )
+    if any(marker in text for marker in blocked):
+        return False
+    return text.startswith("https://") and (
+        "supabase.co/storage" in text
+        or "/asset-delivery/preview/" in text
+        or "/asset-delivery/download/" in text
+        or text.endswith((".mp3", ".mp4", ".wav", ".png", ".jpg", ".jpeg", ".webp"))
+    )
+
+
+def _delivery_asset_metadata_only(asset: Dict[str, Any]) -> bool:
+    return bool(
+        asset.get("metadata_only")
+        or asset.get("invalid_or_placeholder_media_source")
+        or str(asset.get("delivery_status") or "").lower() == "metadata_only"
+    )
+
+
+def _delivery_asset_playable(asset: Dict[str, Any]) -> bool:
+    if _delivery_asset_metadata_only(asset):
+        return False
+    if asset.get("playable") or asset.get("preview_ready") or asset.get("download_ready"):
+        return True
+    if asset.get("signed_delivery_created"):
+        return any(_looks_like_real_delivery_url(url) for url in _delivery_asset_url_fields(asset))
+    return False
+
+
+def _delivery_asset_persisted_real(asset: Dict[str, Any]) -> bool:
+    if _delivery_asset_metadata_only(asset):
+        return False
+    if _delivery_asset_playable(asset):
+        return True
+    if asset.get("storage_provider") or asset.get("signed_delivery_created"):
+        return any(_looks_like_real_delivery_url(url) for url in _delivery_asset_url_fields(asset))
+    return any(_looks_like_real_delivery_url(url) for url in _delivery_asset_url_fields(asset))
+
+
+def _media_pack_has_provider_unavailable(media_pack: Dict[str, Any]) -> bool:
+    statuses = _status_texts(media_pack)
+    if any(status in PROVIDER_UNAVAILABLE_STATUSES or "unavailable" in status for status in statuses):
+        return True
+    if str(media_pack.get("provider_unavailable_reason_code") or "").strip():
+        return True
+    provider_results = [item for item in media_pack.get("provider_execution_results", []) if isinstance(item, dict)]
+    generation_jobs = [item for item in media_pack.get("generation_jobs", []) if isinstance(item, dict)]
+    if any(str(item.get("status") or "").lower() == "provider_unavailable" for item in provider_results + generation_jobs):
+        return True
+    return False
+
+
+def _asset_success_summary(final_assets: List[Dict[str, Any]]) -> Dict[str, Any]:
+    playable_assets = [asset for asset in final_assets if _delivery_asset_playable(asset)]
+    persisted_assets = [asset for asset in final_assets if _delivery_asset_persisted_real(asset)]
+    preview_ready_count = sum(1 for asset in playable_assets if asset.get("preview_ready") or asset.get("playable"))
+    download_ready_count = sum(1 for asset in playable_assets if asset.get("download_ready") or asset.get("playable"))
+    signed_delivery_created = any(bool(asset.get("signed_delivery_created")) for asset in playable_assets)
+    return {
+        "playable_assets": playable_assets,
+        "persisted_assets": persisted_assets,
+        "playable_asset_count": len(playable_assets),
+        "persisted_asset_count": len(persisted_assets),
+        "preview_ready_count": preview_ready_count,
+        "download_ready_count": download_ready_count,
+        "signed_delivery_created": signed_delivery_created,
+    }
+
 
 
 def _status_texts(media_pack: Dict[str, Any]) -> List[str]:
@@ -1151,9 +1267,12 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
             for asset in media_pack.get("media_assets", [])
             if isinstance(asset, dict)
         ]
-        playable_assets = [asset for asset in final_assets if asset.get("playable") or asset.get("preview_ready") or asset.get("download_ready")]
+        asset_success = _asset_success_summary(final_assets)
+        playable_assets = asset_success["playable_assets"]
+        persisted_assets = asset_success["persisted_assets"]
         provider_diag = _provider_diagnostics_from_media_pack(media_pack)
         combined_status = _final_combined_media_status(job, final_assets)
+        mixed_provider_unavailable = _media_pack_has_provider_unavailable(media_pack)
 
         if not playable_assets:
             terminal_state = _resolve_no_playable_terminal_state(media_pack)
@@ -1194,28 +1313,39 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
                 "credential_values_exposed": False,
             }
 
-        job["status"] = "completed"
-        job["lifecycle"] = "final_asset_ready"
+        if mixed_provider_unavailable:
+            job["status"] = "partial_success"
+            job["lifecycle"] = "partial_media_ready"
+            job["safe_visible_reason"] = "Partial media success: at least one playable asset was created, while one or more requested providers were unavailable."
+            job["blocked_reason"] = job["safe_visible_reason"]
+            job["partial_success"] = True
+        else:
+            job["status"] = "completed"
+            job["lifecycle"] = "final_asset_ready"
+            job["partial_success"] = False
         job["media_pack_id"] = media_pack.get("media_pack_id")
         job["media_asset_count"] = len(media_pack.get("media_assets", []))
-        job["real_media_asset_count"] = media_pack.get("real_media_asset_count", 0)
-        job["persisted_asset_count"] = media_pack.get("persisted_asset_count", 0)
+        job["real_media_asset_count"] = max(int(media_pack.get("real_media_asset_count", 0) or 0), len(persisted_assets))
+        job["persisted_asset_count"] = max(int(media_pack.get("persisted_asset_count", 0) or 0), len(persisted_assets))
         job["final_asset_ids"] = [
             asset.get("asset_id")
             for asset in final_assets
             if asset.get("asset_id")
         ]
         job["final_assets"] = final_assets
-        job["preview_ready_count"] = sum(1 for asset in playable_assets if asset.get("preview_ready"))
-        job["download_ready_count"] = sum(1 for asset in playable_assets if asset.get("download_ready"))
-        job["playable_asset_count"] = len(playable_assets)
-        job["playable_asset_created"] = True
-        job["signed_delivery_created"] = bool(job["preview_ready_count"] or job["download_ready_count"])
+        job["preview_ready_count"] = asset_success["preview_ready_count"]
+        job["download_ready_count"] = asset_success["download_ready_count"]
+        job["playable_asset_count"] = asset_success["playable_asset_count"]
+        job["playable_asset_created"] = bool(job["playable_asset_count"])
+        job["signed_delivery_created"] = bool(asset_success["signed_delivery_created"] or job["preview_ready_count"] or job["download_ready_count"])
         job["metadata_only"] = False
         job.update(combined_status)
         job.update(provider_diag)
-        job["provider_unavailable_reason"] = ""
-        job["completed_at"] = _now()
+        job["provider_unavailable_reason"] = job.get("safe_visible_reason") if job.get("status") == "partial_success" else ""
+        if job.get("status") == "partial_success":
+            job["partial_success_at"] = _now()
+        else:
+            job["completed_at"] = _now()
         job["updated_at"] = _now()
         job["credential_values_exposed"] = False
         _write_job(job)
