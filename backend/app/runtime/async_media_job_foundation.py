@@ -255,13 +255,54 @@ def _blocked_fast_packet_text(value: str) -> bool:
 
 def _customer_safe_creative_source(job: Dict[str, Any]) -> str:
     for field in CREATIVE_SOURCE_FIELDS:
-        value = _compact_text(job.get(field), 1200)
-        if not value or _blocked_fast_packet_text(value):
-            continue
-        if len(value) < 8:
-            continue
-        return value
+        raw_value = str(job.get(field) or "")
+        candidates = []
+        for raw_line in raw_value.replace("\r", "\n").split("\n"):
+            line = _compact_text(raw_line, 1200)
+            if not line:
+                continue
+            lowered = line.lower()
+            for prefix in (
+                "user task:",
+                "customer task:",
+                "creative request:",
+                "customer request:",
+                "task:",
+                "request:",
+            ):
+                if lowered.startswith(prefix):
+                    line = line[len(prefix):].strip()
+                    lowered = line.lower()
+            candidates.append(line)
+        if not candidates:
+            candidates = [_compact_text(raw_value, 1200)]
+        for value in candidates:
+            if not value or _blocked_fast_packet_text(value):
+                continue
+            if len(value) < 8:
+                continue
+            return value
     return ""
+
+
+def _safe_task_summary(job: Dict[str, Any]) -> str:
+    source = _customer_safe_creative_source(job)
+    if source:
+        return source[:500]
+    return "Creative media generation is queued for async final render."
+
+
+def _status_safe_job(job: Dict[str, Any]) -> Dict[str, Any]:
+    safe = _scrub_sensitive(job if isinstance(job, dict) else {})
+    summary = _safe_task_summary(job if isinstance(job, dict) else {})
+    safe["task"] = summary
+    safe["task_summary"] = summary
+    safe["customer_task"] = summary
+    fast_packet = build_fast_creative_output_packet(job if isinstance(job, dict) else {})
+    safe["fast_output_packet"] = fast_packet
+    safe["fast_output_packet_available"] = bool(fast_packet.get("fast_output_packet_available"))
+    safe["credential_values_exposed"] = False
+    return safe
 
 
 def _trigger_all_schedule_limit(limit: int) -> int:
@@ -274,6 +315,7 @@ def _trigger_all_schedule_limit(limit: int) -> int:
 
 def _durable_media_queue_payload(job: Dict[str, Any]) -> Dict[str, Any]:
     job_id = str(job.get("job_id") or job.get("media_job_id") or "").strip()
+    safe_task = _safe_task_summary(job)
     return {
         "job_id": job_id,
         "media_job_id": job_id,
@@ -281,7 +323,9 @@ def _durable_media_queue_payload(job: Dict[str, Any]) -> Dict[str, Any]:
         "creative_media_job_type": str(job.get("creative_media_job_type") or job.get("asset_type") or "creative_media_job"),
         "agent_id": str(job.get("agent_id") or job.get("requested_agent") or "creative_media_agent"),
         "tenant_id": str(job.get("tenant_id") or "owner_admin"),
-        "task": str(job.get("task") or "Create a premium creative media asset.")[:2000],
+        "task": safe_task[:1000],
+        "task_summary": safe_task[:1000],
+        "customer_task": safe_task[:1000],
         "include_image": _safe_bool(job.get("include_image")),
         "include_audio": _safe_bool(job.get("include_audio")),
         "include_video": _safe_bool(job.get("include_video")),
@@ -500,25 +544,92 @@ def enqueue_media_job(*, task: str, agent_id: str, tenant_id: str, include_image
     return job
 
 
-def read_media_job(job_id: str) -> Dict[str, Any]:
+def read_media_job(job_id: str, *, include_internal: bool = False) -> Dict[str, Any]:
     path = _job_path(job_id)
     if not path.exists():
         return {"success": False, "job_id": job_id, "status": "not_found", "credential_values_exposed": False}
     job = json.loads(path.read_text(encoding="utf-8"))
     if isinstance(job, dict):
         job["credential_values_exposed"] = False
-    return _scrub_sensitive(job)
+    if include_internal:
+        return _scrub_sensitive(job)
+    return _status_safe_job(job)
 
 
-def list_media_jobs(limit: int = 50, reconcile_visible_assets: bool = False) -> Dict[str, Any]:
+def _latest_durable_media_status_by_job_id(jobs: List[Dict[str, Any]], limit: int = 10) -> Dict[str, Dict[str, Any]]:
+    relevant = [
+        job
+        for job in jobs
+        if isinstance(job, dict)
+        and job.get("durable_queue_job_id")
+        and str(job.get("status") or "").lower() in {"queued", "retry_scheduled", "processing"}
+    ][: max(0, min(int(limit or 10), 10))]
+    if not relevant:
+        return {}
+    try:
+        from backend.app.runtime.durable_execution_queue_runtime import get_latest_execution_job_event, list_execution_jobs
+
+        queue = list_execution_jobs(queue_name=CREATIVE_MEDIA_GENERATION_QUEUE, limit=100)
+    except Exception:
+        return {}
+    if not isinstance(queue, dict) or not queue.get("success"):
+        return {}
+    durable_by_id = {
+        str(item.get("job_id") or item.get("queue_id") or ""): item
+        for item in queue.get("jobs", [])
+        if isinstance(item, dict)
+    }
+    overlays: Dict[str, Dict[str, Any]] = {}
+    for job in relevant:
+        media_job_id = str(job.get("job_id") or "")
+        durable_id = str(job.get("durable_queue_job_id") or "")
+        durable = durable_by_id.get(durable_id)
+        if not media_job_id or not durable:
+            continue
+        durable_status = str(durable.get("status") or "").lower()
+        status = ""
+        if durable_status == "leased":
+            status = "processing"
+        elif durable_status in {"retry_scheduled", "dead_letter"}:
+            status = durable_status
+        elif durable_status == "completed":
+            event = get_latest_execution_job_event(durable_id, event_type="job_completed")
+            details = event.get("details") if isinstance(event, dict) else {}
+            status = str((details or {}).get("media_job_status") or "completed").lower()
+        elif durable_status == "queued":
+            status = "queued"
+        if status:
+            overlays[media_job_id] = {
+                "durable_queue_status": durable_status,
+                "worker_observed_status": status,
+                "status": status,
+                "background_processor_scheduled": True,
+                "credential_values_exposed": False,
+            }
+    return overlays
+
+
+def list_media_jobs(limit: int = 50, reconcile_visible_assets: bool = False, include_durable_status: bool = False) -> Dict[str, Any]:
     if reconcile_visible_assets:
         reconcile_visible_queued_media_asset_jobs(limit=max(int(limit or 50), 1))
     jobs = []
     for path in sorted(STORE.glob("media_job_*.json"), key=lambda p: p.stat().st_mtime, reverse=True)[:limit]:
         try:
-            jobs.append(_scrub_sensitive(json.loads(path.read_text(encoding="utf-8"))))
+            jobs.append(json.loads(path.read_text(encoding="utf-8")))
         except Exception:
             continue
+    if include_durable_status:
+        overlays = _latest_durable_media_status_by_job_id(jobs)
+        for job in jobs:
+            overlay = overlays.get(str(job.get("job_id") or ""))
+            if overlay:
+                job.update(overlay)
+                job["updated_at"] = _now()
+                try:
+                    _write_job(job)
+                except Exception:
+                    pass
+    jobs = [_status_safe_job(job) for job in jobs]
     status_counts: Dict[str, int] = {}
     for job in jobs:
         status = str(job.get("status") or "unknown")
@@ -758,7 +869,7 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
 
     try:
         with _LOCK:
-            current = read_media_job(job_id)
+            current = read_media_job(job_id, include_internal=True)
             current_status = str(current.get("status") or "").lower()
             if current_status in {"processing", *TERMINAL_MEDIA_JOB_STATUSES}:
                 return {

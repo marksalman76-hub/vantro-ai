@@ -22,6 +22,8 @@ services:
     envVars:
       - key: WORKER_CONCURRENCY
         value: "2"
+      - key: WORKER_LIVE_EXECUTION_ENABLED
+        value: "true"
       - key: OWNER_APPROVAL_REQUIRED
         value: "true"
       - key: LIVE_EXTERNAL_CALLS_ENABLED

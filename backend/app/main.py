@@ -5008,7 +5008,7 @@ def admin_list_media_jobs(
             "credential_values_exposed": False,
         }
     from backend.app.runtime.async_media_job_foundation import list_media_jobs
-    return list_media_jobs(limit=100)
+    return list_media_jobs(limit=100, include_durable_status=True)
 
 
 @app.get("/admin/media-jobs/{job_id}")

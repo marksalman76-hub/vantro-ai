@@ -5,7 +5,9 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
+from backend.app.runtime import background_worker_loop
 from backend.app.runtime import async_media_job_foundation as media_jobs
+from backend.app.runtime import durable_execution_queue_runtime as durable_queue
 
 
 ROOT = Path(__file__).resolve().parent
@@ -14,6 +16,7 @@ RUN_NEXT_ROUTE = ROOT / "frontend/src/app/api/admin-media-jobs-run-next/route.ts
 BACKEND_MAIN = ROOT / "backend/app/main.py"
 MEDIA_FOUNDATION = ROOT / "backend/app/runtime/async_media_job_foundation.py"
 WORKER_LOOP = ROOT / "backend/app/runtime/background_worker_loop.py"
+RENDER_YAML = ROOT / "render.yaml"
 
 
 def _read(path: Path) -> str:
@@ -212,6 +215,40 @@ def test_fast_packet_sanitises_internal_and_operational_text() -> None:
         assert marker not in packet_text
 
 
+def test_status_jobs_sanitise_task_scaffolding() -> None:
+    old_store = media_jobs.STORE
+    unsafe_task = """
+    You are executing as: ugc_creative_agent
+    Platform standard: internal rules
+    Output quality requirement: private rubric
+    Agent-specific behaviour: hidden behavior
+    Required structure: internal plan
+    Customer task: Create one creative media output packet for a premium skincare serum, including a hook, short script, three scene directions, caption, and queued final media render status.
+    """
+    with TemporaryDirectory() as temp_dir:
+        media_jobs.STORE = Path(temp_dir)
+        try:
+            job = media_jobs.enqueue_media_job(
+                task=unsafe_task,
+                agent_id="creative_product_asset_agent",
+                tenant_id="client_demo",
+                include_image=True,
+                include_video=True,
+            )
+            listed = media_jobs.list_media_jobs(limit=10)["jobs"][0]
+            read = media_jobs.read_media_job(job["job_id"])
+        finally:
+            media_jobs.STORE = old_store
+
+    for item in [listed, read]:
+        text = _json_text(item)
+        assert "create one creative media output packet for a premium skincare serum" in text
+        assert item["task_summary"] == item["task"]
+        assert item["customer_task"] == item["task"]
+        for marker in _unsafe_fast_packet_markers():
+            assert marker not in text
+
+
 def test_fast_packet_uses_customer_safe_creative_source_globally() -> None:
     packet = media_jobs.build_fast_creative_output_packet(
         {
@@ -309,14 +346,83 @@ def test_worker_is_the_media_processor_boundary() -> None:
     assert "provider_result" not in worker_body
 
 
+def test_render_worker_service_enables_media_worker_loop() -> None:
+    render_yaml = _read(RENDER_YAML)
+    assert "name: ecommerce-ai-agent-platform-worker" in render_yaml
+    assert "startCommand: python -m backend.app.runtime.background_worker_loop" in render_yaml
+    assert "WORKER_LIVE_EXECUTION_ENABLED" in render_yaml
+    assert 'value: "true"' in render_yaml
+
+
+def test_worker_claims_durable_media_queue_and_status_overlay_moves_job_out_of_queued() -> None:
+    old_store = media_jobs.STORE
+    old_process = media_jobs.process_media_job
+    durable_queue.reset_dev_execution_queue_for_tests()
+
+    def fake_process_media_job(job: dict) -> dict:
+        return {
+            "success": True,
+            "processed": True,
+            "status": "provider_not_ready",
+            "job": {
+                "job_id": job.get("job_id"),
+                "status": "provider_not_ready",
+                "credential_values_exposed": False,
+            },
+            "credential_values_exposed": False,
+        }
+
+    with TemporaryDirectory() as temp_dir:
+        media_jobs.STORE = Path(temp_dir)
+        media_jobs.process_media_job = fake_process_media_job
+        import os
+
+        original_env = {key: os.environ.get(key) for key in ["APP_ENV", "DATABASE_URL", "POSTGRES_URL", "RENDER", "PRODUCTION", "WORKER_LIVE_EXECUTION_ENABLED"]}
+        os.environ["APP_ENV"] = "development"
+        os.environ["WORKER_LIVE_EXECUTION_ENABLED"] = "true"
+        os.environ.pop("DATABASE_URL", None)
+        os.environ.pop("POSTGRES_URL", None)
+        os.environ.pop("RENDER", None)
+        os.environ.pop("PRODUCTION", None)
+        try:
+            job = media_jobs.enqueue_media_job(
+                task="Create a product image campaign for a premium serum.",
+                agent_id="product_image_agent",
+                tenant_id="client_demo",
+                include_image=True,
+            )
+            trigger = media_jobs.enqueue_creative_media_job_for_worker(job)
+            assert trigger["queue_name"] == "creative_media_generation_queue"
+            worker = background_worker_loop.process_one_creative_media_generation_job()
+            assert worker["queue_name"] == "creative_media_generation_queue"
+            assert worker["processor_invoked"] is True
+
+            listed = media_jobs.list_media_jobs(limit=10, include_durable_status=True)["jobs"][0]
+            assert listed["status"] == "provider_not_ready"
+            assert listed["status"] != "queued"
+            assert listed["durable_queue_status"] == "completed"
+        finally:
+            media_jobs.process_media_job = old_process
+            media_jobs.STORE = old_store
+            durable_queue.reset_dev_execution_queue_for_tests()
+            for key, value in original_env.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
+
 if __name__ == "__main__":
     test_frontend_uses_trigger_routes_only()
     test_backend_trigger_routes_are_queue_only()
     test_list_media_jobs_is_fast_local_by_default()
     test_durable_queue_bridge_is_global_and_secret_safe()
     test_fast_packet_sanitises_internal_and_operational_text()
+    test_status_jobs_sanitise_task_scaffolding()
     test_fast_packet_uses_customer_safe_creative_source_globally()
     test_trigger_all_is_bounded_and_does_not_build_large_payloads()
     test_web_trigger_response_exposes_fast_packet_not_final_media()
     test_worker_is_the_media_processor_boundary()
+    test_render_worker_service_enables_media_worker_loop()
+    test_worker_claims_durable_media_queue_and_status_overlay_moves_job_out_of_queued()
     print("MEDIA_WORKER_BOUNDARY_PASSED")

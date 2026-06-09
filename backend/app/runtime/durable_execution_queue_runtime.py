@@ -969,6 +969,61 @@ def get_execution_queue_status(queue_name: str = "") -> Dict[str, Any]:
     )
 
 
+def get_latest_execution_job_event(job_id: str, event_type: str = "job_completed") -> Dict[str, Any]:
+    readiness = ensure_execution_queue_tables()
+    if not readiness.get("success"):
+        return readiness
+
+    job_id = str(job_id or "").strip()
+    event_type = str(event_type or "").strip() or "job_completed"
+    if not job_id:
+        return _safe_response(success=False, status="job_id_required", event=None)
+
+    if readiness.get("storage_mode") == "dev_memory":
+        events = [
+            event
+            for event in _DEV_EVENTS
+            if event.get("job_id") == job_id and event.get("event_type") == event_type
+        ]
+        event = events[-1] if events else None
+        return _safe_response(
+            success=True,
+            status="ok" if event else "empty",
+            event=deepcopy(event) if event else None,
+            details=deepcopy(event.get("details")) if event else {},
+            storage_mode="dev_memory",
+            dev_only=True,
+        )
+
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT event_id, job_id, event_type, details, created_at, credential_values_exposed
+                FROM durable_execution_queue_events
+                WHERE job_id = %s AND event_type = %s
+                ORDER BY created_at DESC
+                LIMIT 1
+                """,
+                (job_id, event_type),
+            )
+            row = cur.fetchone()
+
+    if not row:
+        return _safe_response(success=True, status="empty", event=None, details={}, storage_mode="postgres", durable=True)
+
+    details = _parse_payload(row[3])
+    event = {
+        "event_id": row[0],
+        "job_id": row[1],
+        "event_type": row[2],
+        "details": details,
+        "created_at": row[4].isoformat() if isinstance(row[4], datetime) else row[4],
+        "credential_values_exposed": False,
+    }
+    return _safe_response(success=True, status="ok", event=event, details=details, storage_mode="postgres", durable=True)
+
+
 def reset_dev_execution_queue_for_tests() -> Dict[str, Any]:
     _DEV_JOBS.clear()
     _DEV_EVENTS.clear()
