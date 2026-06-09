@@ -347,6 +347,42 @@ def test_worker_is_the_media_processor_boundary() -> None:
     assert "provider_result" not in worker_body
 
 
+def test_background_worker_entrypoint_defines_media_processor_before_main_runs() -> None:
+    worker = _read(WORKER_LOOP)
+    processor_index = worker.index("def process_one_creative_media_generation_job")
+    entrypoint_index = worker.index('if __name__ == "__main__":')
+    assert processor_index < entrypoint_index
+    assert hasattr(background_worker_loop, "process_one_creative_media_generation_job")
+
+    old_processor = background_worker_loop.process_one_creative_media_generation_job
+    import os
+
+    original = os.environ.get("WORKER_LIVE_EXECUTION_ENABLED")
+
+    def fake_process_one() -> dict:
+        return {
+            "success": True,
+            "queue_name": "creative_media_generation_queue",
+            "status": "empty",
+            "processor_invoked": False,
+            "credential_values_exposed": False,
+        }
+
+    os.environ["WORKER_LIVE_EXECUTION_ENABLED"] = "true"
+    background_worker_loop.process_one_creative_media_generation_job = fake_process_one
+    try:
+        result = background_worker_loop.run_once()
+    finally:
+        background_worker_loop.process_one_creative_media_generation_job = old_processor
+        if original is None:
+            os.environ.pop("WORKER_LIVE_EXECUTION_ENABLED", None)
+        else:
+            os.environ["WORKER_LIVE_EXECUTION_ENABLED"] = original
+
+    assert result["success"] is True
+    assert result["queue_name"] == "creative_media_generation_queue"
+
+
 def test_render_worker_service_enables_media_worker_loop() -> None:
     render_yaml = _read(RENDER_YAML)
     assert "name: ecommerce-ai-agent-platform-worker" in render_yaml
@@ -528,6 +564,7 @@ if __name__ == "__main__":
     test_trigger_all_is_bounded_and_does_not_build_large_payloads()
     test_web_trigger_response_exposes_fast_packet_not_final_media()
     test_worker_is_the_media_processor_boundary()
+    test_background_worker_entrypoint_defines_media_processor_before_main_runs()
     test_render_worker_service_enables_media_worker_loop()
     test_worker_claims_durable_media_queue_and_status_overlay_moves_job_out_of_queued()
     test_worker_outcome_remains_visible_without_local_media_job_json()

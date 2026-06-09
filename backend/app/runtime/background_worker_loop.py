@@ -81,12 +81,6 @@ def main() -> None:
         time.sleep(interval)
 
 
-if __name__ == "__main__":
-    main()
-
-
-
-
 def worker_execution_permitted() -> bool:
     return (
         worker_live_execution_enabled()
@@ -339,4 +333,8 @@ def process_one_safe_internal_job(queue_name: str = "client_agent_execution_queu
     }
 
     return execution_packet
+
+
+if __name__ == "__main__":
+    main()
 
