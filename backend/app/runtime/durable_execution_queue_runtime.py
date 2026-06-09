@@ -81,7 +81,19 @@ def _connect():
         raise RuntimeError("psycopg_unavailable")
     if not _database_url():
         raise RuntimeError("DATABASE_URL_missing")
-    return psycopg.connect(_database_url())
+    try:
+        connect_timeout = max(1, min(int(os.getenv("DURABLE_QUEUE_CONNECT_TIMEOUT_SECONDS", "3")), 10))
+    except Exception:
+        connect_timeout = 3
+    try:
+        statement_timeout_ms = max(1000, min(int(os.getenv("DURABLE_QUEUE_STATEMENT_TIMEOUT_MS", "3000")), 10000))
+    except Exception:
+        statement_timeout_ms = 3000
+    return psycopg.connect(
+        _database_url(),
+        connect_timeout=connect_timeout,
+        options=f"-c statement_timeout={statement_timeout_ms}",
+    )
 
 
 def _json_payload(payload: Optional[Dict[str, Any]]) -> str:

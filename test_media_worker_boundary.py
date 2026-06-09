@@ -6,6 +6,7 @@ from tempfile import TemporaryDirectory
 from typing import Any
 
 from backend.app.runtime import background_worker_loop
+from backend.app.runtime import admin_creative_media_asset_viewer as asset_viewer
 from backend.app.runtime import async_media_job_foundation as media_jobs
 from backend.app.runtime import durable_execution_queue_runtime as durable_queue
 
@@ -412,6 +413,110 @@ def test_worker_claims_durable_media_queue_and_status_overlay_moves_job_out_of_q
                     os.environ[key] = value
 
 
+def test_worker_outcome_remains_visible_without_local_media_job_json() -> None:
+    old_store = media_jobs.STORE
+    durable_queue.reset_dev_execution_queue_for_tests()
+    import os
+
+    original_env = {key: os.environ.get(key) for key in ["APP_ENV", "DATABASE_URL", "POSTGRES_URL", "RENDER", "PRODUCTION"]}
+    os.environ["APP_ENV"] = "development"
+    os.environ.pop("DATABASE_URL", None)
+    os.environ.pop("POSTGRES_URL", None)
+    os.environ.pop("RENDER", None)
+    os.environ.pop("PRODUCTION", None)
+
+    with TemporaryDirectory() as temp_dir:
+        media_jobs.STORE = Path(temp_dir)
+        try:
+            enqueue = durable_queue.enqueue_execution_job(
+                queue_name="creative_media_generation_queue",
+                tenant_id="client_demo",
+                project_id="creative_media",
+                agent_id="creative_product_asset_agent",
+                action_type="creative_media_generation_job",
+                payload={
+                    "media_job_id": "media_job_missing_local_json",
+                    "job_id": "media_job_missing_local_json",
+                    "task": "Create one creative media output packet for a premium skincare serum.",
+                    "agent_id": "creative_product_asset_agent",
+                    "tenant_id": "client_demo",
+                },
+                idempotency_key="test:media_job_missing_local_json",
+            )
+            claim = durable_queue.claim_next_execution_job(queue_name="creative_media_generation_queue", worker_id="test_worker")
+            assert claim["status"] == "leased"
+            durable_queue.complete_execution_job(
+                enqueue["job_id"],
+                worker_id="test_worker",
+                result={
+                    "media_job_id": "media_job_missing_local_json",
+                    "media_job_status": "provider_not_ready",
+                    "processed": True,
+                    "provider_status": "provider_not_ready",
+                    "asset_count": 0,
+                    "playable_asset_count": 0,
+                    "preview_ready_count": 0,
+                    "download_ready_count": 0,
+                    "final_asset_ids": [],
+                    "safe_visible_reason": "Provider execution is not currently available.",
+                    "credential_values_exposed": False,
+                },
+            )
+
+            status = media_jobs.list_media_jobs(limit=10, include_durable_status=True)
+            assert status["job_count"] == 1
+            job = status["jobs"][0]
+            assert job["media_job_id"] == "media_job_missing_local_json"
+            assert job["durable_queue_job_id"] == enqueue["job_id"]
+            assert job["status"] == "provider_not_ready"
+            assert job["worker_claimed"] is True
+            assert job["worker_completed"] is True
+            assert job["asset_count"] == 0
+            assert job["playable_asset_count"] == 0
+            assert "skincare serum" in _json_text(job)
+            for marker in _unsafe_fast_packet_markers():
+                assert marker not in _json_text(job)
+
+            assets = asset_viewer.get_admin_creative_media_assets(limit=10)
+            assert assets["success"] is True
+            evidence = [item for item in assets["assets"] if item.get("media_job_id") == "media_job_missing_local_json"]
+            assert evidence
+            assert evidence[0]["durable_queue_job_id"] == enqueue["job_id"]
+            assert evidence[0]["playable"] is False
+        finally:
+            media_jobs.STORE = old_store
+            durable_queue.reset_dev_execution_queue_for_tests()
+            for key, value in original_env.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
+
+def test_asset_viewer_sanitises_operational_asset_content_without_changing_playability() -> None:
+    unsafe_asset = {
+        "asset_id": "asset_operational_text",
+        "agent_id": "creative_media_agent",
+        "provider": "internal",
+        "asset_type": "audio",
+        "status": "persisted",
+        "playable": True,
+        "preview_ready": True,
+        "download_ready": True,
+        "metadata_only": False,
+        "content": "Create operational execution task for: Next step: wait for generated media assets.",
+        "summary": "You are executing as: internal worker.",
+    }
+
+    safe = asset_viewer._safe_asset(unsafe_asset)
+    safe_text = _json_text({"content": safe.get("content"), "summary": safe.get("summary")})
+    assert safe["playable"] is True
+    assert safe["metadata_only"] is False
+    assert safe["preview_ready"] in {True, False}
+    for marker in _unsafe_fast_packet_markers():
+        assert marker not in safe_text
+
+
 if __name__ == "__main__":
     test_frontend_uses_trigger_routes_only()
     test_backend_trigger_routes_are_queue_only()
@@ -425,4 +530,6 @@ if __name__ == "__main__":
     test_worker_is_the_media_processor_boundary()
     test_render_worker_service_enables_media_worker_loop()
     test_worker_claims_durable_media_queue_and_status_overlay_moves_job_out_of_queued()
+    test_worker_outcome_remains_visible_without_local_media_job_json()
+    test_asset_viewer_sanitises_operational_asset_content_without_changing_playability()
     print("MEDIA_WORKER_BOUNDARY_PASSED")

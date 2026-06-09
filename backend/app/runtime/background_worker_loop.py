@@ -206,6 +206,22 @@ def process_one_creative_media_generation_job() -> dict:
             }
         )
         heartbeat_execution_job(queue_job_id, worker_id=worker_id, lease_seconds=_lease_seconds())
+        result_job = result.get("job") if isinstance(result.get("job"), dict) else {}
+        final_assets = [asset for asset in result_job.get("final_assets", []) if isinstance(asset, dict)]
+        final_asset_ids = [
+            str(asset_id)
+            for asset_id in (
+                result_job.get("final_asset_ids")
+                or [asset.get("asset_id") for asset in final_assets if asset.get("asset_id")]
+                or []
+            )
+            if asset_id
+        ][:25]
+        playable_asset_count = int(
+            result_job.get("playable_asset_count")
+            or sum(1 for asset in final_assets if asset.get("playable") or asset.get("preview_ready") or asset.get("download_ready"))
+            or 0
+        )
         completion = complete_execution_job(
             queue_job_id,
             worker_id=worker_id,
@@ -213,6 +229,15 @@ def process_one_creative_media_generation_job() -> dict:
                 "media_job_id": media_job_id,
                 "media_job_status": result.get("status") or (result.get("job") or {}).get("status"),
                 "processed": bool(result.get("processed")),
+                "provider_status": result_job.get("provider_status") or result_job.get("provider_key_selected") or result.get("status"),
+                "asset_count": int(result_job.get("media_asset_count") or len(final_assets) or 0),
+                "playable_asset_count": playable_asset_count,
+                "preview_ready_count": int(result_job.get("preview_ready_count") or 0),
+                "download_ready_count": int(result_job.get("download_ready_count") or 0),
+                "final_asset_ids": final_asset_ids,
+                "safe_visible_reason": result_job.get("safe_visible_reason") or result_job.get("blocked_reason") or "",
+                "created_at": result_job.get("created_at"),
+                "updated_at": result_job.get("updated_at"),
                 "credential_values_exposed": False,
             },
         )

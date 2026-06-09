@@ -42,6 +42,31 @@ def _signed_gateway_url(asset_id: str, delivery_type: str = "preview") -> str:
     return f"{_backend_base_url()}{packet.get('delivery_url')}"
 
 
+def _contains_internal_or_operational_text(value: Any) -> bool:
+    lowered = str(value or "").lower()
+    return any(
+        marker in lowered
+        for marker in (
+            "you are executing as",
+            "platform standard",
+            "output quality requirement",
+            "agent-specific behaviour",
+            "required structure",
+            "create operational execution task",
+            "run delegated workforce",
+            "wait for generated media assets",
+            "internal_prompt",
+        )
+    )
+
+
+def _safe_asset_text(value: Any, *, fallback: str) -> str:
+    text = " ".join(str(value or "").split()).strip()
+    if not text or _contains_internal_or_operational_text(text):
+        return fallback
+    return text[:1000]
+
+
 def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
     asset_id = str(asset.get("asset_id") or "").strip()
     provider = asset.get("provider") or asset.get("provider_key") or "internal"
@@ -72,6 +97,11 @@ def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
     preview_url = gateway_preview_url if playable else ""
     download_url = gateway_download_url if downloadable else ""
 
+    safe_summary = _safe_asset_text(
+        asset.get("summary") or asset.get("content") or "",
+        fallback=f"{str(asset_type).replace('_', ' ').title()} is recorded with status {delivery_status}.",
+    )
+
     return {
         "asset_id": asset_id or asset.get("asset_id"),
         "agent_id": asset.get("agent_id") or asset.get("agent_key") or asset.get("requested_agent"),
@@ -97,8 +127,8 @@ def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
         "playable_asset_created": playable,
         "signed_delivery_created": signed_delivery_created,
         "metadata_only": bool(asset.get("metadata_only") or not playable),
-        "content": asset.get("content"),
-        "summary": asset.get("summary"),
+        "content": _safe_asset_text(asset.get("content"), fallback=safe_summary),
+        "summary": safe_summary,
         "quality_score": asset.get("quality_score"),
         "campaign_context": asset.get("campaign_context"),
         "target_audience": asset.get("target_audience"),
@@ -173,10 +203,10 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
         raw_assets = []
 
         try:
-            jobs_result = list_media_jobs(limit=max(int(limit or 50), 1), reconcile_visible_assets=False)
+            jobs_result = list_media_jobs(limit=max(int(limit or 50), 1), reconcile_visible_assets=False, include_durable_status=True)
             jobs = jobs_result.get("jobs", []) if isinstance(jobs_result, dict) else []
             if not jobs:
-                jobs_result = list_media_jobs(limit=max(int(limit or 50), 1))
+                jobs_result = list_media_jobs(limit=max(int(limit or 50), 1), include_durable_status=True)
                 jobs = jobs_result.get("jobs", []) if isinstance(jobs_result, dict) else []
         except Exception:
             jobs_result = {

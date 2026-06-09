@@ -19,7 +19,7 @@ FAST_PACKET_LIST_LIMIT = 2
 
 _LOCK = threading.Lock()
 
-TERMINAL_MEDIA_JOB_STATUSES = {"completed", "provider_unavailable", "blocked", "failed"}
+TERMINAL_MEDIA_JOB_STATUSES = {"completed", "provider_unavailable", "provider_not_ready", "blocked", "failed", "manual_review", "dead_letter"}
 
 PROVIDER_UNAVAILABLE_STATUSES = {
     "provider_key_missing",
@@ -305,6 +305,22 @@ def _status_safe_job(job: Dict[str, Any]) -> Dict[str, Any]:
     return safe
 
 
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return max(0, int(value or default))
+    except Exception:
+        return default
+
+
+def _durable_status_lookup_allowed() -> bool:
+    if os.getenv("MEDIA_JOB_DURABLE_STATUS_LOOKUP_ENABLED", "").strip().lower() in {"1", "true", "yes", "on"}:
+        return True
+    if not (os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL")):
+        return True
+    render_flag = str(os.getenv("RENDER") or os.getenv("PRODUCTION") or "").strip().lower()
+    return render_flag in {"1", "true", "yes", "on", "production"}
+
+
 def _trigger_all_schedule_limit(limit: int) -> int:
     try:
         configured = int(os.getenv("CREATIVE_MEDIA_TRIGGER_MAX_JOBS", str(TRIGGER_ALL_DEFAULT_SCHEDULE_LIMIT)))
@@ -556,6 +572,130 @@ def read_media_job(job_id: str, *, include_internal: bool = False) -> Dict[str, 
     return _status_safe_job(job)
 
 
+def _durable_media_queue_rows(limit: int = 100) -> List[Dict[str, Any]]:
+    if not _durable_status_lookup_allowed():
+        return []
+    try:
+        from backend.app.runtime.durable_execution_queue_runtime import list_execution_jobs
+
+        queue = list_execution_jobs(queue_name=CREATIVE_MEDIA_GENERATION_QUEUE, limit=max(1, min(int(limit or 100), 200)))
+    except Exception:
+        return []
+    if not isinstance(queue, dict) or not queue.get("success"):
+        return []
+    return [item for item in queue.get("jobs", []) if isinstance(item, dict)]
+
+
+def _safe_final_asset_ids(value: Any) -> List[str]:
+    if not isinstance(value, list):
+        return []
+    return [
+        _safe_job_id(item)
+        for item in value[:25]
+        if _safe_job_id(item)
+    ]
+
+
+def _durable_completion_details(durable_queue_job_id: str, durable_status: str) -> Dict[str, Any]:
+    try:
+        from backend.app.runtime.durable_execution_queue_runtime import get_latest_execution_job_event
+
+        event_type = "job_dead_lettered" if durable_status == "dead_letter" else "job_completed"
+        event = get_latest_execution_job_event(durable_queue_job_id, event_type=event_type)
+    except Exception:
+        return {}
+    details = event.get("details") if isinstance(event, dict) else {}
+    return details if isinstance(details, dict) else {}
+
+
+def _synthetic_job_from_durable_media_queue_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    payload = row.get("payload") if isinstance(row.get("payload"), dict) else {}
+    durable_queue_job_id = str(row.get("job_id") or row.get("queue_id") or "").strip()
+    durable_status = str(row.get("status") or "").lower()
+    details = _durable_completion_details(durable_queue_job_id, durable_status) if durable_queue_job_id and durable_status in {"completed", "dead_letter"} else {}
+    media_job_id = _safe_job_id(
+        details.get("media_job_id")
+        or payload.get("media_job_id")
+        or payload.get("job_id")
+        or ""
+    )
+    if not media_job_id:
+        media_job_id = _safe_job_id(f"durable_{durable_queue_job_id}")
+
+    if durable_status == "leased":
+        status = "processing"
+    elif durable_status == "completed":
+        status = str(details.get("media_job_status") or "completed").lower()
+    elif durable_status == "dead_letter":
+        status = "dead_letter"
+    elif durable_status == "retry_scheduled":
+        status = "retry_scheduled"
+    else:
+        status = durable_status or "queued"
+
+    asset_count = _safe_int(details.get("asset_count"))
+    playable_asset_count = _safe_int(details.get("playable_asset_count"))
+    preview_ready_count = _safe_int(details.get("preview_ready_count"))
+    download_ready_count = _safe_int(details.get("download_ready_count"))
+    final_asset_ids = _safe_final_asset_ids(details.get("final_asset_ids"))
+    safe_reason = _compact_text(details.get("safe_visible_reason") or details.get("error") or "", 500)
+
+    return {
+        "success": True,
+        "job_id": media_job_id,
+        "media_job_id": media_job_id,
+        "status": status,
+        "lifecycle": "worker_outcome_visible",
+        "task": payload.get("task") or payload.get("task_summary") or payload.get("customer_task") or "Creative media generation job.",
+        "agent_id": payload.get("agent_id") or row.get("agent_id") or "creative_media_agent",
+        "tenant_id": payload.get("tenant_id") or row.get("tenant_id") or "owner_admin",
+        "durable_queue_name": CREATIVE_MEDIA_GENERATION_QUEUE,
+        "durable_queue_job_id": durable_queue_job_id,
+        "durable_queue_status": durable_status,
+        "durable_queue_storage_mode": row.get("storage_mode") or "postgres",
+        "background_processor_scheduled": True,
+        "worker_claimed": bool(row.get("started_at") or durable_status in {"leased", "completed", "dead_letter", "retry_scheduled"}),
+        "worker_completed": durable_status == "completed",
+        "worker_dead_lettered": durable_status == "dead_letter",
+        "provider_status": _compact_text(details.get("provider_status") or status, 160),
+        "safe_visible_reason": safe_reason,
+        "blocked_reason": safe_reason,
+        "media_asset_count": asset_count,
+        "asset_count": asset_count,
+        "real_media_asset_count": asset_count,
+        "persisted_asset_count": asset_count,
+        "playable_asset_count": playable_asset_count,
+        "preview_ready_count": preview_ready_count,
+        "download_ready_count": download_ready_count,
+        "final_asset_ids": final_asset_ids,
+        "final_assets": [],
+        "playable_asset_created": bool(playable_asset_count),
+        "signed_delivery_created": bool(preview_ready_count or download_ready_count),
+        "metadata_only": not bool(playable_asset_count),
+        "source_runtime": "durable_execution_queue_outcome",
+        "created_at": row.get("created_at") or details.get("created_at"),
+        "updated_at": row.get("updated_at") or details.get("updated_at") or row.get("completed_at") or row.get("failed_at"),
+        "credential_values_exposed": False,
+    }
+
+
+def _recent_durable_media_job_outcomes(existing_jobs: List[Dict[str, Any]], limit: int = 100) -> List[Dict[str, Any]]:
+    existing_ids = {
+        str(job.get("job_id") or job.get("media_job_id") or "")
+        for job in existing_jobs
+        if isinstance(job, dict)
+    }
+    outcomes: List[Dict[str, Any]] = []
+    for row in _durable_media_queue_rows(limit=limit):
+        job = _synthetic_job_from_durable_media_queue_row(row)
+        job_id = str(job.get("job_id") or "")
+        if not job_id or job_id in existing_ids:
+            continue
+        outcomes.append(job)
+        existing_ids.add(job_id)
+    return outcomes
+
+
 def _latest_durable_media_status_by_job_id(jobs: List[Dict[str, Any]], limit: int = 10) -> Dict[str, Dict[str, Any]]:
     relevant = [
         job
@@ -566,17 +706,10 @@ def _latest_durable_media_status_by_job_id(jobs: List[Dict[str, Any]], limit: in
     ][: max(0, min(int(limit or 10), 10))]
     if not relevant:
         return {}
-    try:
-        from backend.app.runtime.durable_execution_queue_runtime import get_latest_execution_job_event, list_execution_jobs
-
-        queue = list_execution_jobs(queue_name=CREATIVE_MEDIA_GENERATION_QUEUE, limit=100)
-    except Exception:
-        return {}
-    if not isinstance(queue, dict) or not queue.get("success"):
-        return {}
+    queue_jobs = _durable_media_queue_rows(limit=100)
     durable_by_id = {
         str(item.get("job_id") or item.get("queue_id") or ""): item
-        for item in queue.get("jobs", [])
+        for item in queue_jobs
         if isinstance(item, dict)
     }
     overlays: Dict[str, Dict[str, Any]] = {}
@@ -593,17 +726,28 @@ def _latest_durable_media_status_by_job_id(jobs: List[Dict[str, Any]], limit: in
         elif durable_status in {"retry_scheduled", "dead_letter"}:
             status = durable_status
         elif durable_status == "completed":
-            event = get_latest_execution_job_event(durable_id, event_type="job_completed")
-            details = event.get("details") if isinstance(event, dict) else {}
+            details = _durable_completion_details(durable_id, durable_status)
             status = str((details or {}).get("media_job_status") or "completed").lower()
         elif durable_status == "queued":
             status = "queued"
         if status:
+            details = _durable_completion_details(durable_id, durable_status) if durable_status in {"completed", "dead_letter"} else {}
             overlays[media_job_id] = {
                 "durable_queue_status": durable_status,
                 "worker_observed_status": status,
                 "status": status,
                 "background_processor_scheduled": True,
+                "worker_claimed": bool(durable.get("started_at") or durable_status in {"leased", "completed", "dead_letter", "retry_scheduled"}),
+                "worker_completed": durable_status == "completed",
+                "worker_dead_lettered": durable_status == "dead_letter",
+                "provider_status": _compact_text(details.get("provider_status") or status, 160),
+                "asset_count": _safe_int(details.get("asset_count")),
+                "media_asset_count": _safe_int(details.get("asset_count"), _safe_int(job.get("media_asset_count"))),
+                "playable_asset_count": _safe_int(details.get("playable_asset_count")),
+                "preview_ready_count": _safe_int(details.get("preview_ready_count")),
+                "download_ready_count": _safe_int(details.get("download_ready_count")),
+                "final_asset_ids": _safe_final_asset_ids(details.get("final_asset_ids")) or job.get("final_asset_ids") or [],
+                "safe_visible_reason": _compact_text(details.get("safe_visible_reason") or job.get("safe_visible_reason") or "", 500),
                 "credential_values_exposed": False,
             }
     return overlays
@@ -629,6 +773,7 @@ def list_media_jobs(limit: int = 50, reconcile_visible_assets: bool = False, inc
                     _write_job(job)
                 except Exception:
                     pass
+        jobs.extend(_recent_durable_media_job_outcomes(jobs, limit=max(int(limit or 50), 1)))
     jobs = [_status_safe_job(job) for job in jobs]
     status_counts: Dict[str, int] = {}
     for job in jobs:
@@ -702,6 +847,11 @@ def media_job_to_visible_asset_evidence(job: Dict[str, Any], *, audience: str = 
         "job_id": job_id,
         "media_job_id": job_id,
         "task_id": job_id,
+        "durable_queue_job_id": job.get("durable_queue_job_id"),
+        "durable_queue_status": job.get("durable_queue_status"),
+        "worker_claimed": bool(job.get("worker_claimed")),
+        "worker_completed": bool(job.get("worker_completed")),
+        "provider_status": job.get("provider_status") or provider_readiness,
         "tenant_id": job.get("tenant_id") or "owner_admin",
         "agent_id": agent_id,
         "agent_label": _label(agent_id, "Creative Media Agent"),
@@ -727,8 +877,12 @@ def media_job_to_visible_asset_evidence(job: Dict[str, Any], *, audience: str = 
         "playable": bool(playable_count),
         "metadata_only": not bool(playable_count),
         "media_asset_count": generated_count,
+        "asset_count": generated_count,
         "real_media_asset_count": int(job.get("real_media_asset_count") or 0),
         "playable_asset_count": playable_count,
+        "preview_ready_count": int(job.get("preview_ready_count") or 0),
+        "download_ready_count": int(job.get("download_ready_count") or 0),
+        "final_asset_ids": job.get("final_asset_ids") or [],
         "final_assets": final_assets if audience == "admin" else [],
         "owner_approval_required": False,
         "governed": True,
