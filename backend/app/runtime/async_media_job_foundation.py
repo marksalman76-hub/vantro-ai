@@ -207,6 +207,7 @@ def _safe_bool(value: Any) -> bool:
 FAST_PACKET_BLOCKED_MARKERS = (
     "this is a unique multi-agent, multi-industry platform",
     "do not default to ecommerce",
+    "use the industry, business model, market, customer segment, geography, and commercial intent stated in the task",
     "you are executing as",
     "platform standard",
     "output quality requirement",
@@ -226,9 +227,10 @@ FAST_PACKET_BLOCKED_MARKERS = (
     "run delegated workforce",
     "wait for generated media assets",
     "create operational execution task",
+    "original customer creative brief was unavailable",
 )
 
-UNSAFE_CREATIVE_BRIEF_FALLBACK = "Creative media generation completed, but the original customer creative brief was unavailable or unsafe to display."
+UNSAFE_CREATIVE_BRIEF_FALLBACK = "Creative media generation queued, but the original customer creative brief was unavailable."
 
 CREATIVE_SOURCE_FIELDS = (
     "customer_creative_brief",
@@ -263,6 +265,12 @@ def _blocked_fast_packet_text(value: str) -> bool:
 def _customer_safe_creative_source(job: Dict[str, Any]) -> str:
     for field in CREATIVE_SOURCE_FIELDS:
         raw_value = str(job.get(field) or "")
+        lowered_raw = raw_value.lower()
+        for marker in ("user task:", "customer task:", "customer request:", "creative request:"):
+            marker_index = lowered_raw.rfind(marker)
+            if marker_index >= 0:
+                raw_value = raw_value[marker_index + len(marker):]
+                break
         candidates = []
         for raw_line in raw_value.replace("\r", "\n").split("\n"):
             line = _compact_text(raw_line, 1200)
@@ -538,11 +546,15 @@ def enqueue_creative_media_job_for_worker(job: Dict[str, Any]) -> Dict[str, Any]
 
 def enqueue_media_job(*, task: str, agent_id: str, tenant_id: str, include_image: bool = True, include_audio: bool = True, include_video: bool = True, include_avatar: bool = False) -> Dict[str, Any]:
     job_id = f"media_job_{uuid4().hex[:12]}"
+    safe_task = _safe_task_summary({"task": task})
     job = {
         "success": True,
         "job_id": job_id,
         "status": "queued",
-        "task": task,
+        "task": safe_task,
+        "task_summary": safe_task,
+        "customer_task": safe_task,
+        "task_handoff_preserved": safe_task != UNSAFE_CREATIVE_BRIEF_FALLBACK,
         "agent_id": agent_id,
         "tenant_id": tenant_id,
         "include_image": include_image,

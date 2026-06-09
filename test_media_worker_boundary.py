@@ -790,6 +790,88 @@ def test_platform_instruction_text_never_becomes_creative_brief_fields() -> None
         assert marker not in combined_text
 
 
+def test_scaffolded_admin_media_task_preserves_real_customer_brief() -> None:
+    old_store = media_jobs.STORE
+    real_task = (
+        "Create a 15-second premium UGC ad for a luxury vitamin C face serum. "
+        "Include a scroll-stopping hook, natural voiceover, three scene directions, "
+        "a short caption, and final media generation for image, audio, and video. "
+        "The ad should feel realistic, premium, skincare-focused, and suitable for paid social media."
+    )
+    scaffolded_task = f"""
+    You are executing as: marketing_specialist_agent.
+
+    Platform standard:
+    This is a unique multi-agent, multi-industry platform. Do not default to ecommerce unless the task is ecommerce-specific.
+    Use the industry, business model, market, customer segment, geography, and commercial intent stated in the task.
+
+    Output quality requirement:
+    Produce a premium, client-ready, commercially usable, execution-ready deliverable.
+
+    User task:
+    {real_task}
+    """
+
+    with TemporaryDirectory() as temp_dir:
+        media_jobs.STORE = Path(temp_dir)
+        media_jobs.STORE.mkdir(parents=True, exist_ok=True)
+        try:
+            job = media_jobs.enqueue_media_job(
+                task=scaffolded_task,
+                agent_id="marketing_specialist_agent",
+                tenant_id="owner_admin",
+                include_image=True,
+                include_audio=True,
+                include_video=True,
+                include_avatar=True,
+            )
+            read = media_jobs.read_media_job(job["job_id"])
+        finally:
+            media_jobs.STORE = old_store
+
+    packet = read["fast_output_packet"]
+    combined_text = _json_text({"job": read, "packet": packet})
+    assert "luxury vitamin c face serum" in combined_text
+    assert "scroll-stopping hook" in combined_text
+    assert read["task"] == read["customer_task"] == read["task_summary"]
+    assert "luxury vitamin C face serum" in read["task"]
+    assert packet["fast_output_packet_available"] is True
+    assert "luxury vitamin C face serum" in packet["creative_brief"]
+    assert "luxury vitamin C face serum" in packet["hook"]
+    assert "luxury vitamin C face serum" in packet["caption"]
+    for marker in [
+        "use the industry, business model",
+        "platform standard",
+        "you are executing as",
+        "output quality requirement",
+    ]:
+        assert marker not in combined_text
+
+
+def test_generic_media_instruction_is_blocked_when_no_real_task_available() -> None:
+    generic_instruction = "Use the industry, business model, market, customer segment, geography, and commercial intent stated in the task."
+    job = {
+        "job_id": "media_job_generic_instruction",
+        "status": "queued",
+        "task": generic_instruction,
+        "include_image": True,
+        "include_audio": True,
+        "include_video": True,
+    }
+
+    safe_job = media_jobs._status_safe_job(job)
+    packet = media_jobs.build_fast_creative_output_packet(job)
+    combined_text = _json_text({"job": safe_job, "packet": packet})
+
+    assert safe_job["task"] == media_jobs.UNSAFE_CREATIVE_BRIEF_FALLBACK
+    assert safe_job["customer_task"] == media_jobs.UNSAFE_CREATIVE_BRIEF_FALLBACK
+    assert packet["fast_output_packet_available"] is False
+    assert "creative_brief" not in packet
+    assert "hook" not in packet
+    assert "caption" not in packet
+    assert "use the industry, business model" not in combined_text
+
+
 if __name__ == "__main__":
     test_frontend_uses_trigger_routes_only()
     test_backend_trigger_routes_are_queue_only()
@@ -809,4 +891,6 @@ if __name__ == "__main__":
     test_asset_viewer_sanitises_operational_asset_content_without_changing_playability()
     test_creative_assets_show_playable_assets_before_job_evidence()
     test_platform_instruction_text_never_becomes_creative_brief_fields()
+    test_scaffolded_admin_media_task_preserves_real_customer_brief()
+    test_generic_media_instruction_is_blocked_when_no_real_task_available()
     print("MEDIA_WORKER_BOUNDARY_PASSED")
