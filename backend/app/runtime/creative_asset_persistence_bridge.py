@@ -5,6 +5,7 @@ import os
 import hashlib
 import mimetypes
 import base64
+from urllib.parse import urlparse
 
 try:
     from backend.app.runtime.supabase_creative_storage import (
@@ -193,9 +194,58 @@ def _is_data_url(value):
 
 def _is_browser_safe_url(value):
     text = _safe_string(value).strip()
+    return is_valid_playable_media_source(text)
+
+
+def is_valid_playable_media_source(value):
+    text = _safe_string(value).strip()
     if not text or _is_data_url(text) or len(text) > 2000:
         return False
-    return text.startswith("http://") or text.startswith("https://")
+    lowered = text.lower()
+    if lowered.startswith(("file://", "blob:", "data:")):
+        return False
+    if lowered.startswith(("/", "\\", "c:\\", "c:/")) or ":\\" in lowered:
+        return False
+    if any(
+        marker in lowered
+        for marker in (
+            "placeholder",
+            "test-only",
+            "test_only",
+            "dummy",
+            "fake-media",
+            "fake_media",
+            "/tmp/",
+            "\\temp\\",
+            "\\tmp\\",
+            "appdata\\local\\temp",
+        )
+    ):
+        return False
+    if not lowered.startswith(("http://", "https://")):
+        return False
+    try:
+        parsed = urlparse(text)
+    except Exception:
+        return False
+    host = (parsed.hostname or "").lower().strip("[]")
+    if not host:
+        return False
+    if host in {"example.com", "example.org", "example.net", "localhost", "0.0.0.0", "127.0.0.1", "::1"}:
+        return False
+    if host.startswith("127.") or host.endswith(".localhost") or host.endswith(".local"):
+        return False
+    if host.endswith(".example.com") or host.endswith(".example.org") or host.endswith(".example.net"):
+        return False
+    return True
+
+
+def has_invalid_or_placeholder_media_source(*values):
+    for value in values:
+        text = _safe_string(value).strip()
+        if text and not _is_data_url(text) and not is_valid_playable_media_source(text):
+            return True
+    return False
 
 
 def _first_browser_safe_url(*values):
@@ -474,7 +524,13 @@ def persist_creative_asset(asset_packet: dict):
 
     local_path = _candidate_local_path(packet)
     storage_upload = _maybe_upload_media_file(packet, asset_id, asset_type)
-    storage_url = storage_upload.get("public_url") if isinstance(storage_upload, dict) and storage_upload.get("success") else None
+    storage_url = (
+        storage_upload.get("public_url")
+        if isinstance(storage_upload, dict)
+        and storage_upload.get("success")
+        and is_valid_playable_media_source(storage_upload.get("public_url"))
+        else None
+    )
     provider_url = _first_browser_safe_url(
         packet.get("provider_asset_url"),
         packet.get("preview_url"),
@@ -482,15 +538,24 @@ def persist_creative_asset(asset_packet: dict):
         packet.get("asset_url"),
         packet.get("media_url"),
     )
-    local_url = str(local_path) if local_path is not None else ""
+    local_url = ""
 
     playable_url = storage_url or provider_url or local_url
     playable = bool(playable_url)
     metadata_only = not playable
     raw_status = str(packet.get("status") or "").strip().lower()
+    invalid_source = has_invalid_or_placeholder_media_source(
+        packet.get("provider_asset_url"),
+        packet.get("preview_url"),
+        packet.get("download_url"),
+        packet.get("asset_url"),
+        packet.get("media_url"),
+    )
     resolved_status = packet.get("status") or ("persisted" if playable else "metadata_only_not_playable")
+    if invalid_source and not playable:
+        resolved_status = "blocked_placeholder_source"
     if metadata_only and raw_status in {"completed", "persisted", "final_asset_ready"}:
-        resolved_status = "metadata_only_not_playable"
+        resolved_status = "blocked_placeholder_source" if invalid_source else "metadata_only_not_playable"
 
     if storage_url:
         storage_provider = "supabase"
@@ -519,6 +584,7 @@ def persist_creative_asset(asset_packet: dict):
         "download_ready": playable,
         "playable": playable,
         "metadata_only": metadata_only,
+        "not_playable_reason": "" if playable else ("placeholder_or_invalid_media_source" if invalid_source else "asset_record_has_no_playable_delivery_source"),
         "local_file_found_for_upload": local_path is not None,
         "storage_provider": storage_provider,
         "storage_bucket": media_output_bucket() if storage_url else None,
@@ -538,6 +604,7 @@ def persist_creative_asset(asset_packet: dict):
         "credential_values_exposed": False,
         "playable_asset_created": playable,
         "signed_delivery_created": playable,
+        "invalid_or_placeholder_media_source": bool(invalid_source),
         "created_at": created_at,
     }
 
@@ -601,6 +668,8 @@ def persist_creative_asset(asset_packet: dict):
         "asset_type": stored["asset_type"],
         "registry_count": len(registry),
         "storage_provider": stored["storage_provider"],
+        "asset_status": stored["status"],
+        "not_playable_reason": stored["not_playable_reason"],
         "durable_storage_ready": stored["storage_provider"] == "supabase",
         "preview_ready": stored["preview_ready"],
         "download_ready": stored["download_ready"],
@@ -614,6 +683,7 @@ def persist_creative_asset(asset_packet: dict):
         "persistence_attempted": True,
         "persistence_input_shape": "embedded_media" if materialized_local_path is not None else "asset_packet",
         "playable_source_detected": playable,
+        "invalid_or_placeholder_media_source": bool(invalid_source),
         "signed_delivery_attempted": playable,
         "signed_delivery_created": playable,
         "storage_upload_status": storage_upload.get("status") if isinstance(storage_upload, dict) else None,

@@ -17,6 +17,7 @@ from backend.app.runtime.canonical_media_asset_metadata_runtime import (
     record_asset_delivery_packet,
     record_media_asset,
 )
+from backend.app.runtime.creative_asset_persistence_bridge import is_valid_playable_media_source
 
 
 _ASSET_RECORDS: Dict[str, Dict[str, Any]] = {}
@@ -43,18 +44,11 @@ def _safe_metadata(metadata: Optional[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def _is_browser_url(value: Any) -> bool:
-    text = str(value or "").strip()
-    return text.startswith(("http://", "https://"))
+    return is_valid_playable_media_source(value)
 
 
 def _is_local_runtime_path(value: Any) -> bool:
-    text = str(value or "").strip()
-    return bool(text) and (
-        text.startswith("/opt/render/project/src/runtime_outputs/")
-        or text.startswith(str(Path.cwd() / "runtime_outputs"))
-        or "\\runtime_outputs\\" in text
-        or "/runtime_outputs/" in text
-    )
+    return False
 
 
 def _content_type_for_path(path: str, asset_type: str = "") -> str:
@@ -105,6 +99,9 @@ def create_asset_record(
 ) -> Dict[str, Any]:
     asset_id = f"asset_{uuid.uuid4().hex[:16]}"
     now = _now_ms()
+    valid_source_url = source_url if _is_browser_url(source_url) else ""
+    local_file_path = source_url if _is_local_runtime_path(source_url) else ""
+    playable = bool(valid_source_url or local_file_path)
 
     record = {
         "asset_id": asset_id,
@@ -113,9 +110,13 @@ def create_asset_record(
         "provider_key": provider_key,
         "asset_type": asset_type,
         "asset_status": asset_status,
-        "source_url_present": bool(source_url),
-        "source_url": source_url if _is_browser_url(source_url) else "",
-        "local_file_path": source_url if _is_local_runtime_path(source_url) else "",
+        "source_url_present": bool(valid_source_url),
+        "source_url": valid_source_url,
+        "local_file_path": local_file_path,
+        "preview_ready": playable,
+        "download_ready": playable,
+        "playable": playable,
+        "metadata_only": not playable,
         "storage_key": storage_key or f"{tenant_id}/{request_id}/{asset_id}",
         "metadata": _safe_metadata(metadata),
         "created_at_ms": now,
@@ -134,16 +135,16 @@ def create_asset_record(
         asset_type=asset_type,
         media_type=asset_type,
         status=asset_status,
-        storage_provider="provider_url" if _is_browser_url(source_url) else "local_runtime_file" if _is_local_runtime_path(source_url) else "metadata_only",
+        storage_provider="provider_url" if valid_source_url else "local_runtime_file" if local_file_path else "metadata_only",
         object_key=record["storage_key"],
         local_path=record["local_file_path"],
         provider_url=record["source_url"],
         preview_url=record["source_url"] or record["local_file_path"],
         download_url=record["source_url"] or record["local_file_path"],
-        preview_ready=bool(record["source_url"] or record["local_file_path"]),
-        download_ready=bool(record["source_url"] or record["local_file_path"]),
-        playable=bool(record["source_url"] or record["local_file_path"]),
-        metadata_only=not bool(record["source_url"] or record["local_file_path"]),
+        preview_ready=playable,
+        download_ready=playable,
+        playable=playable,
+        metadata_only=not playable,
         source_runtime="asset_storage_signed_delivery_runtime",
         payload=record,
     )
@@ -158,7 +159,8 @@ def create_asset_record(
 def _canonical_asset_to_record(asset: Dict[str, Any]) -> Dict[str, Any]:
     payload = asset.get("payload") if isinstance(asset.get("payload"), dict) else {}
     source_url = asset.get("provider_url") or asset.get("preview_url") or asset.get("download_url") or ""
-    local_file_path = asset.get("local_path") or ""
+    source_url = source_url if _is_browser_url(source_url) else ""
+    local_file_path = ""
     return {
         "asset_id": asset.get("asset_id"),
         "tenant_id": asset.get("tenant_id") or "owner_admin",
@@ -166,10 +168,10 @@ def _canonical_asset_to_record(asset: Dict[str, Any]) -> Dict[str, Any]:
         "provider_key": payload.get("provider_key") or payload.get("provider") or "internal",
         "asset_type": asset.get("asset_type") or asset.get("media_type") or "creative_asset",
         "asset_status": asset.get("status") or "persisted",
-        "metadata_only": bool(asset.get("metadata_only")),
-        "playable": bool(asset.get("playable")),
+        "metadata_only": bool(asset.get("metadata_only") or not source_url),
+        "playable": bool(asset.get("playable") and source_url),
         "source_url_present": bool(source_url),
-        "source_url": source_url if _is_browser_url(source_url) else "",
+        "source_url": source_url,
         "local_file_path": local_file_path,
         "storage_key": asset.get("object_key") or f"canonical_media/{asset.get('asset_id')}",
         "metadata": _safe_metadata(payload),
@@ -202,11 +204,6 @@ def _registry_asset_to_record(asset_id: str) -> Dict[str, Any]:
             local_file_path = ""
             source_url = ""
 
-            for candidate in [download_url, preview_url, provider_asset_url]:
-                if _is_local_runtime_path(candidate):
-                    local_file_path = str(candidate)
-                    break
-
             for candidate in [preview_url, provider_asset_url, download_url]:
                 if _is_browser_url(candidate):
                     source_url = str(candidate)
@@ -219,11 +216,11 @@ def _registry_asset_to_record(asset_id: str) -> Dict[str, Any]:
                 "provider_key": asset.get("provider") or "internal",
                 "asset_type": asset.get("asset_type") or "creative_asset",
                 "asset_status": asset.get("status") or "persisted",
-                "metadata_only": bool(asset.get("metadata_only") or not asset.get("playable")),
-                "playable": bool(asset.get("playable")),
+                "metadata_only": bool(asset.get("metadata_only") or not (asset.get("playable") and source_url)),
+                "playable": bool(asset.get("playable") and source_url),
                 "source_url_present": bool(source_url),
                 "source_url": source_url,
-                "local_file_path": local_file_path,
+                "local_file_path": "",
                 "storage_key": f"creative_registry/{asset_id}",
                 "metadata": {
                     "registry_fallback": True,
@@ -356,10 +353,19 @@ def create_signed_asset_delivery_packet(
             "customer_safe": True,
         }
 
-    if record.get("metadata_only") and not record.get("source_url") and not record.get("local_file_path"):
+    source_valid = is_valid_playable_media_source(record.get("source_url"))
+    if record.get("metadata_only") and not source_valid:
         return {
             "status": "metadata_only",
             "reason": "asset_has_no_playable_delivery_source",
+            "asset_id": asset_id,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+    if not source_valid:
+        return {
+            "status": "blocked_placeholder_source",
+            "reason": "placeholder_or_invalid_media_source",
             "asset_id": asset_id,
             "credential_values_exposed": False,
             "customer_safe": True,

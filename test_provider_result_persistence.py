@@ -142,6 +142,31 @@ def test_provider_output_url_is_persisted_and_signed_delivery_created() -> None:
         )
 
         assert persisted["success"] is True
+        assert persisted["playable"] is False
+        assert persisted["preview_ready"] is False
+        assert persisted["download_ready"] is False
+        assert persisted["metadata_only"] is True
+        assert persisted["asset_status"] == "blocked_placeholder_source"
+        assert persisted["not_playable_reason"] == "placeholder_or_invalid_media_source"
+        assert persisted["signed_delivery_created"] is False
+
+
+def test_real_supabase_provider_output_url_remains_playable() -> None:
+    reset_asset_storage_for_tests()
+    with isolated_creative_registry(), local_only_persistence():
+        persisted = bridge.persist_creative_asset(
+            {
+                "agent_id": "ugc_creative_agent",
+                "tenant_id": "owner_admin",
+                "provider": "elevenlabs",
+                "asset_type": "audio",
+                "title": "Playable Supabase audio asset",
+                "status": "completed",
+                "provider_asset_url": "https://demo.supabase.co/storage/v1/object/public/creative-media/audio.mp3",
+            }
+        )
+
+        assert persisted["success"] is True
         assert persisted["playable"] is True
         assert persisted["metadata_only"] is False
         assert persisted["signed_delivery_created"] is True
@@ -165,9 +190,9 @@ def test_embedded_audio_data_url_is_materialized_and_signed_delivery_created() -
         )
 
         assert persisted["success"] is True
-        assert persisted["playable"] is True
-        assert persisted["metadata_only"] is False
-        assert persisted["signed_delivery_created"] is True
+        assert persisted["playable"] is False
+        assert persisted["metadata_only"] is True
+        assert persisted["signed_delivery_created"] is False
 
 
 def test_provider_failure_returns_safe_diagnostics_without_secrets() -> None:
@@ -278,6 +303,7 @@ def test_media_job_stays_processing_when_provider_is_polling() -> None:
 if __name__ == "__main__":
     test_runway_async_job_response_is_polling_not_failed()
     test_provider_output_url_is_persisted_and_signed_delivery_created()
+    test_real_supabase_provider_output_url_remains_playable()
     test_embedded_audio_data_url_is_materialized_and_signed_delivery_created()
     test_provider_failure_returns_safe_diagnostics_without_secrets()
     test_media_job_stays_processing_when_provider_is_polling()

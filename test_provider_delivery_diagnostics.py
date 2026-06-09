@@ -124,7 +124,7 @@ def test_signed_delivery_packet_exists_for_playable_asset_and_no_credential_leak
         provider_key="elevenlabs",
         asset_type="audio",
         asset_status="completed",
-        source_url="https://example.com/audio.mp3",
+        source_url="https://demo.supabase.co/storage/v1/object/public/creative-media/audio.mp3",
         metadata={"safe": True, "api_key": "should_be_removed"},
     )
 
@@ -141,9 +141,37 @@ def test_signed_delivery_packet_exists_for_playable_asset_and_no_credential_leak
     assert packet["credential_values_exposed"] is False
 
 
+def test_signed_delivery_blocks_placeholder_media_source() -> None:
+    reset_asset_storage_for_tests()
+
+    record = create_asset_record(
+        tenant_id="owner_admin",
+        request_id="req_placeholder_001",
+        provider_key="runway",
+        asset_type="video",
+        asset_status="completed",
+        source_url="https://example.com/generated/video.mp4",
+        metadata={"safe": True},
+    )
+
+    assert record["playable"] is False
+    assert record["metadata_only"] is True
+
+    packet = create_signed_asset_delivery_packet(
+        tenant_id="owner_admin",
+        asset_id=record["asset_id"],
+        delivery_type="preview",
+    )
+
+    assert packet["status"] in {"metadata_only", "blocked_placeholder_source"}
+    assert packet.get("signed_delivery_token_present") is not True
+    assert packet["credential_values_exposed"] is False
+
+
 if __name__ == "__main__":
     test_provider_unavailable_diagnostics_are_safe_and_explicit()
     test_completed_without_playable_source_is_not_persisted_as_completed()
     test_signed_delivery_packet_exists_for_playable_asset_and_no_credential_leak()
+    test_signed_delivery_blocks_placeholder_media_source()
     print("PROVIDER_DELIVERY_DIAGNOSTICS_PASSED")
     sys.stdout.flush()

@@ -590,6 +590,9 @@ def test_asset_viewer_sanitises_operational_asset_content_without_changing_playa
         "preview_ready": True,
         "download_ready": True,
         "metadata_only": False,
+        "provider_asset_url": "https://demo.supabase.co/storage/v1/object/public/creative-media/audio.mp3",
+        "preview_url": "https://demo.supabase.co/storage/v1/object/public/creative-media/audio.mp3",
+        "download_url": "https://demo.supabase.co/storage/v1/object/public/creative-media/audio.mp3",
         "content": "Create operational execution task for: Next step: wait for generated media assets.",
         "summary": "You are executing as: internal worker.",
     }
@@ -611,8 +614,8 @@ def test_creative_assets_show_playable_assets_before_job_evidence() -> None:
     def fake_get_persisted_creative_assets(limit: int = 50) -> dict:
         return {
             "success": True,
-            "asset_count": 2,
-            "total_asset_count": 2,
+            "asset_count": 4,
+            "total_asset_count": 4,
             "assets": [
                 {
                     "asset_id": "video_metadata_only_asset",
@@ -620,12 +623,45 @@ def test_creative_assets_show_playable_assets_before_job_evidence() -> None:
                     "agent_id": "creative_media_agent",
                     "provider": "runway",
                     "asset_type": "video",
-                    "status": "provider_http_error",
-                    "playable": False,
-                    "preview_ready": False,
-                    "download_ready": False,
-                    "metadata_only": True,
-                    "summary": "Video provider returned metadata only.",
+                    "status": "completed",
+                    "provider_asset_url": "https://example.com/generated/video.mp4",
+                    "preview_url": "https://example.com/generated/video.mp4",
+                    "download_url": "https://example.com/generated/video.mp4",
+                    "playable": True,
+                    "preview_ready": True,
+                    "download_ready": True,
+                    "metadata_only": False,
+                    "summary": "Video provider returned placeholder URL.",
+                    "credential_values_exposed": False,
+                },
+                {
+                    "asset_id": "localhost_video_asset",
+                    "media_job_id": "media_job_completed_with_audio",
+                    "agent_id": "creative_media_agent",
+                    "provider": "runway",
+                    "asset_type": "video",
+                    "status": "completed",
+                    "provider_asset_url": "http://127.0.0.1:8000/generated/video.mp4",
+                    "playable": True,
+                    "preview_ready": True,
+                    "download_ready": True,
+                    "metadata_only": False,
+                    "summary": "Video provider returned local URL.",
+                    "credential_values_exposed": False,
+                },
+                {
+                    "asset_id": "windows_temp_video_asset",
+                    "media_job_id": "media_job_completed_with_audio",
+                    "agent_id": "creative_media_agent",
+                    "provider": "runway",
+                    "asset_type": "video",
+                    "status": "completed",
+                    "provider_asset_url": "C:\\Users\\User\\AppData\\Local\\Temp\\video.mp4",
+                    "playable": True,
+                    "preview_ready": True,
+                    "download_ready": True,
+                    "metadata_only": False,
+                    "summary": "Video provider returned temp path.",
                     "credential_values_exposed": False,
                 },
                 {
@@ -639,6 +675,9 @@ def test_creative_assets_show_playable_assets_before_job_evidence() -> None:
                     "preview_ready": True,
                     "download_ready": True,
                     "metadata_only": False,
+                    "provider_asset_url": "https://demo.supabase.co/storage/v1/object/public/creative-media/audio.mp3",
+                    "preview_url": "https://demo.supabase.co/storage/v1/object/public/creative-media/audio.mp3",
+                    "download_url": "https://demo.supabase.co/storage/v1/object/public/creative-media/audio.mp3",
                     "summary": "Playable audio voiceover.",
                     "credential_values_exposed": False,
                 },
@@ -692,8 +731,8 @@ def test_creative_assets_show_playable_assets_before_job_evidence() -> None:
     assert result["success"] is True
     assert result["playable_asset_count"] == 1
     assert result["evidence_row_count"] == 1
-    assert result["metadata_only_count"] >= 2
-    assert result["total_detected"] == 3
+    assert result["metadata_only_count"] >= 4
+    assert result["total_detected"] == 5
 
     assets = result["assets"]
     assert assets[0]["asset_id"] == "audio_playable_asset"
@@ -703,6 +742,16 @@ def test_creative_assets_show_playable_assets_before_job_evidence() -> None:
     assert assets[1]["asset_id"] == "video_metadata_only_asset"
     assert assets[1]["playable"] is False
     assert assets[1]["metadata_only"] is True
+    assert assets[1]["preview_ready"] is False
+    assert assets[1]["download_ready"] is False
+    assert assets[1]["signed_delivery_created"] is False
+    assert assets[1]["delivery_status"] == "blocked_placeholder_source"
+    assert assets[1]["not_playable_reason"] == "placeholder_or_invalid_media_source"
+    blocked = {asset["asset_id"]: asset for asset in assets if asset.get("asset_id") in {"localhost_video_asset", "windows_temp_video_asset"}}
+    assert blocked["localhost_video_asset"]["playable"] is False
+    assert blocked["localhost_video_asset"]["not_playable_reason"] == "placeholder_or_invalid_media_source"
+    assert blocked["windows_temp_video_asset"]["playable"] is False
+    assert blocked["windows_temp_video_asset"]["not_playable_reason"] == "placeholder_or_invalid_media_source"
     evidence = [asset for asset in assets if asset.get("asset_type") == "creative_media_job_evidence"]
     assert evidence
     assert evidence[0]["playable"] is False

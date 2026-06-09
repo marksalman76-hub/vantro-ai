@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from backend.app.runtime.asset_storage_signed_delivery_runtime import create_signed_asset_delivery_packet
+from backend.app.runtime.creative_asset_persistence_bridge import is_valid_playable_media_source
 
 
 PROVIDERS_CHECKED = ["elevenlabs", "runway", "heygen", "kling", "sync", "openai_image", "internal"]
@@ -77,12 +78,27 @@ def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
     asset_id = str(asset.get("asset_id") or "").strip()
     provider = asset.get("provider") or asset.get("provider_key") or "internal"
     asset_type = asset.get("asset_type") or asset.get("media_type") or "creative_asset"
-    playable = bool(asset.get("playable") or (asset.get("preview_ready") and not asset.get("metadata_only")))
-    downloadable = bool(asset.get("download_ready") and playable)
+    original_preview_url = asset.get("preview_url") or asset.get("provider_asset_url") or asset.get("asset_url") or asset.get("media_url") or ""
+    original_download_url = asset.get("download_url") or asset.get("provider_asset_url") or asset.get("asset_url") or asset.get("media_url") or original_preview_url or ""
+    source_candidates = [
+        asset.get("provider_asset_url"),
+        asset.get("preview_url"),
+        asset.get("download_url"),
+        asset.get("asset_url"),
+        asset.get("media_url"),
+    ]
+    has_source_value = any(str(value or "").strip() for value in source_candidates)
+    valid_source = any(is_valid_playable_media_source(value) for value in source_candidates)
+    placeholder_blocked = bool(has_source_value and not valid_source)
+    playable = bool(valid_source and (asset.get("playable") or (asset.get("preview_ready") and not asset.get("metadata_only"))))
+    downloadable = bool(valid_source and asset.get("download_ready") and playable)
     raw_status = str(asset.get("status") or asset.get("asset_status") or "persisted")
     if playable:
         delivery_status = "final_asset_ready"
         delivery_reason = "playable_delivery_source_available"
+    elif placeholder_blocked:
+        delivery_status = "blocked_placeholder_source"
+        delivery_reason = "placeholder_or_invalid_media_source"
     elif "failed" in raw_status.lower():
         delivery_status = "failed"
         delivery_reason = "media_generation_or_persistence_failed"
@@ -96,9 +112,6 @@ def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
     gateway_preview_url = _signed_gateway_url(asset_id, "preview") if asset_id and playable else ""
     gateway_download_url = _signed_gateway_url(asset_id, "download") if asset_id and downloadable else ""
     signed_delivery_created = bool(gateway_preview_url or gateway_download_url)
-
-    original_preview_url = asset.get("preview_url") or asset.get("provider_asset_url") or asset.get("asset_url") or asset.get("media_url") or ""
-    original_download_url = asset.get("download_url") or asset.get("provider_asset_url") or asset.get("asset_url") or asset.get("media_url") or original_preview_url or ""
 
     preview_url = gateway_preview_url if playable else ""
     download_url = gateway_download_url if downloadable else ""
@@ -133,6 +146,7 @@ def _safe_asset(asset: Dict[str, Any]) -> Dict[str, Any]:
         "playable_asset_created": playable,
         "signed_delivery_created": signed_delivery_created,
         "metadata_only": bool(asset.get("metadata_only") or not playable),
+        "invalid_or_placeholder_media_source": placeholder_blocked,
         "content": _safe_asset_text(asset.get("content"), fallback=safe_summary),
         "summary": safe_summary,
         "quality_score": asset.get("quality_score"),
