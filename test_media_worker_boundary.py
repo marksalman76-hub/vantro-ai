@@ -10,6 +10,7 @@ from backend.app.runtime import admin_creative_media_asset_viewer as asset_viewe
 from backend.app.runtime import async_media_job_foundation as media_jobs
 from backend.app.runtime import creative_asset_persistence_bridge as creative_assets
 from backend.app.runtime import durable_execution_queue_runtime as durable_queue
+from backend.app.runtime import shared_creative_media_generation_runtime as shared_media
 
 
 ROOT = Path(__file__).resolve().parent
@@ -872,6 +873,202 @@ def test_generic_media_instruction_is_blocked_when_no_real_task_available() -> N
     assert "use the industry, business model" not in combined_text
 
 
+def test_provider_unavailable_worker_job_exposes_safe_reason_codes() -> None:
+    old_store = media_jobs.STORE
+    import os
+
+    original_env = {
+        key: os.environ.get(key)
+        for key in [
+            "APP_ENV",
+            "LIVE_EXTERNAL_CALLS_ENABLED",
+            "OWNER_APPROVED_LIVE_ACTIVATION",
+            "REAL_PROVIDER_HTTP_DISPATCH_ENABLED",
+            "RUNWAYML_API_SECRET",
+            "RUNWAY_API_KEY",
+            "RUNWAY_CREATE_JOB_URL",
+            "ELEVENLABS_API_KEY",
+        ]
+    }
+    os.environ["APP_ENV"] = "development"
+    os.environ["LIVE_EXTERNAL_CALLS_ENABLED"] = "false"
+    os.environ.pop("OWNER_APPROVED_LIVE_ACTIVATION", None)
+    os.environ.pop("REAL_PROVIDER_HTTP_DISPATCH_ENABLED", None)
+    os.environ.pop("RUNWAYML_API_SECRET", None)
+    os.environ.pop("RUNWAY_API_KEY", None)
+    os.environ.pop("RUNWAY_CREATE_JOB_URL", None)
+    os.environ.pop("ELEVENLABS_API_KEY", None)
+
+    with TemporaryDirectory() as temp_dir:
+        media_jobs.STORE = Path(temp_dir)
+        media_jobs.STORE.mkdir(parents=True, exist_ok=True)
+        try:
+            job = media_jobs.enqueue_media_job(
+                task="Create a 15-second premium UGC ad for a luxury vitamin C face serum.",
+                agent_id="creative_media_agent",
+                tenant_id="client_demo",
+                include_image=False,
+                include_audio=False,
+                include_video=True,
+                include_avatar=False,
+            )
+            result = media_jobs.process_media_job(job)
+            read = media_jobs.read_media_job(job["job_id"])
+        finally:
+            media_jobs.STORE = old_store
+            for key, value in original_env.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
+    assert result["success"] is True
+    assert read["status"] == "provider_unavailable"
+    assert read["runway_configured"] is False
+    assert read["elevenlabs_configured"] is False
+    assert read["live_provider_execution_enabled"] is False
+    assert read["selected_provider"] == "runway"
+    assert read["selected_video_provider"] == "runway"
+    assert read["provider_unavailable_reason_code"] == "runway_key_missing"
+    assert read["media_asset_count"] == 1
+    assert read["playable_asset_created"] is False
+    assert read["credential_values_exposed"] is False
+
+    combined_text = _json_text(read)
+    assert "configured-for-test" not in combined_text
+    assert "super_secret" not in combined_text
+    assert "provider_token" not in combined_text
+
+    video_asset = read["final_assets"][0]
+    assert video_asset["asset_type"] == "video"
+    assert video_asset["playable"] is False
+    assert video_asset["preview_ready"] is False
+    assert video_asset["download_ready"] is False
+    assert video_asset["signed_delivery_created"] is False
+    assert video_asset["metadata_only"] is True
+
+
+def test_audio_can_complete_when_video_provider_is_unavailable() -> None:
+    old_store = media_jobs.STORE
+    old_execute = shared_media._execute_ai_media_provider_packet
+    import os
+
+    original_env = {
+        key: os.environ.get(key)
+        for key in [
+            "APP_ENV",
+            "LIVE_EXTERNAL_CALLS_ENABLED",
+            "OWNER_APPROVED_LIVE_ACTIVATION",
+            "REAL_PROVIDER_HTTP_DISPATCH_ENABLED",
+            "RUNWAYML_API_SECRET",
+            "RUNWAY_API_KEY",
+            "RUNWAY_CREATE_JOB_URL",
+            "ELEVENLABS_API_KEY",
+        ]
+    }
+    os.environ["APP_ENV"] = "development"
+    os.environ["LIVE_EXTERNAL_CALLS_ENABLED"] = "true"
+    os.environ["OWNER_APPROVED_LIVE_ACTIVATION"] = "true"
+    os.environ["REAL_PROVIDER_HTTP_DISPATCH_ENABLED"] = "true"
+    os.environ.pop("RUNWAYML_API_SECRET", None)
+    os.environ.pop("RUNWAY_API_KEY", None)
+    os.environ.pop("RUNWAY_CREATE_JOB_URL", None)
+    os.environ["ELEVENLABS_API_KEY"] = "configured-for-test"
+
+    def fake_provider_packet(**kwargs: Any) -> dict:
+        media_type = kwargs.get("media_type")
+        if media_type == "audio":
+            return {
+                "success": True,
+                "status": "completed",
+                "provider": "elevenlabs",
+                "media_type": "audio",
+                "media_url": "https://demo.supabase.co/storage/v1/object/public/creative-media/audio.mp3",
+                "asset_url": "https://demo.supabase.co/storage/v1/object/public/creative-media/audio.mp3",
+                "preview_url": "https://demo.supabase.co/storage/v1/object/public/creative-media/audio.mp3",
+                "download_url": "https://demo.supabase.co/storage/v1/object/public/creative-media/audio.mp3",
+                "provider_configured": True,
+                "provider_key_selected": "elevenlabs",
+                "provider_dispatch_enabled": True,
+                "live_external_calls_enabled": True,
+                "owner_approved_live_activation": True,
+                "real_provider_http_dispatch_enabled": True,
+                "live_provider_execution_attempted": True,
+                "real_media_asset_created": True,
+                "credential_values_exposed": False,
+                "customer_safe": True,
+            }
+        return {
+            "success": False,
+            "status": "provider_key_missing",
+            "provider": "runway",
+            "media_type": "video",
+            "provider_configured": False,
+            "provider_key_selected": "runway",
+            "provider_unavailable_reason": "provider_key_missing_or_not_configured_on_runtime",
+            "provider_unavailable_reason_code": "runway_key_missing",
+            "provider_dispatch_enabled": True,
+            "live_external_calls_enabled": True,
+            "owner_approved_live_activation": True,
+            "real_provider_http_dispatch_enabled": True,
+            "live_provider_execution_attempted": False,
+            "real_media_asset_created": False,
+            "metadata_only": True,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
+    with TemporaryDirectory() as temp_dir:
+        media_jobs.STORE = Path(temp_dir)
+        media_jobs.STORE.mkdir(parents=True, exist_ok=True)
+        shared_media._execute_ai_media_provider_packet = fake_provider_packet
+        try:
+            job = media_jobs.enqueue_media_job(
+                task="Create a 15-second premium UGC ad for a luxury vitamin C face serum.",
+                agent_id="creative_media_agent",
+                tenant_id="client_demo",
+                include_image=False,
+                include_audio=True,
+                include_video=True,
+                include_avatar=False,
+            )
+            result = media_jobs.process_media_job(job)
+            read = media_jobs.read_media_job(job["job_id"])
+        finally:
+            shared_media._execute_ai_media_provider_packet = old_execute
+            media_jobs.STORE = old_store
+            for key, value in original_env.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
+
+    assert result["success"] is True
+    assert read["status"] == "completed"
+    assert read["playable_asset_created"] is True
+    assert read["playable_asset_count"] >= 1
+    assert read["selected_video_provider"] == "runway"
+    assert read["selected_audio_provider"] == "elevenlabs"
+    assert read["runway_configured"] is False
+    assert read["elevenlabs_configured"] is True
+    assert read["live_provider_execution_enabled"] is True
+    assert read["provider_unavailable_reason_code"] == "runway_key_missing"
+    assert read["provider_unavailable_reason"] == ""
+
+    final_assets = read["final_assets"]
+    video_assets = [asset for asset in final_assets if asset.get("asset_type") == "video"]
+    audio_assets = [asset for asset in final_assets if asset.get("asset_type") == "audio"]
+    assert video_assets
+    assert audio_assets
+    assert video_assets[0]["playable"] is False
+    assert video_assets[0]["metadata_only"] is True
+    assert video_assets[0]["signed_delivery_created"] is False
+    assert audio_assets[0]["playable"] is True
+    assert audio_assets[0]["preview_ready"] is True
+    assert audio_assets[0]["download_ready"] is True
+    assert audio_assets[0]["signed_delivery_created"] is True
+
+
 if __name__ == "__main__":
     test_frontend_uses_trigger_routes_only()
     test_backend_trigger_routes_are_queue_only()
@@ -893,4 +1090,6 @@ if __name__ == "__main__":
     test_platform_instruction_text_never_becomes_creative_brief_fields()
     test_scaffolded_admin_media_task_preserves_real_customer_brief()
     test_generic_media_instruction_is_blocked_when_no_real_task_available()
+    test_provider_unavailable_worker_job_exposes_safe_reason_codes()
+    test_audio_can_complete_when_video_provider_is_unavailable()
     print("MEDIA_WORKER_BOUNDARY_PASSED")

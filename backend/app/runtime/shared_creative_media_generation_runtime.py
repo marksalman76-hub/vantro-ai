@@ -53,6 +53,12 @@ METADATA_ONLY_STATUSES = {
     "endpoint_missing",
     "blocked_owner_approval_required",
     "provider_execution_attempted",
+    "provider_key_missing",
+    "prepared_no_live_provider_configured",
+    "blocked_live_dispatch_not_enabled",
+    "provider_unavailable",
+    "provider_bridge_failed",
+    "runway_adapter_unavailable",
 }
 
 
@@ -82,6 +88,32 @@ def _provider_dispatch_diagnostics() -> Dict[str, bool]:
         "owner_approved_live_activation": owner_approved_live_activation,
         "real_provider_http_dispatch_enabled": real_provider_http_dispatch_enabled,
     }
+
+
+def _provider_readiness_summary() -> Dict[str, Any]:
+    dispatch = _provider_dispatch_diagnostics()
+    return {
+        "runway_configured": _provider_configured("runway"),
+        "elevenlabs_configured": _provider_configured("elevenlabs"),
+        "kling_configured": _provider_configured("kling"),
+        "heygen_configured": _provider_configured("heygen"),
+        "live_provider_execution_enabled": bool(dispatch.get("provider_dispatch_enabled")),
+        **dispatch,
+        "credential_values_exposed": False,
+    }
+
+
+def _safe_provider_reason_code(*, provider: str, configured: bool, media_type: str = "") -> str:
+    dispatch = _provider_dispatch_diagnostics()
+    if not configured:
+        return f"{provider or 'provider'}_key_missing"
+    if not dispatch.get("live_external_calls_enabled"):
+        return "live_external_calls_disabled"
+    if not dispatch.get("owner_approved_live_activation"):
+        return "owner_approved_live_activation_disabled"
+    if not dispatch.get("real_provider_http_dispatch_enabled"):
+        return "real_provider_http_dispatch_disabled"
+    return f"{provider or 'provider'}_{media_type or 'media'}_unavailable"
 
 
 def _provider_configured(provider: str) -> bool:
@@ -208,6 +240,7 @@ def _execute_ai_media_provider_packet(
             "provider_configured": False,
             "provider_key_selected": provider,
             "provider_unavailable_reason": "provider_key_missing_or_not_configured_on_runtime",
+            "provider_unavailable_reason_code": _safe_provider_reason_code(provider=provider, configured=False, media_type=media_type),
             "playable_asset_created": False,
             "signed_delivery_created": False,
             "metadata_only": True,
@@ -261,6 +294,7 @@ def _execute_ai_media_provider_packet(
         result.setdefault("provider_configured", bool(configured))
         result.setdefault("provider_key_selected", provider)
         result.setdefault("provider_unavailable_reason", "")
+        result.setdefault("provider_unavailable_reason_code", _safe_provider_reason_code(provider=provider, configured=bool(configured), media_type=media_type) if not result.get("real_media_asset_created") else "")
         result.setdefault("playable_asset_created", bool(result.get("real_media_asset_created")))
         result.setdefault("signed_delivery_created", False)
         result.setdefault("metadata_only", not bool(result.get("real_media_asset_created")))
@@ -281,6 +315,7 @@ def _execute_ai_media_provider_packet(
             "provider_configured": bool(configured),
             "provider_key_selected": provider,
             "provider_unavailable_reason": "provider_bridge_failed",
+            "provider_unavailable_reason_code": "provider_bridge_failed",
             "playable_asset_created": False,
             "signed_delivery_created": False,
             "metadata_only": True,
@@ -305,6 +340,10 @@ def _execute_runway_direct_if_available(
             "media_type": "video",
             "live_provider_execution_attempted": False,
             "real_media_asset_created": False,
+            "provider_configured": False,
+            "provider_key_selected": "runway",
+            "provider_unavailable_reason": "provider_key_missing_or_not_configured_on_runtime",
+            "provider_unavailable_reason_code": _safe_provider_reason_code(provider="runway", configured=False, media_type="video"),
             "credential_values_exposed": False,
             "customer_safe": True,
         }
@@ -329,6 +368,10 @@ def _execute_runway_direct_if_available(
             "media_type": "video",
             "live_provider_execution_attempted": True,
             "real_media_asset_created": False,
+            "provider_configured": True,
+            "provider_key_selected": "runway",
+            "provider_unavailable_reason": "runway_adapter_unavailable",
+            "provider_unavailable_reason_code": "runway_adapter_unavailable",
             "error": str(exc)[:800],
             "credential_values_exposed": False,
             "customer_safe": True,
@@ -709,6 +752,11 @@ def _append_if_persistable(asset: Dict[str, Any], target: List[Dict[str, Any]]) 
         asset["playable_asset_created"] = False
         asset["signed_delivery_created"] = False
         asset["metadata_only"] = True
+        asset["playable"] = False
+        asset["preview_ready"] = False
+        asset["download_ready"] = False
+        asset["real_media_asset_created"] = False
+        target.append(asset)
         return asset
 
     asset["persistence_attempted"] = True
@@ -755,6 +803,11 @@ def generate_creative_media_pack(
     avatar_prompt = _avatar_prompt(task, agent_id) if include_avatar else ""
 
     provider_stack = recommended_stack_for_task(agent_id, task)
+    selected_image_provider = _first_configured_provider("image") if include_image else ""
+    selected_video_provider = _first_configured_provider("video") if include_video else ""
+    selected_audio_provider = _first_configured_provider("audio") if include_audio else ""
+    selected_avatar_provider = _first_configured_provider("avatar") if include_avatar else ""
+    readiness_summary = _provider_readiness_summary()
 
     image_assets: List[Dict[str, Any]] = []
     audio_assets: List[Dict[str, Any]] = []
@@ -764,7 +817,7 @@ def generate_creative_media_pack(
     generation_jobs: List[Dict[str, Any]] = []
 
     if include_image:
-        image_provider = _first_configured_provider("image")
+        image_provider = selected_image_provider
         image_asset = generate_creative_visual_asset(
             prompt=task,
             agent_id=agent_id,
@@ -811,7 +864,7 @@ def generate_creative_media_pack(
             image_assets.append(image_asset)
 
     if include_video:
-        provider = _first_configured_provider("video")
+        provider = selected_video_provider
         direct_runway_result = (
             _execute_runway_direct_if_available(
                 prompt=video_prompt,
@@ -857,12 +910,14 @@ def generate_creative_media_pack(
                 "live_generation_available": _provider_configured(provider),
                 "live_provider_execution_attempted": provider_result.get("live_provider_execution_attempted", True),
                 "real_media_asset_created": video_asset.get("real_media_asset_created", False),
+                "provider_configured": bool(provider_result.get("provider_configured") or _provider_configured(provider)),
+                "provider_unavailable_reason_code": provider_result.get("provider_unavailable_reason_code") or _safe_provider_reason_code(provider=provider, configured=_provider_configured(provider), media_type="video"),
                 "prompt": video_prompt,
             }
         )
 
     if include_audio:
-        provider = _first_configured_provider("audio")
+        provider = selected_audio_provider
         provider_result = _execute_ai_media_provider_packet(
             provider=provider,
             media_type="audio",
@@ -893,12 +948,14 @@ def generate_creative_media_pack(
                 "live_generation_available": _provider_configured(provider),
                 "live_provider_execution_attempted": provider_result.get("live_provider_execution_attempted", True),
                 "real_media_asset_created": audio_asset.get("real_media_asset_created", False),
+                "provider_configured": bool(provider_result.get("provider_configured") or _provider_configured(provider)),
+                "provider_unavailable_reason_code": provider_result.get("provider_unavailable_reason_code") or _safe_provider_reason_code(provider=provider, configured=_provider_configured(provider), media_type="audio"),
                 "script": audio_script,
             }
         )
 
     if include_avatar:
-        provider = _first_configured_provider("avatar")
+        provider = selected_avatar_provider
         provider_result = _execute_ai_media_provider_packet(
             provider=provider,
             media_type="avatar",
@@ -965,6 +1022,8 @@ def generate_creative_media_pack(
                 "live_generation_available": _provider_configured(provider),
                 "live_provider_execution_attempted": provider_result.get("live_provider_execution_attempted", True),
                 "real_media_asset_created": avatar_asset.get("real_media_asset_created", False),
+                "provider_configured": bool(provider_result.get("provider_configured") or _provider_configured(provider)),
+                "provider_unavailable_reason_code": provider_result.get("provider_unavailable_reason_code") or _safe_provider_reason_code(provider=provider, configured=_provider_configured(provider), media_type="avatar"),
                 "prompt": avatar_prompt,
             }
         )
@@ -997,6 +1056,14 @@ def generate_creative_media_pack(
         for asset in media_assets
         if bool(asset.get("playable") or (isinstance(asset.get("persistence"), dict) and asset.get("persistence", {}).get("playable")))
     ]
+    provider_unavailable_reason_code = next(
+        (
+            str(result.get("provider_unavailable_reason_code"))
+            for result in provider_execution_results
+            if isinstance(result, dict) and result.get("provider_unavailable_reason_code")
+        ),
+        "none" if playable_media_assets else "no_playable_provider_asset_result",
+    )
 
     return {
         "success": True,
@@ -1031,6 +1098,16 @@ def generate_creative_media_pack(
         "provider_execution_results": provider_execution_results,
         "provider_stack": provider_stack,
         "provider_chain": provider_stack.get("preferred_providers", []) if isinstance(provider_stack, dict) else [],
+        "provider_readiness": readiness_summary,
+        "runway_configured": readiness_summary.get("runway_configured"),
+        "elevenlabs_configured": readiness_summary.get("elevenlabs_configured"),
+        "live_provider_execution_enabled": readiness_summary.get("live_provider_execution_enabled"),
+        "selected_provider": selected_video_provider or selected_image_provider or selected_audio_provider or selected_avatar_provider,
+        "selected_image_provider": selected_image_provider,
+        "selected_audio_provider": selected_audio_provider,
+        "selected_video_provider": selected_video_provider,
+        "selected_avatar_provider": selected_avatar_provider,
+        "provider_unavailable_reason_code": provider_unavailable_reason_code,
         "created_at": _now(),
         "customer_safe": True,
         "credential_values_exposed": False,

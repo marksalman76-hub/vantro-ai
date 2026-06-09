@@ -978,6 +978,8 @@ def _asset_delivery_summary(asset: Dict[str, Any]) -> Dict[str, Any]:
         "preview_ready": bool(persistence.get("preview_ready") or asset.get("preview_ready")),
         "download_ready": bool(persistence.get("download_ready") or asset.get("download_ready")),
         "playable": bool(persistence.get("playable") or asset.get("playable")),
+        "metadata_only": bool(persistence.get("metadata_only") or asset.get("metadata_only")),
+        "signed_delivery_created": bool(persistence.get("signed_delivery_created") or asset.get("signed_delivery_created")),
         "storage_provider": persistence.get("storage_provider"),
     }
 
@@ -1054,23 +1056,40 @@ def _provider_diagnostics_from_media_pack(media_pack: Dict[str, Any], *, default
     first = provider_results[0] if provider_results else {}
     generation_jobs = [item for item in media_pack.get("generation_jobs", []) if isinstance(item, dict)]
     first_job = generation_jobs[0] if generation_jobs else {}
+    readiness = media_pack.get("provider_readiness") if isinstance(media_pack.get("provider_readiness"), dict) else {}
 
     provider_selected = str(
-        first.get("provider")
+        media_pack.get("selected_provider")
+        or first.get("provider")
         or first_job.get("provider")
         or default_provider
         or ""
     ).strip()
 
-    live_external_calls_enabled = bool(first.get("live_external_calls_enabled"))
-    owner_approved_live_activation = bool(first.get("owner_approved_live_activation"))
-    real_provider_http_dispatch_enabled = bool(first.get("real_provider_http_dispatch_enabled"))
+    live_external_calls_enabled = bool(first.get("live_external_calls_enabled") or readiness.get("live_external_calls_enabled"))
+    owner_approved_live_activation = bool(first.get("owner_approved_live_activation") or readiness.get("owner_approved_live_activation"))
+    real_provider_http_dispatch_enabled = bool(first.get("real_provider_http_dispatch_enabled") or readiness.get("real_provider_http_dispatch_enabled"))
+    reason_code = str(
+        media_pack.get("provider_unavailable_reason_code")
+        or first.get("provider_unavailable_reason_code")
+        or first_job.get("provider_unavailable_reason_code")
+        or ""
+    ).strip()
 
     return {
         "provider_key_selected": provider_selected,
+        "provider_status": provider_selected,
         "provider_configured": bool(first.get("provider_configured") or first_job.get("live_generation_available")),
+        "runway_configured": bool(media_pack.get("runway_configured") or readiness.get("runway_configured")),
+        "elevenlabs_configured": bool(media_pack.get("elevenlabs_configured") or readiness.get("elevenlabs_configured")),
+        "live_provider_execution_enabled": bool(media_pack.get("live_provider_execution_enabled") or readiness.get("live_provider_execution_enabled")),
+        "selected_provider": provider_selected,
+        "selected_audio_provider": str(media_pack.get("selected_audio_provider") or "").strip(),
+        "selected_video_provider": str(media_pack.get("selected_video_provider") or "").strip(),
+        "provider_unavailable_reason_code": reason_code,
         "provider_dispatch_enabled": bool(
             first.get("provider_dispatch_enabled")
+            or readiness.get("provider_dispatch_enabled")
             or (
                 live_external_calls_enabled
                 and owner_approved_live_activation
@@ -1154,6 +1173,7 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
             job["final_assets"] = final_assets
             job["preview_ready_count"] = 0
             job["download_ready_count"] = 0
+            job["playable_asset_count"] = 0
             job["playable_asset_created"] = False
             job["signed_delivery_created"] = False
             job["metadata_only"] = True
@@ -1188,6 +1208,7 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
         job["final_assets"] = final_assets
         job["preview_ready_count"] = sum(1 for asset in playable_assets if asset.get("preview_ready"))
         job["download_ready_count"] = sum(1 for asset in playable_assets if asset.get("download_ready"))
+        job["playable_asset_count"] = len(playable_assets)
         job["playable_asset_created"] = True
         job["signed_delivery_created"] = bool(job["preview_ready_count"] or job["download_ready_count"])
         job["metadata_only"] = False
