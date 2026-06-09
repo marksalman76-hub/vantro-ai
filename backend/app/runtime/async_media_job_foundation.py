@@ -205,6 +205,8 @@ def _safe_bool(value: Any) -> bool:
 
 
 FAST_PACKET_BLOCKED_MARKERS = (
+    "this is a unique multi-agent, multi-industry platform",
+    "do not default to ecommerce",
     "you are executing as",
     "platform standard",
     "output quality requirement",
@@ -215,13 +217,18 @@ FAST_PACKET_BLOCKED_MARKERS = (
     "developer prompt",
     "internal prompt",
     "backend execution",
+    "backend instructions",
+    "internal routing",
     "governance",
+    "internal governance",
     "raw provider",
     "provider payload",
     "run delegated workforce",
     "wait for generated media assets",
     "create operational execution task",
 )
+
+UNSAFE_CREATIVE_BRIEF_FALLBACK = "Creative media generation completed, but the original customer creative brief was unavailable or unsafe to display."
 
 CREATIVE_SOURCE_FIELDS = (
     "customer_creative_brief",
@@ -289,6 +296,8 @@ def _safe_task_summary(job: Dict[str, Any]) -> str:
     source = _customer_safe_creative_source(job)
     if source:
         return source[:500]
+    if any(str(job.get(field) or "").strip() for field in CREATIVE_SOURCE_FIELDS):
+        return UNSAFE_CREATIVE_BRIEF_FALLBACK
     return "Creative media generation is queued for async final render."
 
 
@@ -828,6 +837,52 @@ def _safe_blocked_reason(job: Dict[str, Any]) -> str:
     return "Media job evidence is available, but no playable generated asset is attached yet."
 
 
+def _asset_kind(asset: Dict[str, Any]) -> str:
+    return str(asset.get("media_type") or asset.get("asset_type") or "").lower()
+
+
+def _asset_playable(asset: Dict[str, Any]) -> bool:
+    return bool(asset.get("playable") or asset.get("preview_ready") or asset.get("download_ready"))
+
+
+def _final_combined_media_status(job: Dict[str, Any], final_assets: List[Dict[str, Any]]) -> Dict[str, Any]:
+    playable_combined = [
+        asset
+        for asset in final_assets
+        if _asset_kind(asset) == "combined_video" and _asset_playable(asset)
+    ]
+    separate_audio_ready = any(
+        _asset_kind(asset) in {"audio", "voiceover", "dubbing_audio"} and _asset_playable(asset)
+        for asset in final_assets
+    )
+    separate_video_ready = any(
+        _asset_kind(asset) in {"video", "ugc_video", "ad_video", "avatar_video", "lipsync_video"} and _asset_playable(asset)
+        for asset in final_assets
+    )
+    combined_required = bool(
+        job.get("final_combined_asset_required")
+        or (job.get("include_audio") and job.get("include_video"))
+        or (separate_audio_ready and separate_video_ready)
+    )
+    if playable_combined:
+        return {
+            "final_combined_asset_ready": True,
+            "final_combined_asset_required": combined_required,
+            "final_combined_asset_status": "final_asset_ready",
+            "final_combined_asset_id": playable_combined[0].get("asset_id"),
+            "separate_audio_ready": separate_audio_ready,
+            "separate_video_ready": separate_video_ready,
+        }
+    return {
+        "final_combined_asset_ready": False,
+        "final_combined_asset_required": combined_required,
+        "final_combined_asset_status": "pending_composition" if combined_required else "not_required",
+        "final_combined_asset_id": "",
+        "separate_audio_ready": separate_audio_ready,
+        "separate_video_ready": separate_video_ready,
+    }
+
+
 def media_job_to_visible_asset_evidence(job: Dict[str, Any], *, audience: str = "admin") -> Dict[str, Any]:
     job_id = str(job.get("job_id") or job.get("media_job_id") or "").strip()
     status = str(job.get("status") or job.get("media_job_status") or "queued").strip()
@@ -840,6 +895,12 @@ def media_job_to_visible_asset_evidence(job: Dict[str, Any], *, audience: str = 
     preview_ready = any(asset.get("preview_ready") for asset in final_assets)
     download_ready = any(asset.get("download_ready") for asset in final_assets)
     title = f"Creative media job {_label(status, 'Queued').lower()}"
+    combined_status = _final_combined_media_status(job, final_assets)
+    evidence_delivery_status = (
+        "final_combined_asset_ready"
+        if combined_status["final_combined_asset_ready"]
+        else ("separate_media_ready" if playable_count else provider_readiness)
+    )
 
     return {
         "asset_id": job_id,
@@ -864,18 +925,18 @@ def media_job_to_visible_asset_evidence(job: Dict[str, Any], *, audience: str = 
         "test_label": f"{title}: {_label(agent_id, 'Creative Media Agent')}",
         "file_name": job_id,
         "status": status,
-        "delivery_status": "final_asset_ready" if playable_count else provider_readiness,
-        "lifecycle_status": "preview_ready" if playable_count else "pending",
+        "delivery_status": evidence_delivery_status,
+        "lifecycle_status": "evidence_ready" if playable_count else "pending",
         "summary": (
             f"Creative media job {job_id} is {_label(status, 'queued').lower()}. "
             f"Generated assets: {generated_count}. Playable assets: {playable_count}."
         ),
         "blocked_reason": "" if playable_count else blocked_reason,
         "not_playable_reason": "" if playable_count else blocked_reason,
-        "preview_ready": bool(preview_ready),
-        "download_ready": bool(download_ready),
-        "playable": bool(playable_count),
-        "metadata_only": not bool(playable_count),
+        "preview_ready": False,
+        "download_ready": False,
+        "playable": False,
+        "metadata_only": True,
         "media_asset_count": generated_count,
         "asset_count": generated_count,
         "real_media_asset_count": int(job.get("real_media_asset_count") or 0),
@@ -883,6 +944,7 @@ def media_job_to_visible_asset_evidence(job: Dict[str, Any], *, audience: str = 
         "preview_ready_count": int(job.get("preview_ready_count") or 0),
         "download_ready_count": int(job.get("download_ready_count") or 0),
         "final_asset_ids": job.get("final_asset_ids") or [],
+        **combined_status,
         "final_assets": final_assets if audience == "admin" else [],
         "owner_approval_required": False,
         "governed": True,
@@ -1060,6 +1122,7 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
         ]
         playable_assets = [asset for asset in final_assets if asset.get("playable") or asset.get("preview_ready") or asset.get("download_ready")]
         provider_diag = _provider_diagnostics_from_media_pack(media_pack)
+        combined_status = _final_combined_media_status(job, final_assets)
 
         if not playable_assets:
             terminal_state = _resolve_no_playable_terminal_state(media_pack)
@@ -1082,6 +1145,7 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
             job["playable_asset_created"] = False
             job["signed_delivery_created"] = False
             job["metadata_only"] = True
+            job.update(combined_status)
             job.update(provider_diag)
             job["provider_unavailable_reason"] = job.get("provider_unavailable_reason") or terminal_state["reason"]
             job[f"{terminal_state['status']}_at"] = _now()
@@ -1115,6 +1179,7 @@ def process_media_job(job: Dict[str, Any]) -> Dict[str, Any]:
         job["playable_asset_created"] = True
         job["signed_delivery_created"] = bool(job["preview_ready_count"] or job["download_ready_count"])
         job["metadata_only"] = False
+        job.update(combined_status)
         job.update(provider_diag)
         job["provider_unavailable_reason"] = ""
         job["completed_at"] = _now()

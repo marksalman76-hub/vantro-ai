@@ -8,6 +8,7 @@ from typing import Any
 from backend.app.runtime import background_worker_loop
 from backend.app.runtime import admin_creative_media_asset_viewer as asset_viewer
 from backend.app.runtime import async_media_job_foundation as media_jobs
+from backend.app.runtime import creative_asset_persistence_bridge as creative_assets
 from backend.app.runtime import durable_execution_queue_runtime as durable_queue
 
 
@@ -53,6 +54,8 @@ def _unsafe_fast_packet_markers() -> list[str]:
         "output quality requirement",
         "agent-specific behaviour",
         "required structure",
+        "this is a unique multi-agent, multi-industry platform",
+        "do not default to ecommerce",
         "create operational execution task",
         "run delegated workforce",
         "wait for generated media assets",
@@ -600,6 +603,144 @@ def test_asset_viewer_sanitises_operational_asset_content_without_changing_playa
         assert marker not in safe_text
 
 
+def test_creative_assets_show_playable_assets_before_job_evidence() -> None:
+    old_store = media_jobs.STORE
+    old_get_assets = creative_assets.get_persisted_creative_assets
+    old_signed_url = asset_viewer._signed_gateway_url
+
+    def fake_get_persisted_creative_assets(limit: int = 50) -> dict:
+        return {
+            "success": True,
+            "asset_count": 2,
+            "total_asset_count": 2,
+            "assets": [
+                {
+                    "asset_id": "video_metadata_only_asset",
+                    "media_job_id": "media_job_completed_with_audio",
+                    "agent_id": "creative_media_agent",
+                    "provider": "runway",
+                    "asset_type": "video",
+                    "status": "provider_http_error",
+                    "playable": False,
+                    "preview_ready": False,
+                    "download_ready": False,
+                    "metadata_only": True,
+                    "summary": "Video provider returned metadata only.",
+                    "credential_values_exposed": False,
+                },
+                {
+                    "asset_id": "audio_playable_asset",
+                    "media_job_id": "media_job_completed_with_audio",
+                    "agent_id": "creative_media_agent",
+                    "provider": "elevenlabs",
+                    "asset_type": "audio",
+                    "status": "persisted",
+                    "playable": True,
+                    "preview_ready": True,
+                    "download_ready": True,
+                    "metadata_only": False,
+                    "summary": "Playable audio voiceover.",
+                    "credential_values_exposed": False,
+                },
+            ],
+            "providers_checked": ["elevenlabs", "runway", "internal"],
+            "credential_values_exposed": False,
+        }
+
+    with TemporaryDirectory() as temp_dir:
+        media_jobs.STORE = Path(temp_dir)
+        media_jobs.STORE.mkdir(parents=True, exist_ok=True)
+        creative_assets.get_persisted_creative_assets = fake_get_persisted_creative_assets
+        asset_viewer._signed_gateway_url = lambda asset_id, delivery_type="preview": f"https://signed.example/{delivery_type}/{asset_id}"
+        try:
+            job = media_jobs.enqueue_media_job(
+                task="Create one creative media output packet for a premium skincare serum.",
+                agent_id="creative_media_agent",
+                tenant_id="client_demo",
+                include_audio=True,
+                include_video=True,
+            )
+            job.update(
+                {
+                    "status": "completed",
+                    "worker_claimed": True,
+                    "worker_completed": True,
+                    "durable_queue_status": "completed",
+                    "provider_status": "runway",
+                    "media_asset_count": 2,
+                    "real_media_asset_count": 2,
+                    "persisted_asset_count": 2,
+                    "playable_asset_count": 1,
+                    "preview_ready_count": 1,
+                    "download_ready_count": 1,
+                    "signed_delivery_created": True,
+                    "final_assets": [
+                        {"asset_id": "video_metadata_only_asset", "asset_type": "video", "playable": False, "metadata_only": True},
+                        {"asset_id": "audio_playable_asset", "asset_type": "audio", "playable": True, "preview_ready": True, "download_ready": True},
+                    ],
+                    "final_asset_ids": ["video_metadata_only_asset", "audio_playable_asset"],
+                }
+            )
+            media_jobs._write_job(job)
+
+            result = asset_viewer.get_admin_creative_media_assets(limit=10)
+        finally:
+            asset_viewer._signed_gateway_url = old_signed_url
+            creative_assets.get_persisted_creative_assets = old_get_assets
+            media_jobs.STORE = old_store
+
+    assert result["success"] is True
+    assert result["playable_asset_count"] == 1
+    assert result["evidence_row_count"] == 1
+    assert result["metadata_only_count"] >= 2
+    assert result["total_detected"] == 3
+
+    assets = result["assets"]
+    assert assets[0]["asset_id"] == "audio_playable_asset"
+    assert assets[0]["playable"] is True
+    assert assets[0]["preview_ready"] is True
+    assert assets[0]["download_ready"] is True
+    assert assets[1]["asset_id"] == "video_metadata_only_asset"
+    assert assets[1]["playable"] is False
+    assert assets[1]["metadata_only"] is True
+    evidence = [asset for asset in assets if asset.get("asset_type") == "creative_media_job_evidence"]
+    assert evidence
+    assert evidence[0]["playable"] is False
+    assert evidence[0]["final_combined_asset_ready"] is False
+    assert evidence[0]["final_combined_asset_required"] is True
+    assert evidence[0]["final_combined_asset_status"] == "pending_composition"
+    assert evidence[0]["separate_audio_ready"] is True
+    assert evidence[0]["separate_video_ready"] is False
+
+
+def test_platform_instruction_text_never_becomes_creative_brief_fields() -> None:
+    unsafe_task = (
+        "This is a unique multi-agent, multi-industry platform. "
+        "Do not default to ecommerce unless the task is ecommerce-specific. "
+        "Platform standard: internal routing and backend instructions."
+    )
+    job = {
+        "job_id": "media_job_internal_platform_text",
+        "status": "completed",
+        "task": unsafe_task,
+        "include_audio": True,
+        "include_video": True,
+    }
+
+    safe_job = media_jobs._status_safe_job(job)
+    packet = media_jobs.build_fast_creative_output_packet(job)
+    combined_text = _json_text({"job": safe_job, "packet": packet})
+
+    assert safe_job["task"] == media_jobs.UNSAFE_CREATIVE_BRIEF_FALLBACK
+    assert safe_job["customer_task"] == media_jobs.UNSAFE_CREATIVE_BRIEF_FALLBACK
+    assert packet["fast_output_packet_available"] is False
+    assert "creative_brief" not in packet
+    assert "hook" not in packet
+    assert "caption" not in packet
+    for marker in _unsafe_fast_packet_markers():
+        assert marker not in combined_text
+
+
 if __name__ == "__main__":
     test_frontend_uses_trigger_routes_only()
     test_backend_trigger_routes_are_queue_only()
@@ -617,4 +758,6 @@ if __name__ == "__main__":
     test_worker_claims_durable_media_queue_and_status_overlay_moves_job_out_of_queued()
     test_worker_outcome_remains_visible_without_local_media_job_json()
     test_asset_viewer_sanitises_operational_asset_content_without_changing_playability()
+    test_creative_assets_show_playable_assets_before_job_evidence()
+    test_platform_instruction_text_never_becomes_creative_brief_fields()
     print("MEDIA_WORKER_BOUNDARY_PASSED")

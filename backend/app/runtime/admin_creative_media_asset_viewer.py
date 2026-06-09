@@ -47,14 +47,20 @@ def _contains_internal_or_operational_text(value: Any) -> bool:
     return any(
         marker in lowered
         for marker in (
+            "this is a unique multi-agent, multi-industry platform",
+            "do not default to ecommerce",
             "you are executing as",
             "platform standard",
             "output quality requirement",
             "agent-specific behaviour",
+            "agent specific behaviour",
             "required structure",
             "create operational execution task",
             "run delegated workforce",
             "wait for generated media assets",
+            "internal governance",
+            "internal routing",
+            "backend instructions",
             "internal_prompt",
         )
     )
@@ -166,6 +172,26 @@ def _is_creative_media_queue_asset(asset: Dict[str, Any]) -> bool:
     )
 
 
+def _asset_priority(asset: Dict[str, Any]) -> tuple[int, str]:
+    if asset.get("playable"):
+        return (0, str(asset.get("created_at") or ""))
+    if asset.get("metadata_only"):
+        return (2, str(asset.get("created_at") or ""))
+    return (1, str(asset.get("created_at") or ""))
+
+
+def _persisted_asset_lookup_allowed_with_evidence(get_persisted_creative_assets: Any, has_job_evidence: bool) -> bool:
+    if not has_job_evidence:
+        return True
+    if os.getenv("CREATIVE_ASSET_PERSISTED_LOOKUP_WITH_EVIDENCE", "").strip().lower() in {"1", "true", "yes", "on"}:
+        return True
+    if str(os.getenv("RENDER") or "").strip().lower() in {"1", "true", "yes", "on"}:
+        return True
+    if getattr(get_persisted_creative_assets, "__module__", "") != "backend.app.runtime.creative_asset_persistence_bridge":
+        return True
+    return not (os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL"))
+
+
 def get_admin_creative_media_asset_viewer_status() -> Dict[str, Any]:
     return {
         "success": True,
@@ -227,7 +253,7 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
 
         assets: List[Dict[str, Any]] = []
         job_evidence = []
-        existing_ids = set()
+        evidence_ids = set()
         for job in jobs:
             if not isinstance(job, dict):
                 continue
@@ -236,11 +262,11 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
             except Exception:
                 continue
             evidence_id = str(evidence.get("asset_id") or "")
-            if evidence_id and evidence_id not in existing_ids:
+            if evidence_id and evidence_id not in evidence_ids:
                 job_evidence.append(evidence)
-                existing_ids.add(evidence_id)
+                evidence_ids.add(evidence_id)
 
-        if not job_evidence:
+        if _persisted_asset_lookup_allowed_with_evidence(get_persisted_creative_assets, bool(job_evidence)):
             try:
                 registry = get_persisted_creative_assets(limit=max(int(limit or 50), 1))
                 raw_assets = registry.get("assets", []) if isinstance(registry, dict) else []
@@ -255,6 +281,7 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
                 }
                 raw_assets = []
 
+        asset_ids = set()
         for asset in raw_assets:
             if not isinstance(asset, dict):
                 continue
@@ -263,9 +290,9 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
                 try:
                     evidence = media_job_to_visible_asset_evidence(jobs_by_id[job_id], audience="admin")
                     evidence_id = str(evidence.get("asset_id") or "")
-                    if evidence_id and evidence_id not in existing_ids:
-                        assets.append(evidence)
-                        existing_ids.add(evidence_id)
+                    if evidence_id and evidence_id not in evidence_ids:
+                        job_evidence.append(evidence)
+                        evidence_ids.add(evidence_id)
                 except Exception:
                     pass
                 continue
@@ -274,12 +301,17 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
             except Exception:
                 continue
             safe_id = str(safe.get("asset_id") or "")
-            if not safe_id or safe_id not in existing_ids:
+            if not safe_id or safe_id not in asset_ids:
                 assets.append(safe)
                 if safe_id:
-                    existing_ids.add(safe_id)
+                    asset_ids.add(safe_id)
 
-        visible_assets = (job_evidence + assets)[: max(int(limit or 50), 1)]
+        assets = sorted(assets, key=_asset_priority)
+        safe_limit = max(int(limit or 50), 1)
+        visible_assets = (assets + job_evidence)[:safe_limit]
+        visible_playable_count = sum(1 for asset in visible_assets if asset.get("playable") and asset.get("asset_type") != "creative_media_job_evidence")
+        evidence_row_count = sum(1 for asset in visible_assets if asset.get("asset_type") == "creative_media_job_evidence")
+        metadata_only_count = sum(1 for asset in visible_assets if asset.get("metadata_only"))
 
         return {
             "success": True,
@@ -290,6 +322,10 @@ def get_admin_creative_media_assets(limit: int = 50) -> Dict[str, Any]:
             "asset_count": len(visible_assets),
             "total_asset_count": (registry.get("total_asset_count", len(assets)) if isinstance(registry, dict) else len(assets)) + len(job_evidence),
             "job_evidence_count": len(job_evidence),
+            "evidence_row_count": evidence_row_count,
+            "playable_asset_count": visible_playable_count,
+            "metadata_only_count": metadata_only_count,
+            "total_detected": len(assets) + len(job_evidence),
             "canonical_store": jobs_result.get("canonical_store", "backend:runtime_outputs/media_jobs"),
             "visible_queued_job_count": jobs_result.get("visible_queued_job_count", 0),
             "processor_queued_job_count": jobs_result.get("processor_queued_job_count", 0),
