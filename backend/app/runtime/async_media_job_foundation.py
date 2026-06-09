@@ -578,6 +578,43 @@ def enqueue_media_job(*, task: str, agent_id: str, tenant_id: str, include_image
     job["fast_output_packet_available"] = bool(fast_packet.get("fast_output_packet_available"))
     with _LOCK:
         _job_path(job_id).write_text(json.dumps(job, indent=2), encoding="utf-8")
+
+    # MEDIA_JOB_AUTO_WORKER_QUEUE_ACCEPTANCE_V1
+    # Media jobs created by approved creative media agents must immediately
+    # enter the durable worker queue. Otherwise they remain in the media_jobs
+    # store as queued and are never claimed unless a separate admin trigger runs.
+    try:
+        worker_queue_result = enqueue_creative_media_job_for_worker(job)
+        if isinstance(worker_queue_result, dict):
+            job["worker_queue_acceptance_checked"] = True
+            job["worker_queue_scheduled"] = bool(
+                worker_queue_result.get("scheduled")
+                or worker_queue_result.get("success")
+            )
+            job["worker_queue_status"] = worker_queue_result.get("status")
+            job["durable_queue_job_id"] = (
+                worker_queue_result.get("durable_queue_job_id")
+                or worker_queue_result.get("queue_id")
+                or worker_queue_result.get("job_id")
+            )
+            job["durable_queue_name"] = (
+                worker_queue_result.get("durable_queue_name")
+                or worker_queue_result.get("queue_name")
+                or CREATIVE_MEDIA_GENERATION_QUEUE
+            )
+            job["durable_queue_status"] = worker_queue_result.get("status")
+            job["credential_values_exposed"] = False
+            with _LOCK:
+                _job_path(job_id).write_text(json.dumps(job, indent=2), encoding="utf-8")
+    except Exception as exc:
+        job["worker_queue_acceptance_checked"] = True
+        job["worker_queue_scheduled"] = False
+        job["worker_queue_status"] = "worker_queue_enqueue_failed"
+        job["worker_queue_error"] = str(exc)[:240]
+        job["credential_values_exposed"] = False
+        with _LOCK:
+            _job_path(job_id).write_text(json.dumps(job, indent=2), encoding="utf-8")
+
     return job
 
 
