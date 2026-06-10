@@ -18,6 +18,10 @@ AI_MEDIA_ADMIN_COMPAT_PATHS = {
     "/admin/ai-media-pipeline/run",
     "/admin/provider-action-readiness",
     "/admin/provider-action-readiness/evaluate",
+    "/admin/media-jobs/run-next",
+    "/admin/media-jobs/run-all",
+    "/admin/media-jobs/trigger-next",
+    "/admin/media-jobs/trigger-all",
 }
 
 
@@ -72,6 +76,10 @@ def validate_ai_media_admin_session_compatibility(request: Any) -> Dict[str, Any
         "/admin/ai-media-pipeline/run": {"POST", "OPTIONS"},
         "/admin/provider-action-readiness": {"GET", "OPTIONS"},
         "/admin/provider-action-readiness/evaluate": {"POST", "OPTIONS"},
+        "/admin/media-jobs/run-next": {"POST", "OPTIONS"},
+        "/admin/media-jobs/run-all": {"POST", "OPTIONS"},
+        "/admin/media-jobs/trigger-next": {"POST", "OPTIONS"},
+        "/admin/media-jobs/trigger-all": {"POST", "OPTIONS"},
     }
 
     if method not in allowed_methods.get(path, set()):
