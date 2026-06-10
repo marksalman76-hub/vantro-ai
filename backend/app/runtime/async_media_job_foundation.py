@@ -544,6 +544,82 @@ def enqueue_creative_media_job_for_worker(job: Dict[str, Any]) -> Dict[str, Any]
     }
 
 
+# FINAL_DELIVERABLE_FALLBACK_PACKAGE_V1
+# When at least one playable/signed asset exists but a final combined video cannot
+# be composed because a provider is unavailable, expose a client-safe final
+# deliverable package instead of leaving the job stuck at pending composition.
+def _apply_final_deliverable_fallback_package(job_data: Dict[str, Any]) -> Dict[str, Any]:
+    safe_job = dict(job_data or {})
+    final_assets = safe_job.get("final_assets") if isinstance(safe_job.get("final_assets"), list) else []
+    playable_assets = [
+        asset for asset in final_assets
+        if isinstance(asset, dict)
+        and (
+            asset.get("playable")
+            or asset.get("preview_ready")
+            or asset.get("download_ready")
+            or asset.get("signed_delivery_created")
+        )
+    ]
+
+    if not playable_assets:
+        return safe_job
+
+    existing_ready = bool(safe_job.get("final_deliverable_ready"))
+    combined_ready = bool(safe_job.get("final_combined_asset_ready"))
+    combined_status = str(safe_job.get("final_combined_asset_status") or "").strip().lower()
+
+    if existing_ready or combined_ready:
+        safe_job["credential_values_exposed"] = False
+        return safe_job
+
+    if combined_status and combined_status not in {
+        "pending_composition",
+        "pending",
+        "queued",
+        "failed",
+        "provider_unavailable",
+        "partial_success",
+    }:
+        safe_job["credential_values_exposed"] = False
+        return safe_job
+
+    fallback_asset_ids = [
+        str(asset.get("asset_id"))
+        for asset in playable_assets
+        if asset.get("asset_id")
+    ][:25]
+
+    primary_asset = playable_assets[0]
+    primary_asset_id = str(primary_asset.get("asset_id") or fallback_asset_ids[0] if fallback_asset_ids else "")
+
+    safe_job["final_deliverable_ready"] = True
+    safe_job["final_deliverable_type"] = "fallback_asset_package"
+    safe_job["final_deliverable_status"] = "ready"
+    safe_job["final_deliverable_reason"] = (
+        "A client-ready fallback asset package was created because at least one "
+        "playable/signed asset is available while final video composition is waiting "
+        "on an unavailable provider."
+    )
+    safe_job["final_deliverable_asset_ids"] = fallback_asset_ids
+    safe_job["final_deliverable_primary_asset_id"] = primary_asset_id
+    safe_job["final_deliverable_asset_count"] = len(playable_assets)
+    safe_job["final_combined_asset_required"] = bool(safe_job.get("final_combined_asset_required", True))
+    safe_job["final_combined_asset_ready"] = False
+    safe_job["final_combined_asset_status"] = "fallback_package_ready"
+    safe_job["final_combined_asset_id"] = str(safe_job.get("final_combined_asset_id") or "")
+    safe_job["client_ready_delivery"] = True
+    safe_job["client_ready_delivery_type"] = "fallback_asset_package"
+    safe_job["client_ready_delivery_message"] = (
+        "Playable media assets are ready for preview/download. Final combined video "
+        "composition can be retried when the video provider is available."
+    )
+    safe_job["customer_safe"] = True
+    safe_job["credential_values_exposed"] = False
+    return safe_job
+
+
+
 # ASSIGNED_AGENT_DIRECT_MEDIA_EXECUTION_V1
 # Worker-claim fallback:
 # If a creative media job is already approved and assigned to a specific agent,
@@ -617,22 +693,42 @@ def _execute_assigned_agent_media_job_directly(job: Dict[str, Any]) -> None:
         )
 
         result_job = result.get("job") if isinstance(result, dict) and isinstance(result.get("job"), dict) else {}
+        result_job = _apply_final_deliverable_fallback_package(result_job)
         final_assets = result_job.get("final_assets") if isinstance(result_job.get("final_assets"), list) else []
         final_asset_ids = result_job.get("final_asset_ids") if isinstance(result_job.get("final_asset_ids"), list) else []
 
-        _write_assigned_agent_direct_execution_state(
-            job_id,
-            {
-                "assigned_agent_direct_execution_completed": True,
-                "assigned_agent_direct_execution_completed_at": _now(),
-                "worker_completed": True,
-                "worker_completed_by": "assigned_agent_direct_executor",
-                "final_assets": final_assets,
-                "final_asset_ids": final_asset_ids,
-                "final_assets_count": len(final_assets),
-                "credential_values_exposed": False,
-            },
-        )
+        completion_updates = {
+            "assigned_agent_direct_execution_completed": True,
+            "assigned_agent_direct_execution_completed_at": _now(),
+            "worker_completed": True,
+            "worker_completed_by": "assigned_agent_direct_executor",
+            "final_assets": final_assets,
+            "final_asset_ids": final_asset_ids,
+            "final_assets_count": len(final_assets),
+            "credential_values_exposed": False,
+        }
+
+        for key in (
+            "final_deliverable_ready",
+            "final_deliverable_type",
+            "final_deliverable_status",
+            "final_deliverable_reason",
+            "final_deliverable_asset_ids",
+            "final_deliverable_primary_asset_id",
+            "final_deliverable_asset_count",
+            "final_combined_asset_required",
+            "final_combined_asset_ready",
+            "final_combined_asset_status",
+            "final_combined_asset_id",
+            "client_ready_delivery",
+            "client_ready_delivery_type",
+            "client_ready_delivery_message",
+            "customer_safe",
+        ):
+            if key in result_job:
+                completion_updates[key] = result_job.get(key)
+
+        _write_assigned_agent_direct_execution_state(job_id, completion_updates)
     except Exception as exc:
         _write_assigned_agent_direct_execution_state(
             job_id,
