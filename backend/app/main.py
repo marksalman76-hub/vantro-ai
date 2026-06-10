@@ -106,7 +106,7 @@ behaviour optimisation, and execution stack routing.
 """
 
 from backend.app.runtime.global_execution_evidence_layer import build_execution_evidence_packet
-from fastapi import FastAPI, Header, Request
+from fastapi import Request, FastAPI, Header, Request
 from backend.app.runtime.creative_asset_persistence_bridge import get_persisted_creative_assets, persist_creative_agent_output
 from backend.app.runtime.asset_storage_signed_delivery_runtime import build_customer_safe_delivery_response
 from backend.app.runtime.shared_creative_media_generation_runtime import CREATIVE_MEDIA_AGENTS
@@ -5302,3 +5302,31 @@ def admin_run_all_media_jobs(
     before = _media_job_store_snapshot(limit=25)
     result = trigger_all_creative_media_jobs(limit=25)
     return _media_job_trigger_response(result, authorised=True, before_snapshot=before, legacy_route="/admin/media-jobs/run-all")
+
+
+# DIRECT_MEDIA_PROVIDER_EXECUTION_LANE_V1
+@app.get("/admin/direct-media-provider-status")
+def admin_direct_media_provider_status() -> Dict[str, object]:
+    from backend.app.runtime.direct_media_provider_execution_runtime import direct_media_provider_execution_status
+
+    return direct_media_provider_execution_status()
+
+
+@app.post("/admin/direct-media-provider-execute")
+async def admin_direct_media_provider_execute(request: Request) -> Dict[str, object]:
+    from backend.app.runtime.direct_media_provider_execution_runtime import execute_direct_media_provider_job
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    return execute_direct_media_provider_job(payload)
+
+
+@app.get("/admin/direct-media-provider-job-status/{job_id}")
+def admin_direct_media_provider_job_status(job_id: str) -> Dict[str, object]:
+    from backend.app.runtime.direct_media_provider_execution_runtime import get_direct_media_provider_job_status
+
+    return get_direct_media_provider_job_status(job_id)
+
