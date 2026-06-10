@@ -85,6 +85,7 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
   const [result, setResult] = useState<DirectMediaResult | null>(null);
   const [message, setMessage] = useState("");
   const [pollingJobId, setPollingJobId] = useState("");
+  const [compact, setCompact] = useState(false);
 
   const providerReady = useMemo(() => {
     if (!status) return false;
@@ -151,6 +152,7 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
       if (data?.job_id && (data?.polling_required || data?.status === "queued" || data?.status === "running")) {
         setPollingJobId(data.job_id);
         setMessage("Direct media job accepted. Polling for completion...");
+        setCompact(true);
       } else if (data?.success && data?.playable) {
         setResult(data);
         setMessage("Direct media generated successfully. Preview is ready.");
@@ -182,6 +184,7 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
 
       if (data?.status === "completed" && data?.playable) {
         setMessage("Direct media generated successfully. Preview is ready.");
+        setCompact(false);
         setPollingJobId("");
         return;
       }
@@ -228,8 +231,8 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
   const shellStyle: React.CSSProperties = {
     border: isAdmin ? "1px solid rgba(34,211,238,.24)" : "1px solid rgba(129,140,248,.20)",
     borderRadius: 22,
-    padding: 18,
-    margin: isAdmin ? "18px 0" : "18px 0 22px",
+    padding: compact ? 12 : 18,
+    margin: isAdmin ? "10px 0 18px" : "12px 0 22px",
     background: isAdmin
       ? "linear-gradient(135deg, rgba(8,47,73,.96), rgba(15,23,42,.96))"
       : "linear-gradient(135deg, rgba(255,255,255,.98), rgba(238,242,255,.96))",
@@ -295,21 +298,38 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
               : "Generated media from the direct provider lane appears in the workspace once owner/admin execution is completed. Live paid provider execution remains owner/admin controlled."}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={loadStatus}
-          style={{
-            border: "none",
-            borderRadius: 999,
-            padding: "9px 13px",
-            background: isAdmin ? "rgba(34,211,238,.20)" : "rgba(79,70,229,.10)",
-            color: isAdmin ? "#e0f2fe" : "#4338ca",
-            fontWeight: 950,
-            cursor: "pointer",
-          }}
-        >
-          {statusLoading ? "Checking..." : "Refresh status"}
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <button
+            type="button"
+            onClick={() => setCompact((value) => !value)}
+            style={{
+              border: "none",
+              borderRadius: 999,
+              padding: "9px 13px",
+              background: isAdmin ? "rgba(99,102,241,.25)" : "rgba(79,70,229,.10)",
+              color: isAdmin ? "#e0f2fe" : "#4338ca",
+              fontWeight: 950,
+              cursor: "pointer",
+            }}
+          >
+            {compact ? "Expand panel" : "Compact panel"}
+          </button>
+          <button
+            type="button"
+            onClick={loadStatus}
+            style={{
+              border: "none",
+              borderRadius: 999,
+              padding: "9px 13px",
+              background: isAdmin ? "rgba(34,211,238,.20)" : "rgba(79,70,229,.10)",
+              color: isAdmin ? "#e0f2fe" : "#4338ca",
+              fontWeight: 950,
+              cursor: "pointer",
+            }}
+          >
+            {statusLoading ? "Checking..." : "Refresh status"}
+          </button>
+        </div>
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
@@ -317,8 +337,11 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
         <span style={pillStyle}>ElevenLabs: {status?.elevenlabs?.configured ? "ready" : "not configured"}</span>
         <span style={pillStyle}>Kling: {status?.kling?.configured ? "ready" : "not configured"}</span>
         <span style={pillStyle}>Secrets exposed: {status?.credential_values_exposed ? "yes" : "no"}</span>
+        {pollingJobId ? <span style={pillStyle}>Polling: {pollingJobId}</span> : null}
       </div>
 
+      {!compact ? (
+      <>
       <div style={gridStyle}>
         <label style={labelStyle}>
           Agent
@@ -382,6 +405,14 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
         ) : null}
       </div>
 
+      </>
+
+      ) : (
+        <div style={{ marginTop: 12, fontSize: 12.5, fontWeight: 850, color: isAdmin ? "#bae6fd" : "#475569" }}>
+          Panel compacted. Current status: <strong>{resultStatus}</strong>{pollingJobId ? ` · Polling ${pollingJobId}` : ""}. Use Expand panel to edit prompt or view preview.
+        </div>
+      )}
+
       <div
         style={{
           marginTop: 14,
@@ -410,7 +441,7 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
             {result?.media_type === "audio" ? (
               <audio controls src={previewUrl} style={{ width: "100%" }} />
             ) : (
-              <video controls src={previewUrl} style={{ width: "100%", maxHeight: 320, borderRadius: 14, background: "#000" }} />
+              <video controls src={previewUrl} style={{ width: "100%", maxHeight: 220, borderRadius: 14, background: "#000" }} />
             )}
             <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
               <a href={previewUrl} target="_blank" rel="noreferrer" style={{ ...pillStyle, textDecoration: "none" }}>
