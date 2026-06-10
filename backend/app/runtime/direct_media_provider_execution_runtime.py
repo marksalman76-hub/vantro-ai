@@ -11,6 +11,7 @@ import uuid
 ROOT = Path(__file__).resolve().parents[3]
 DIRECT_JOB_DIR = ROOT / "runtime_outputs" / "direct_media_provider_jobs"
 DIRECT_JOB_DIR.mkdir(parents=True, exist_ok=True)
+DIRECT_PENDING_JOB_INDEX: Dict[str, Dict[str, Any]] = {}
 
 SUPPORTED_VIDEO_PROVIDERS = {"runway", "kling"}
 SUPPORTED_AUDIO_PROVIDERS = {"elevenlabs"}
@@ -35,32 +36,46 @@ def _write_job(job: Dict[str, Any]) -> Dict[str, Any]:
     job["job_id"] = job_id
     job["updated_at"] = _now()
     path = _job_path(job_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(job, indent=2, default=str), encoding="utf-8")
+    DIRECT_PENDING_JOB_INDEX[job_id] = dict(job)
     return job
 
 
 def _read_job(job_id: str) -> Dict[str, Any]:
     path = _job_path(job_id)
-    if not path.exists():
+    if path.exists():
+        try:
+            job = json.loads(path.read_text(encoding="utf-8"))
+            DIRECT_PENDING_JOB_INDEX[str(job_id)] = dict(job)
+            return job
+        except Exception as error:
+            return {
+                "success": False,
+                "status": "read_failed",
+                "job_id": job_id,
+                "error": str(error)[:500],
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            }
+
+    cached = DIRECT_PENDING_JOB_INDEX.get(str(job_id))
+    if isinstance(cached, dict) and cached:
         return {
-            "success": False,
-            "status": "not_found",
-            "job_id": job_id,
+            **cached,
+            "status": cached.get("status") or "queued",
+            "success": bool(cached.get("success", True)),
             "customer_safe": True,
             "credential_values_exposed": False,
         }
 
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception as error:
-        return {
-            "success": False,
-            "status": "read_failed",
-            "job_id": job_id,
-            "error": str(error)[:500],
-            "customer_safe": True,
-            "credential_values_exposed": False,
-        }
+    return {
+        "success": False,
+        "status": "not_found",
+        "job_id": job_id,
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
 
 
 def _env_present(names: list[str]) -> bool:
@@ -342,7 +357,14 @@ def execute_direct_media_provider_job(payload: Dict[str, Any]) -> Dict[str, Any]
 def get_direct_media_provider_job_status(job_id: str) -> Dict[str, Any]:
     job = _read_job(job_id)
     if not job.get("success") and job.get("status") == "not_found":
-        return job
+        return {
+            **job,
+            "polling_required": False,
+            "message": "Direct media job was not found in the active runtime. Submit a new job if this remains after refresh.",
+            "direct_media_provider_execution": True,
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
 
     return {
         **job,
