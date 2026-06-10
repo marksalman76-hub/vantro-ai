@@ -14,6 +14,7 @@ function adminToken() {
   return (
     process.env.ADMIN_PLATFORM_TOKEN ||
     process.env.ADMIN_AUTH_SECRET ||
+    process.env.ADMIN_BEARER_TOKEN ||
     process.env.ADMIN_TOKEN ||
     process.env.PLATFORM_ADMIN_TOKEN ||
     process.env.OWNER_ADMIN_TOKEN ||
