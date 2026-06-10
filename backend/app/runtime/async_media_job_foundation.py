@@ -544,6 +544,147 @@ def enqueue_creative_media_job_for_worker(job: Dict[str, Any]) -> Dict[str, Any]
     }
 
 
+# ASSIGNED_AGENT_DIRECT_MEDIA_EXECUTION_V1
+# Worker-claim fallback:
+# If a creative media job is already approved and assigned to a specific agent,
+# the API can safely start a daemon execution thread after queueing the job.
+# This prevents assigned-agent media jobs from sitting forever in queued state
+# when the external worker queue is misaligned or not claiming.
+def _assigned_agent_direct_media_execution_enabled() -> bool:
+    return (os.getenv("ASSIGNED_AGENT_DIRECT_MEDIA_EXECUTION_ENABLED", "true") or "true").lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
+def _write_assigned_agent_direct_execution_state(job_id: str, updates: Dict[str, Any]) -> None:
+    try:
+        path = _job_path(job_id)
+        current: Dict[str, Any] = {}
+        if path.exists():
+            current = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(current, dict):
+                current = {}
+
+        current.update(updates)
+        current["updated_at"] = _now()
+        current["credential_values_exposed"] = False
+
+        with _LOCK:
+            path.write_text(json.dumps(current, indent=2), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _execute_assigned_agent_media_job_directly(job: Dict[str, Any]) -> None:
+    job_id = str(job.get("job_id") or "").strip()
+    if not job_id:
+        return
+
+    agent_id = str(job.get("agent_id") or job.get("requested_agent") or "").strip()
+    tenant_id = str(job.get("tenant_id") or "").strip()
+
+    _write_assigned_agent_direct_execution_state(
+        job_id,
+        {
+            "status": "processing",
+            "lifecycle": "processing",
+            "worker_claimed": True,
+            "worker_claimed_by": "assigned_agent_direct_executor",
+            "assigned_agent_direct_execution_started": True,
+            "assigned_agent_direct_execution_agent_id": agent_id,
+            "assigned_agent_direct_execution_tenant_id": tenant_id,
+            "assigned_agent_direct_execution_started_at": _now(),
+            "credential_values_exposed": False,
+        },
+    )
+
+    try:
+        result = process_media_job(
+            {
+                "job_id": job_id,
+                "task": job.get("task") or job.get("task_summary") or job.get("customer_task"),
+                "agent_id": agent_id,
+                "tenant_id": tenant_id,
+                "include_image": bool(job.get("include_image")),
+                "include_audio": bool(job.get("include_audio")),
+                "include_video": bool(job.get("include_video")),
+                "include_avatar": bool(job.get("include_avatar")),
+                "credential_values_exposed": False,
+            }
+        )
+
+        result_job = result.get("job") if isinstance(result, dict) and isinstance(result.get("job"), dict) else {}
+        final_assets = result_job.get("final_assets") if isinstance(result_job.get("final_assets"), list) else []
+        final_asset_ids = result_job.get("final_asset_ids") if isinstance(result_job.get("final_asset_ids"), list) else []
+
+        _write_assigned_agent_direct_execution_state(
+            job_id,
+            {
+                "assigned_agent_direct_execution_completed": True,
+                "assigned_agent_direct_execution_completed_at": _now(),
+                "worker_completed": True,
+                "worker_completed_by": "assigned_agent_direct_executor",
+                "final_assets": final_assets,
+                "final_asset_ids": final_asset_ids,
+                "final_assets_count": len(final_assets),
+                "credential_values_exposed": False,
+            },
+        )
+    except Exception as exc:
+        _write_assigned_agent_direct_execution_state(
+            job_id,
+            {
+                "status": "failed",
+                "lifecycle": "failed",
+                "assigned_agent_direct_execution_completed": False,
+                "assigned_agent_direct_execution_error": str(exc)[:500],
+                "worker_completed": False,
+                "credential_values_exposed": False,
+            },
+        )
+
+
+def _schedule_assigned_agent_direct_media_execution(job: Dict[str, Any]) -> Dict[str, Any]:
+    if not _assigned_agent_direct_media_execution_enabled():
+        return {
+            "scheduled": False,
+            "status": "assigned_agent_direct_execution_disabled",
+            "credential_values_exposed": False,
+        }
+
+    job_id = str(job.get("job_id") or "").strip()
+    agent_id = str(job.get("agent_id") or job.get("requested_agent") or "").strip()
+    tenant_id = str(job.get("tenant_id") or "").strip()
+
+    if not job_id or not agent_id or not tenant_id:
+        return {
+            "scheduled": False,
+            "status": "assigned_agent_direct_execution_missing_required_context",
+            "credential_values_exposed": False,
+        }
+
+    thread = threading.Thread(
+        target=_execute_assigned_agent_media_job_directly,
+        args=(dict(job),),
+        name=f"assigned_agent_media_executor_{job_id}",
+        daemon=True,
+    )
+    thread.start()
+
+    return {
+        "scheduled": True,
+        "status": "assigned_agent_direct_execution_scheduled",
+        "media_job_id": job_id,
+        "agent_id": agent_id,
+        "tenant_id": tenant_id,
+        "credential_values_exposed": False,
+    }
+
+
+
 def enqueue_media_job(*, task: str, agent_id: str, tenant_id: str, include_image: bool = True, include_audio: bool = True, include_video: bool = True, include_avatar: bool = False) -> Dict[str, Any]:
     job_id = f"media_job_{uuid4().hex[:12]}"
     safe_task = _safe_task_summary({"task": task})
@@ -611,6 +752,16 @@ def enqueue_media_job(*, task: str, agent_id: str, tenant_id: str, include_image
         job["worker_queue_scheduled"] = False
         job["worker_queue_status"] = "worker_queue_enqueue_failed"
         job["worker_queue_error"] = str(exc)[:240]
+        job["credential_values_exposed"] = False
+        with _LOCK:
+            _job_path(job_id).write_text(json.dumps(job, indent=2), encoding="utf-8")
+
+    direct_execution_result = _schedule_assigned_agent_direct_media_execution(job)
+    if isinstance(direct_execution_result, dict):
+        job["assigned_agent_direct_execution_checked"] = True
+        job["assigned_agent_direct_execution_scheduled"] = bool(direct_execution_result.get("scheduled"))
+        job["assigned_agent_direct_execution_status"] = direct_execution_result.get("status")
+        job["assigned_agent_direct_execution_agent_id"] = direct_execution_result.get("agent_id") or job.get("agent_id")
         job["credential_values_exposed"] = False
         with _LOCK:
             _job_path(job_id).write_text(json.dumps(job, indent=2), encoding="utf-8")
