@@ -325,6 +325,118 @@ def _execute_ai_media_provider_packet(
         }
 
 
+# RUNWAY_VIDEO_RETRY_FAILOVER_PACKET_V1
+# Builds a safe retry/failover packet for failed Runway video generation.
+# This does not perform any external provider call. It only marks the result as
+# retry/failover-ready so admin/client UI and future worker logic can act safely.
+def _build_video_retry_failover_packet(
+    *,
+    provider_unavailable_reason_code: str,
+    selected_video_provider: str,
+    readiness_summary: Dict[str, Any],
+    generation_jobs: List[Dict[str, Any]],
+    media_assets: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    reason_code = str(provider_unavailable_reason_code or "").strip().lower()
+    selected = str(selected_video_provider or "").strip().lower()
+
+    video_failure_codes = {
+        "runway_video_unavailable",
+        "runway_adapter_unavailable",
+        "runway_provider_unavailable",
+        "provider_bridge_failed",
+        "video_provider_unavailable",
+    }
+
+    video_jobs = [
+        dict(job)
+        for job in generation_jobs
+        if isinstance(job, dict) and str(job.get("media_type") or "").lower() in {"video", "avatar_video"}
+    ]
+
+    video_assets = [
+        dict(asset)
+        for asset in media_assets
+        if isinstance(asset, dict) and str(asset.get("asset_type") or asset.get("media_type") or "").lower() in {"video", "avatar_video"}
+    ]
+
+    video_ready = any(
+        bool(asset.get("playable") or asset.get("download_ready") or asset.get("preview_ready"))
+        for asset in video_assets
+    )
+
+    should_prepare = (
+        not video_ready
+        and (
+            reason_code in video_failure_codes
+            or (selected == "runway" and "runway" in reason_code)
+            or any(str(job.get("provider") or "").lower() == "runway" and not bool(job.get("real_media_asset_created")) for job in video_jobs)
+        )
+    )
+
+    if not should_prepare:
+        return {
+            "provider_retry_recommended": False,
+            "provider_failover_recommended": False,
+            "final_combined_asset_retry_status": "not_required",
+            "video_retry_failover_ready": False,
+            "video_failover_candidates": [],
+            "credential_values_exposed": False,
+            "customer_safe": True,
+        }
+
+    candidate_order = ["kling", "heygen", "replicate"]
+    readiness = readiness_summary if isinstance(readiness_summary, dict) else {}
+
+    def configured(provider: str) -> bool:
+        provider_configured_map = readiness.get("provider_configured")
+        mapped = (
+            provider_configured_map.get(provider)
+            if isinstance(provider_configured_map, dict)
+            else False
+        )
+        return bool(
+            readiness.get(f"{provider}_configured")
+            or readiness.get(provider)
+            or mapped
+        )
+
+    candidates = [
+        {
+            "provider": provider,
+            "configured": configured(provider),
+            "media_type": "video",
+            "failover_role": "video_generation",
+        }
+        for provider in candidate_order
+    ]
+
+    configured_candidates = [item for item in candidates if item.get("configured")]
+
+    return {
+        "provider_retry_recommended": True,
+        "provider_failover_recommended": True,
+        "provider_retry_reason_code": reason_code or "video_provider_unavailable",
+        "provider_retry_reason": "Selected video provider did not return a playable video asset.",
+        "provider_retry_provider": selected or "runway",
+        "provider_retry_media_type": "video",
+        "provider_retry_allowed": True,
+        "provider_retry_requires_owner_approval": True,
+        "provider_retry_external_call_executed": False,
+        "provider_failover_requires_owner_approval": True,
+        "provider_failover_external_call_executed": False,
+        "video_retry_failover_ready": True,
+        "video_failover_candidates": candidates,
+        "video_failover_configured_candidates": configured_candidates,
+        "video_failover_next_provider": configured_candidates[0]["provider"] if configured_candidates else "",
+        "final_combined_asset_retry_status": "retry_or_failover_ready",
+        "final_combined_asset_retry_message": "Video generation can be retried or failed over to a configured video provider while the fallback package remains client-ready.",
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
+
+
+
 def _execute_runway_direct_if_available(
     *,
     prompt: str,
@@ -1156,6 +1268,13 @@ def generate_creative_media_pack(
         ),
         "none" if playable_media_assets else "no_playable_provider_asset_result",
     )
+    video_retry_failover_packet = _build_video_retry_failover_packet(
+        provider_unavailable_reason_code=provider_unavailable_reason_code,
+        selected_video_provider=selected_video_provider,
+        readiness_summary=readiness_summary,
+        generation_jobs=generation_jobs,
+        media_assets=media_assets,
+    )
 
     return {
         "success": True,
@@ -1200,6 +1319,23 @@ def generate_creative_media_pack(
         "selected_video_provider": selected_video_provider,
         "selected_avatar_provider": selected_avatar_provider,
         "provider_unavailable_reason_code": provider_unavailable_reason_code,
+        "provider_retry_recommended": video_retry_failover_packet.get("provider_retry_recommended"),
+        "provider_failover_recommended": video_retry_failover_packet.get("provider_failover_recommended"),
+        "provider_retry_reason_code": video_retry_failover_packet.get("provider_retry_reason_code", ""),
+        "provider_retry_reason": video_retry_failover_packet.get("provider_retry_reason", ""),
+        "provider_retry_provider": video_retry_failover_packet.get("provider_retry_provider", ""),
+        "provider_retry_media_type": video_retry_failover_packet.get("provider_retry_media_type", ""),
+        "provider_retry_allowed": video_retry_failover_packet.get("provider_retry_allowed", False),
+        "provider_retry_requires_owner_approval": video_retry_failover_packet.get("provider_retry_requires_owner_approval", True),
+        "provider_retry_external_call_executed": video_retry_failover_packet.get("provider_retry_external_call_executed", False),
+        "provider_failover_requires_owner_approval": video_retry_failover_packet.get("provider_failover_requires_owner_approval", True),
+        "provider_failover_external_call_executed": video_retry_failover_packet.get("provider_failover_external_call_executed", False),
+        "video_retry_failover_ready": video_retry_failover_packet.get("video_retry_failover_ready", False),
+        "video_failover_candidates": video_retry_failover_packet.get("video_failover_candidates", []),
+        "video_failover_configured_candidates": video_retry_failover_packet.get("video_failover_configured_candidates", []),
+        "video_failover_next_provider": video_retry_failover_packet.get("video_failover_next_provider", ""),
+        "final_combined_asset_retry_status": video_retry_failover_packet.get("final_combined_asset_retry_status", "not_required"),
+        "final_combined_asset_retry_message": video_retry_failover_packet.get("final_combined_asset_retry_message", ""),
         "created_at": _now(),
         "customer_safe": True,
         "credential_values_exposed": False,
