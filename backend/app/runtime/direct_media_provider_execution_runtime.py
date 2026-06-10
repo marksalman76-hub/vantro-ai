@@ -365,3 +365,86 @@ def direct_media_provider_execution_status() -> Dict[str, Any]:
         "credential_values_exposed": False,
         "customer_safe": True,
     }
+
+
+
+# ASYNC_DIRECT_MEDIA_PROVIDER_EXECUTION_V1
+def start_direct_media_provider_job_async(payload: Dict[str, Any]) -> Dict[str, Any]:
+    import threading
+
+    safe_payload = dict(payload or {})
+    job_id = str(safe_payload.get("job_id") or _safe_id("direct_media_job"))
+    safe_payload["job_id"] = job_id
+
+    agent_id = str(
+        safe_payload.get("agent_id")
+        or safe_payload.get("assigned_agent")
+        or safe_payload.get("requested_agent")
+        or ""
+    ).strip()
+
+    provider = str(
+        safe_payload.get("provider")
+        or safe_payload.get("selected_provider")
+        or safe_payload.get("selected_video_provider")
+        or safe_payload.get("video_provider")
+        or safe_payload.get("software")
+        or ""
+    ).strip().lower()
+
+    media_type = str(safe_payload.get("media_type") or safe_payload.get("asset_type") or "").strip().lower()
+    prompt = str(safe_payload.get("prompt") or safe_payload.get("task") or safe_payload.get("text") or "").strip()
+    owner_approved = bool(safe_payload.get("owner_approved") or safe_payload.get("owner_approval_granted"))
+
+    queued_job = _write_job({
+        "success": True,
+        "job_id": job_id,
+        "status": "queued",
+        "agent_id": agent_id,
+        "provider": provider,
+        "media_type": media_type,
+        "asset_type": media_type,
+        "prompt_character_count": len(prompt),
+        "owner_approved": owner_approved,
+        "direct_media_provider_execution": True,
+        "async_direct_media_provider_execution": True,
+        "queued_at": _now(),
+        "created_at": _now(),
+        "customer_safe": True,
+        "credential_values_exposed": False,
+        "internal_config_exposed": False,
+    })
+
+    def _runner() -> None:
+        try:
+            _write_job({
+                **queued_job,
+                "status": "running",
+                "started_at": _now(),
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            })
+            execute_direct_media_provider_job(safe_payload)
+        except Exception as error:
+            _write_job({
+                **queued_job,
+                "success": False,
+                "status": "async_execution_exception",
+                "error": str(error)[:800],
+                "failed_at": _now(),
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            })
+
+    thread = threading.Thread(target=_runner, name=f"direct_media_provider_{job_id}", daemon=True)
+    thread.start()
+
+    return {
+        **queued_job,
+        "status": "queued",
+        "accepted": True,
+        "polling_required": True,
+        "message": "Direct media provider job accepted. Poll job status for completion.",
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }

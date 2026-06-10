@@ -84,6 +84,7 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
   );
   const [result, setResult] = useState<DirectMediaResult | null>(null);
   const [message, setMessage] = useState("");
+  const [pollingJobId, setPollingJobId] = useState("");
 
   const providerReady = useMemo(() => {
     if (!status) return false;
@@ -147,7 +148,11 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
       const data = await response.json();
       setResult(data);
 
-      if (data?.success && data?.playable) {
+      if (data?.job_id && (data?.polling_required || data?.status === "queued" || data?.status === "running")) {
+        setPollingJobId(data.job_id);
+        setMessage("Direct media job accepted. Polling for completion...");
+      } else if (data?.success && data?.playable) {
+        setResult(data);
         setMessage("Direct media generated successfully. Preview is ready.");
       } else {
         setMessage(data?.message || data?.error || data?.status || "Direct media provider execution completed with no playable asset.");
@@ -165,6 +170,45 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
       setRunning(false);
     }
   }
+
+
+  async function pollDirectMediaJob(jobId: string) {
+    try {
+      const response = await fetch(`/api/admin-direct-media-provider-job-status?job_id=${encodeURIComponent(jobId)}`, {
+        cache: "no-store",
+      });
+      const data = await response.json();
+      setResult(data);
+
+      if (data?.status === "completed" && data?.playable) {
+        setMessage("Direct media generated successfully. Preview is ready.");
+        setPollingJobId("");
+        return;
+      }
+
+      if (String(data?.status || "").includes("failed") || String(data?.status || "").includes("exception") || String(data?.status || "").includes("blocked")) {
+        setMessage(data?.message || data?.error || data?.status || "Direct media job stopped before producing a playable asset.");
+        setPollingJobId("");
+        return;
+      }
+
+      setMessage(`Direct media job ${data?.status || "running"}. Polling for completion...`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to poll direct media job.");
+    }
+  }
+
+  useEffect(() => {
+    if (!pollingJobId) return;
+
+    const timer = window.setInterval(() => {
+      pollDirectMediaJob(pollingJobId);
+    }, 5000);
+
+    pollDirectMediaJob(pollingJobId);
+
+    return () => window.clearInterval(timer);
+  }, [pollingJobId]);
 
   useEffect(() => {
     loadStatus();

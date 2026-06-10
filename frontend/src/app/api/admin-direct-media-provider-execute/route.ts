@@ -58,9 +58,10 @@ export async function POST(request: NextRequest) {
       prompt: payload.prompt || payload.task || "Create a simple ecommerce media asset.",
       owner_approved: true,
       owner_approval_granted: true,
+      async_requested: true,
     };
 
-    const response = await fetch(`${backendBaseUrl()}/admin/direct-media-provider-execute`, {
+    const response = await fetch(`${backendBaseUrl()}/admin/direct-media-provider-submit`, {
       method: "POST",
       headers: adminHeaders(),
       body: JSON.stringify(safePayload),

@@ -5338,6 +5338,7 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
     is_direct_media_path = (
         path == "/admin/direct-media-provider-status"
         or path == "/admin/direct-media-provider-execute"
+        or path == "/admin/direct-media-provider-submit"
         or path.startswith("/admin/direct-media-provider-job-status/")
     )
 
@@ -5387,6 +5388,16 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
 
             return JSONResponse(content=execute_direct_media_provider_job(payload))
 
+        if path == "/admin/direct-media-provider-submit" and request.method.upper() == "POST":
+            from backend.app.runtime.direct_media_provider_execution_runtime import start_direct_media_provider_job_async
+
+            try:
+                payload = await request.json()
+            except Exception:
+                payload = {}
+
+            return JSONResponse(content=start_direct_media_provider_job_async(payload))
+
         if path.startswith("/admin/direct-media-provider-job-status/") and request.method.upper() == "GET":
             from backend.app.runtime.direct_media_provider_execution_runtime import get_direct_media_provider_job_status
 
@@ -5414,4 +5425,17 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
                 "credential_values_exposed": False,
             },
         )
+
+
+# ASYNC_DIRECT_MEDIA_PROVIDER_SUBMIT_ROUTE_V1
+@app.post("/admin/direct-media-provider-submit")
+async def admin_direct_media_provider_submit(request: Request) -> Dict[str, object]:
+    from backend.app.runtime.direct_media_provider_execution_runtime import start_direct_media_provider_job_async
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    return start_direct_media_provider_job_async(payload)
 
