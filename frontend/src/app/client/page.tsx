@@ -2399,10 +2399,11 @@ const primaryAssetUrl =
 
         <section style={responsiveWorkspaceGridStyle}>
           <div style={{ ...cardStyle, minHeight: 430 }}>
-            {/* DIRECT_MEDIA_PROVIDER_CLIENT_PANEL_V1 */}
+
+            {/* DIRECT_MEDIA_PROVIDER_CLIENT_PANEL_V2_TOP_VISIBLE */}
             <DirectMediaProviderPanel mode="client" />
 
-            <StepHeader number="01" title="Run AI Agent" />
+<StepHeader number="01" title="Run AI Agent" />
             <h3 style={cardTitle}>Select agents and launch governed execution.</h3>
             <p style={{ ...mutedText, margin: "6px 0 0" }}>
               Configure your task and run using your saved business profile.
