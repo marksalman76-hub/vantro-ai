@@ -19,6 +19,8 @@ type CreativeMediaAsset = {
   agent_label?: string | null;
   preview_ready?: boolean;
   download_ready?: boolean;
+  playable?: boolean;
+  signed_delivery_created?: boolean;
   customer_safe?: boolean;
 };
 
@@ -1215,6 +1217,26 @@ const [activeNav, setActiveNav] = useState("Overview");
                                         <small>Skipped reasons</small>
                                         <span>{JSON.stringify(latestMediaProcessorResult.skipped_reasons || {})}</span>
                                       </div>
+                                      {latestMediaProcessorResult.final_deliverable_ready || latestMediaProcessorResult.client_ready_delivery ? (
+                                        <div>
+                                          <small>Final deliverable</small>
+                                          <span>
+                                            ready: {latestMediaProcessorResult.final_deliverable_ready ? "true" : "false"} · type: {latestMediaProcessorResult.final_deliverable_type || latestMediaProcessorResult.client_ready_delivery_type || "fallback_asset_package"} · status: {latestMediaProcessorResult.final_deliverable_status || latestMediaProcessorResult.final_combined_asset_status || "ready"}
+                                          </span>
+                                        </div>
+                                      ) : null}
+                                      {latestMediaProcessorResult.final_combined_asset_status ? (
+                                        <div>
+                                          <small>Combined asset</small>
+                                          <span>{latestMediaProcessorResult.final_combined_asset_status}</span>
+                                        </div>
+                                      ) : null}
+                                      {latestMediaProcessorResult.client_ready_delivery_message ? (
+                                        <div>
+                                          <small>Client-ready message</small>
+                                          <span>{latestMediaProcessorResult.client_ready_delivery_message}</span>
+                                        </div>
+                                      ) : null}
                                       {latestMediaProcessorResult.error ? (
                                         <div>
                                           <small>Processor error</small>
@@ -1724,6 +1746,8 @@ const [activeNav, setActiveNav] = useState("Overview");
                     ) : null}
                     <p>Preview ready: <span className="text-slate-200">{asset.preview_ready ? "Yes" : "No"}</span></p>
                     <p>Download ready: <span className="text-slate-200">{asset.download_ready ? "Yes" : "No"}</span></p>
+                    <p>Playable: <span className="text-slate-200">{asset.playable ? "Yes" : "No"}</span></p>
+                    <p>Signed delivery: <span className="text-slate-200">{asset.signed_delivery_created ? "Yes" : "No"}</span></p>
                     <p>Size: <span className="text-slate-200">{asset.size_bytes ? `${Math.round(asset.size_bytes / 1024)} KB` : "Unknown"}</span></p>
                   </div>
 
@@ -1738,6 +1762,12 @@ const [activeNav, setActiveNav] = useState("Overview");
                       <p className="break-all text-xs text-slate-300">{asset.local_path || "Not available"}</p>
                     </div>
                   )}
+
+                  {asset.playable || asset.signed_delivery_created ? (
+                    <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-3 text-xs text-emerald-200">
+                      Client-ready fallback package asset. This asset is available for preview/download where a signed URL is present.
+                    </div>
+                  ) : null}
 
                   {asset.asset_type === "video" ? (
                     <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/5 p-3 text-xs text-emerald-200">

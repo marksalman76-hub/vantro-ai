@@ -22,6 +22,20 @@ type LatestDeliverablePayload = {
   assets?: unknown;
   result?: Record<string, unknown>;
   data?: Record<string, unknown>;
+  media_job_id?: string;
+  final_deliverable_ready?: boolean;
+  final_deliverable_status?: string;
+  final_deliverable_type?: string;
+  final_deliverable_reason?: string;
+  final_deliverable_asset_ids?: unknown;
+  final_deliverable_asset_count?: number;
+  final_combined_asset_status?: string;
+  client_ready_delivery?: boolean;
+  client_ready_delivery_type?: string;
+  client_ready_delivery_message?: string;
+  playable_asset_count?: number;
+  final_assets_count?: number;
+  final_assets?: unknown;
 };
 
 function readable(value: unknown): string {
@@ -46,14 +60,61 @@ function firstMeaningful(...values: unknown[]): string {
   return "";
 }
 
-function pickAssetUrl(payload: LatestDeliverablePayload): string {
-  const asset: Record<string, unknown> = (payload.asset || payload.result?.asset || payload.data?.asset || {}) as Record<string, unknown>;
-  const keys = ["signed_preview_url", "preview_url", "signed_download_url", "download_url", "public_url", "url"];
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+function asArray(value: unknown): Record<string, unknown>[] {
+  return Array.isArray(value) ? value.filter((item) => item && typeof item === "object").map((item) => item as Record<string, unknown>) : [];
+}
+
+function collectFallbackAssets(payload: LatestDeliverablePayload): Record<string, unknown>[] {
+  const result = asRecord(payload.result);
+  const data = asRecord(payload.data);
+  return [
+    ...asArray(payload.final_assets),
+    ...asArray(payload.assets),
+    ...asArray(result.final_assets),
+    ...asArray(result.assets),
+    ...asArray(data.final_assets),
+    ...asArray(data.assets),
+  ];
+}
+
+function pickString(record: Record<string, unknown>, keys: string[]): string {
   for (const key of keys) {
-    const value = asset[key];
+    const value = record[key];
     if (typeof value === "string" && value.trim()) return value.trim();
   }
   return "";
+}
+
+function pickAssetUrl(payload: LatestDeliverablePayload): string {
+  const assets = collectFallbackAssets(payload);
+  const urlKeys = ["signed_preview_url", "preview_url", "signed_download_url", "download_url", "public_url", "url"];
+
+  for (const asset of assets) {
+    const ready = asset.preview_ready || asset.download_ready || asset.playable || asset.signed_delivery_created;
+    const value = pickString(asset, urlKeys);
+    if (ready && value) return value;
+  }
+
+  const asset: Record<string, unknown> = asRecord(payload.asset || payload.result?.asset || payload.data?.asset || {});
+  return pickString(asset, urlKeys);
+}
+
+function boolFromPayload(payload: LatestDeliverablePayload | null, key: string): boolean {
+  if (!payload) return false;
+  const result = asRecord(payload.result);
+  const data = asRecord(payload.data);
+  return Boolean((payload as Record<string, unknown>)[key] || result[key] || data[key]);
+}
+
+function textFromPayload(payload: LatestDeliverablePayload | null, key: string): string {
+  if (!payload) return "";
+  const result = asRecord(payload.result);
+  const data = asRecord(payload.data);
+  return firstMeaningful((payload as Record<string, unknown>)[key], result[key], data[key]);
 }
 
 export default function LatestDeliverableViewer() {
@@ -114,11 +175,16 @@ export default function LatestDeliverableViewer() {
   }, [payload]);
 
   const assetUrl = useMemo(() => (payload ? pickAssetUrl(payload) : ""), [payload]);
-  const hasRealOutput = Boolean(payload?.has_real_output && (outputText || assetUrl));
+  const fallbackPackageReady = boolFromPayload(payload, "final_deliverable_ready") || boolFromPayload(payload, "client_ready_delivery");
+  const fallbackPackageStatus = textFromPayload(payload, "final_deliverable_status") || textFromPayload(payload, "final_combined_asset_status");
+  const fallbackPackageType = textFromPayload(payload, "final_deliverable_type") || textFromPayload(payload, "client_ready_delivery_type");
+  const fallbackPackageMessage = textFromPayload(payload, "client_ready_delivery_message") || textFromPayload(payload, "final_deliverable_reason");
+  const fallbackAssets = useMemo(() => (payload ? collectFallbackAssets(payload) : []), [payload]);
+  const hasRealOutput = Boolean((payload?.has_real_output && (outputText || assetUrl)) || fallbackPackageReady || assetUrl);
   const status = loading
     ? "Checking latest output"
     : hasRealOutput
-      ? "Completed"
+      ? fallbackPackageReady ? "Client-ready package" : "Completed"
       : payload?.client_safe_status || payload?.display_status || "Output pending";
 
   return (
@@ -145,6 +211,33 @@ export default function LatestDeliverableViewer() {
         <p className="text-sm text-slate-300">Checking for the latest real deliverable...</p>
       ) : hasRealOutput ? (
         <div className="space-y-4">
+          {fallbackPackageReady ? (
+            <div className="rounded-xl border border-emerald-300/25 bg-emerald-300/10 p-4 text-sm text-emerald-50">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-emerald-300">
+                Client-ready fallback package
+              </p>
+              <p className="mt-2 font-semibold text-white">
+                {fallbackPackageType ? fallbackPackageType.replaceAll("_", " ") : "Fallback asset package"} · {fallbackPackageStatus || "ready"}
+              </p>
+              {fallbackPackageMessage ? (
+                <p className="mt-2 text-emerald-100">{fallbackPackageMessage}</p>
+              ) : null}
+              {fallbackAssets.length ? (
+                <div className="mt-3 grid gap-2">
+                  {fallbackAssets.slice(0, 5).map((asset, index) => (
+                    <div key={`${String(asset.asset_id || index)}-${index}`} className="rounded-lg border border-emerald-300/20 bg-black/20 p-3 text-xs text-emerald-100">
+                      <strong>{String(asset.asset_type || "asset")}</strong>
+                      <span> · {String(asset.asset_id || "asset")}</span>
+                      <span> · playable: {asset.playable ? "yes" : "no"}</span>
+                      <span> · preview: {asset.preview_ready ? "yes" : "no"}</span>
+                      <span> · download: {asset.download_ready ? "yes" : "no"}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
           {outputText ? (
             <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-xl border border-slate-700/70 bg-black/30 p-4 text-sm leading-6 text-slate-100">
               {outputText}
