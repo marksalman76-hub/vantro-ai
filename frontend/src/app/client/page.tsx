@@ -1,4 +1,5 @@
 "use client";
+import DirectMediaProviderPanel from "../../components/DirectMediaProviderPanel";
 
 import { extractLiveActionDeliverableText } from "../../lib/liveActionResultExtraction";
 
@@ -2398,6 +2399,9 @@ const primaryAssetUrl =
 
         <section style={responsiveWorkspaceGridStyle}>
           <div style={{ ...cardStyle, minHeight: 430 }}>
+            {/* DIRECT_MEDIA_PROVIDER_CLIENT_PANEL_V1 */}
+            <DirectMediaProviderPanel mode="client" />
+
             <StepHeader number="01" title="Run AI Agent" />
             <h3 style={cardTitle}>Select agents and launch governed execution.</h3>
             <p style={{ ...mutedText, margin: "6px 0 0" }}>

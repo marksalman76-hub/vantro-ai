@@ -1,4 +1,5 @@
 "use client";
+import DirectMediaProviderPanel from "../../components/DirectMediaProviderPanel";
 
 type CreativeMediaAsset = {
   job_id?: string;
@@ -1688,7 +1689,10 @@ const [activeNav, setActiveNav] = useState("Overview");
         <section className="rounded-2xl border border-cyan-400/20 bg-slate-950/70 p-5 shadow-lg">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">Creative Media Assets</p>
+              {/* DIRECT_MEDIA_PROVIDER_ADMIN_PANEL_V1 */}
+          <DirectMediaProviderPanel mode="admin" />
+
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">Creative Media Assets</p>
               <h2 className="mt-1 text-xl font-bold text-white">Generated audio and video outputs</h2>
               <p className="mt-1 text-sm text-slate-400">
                 Latest governed provider assets from ElevenLabs, Runway, Kling, HeyGen and Sync.
