@@ -26,6 +26,10 @@ ADMIN_PATH_PREFIXES = (
 GOVERNED_EXECUTION_PATHS = (
     "/run-agent",
     "/api/run-agent",
+    "/admin/media-jobs/run-next",
+    "/admin/media-jobs/run-all",
+    "/admin/media-jobs/trigger-next",
+    "/admin/media-jobs/trigger-all",
 )
 
 STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
