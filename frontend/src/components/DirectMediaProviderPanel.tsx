@@ -6,14 +6,34 @@ type DirectMediaProviderPanelProps = {
   mode: "admin" | "client";
 };
 
+type ProviderStackItem = {
+  provider: string;
+  name?: string;
+  category?: string;
+  supports?: string[];
+  configured?: boolean;
+  direct_execution_enabled?: boolean;
+  disabled_reason?: string;
+  credential_values_exposed?: boolean;
+  customer_safe?: boolean;
+};
+
 type DirectMediaStatus = {
   success?: boolean;
   direct_media_provider_execution_ready?: boolean;
+  provider_stack?: ProviderStackItem[];
+  provider_count?: number;
+  configured_provider_count?: number;
+  direct_execution_provider_count?: number;
   supported_video_providers?: string[];
   supported_audio_providers?: string[];
-  runway?: { configured?: boolean };
-  kling?: { configured?: boolean };
-  elevenlabs?: { configured?: boolean };
+  runway?: ProviderStackItem;
+  kling?: ProviderStackItem;
+  heygen?: ProviderStackItem;
+  elevenlabs?: ProviderStackItem;
+  replicate?: ProviderStackItem;
+  openai?: ProviderStackItem;
+  sync?: ProviderStackItem;
   credential_values_exposed?: boolean;
   customer_safe?: boolean;
   error?: string;
@@ -34,7 +54,6 @@ type DirectMediaResult = {
   download_ready?: boolean;
   preview_url?: string;
   download_url?: string;
-  video_size_bytes?: number;
   credential_values_exposed?: boolean;
   customer_safe?: boolean;
   error?: string;
@@ -55,20 +74,28 @@ const AGENT_OPTIONS = [
   ["marketing_specialist_agent", "Marketing Specialist Agent"],
 ];
 
-const PROVIDER_OPTIONS = [
-  ["runway", "Runway video"],
-  ["elevenlabs", "ElevenLabs audio"],
-  ["kling", "Kling video"],
+const FALLBACK_PROVIDER_STACK: ProviderStackItem[] = [
+  { provider: "runway", name: "Runway", supports: ["video"], configured: false, direct_execution_enabled: true },
+  { provider: "kling", name: "Kling", supports: ["video"], configured: false, direct_execution_enabled: true },
+  { provider: "heygen", name: "HeyGen", supports: ["video", "avatar_video"], configured: false, direct_execution_enabled: false, disabled_reason: "Direct adapter pending" },
+  { provider: "elevenlabs", name: "ElevenLabs", supports: ["audio", "voiceover"], configured: false, direct_execution_enabled: true },
+  { provider: "replicate", name: "Replicate", supports: ["image", "video"], configured: false, direct_execution_enabled: false, disabled_reason: "Direct adapter pending" },
+  { provider: "openai", name: "OpenAI", supports: ["image", "text"], configured: false, direct_execution_enabled: false, disabled_reason: "Direct media adapter pending" },
+  { provider: "sync", name: "Sync / lip-sync", supports: ["lip_sync", "video"], configured: false, direct_execution_enabled: false, disabled_reason: "Direct adapter pending" },
 ];
 
-function providerSupportsMedia(provider: string, mediaType: string) {
-  if (provider === "elevenlabs") return mediaType === "audio";
-  if (provider === "runway" || provider === "kling") return mediaType === "video";
-  return false;
+function mediaTypeSupported(provider: ProviderStackItem | undefined, mediaType: string) {
+  return Boolean(provider?.supports || []).valueOf() && Boolean(provider?.supports?.includes(mediaType));
 }
 
 function safeText(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
+}
+
+function displayProviderStatus(provider: ProviderStackItem) {
+  if (!provider.configured) return "not configured";
+  if (!provider.direct_execution_enabled) return provider.disabled_reason || "display only";
+  return "ready";
 }
 
 export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPanelProps) {
@@ -87,15 +114,24 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
   const [pollingJobId, setPollingJobId] = useState("");
   const [compact, setCompact] = useState(false);
 
-  const providerReady = useMemo(() => {
-    if (!status) return false;
-    if (provider === "runway") return Boolean(status.runway?.configured);
-    if (provider === "kling") return Boolean(status.kling?.configured);
-    if (provider === "elevenlabs") return Boolean(status.elevenlabs?.configured);
-    return false;
-  }, [provider, status]);
+  const providerStack = useMemo(() => {
+    const remoteStack = Array.isArray(status?.provider_stack) ? status?.provider_stack || [] : [];
+    return remoteStack.length ? remoteStack : FALLBACK_PROVIDER_STACK;
+  }, [status]);
 
-  const canRun = isAdmin && providerReady && providerSupportsMedia(provider, mediaType) && Boolean(prompt.trim()) && !running;
+  const selectedProvider = useMemo(
+    () => providerStack.find((item) => item.provider === provider) || providerStack[0],
+    [provider, providerStack]
+  );
+
+  const canRun =
+    isAdmin &&
+    Boolean(selectedProvider?.configured) &&
+    Boolean(selectedProvider?.direct_execution_enabled) &&
+    mediaTypeSupported(selectedProvider, mediaType) &&
+    Boolean(prompt.trim()) &&
+    !running;
+
   const previewUrl = safeText(result?.preview_url || result?.provider_result?.video_url_preview);
   const resultStatus = safeText(result?.status || result?.provider_status || result?.provider_result?.status, "Not run yet");
 
@@ -105,6 +141,9 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
       const response = await fetch("/api/admin-direct-media-provider-status", { cache: "no-store" });
       const data = await response.json();
       setStatus(data);
+      if (Array.isArray(data?.provider_stack) && !data.provider_stack.some((item: ProviderStackItem) => item.provider === provider)) {
+        setProvider(data.provider_stack[0]?.provider || "runway");
+      }
     } catch (error) {
       setStatus({
         success: false,
@@ -118,6 +157,33 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
     }
   }
 
+  async function pollDirectMediaJob(jobId: string) {
+    try {
+      const response = await fetch(`/api/admin-direct-media-provider-job-status?job_id=${encodeURIComponent(jobId)}`, {
+        cache: "no-store",
+      });
+      const data = await response.json();
+      setResult(data);
+
+      if (data?.status === "completed" && data?.playable) {
+        setMessage("Direct media generated successfully. Preview is ready.");
+        setCompact(false);
+        setPollingJobId("");
+        return;
+      }
+
+      if (String(data?.status || "").includes("failed") || String(data?.status || "").includes("exception") || String(data?.status || "").includes("blocked")) {
+        setMessage(data?.message || data?.error || data?.status || "Direct media job stopped before producing a playable asset.");
+        setPollingJobId("");
+        return;
+      }
+
+      setMessage(`Direct media job ${data?.status || "running"}. Polling for completion...`);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Unable to poll direct media job.");
+    }
+  }
+
   async function runDirectMediaGeneration() {
     if (!isAdmin) {
       setMessage("Client workspaces can view safe generated media. Live provider spend remains owner/admin controlled.");
@@ -125,7 +191,13 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
     }
 
     if (!canRun) {
-      setMessage("Select a configured provider, matching media type, and prompt first.");
+      setMessage(
+        !selectedProvider?.configured
+          ? `${selectedProvider?.name || provider} is not configured yet. Add provider credentials before execution.`
+          : !selectedProvider?.direct_execution_enabled
+            ? `${selectedProvider?.name || provider} is visible in the stack, but its direct adapter is not enabled yet.`
+            : "Select a matching provider, media type, and prompt first."
+      );
       return;
     }
 
@@ -173,34 +245,6 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
     }
   }
 
-
-  async function pollDirectMediaJob(jobId: string) {
-    try {
-      const response = await fetch(`/api/admin-direct-media-provider-job-status?job_id=${encodeURIComponent(jobId)}`, {
-        cache: "no-store",
-      });
-      const data = await response.json();
-      setResult(data);
-
-      if (data?.status === "completed" && data?.playable) {
-        setMessage("Direct media generated successfully. Preview is ready.");
-        setCompact(false);
-        setPollingJobId("");
-        return;
-      }
-
-      if (String(data?.status || "").includes("failed") || String(data?.status || "").includes("exception") || String(data?.status || "").includes("blocked")) {
-        setMessage(data?.message || data?.error || data?.status || "Direct media job stopped before producing a playable asset.");
-        setPollingJobId("");
-        return;
-      }
-
-      setMessage(`Direct media job ${data?.status || "running"}. Polling for completion...`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Unable to poll direct media job.");
-    }
-  }
-
   useEffect(() => {
     if (!pollingJobId) return;
 
@@ -218,15 +262,15 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
   }, []);
 
   useEffect(() => {
-    if (provider === "elevenlabs") {
-      setMediaType("audio");
-      if (prompt.toLowerCase().includes("video")) {
-        setPrompt("Create a short premium ecommerce product voiceover for a clean 5 second product promo.");
-      }
-    } else if (mediaType === "audio") {
-      setMediaType("video");
+    const supports = selectedProvider?.supports || [];
+    if (supports.length && !supports.includes(mediaType)) {
+      setMediaType(supports.includes("video") ? "video" : supports.includes("audio") ? "audio" : supports[0]);
     }
-  }, [provider]);
+
+    if (provider === "elevenlabs" && prompt.toLowerCase().includes("video")) {
+      setPrompt("Create a short premium ecommerce product voiceover for a clean 5 second product promo.");
+    }
+  }, [provider, selectedProvider?.supports?.join("|")]);
 
   const shellStyle: React.CSSProperties = {
     border: isAdmin ? "1px solid rgba(34,211,238,.24)" : "1px solid rgba(129,140,248,.20)",
@@ -238,13 +282,6 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
       : "linear-gradient(135deg, rgba(255,255,255,.98), rgba(238,242,255,.96))",
     boxShadow: isAdmin ? "0 18px 42px rgba(8,47,73,.22)" : "0 14px 34px rgba(79,70,229,.10)",
     color: isAdmin ? "#e0f2fe" : "#0f172a",
-  };
-
-  const gridStyle: React.CSSProperties = {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
-    gap: 10,
-    marginTop: 14,
   };
 
   const inputStyle: React.CSSProperties = {
@@ -292,136 +329,89 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
           <h3 style={{ margin: "6px 0 4px", fontSize: 21, color: isAdmin ? "#f8fafc" : "#111827" }}>
             {isAdmin ? "Generate media with selected software" : "Direct media generation status"}
           </h3>
-          <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: isAdmin ? "#bae6fd" : "#475569", maxWidth: 760 }}>
+          <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: isAdmin ? "#bae6fd" : "#475569", maxWidth: 800 }}>
             {isAdmin
-              ? "Choose an agent, provider, media type and prompt. This uses the verified direct provider execution path instead of the old queued media workflow."
-              : "Generated media from the direct provider lane appears in the workspace once owner/admin execution is completed. Live paid provider execution remains owner/admin controlled."}
+              ? "Choose an agent, provider, media type and prompt. The full media stack is visible, while live execution remains limited to configured direct adapters."
+              : "Generated media from the direct provider lane appears in the workspace once owner/admin execution is completed."}
           </p>
         </div>
+
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button
-            type="button"
-            onClick={() => setCompact((value) => !value)}
-            style={{
-              border: "none",
-              borderRadius: 999,
-              padding: "9px 13px",
-              background: isAdmin ? "rgba(99,102,241,.25)" : "rgba(79,70,229,.10)",
-              color: isAdmin ? "#e0f2fe" : "#4338ca",
-              fontWeight: 950,
-              cursor: "pointer",
-            }}
-          >
+          <button type="button" onClick={() => setCompact((value) => !value)} style={{ border: "none", borderRadius: 999, padding: "9px 13px", background: isAdmin ? "rgba(99,102,241,.25)" : "rgba(79,70,229,.10)", color: isAdmin ? "#e0f2fe" : "#4338ca", fontWeight: 950, cursor: "pointer" }}>
             {compact ? "Expand panel" : "Compact panel"}
           </button>
-          <button
-            type="button"
-            onClick={loadStatus}
-            style={{
-              border: "none",
-              borderRadius: 999,
-              padding: "9px 13px",
-              background: isAdmin ? "rgba(34,211,238,.20)" : "rgba(79,70,229,.10)",
-              color: isAdmin ? "#e0f2fe" : "#4338ca",
-              fontWeight: 950,
-              cursor: "pointer",
-            }}
-          >
+          <button type="button" onClick={loadStatus} style={{ border: "none", borderRadius: 999, padding: "9px 13px", background: isAdmin ? "rgba(34,211,238,.20)" : "rgba(79,70,229,.10)", color: isAdmin ? "#e0f2fe" : "#4338ca", fontWeight: 950, cursor: "pointer" }}>
             {statusLoading ? "Checking..." : "Refresh status"}
           </button>
         </div>
       </div>
 
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 14 }}>
-        <span style={pillStyle}>Runway: {status?.runway?.configured ? "ready" : "not configured"}</span>
-        <span style={pillStyle}>ElevenLabs: {status?.elevenlabs?.configured ? "ready" : "not configured"}</span>
-        <span style={pillStyle}>Kling: {status?.kling?.configured ? "ready" : "not configured"}</span>
+        {providerStack.map((item) => (
+          <span key={item.provider} style={pillStyle}>
+            {item.name || item.provider}: {displayProviderStatus(item)}
+          </span>
+        ))}
         <span style={pillStyle}>Secrets exposed: {status?.credential_values_exposed ? "yes" : "no"}</span>
         {pollingJobId ? <span style={pillStyle}>Polling: {pollingJobId}</span> : null}
       </div>
 
       {!compact ? (
-      <>
-      <div style={gridStyle}>
-        <label style={labelStyle}>
-          Agent
-          <select value={agentId} onChange={(event) => setAgentId(event.target.value)} disabled={!isAdmin} style={inputStyle}>
-            {AGENT_OPTIONS.map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </label>
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 10, marginTop: 14 }}>
+            <label style={labelStyle}>
+              Agent
+              <select value={agentId} onChange={(event) => setAgentId(event.target.value)} disabled={!isAdmin} style={inputStyle}>
+                {AGENT_OPTIONS.map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </label>
 
-        <label style={labelStyle}>
-          Provider
-          <select value={provider} onChange={(event) => setProvider(event.target.value)} disabled={!isAdmin} style={inputStyle}>
-            {PROVIDER_OPTIONS.map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </label>
+            <label style={labelStyle}>
+              Provider
+              <select value={provider} onChange={(event) => setProvider(event.target.value)} disabled={!isAdmin} style={inputStyle}>
+                {providerStack.map((item) => (
+                  <option key={item.provider} value={item.provider}>
+                    {item.name || item.provider} — {displayProviderStatus(item)}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-        <label style={labelStyle}>
-          Media type
-          <select value={mediaType} onChange={(event) => setMediaType(event.target.value)} disabled={!isAdmin} style={inputStyle}>
-            <option value="video">Video</option>
-            <option value="audio">Audio</option>
-          </select>
-        </label>
-      </div>
+            <label style={labelStyle}>
+              Media type
+              <select value={mediaType} onChange={(event) => setMediaType(event.target.value)} disabled={!isAdmin} style={inputStyle}>
+                <option value="video">Video</option>
+                <option value="audio">Audio</option>
+                <option value="image">Image</option>
+                <option value="avatar_video">Avatar video</option>
+                <option value="lip_sync">Lip-sync</option>
+                <option value="text">Text</option>
+              </select>
+            </label>
+          </div>
 
-      <label style={{ ...labelStyle, marginTop: 12 }}>
-        Prompt
-        <textarea
-          value={prompt}
-          onChange={(event) => setPrompt(event.target.value)}
-          disabled={!isAdmin}
-          rows={4}
-          style={{ ...inputStyle, resize: "vertical", lineHeight: 1.55 }}
-        />
-      </label>
+          <label style={{ ...labelStyle, marginTop: 12 }}>
+            Prompt
+            <textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} disabled={!isAdmin} rows={4} style={{ ...inputStyle, resize: "vertical", lineHeight: 1.55 }} />
+          </label>
 
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 14 }}>
-        <button
-          type="button"
-          onClick={runDirectMediaGeneration}
-          disabled={!canRun}
-          style={{
-            border: "none",
-            borderRadius: 999,
-            padding: "11px 16px",
-            background: canRun ? "linear-gradient(135deg,#06b6d4,#6366f1)" : "rgba(148,163,184,.35)",
-            color: "#ffffff",
-            fontWeight: 950,
-            cursor: canRun ? "pointer" : "not-allowed",
-            boxShadow: canRun ? "0 12px 26px rgba(14,165,233,.22)" : "none",
-          }}
-        >
-          {running ? "Generating..." : isAdmin ? "Generate direct media" : "Owner/admin controlled"}
-        </button>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 14 }}>
+            <button type="button" onClick={runDirectMediaGeneration} disabled={!canRun} style={{ border: "none", borderRadius: 999, padding: "11px 16px", background: canRun ? "linear-gradient(135deg,#06b6d4,#6366f1)" : "rgba(148,163,184,.35)", color: "#ffffff", fontWeight: 950, cursor: canRun ? "pointer" : "not-allowed", boxShadow: canRun ? "0 12px 26px rgba(14,165,233,.22)" : "none" }}>
+              {running ? "Generating..." : isAdmin ? "Generate direct media" : "Owner/admin controlled"}
+            </button>
 
-        {message ? (
-          <span style={{ fontSize: 12.5, fontWeight: 850, color: isAdmin ? "#bae6fd" : "#475569" }}>{message}</span>
-        ) : null}
-      </div>
-
-      </>
-
+            {message ? <span style={{ fontSize: 12.5, fontWeight: 850, color: isAdmin ? "#bae6fd" : "#475569" }}>{message}</span> : null}
+          </div>
+        </>
       ) : (
         <div style={{ marginTop: 12, fontSize: 12.5, fontWeight: 850, color: isAdmin ? "#bae6fd" : "#475569" }}>
           Panel compacted. Current status: <strong>{resultStatus}</strong>{pollingJobId ? ` · Polling ${pollingJobId}` : ""}. Use Expand panel to edit prompt or view preview.
         </div>
       )}
 
-      <div
-        style={{
-          marginTop: 14,
-          borderRadius: 18,
-          padding: 14,
-          background: isAdmin ? "rgba(2,6,23,.42)" : "rgba(255,255,255,.82)",
-          border: isAdmin ? "1px solid rgba(125,211,252,.18)" : "1px solid rgba(148,163,184,.22)",
-        }}
-      >
+      <div style={{ marginTop: 14, borderRadius: 18, padding: 14, background: isAdmin ? "rgba(2,6,23,.42)" : "rgba(255,255,255,.82)", border: isAdmin ? "1px solid rgba(125,211,252,.18)" : "1px solid rgba(148,163,184,.22)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
           <div>
             <div style={{ fontSize: 12, fontWeight: 950, color: isAdmin ? "#f8fafc" : "#0f172a" }}>Latest direct media result</div>
@@ -444,9 +434,7 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
               <video controls src={previewUrl} style={{ width: "100%", maxHeight: 220, borderRadius: 14, background: "#000" }} />
             )}
             <div style={{ marginTop: 10, display: "flex", gap: 10, flexWrap: "wrap" }}>
-              <a href={previewUrl} target="_blank" rel="noreferrer" style={{ ...pillStyle, textDecoration: "none" }}>
-                Open preview
-              </a>
+              <a href={previewUrl} target="_blank" rel="noreferrer" style={{ ...pillStyle, textDecoration: "none" }}>Open preview</a>
               <span style={pillStyle}>Playable: {result?.playable ? "yes" : "pending"}</span>
               <span style={pillStyle}>Preview: {result?.preview_ready ? "ready" : "pending"}</span>
               <span style={pillStyle}>Download: {result?.download_ready ? "ready" : "pending"}</span>

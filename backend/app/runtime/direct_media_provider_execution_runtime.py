@@ -474,3 +474,138 @@ def start_direct_media_provider_job_async(payload: Dict[str, Any]) -> Dict[str, 
         "customer_safe": True,
         "credential_values_exposed": False,
     }
+
+
+
+# DIRECT_MEDIA_FULL_PROVIDER_STACK_VISIBILITY_V1
+DIRECT_PROVIDER_STACK = [
+    {
+        "provider": "runway",
+        "name": "Runway",
+        "category": "video",
+        "supports": ["video"],
+        "env_names": ["RUNWAYML_API_SECRET", "RUNWAY_API_KEY"],
+        "direct_execution_enabled": True,
+        "disabled_reason": "",
+    },
+    {
+        "provider": "kling",
+        "name": "Kling",
+        "category": "video",
+        "supports": ["video"],
+        "env_names": ["KLING_API_KEY", "KLING_SECRET_KEY"],
+        "direct_execution_enabled": True,
+        "disabled_reason": "",
+    },
+    {
+        "provider": "heygen",
+        "name": "HeyGen",
+        "category": "avatar_video",
+        "supports": ["video", "avatar_video"],
+        "env_names": ["HEYGEN_API_KEY"],
+        "direct_execution_enabled": False,
+        "disabled_reason": "Direct adapter pending",
+    },
+    {
+        "provider": "elevenlabs",
+        "name": "ElevenLabs",
+        "category": "audio",
+        "supports": ["audio", "voiceover"],
+        "env_names": ["ELEVENLABS_API_KEY"],
+        "direct_execution_enabled": True,
+        "disabled_reason": "",
+    },
+    {
+        "provider": "replicate",
+        "name": "Replicate",
+        "category": "image_video",
+        "supports": ["image", "video"],
+        "env_names": ["REPLICATE_API_TOKEN"],
+        "direct_execution_enabled": False,
+        "disabled_reason": "Direct adapter pending",
+    },
+    {
+        "provider": "openai",
+        "name": "OpenAI",
+        "category": "image_text",
+        "supports": ["image", "text"],
+        "env_names": ["OPENAI_API_KEY"],
+        "direct_execution_enabled": False,
+        "disabled_reason": "Direct media adapter pending",
+    },
+    {
+        "provider": "sync",
+        "name": "Sync / lip-sync",
+        "category": "lip_sync",
+        "supports": ["lip_sync", "video"],
+        "env_names": ["SYNC_API_KEY", "SYNC_LABS_API_KEY"],
+        "direct_execution_enabled": False,
+        "disabled_reason": "Direct adapter pending",
+    },
+]
+
+
+def _provider_stack_item(provider_config: Dict[str, Any]) -> Dict[str, Any]:
+    env_names = list(provider_config.get("env_names") or [])
+    configured = _env_present(env_names)
+
+    return {
+        "provider": provider_config.get("provider"),
+        "name": provider_config.get("name"),
+        "category": provider_config.get("category"),
+        "supports": list(provider_config.get("supports") or []),
+        "configured": configured,
+        "direct_execution_enabled": bool(provider_config.get("direct_execution_enabled")),
+        "disabled_reason": "" if bool(provider_config.get("direct_execution_enabled")) else str(provider_config.get("disabled_reason") or "Adapter pending"),
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+def full_direct_media_provider_stack() -> list[Dict[str, Any]]:
+    return [_provider_stack_item(item) for item in DIRECT_PROVIDER_STACK]
+
+
+def provider_readiness(provider: str) -> Dict[str, Any]:
+    key = str(provider or "").strip().lower()
+    for item in DIRECT_PROVIDER_STACK:
+        if item.get("provider") == key:
+            return _provider_stack_item(item)
+
+    return {
+        "provider": key or "unknown",
+        "name": key or "Unknown provider",
+        "configured": False,
+        "direct_execution_enabled": False,
+        "disabled_reason": "Unsupported provider",
+        "supports": [],
+        "status": "unsupported_provider",
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+def direct_media_provider_execution_status() -> Dict[str, Any]:
+    provider_stack = full_direct_media_provider_stack()
+    provider_map = {item["provider"]: item for item in provider_stack}
+
+    return {
+        "success": True,
+        "direct_media_provider_execution_ready": True,
+        "provider_stack": provider_stack,
+        "provider_count": len(provider_stack),
+        "configured_provider_count": sum(1 for item in provider_stack if item.get("configured")),
+        "direct_execution_provider_count": sum(1 for item in provider_stack if item.get("direct_execution_enabled")),
+        "supported_video_providers": sorted(SUPPORTED_VIDEO_PROVIDERS),
+        "supported_audio_providers": sorted(SUPPORTED_AUDIO_PROVIDERS),
+        "runway": provider_map.get("runway", provider_readiness("runway")),
+        "kling": provider_map.get("kling", provider_readiness("kling")),
+        "heygen": provider_map.get("heygen", provider_readiness("heygen")),
+        "elevenlabs": provider_map.get("elevenlabs", provider_readiness("elevenlabs")),
+        "replicate": provider_map.get("replicate", provider_readiness("replicate")),
+        "openai": provider_map.get("openai", provider_readiness("openai")),
+        "sync": provider_map.get("sync", provider_readiness("sync")),
+        "external_action_requires_owner_approval": True,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
