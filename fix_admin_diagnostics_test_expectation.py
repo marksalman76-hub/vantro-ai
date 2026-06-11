@@ -1,4 +1,21 @@
 from pathlib import Path
+from datetime import datetime
+
+ROOT = Path(__file__).resolve().parent
+TEST = ROOT / "test_admin_only_provider_diagnostics_panel.py"
+PANEL = ROOT / "frontend" / "src" / "components" / "DirectMediaProviderPanel.tsx"
+CLIENT_PAGE = ROOT / "frontend" / "src" / "app" / "client" / "page.tsx"
+
+STAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
+BACKUP_DIR = ROOT / "backups" / f"admin_diagnostics_test_expectation_before_{STAMP}"
+BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+
+for path in [TEST]:
+    if path.exists():
+        (BACKUP_DIR / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+
+TEST.write_text(
+    r'''from pathlib import Path
 
 
 def test_admin_only_provider_diagnostics_panel():
@@ -25,3 +42,10 @@ if __name__ == "__main__":
     test_admin_only_provider_diagnostics_panel()
     test_client_portal_provider_diagnostics_removed()
     print("ADMIN_ONLY_PROVIDER_DIAGNOSTICS_PANEL_TEST_PASSED")
+''',
+    encoding="utf-8",
+)
+
+print("ADMIN_DIAGNOSTICS_TEST_EXPECTATION_FIXED")
+print(f"Backup: {BACKUP_DIR}")
+print(f"Updated: {TEST}")
