@@ -112,12 +112,13 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
   const [result, setResult] = useState<DirectMediaResult | null>(null);
   const [message, setMessage] = useState("");
   const [pollingJobId, setPollingJobId] = useState("");
-  const [compact, setCompact] = useState(false);
+  const [compact, setCompact] = useState(true);
   const [latestVideoJobId, setLatestVideoJobId] = useState("");
   const [latestAudioJobId, setLatestAudioJobId] = useState("");
   const [composing, setComposing] = useState(false);
   const [compositionMessage, setCompositionMessage] = useState("");
   const [compositionResult, setCompositionResult] = useState<DirectMediaResult | null>(null);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
 
   const providerStack = useMemo(() => {
     const remoteStack = Array.isArray(status?.provider_stack) ? status?.provider_stack || [] : [];
