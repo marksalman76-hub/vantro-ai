@@ -1,3 +1,4 @@
+/* ADMIN_ONLY_PROVIDER_DIAGNOSTICS_PANEL_V1 */
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -395,7 +396,7 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
             Direct media provider lane
           </div>
           <h3 style={{ margin: "6px 0 4px", fontSize: 21, color: isAdmin ? "#f8fafc" : "#111827" }}>
-            {isAdmin ? "Generate media with selected software" : "Direct media generation status"}
+            {isAdmin ? "Advanced provider diagnostics" : "Direct media generation status"}
           </h3>
           <p style={{ margin: 0, fontSize: 13.5, lineHeight: 1.55, color: isAdmin ? "#bae6fd" : "#475569", maxWidth: 800 }}>
             {isAdmin
@@ -406,7 +407,7 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button type="button" onClick={() => setCompact((value) => !value)} style={{ border: "none", borderRadius: 999, padding: "9px 13px", background: isAdmin ? "rgba(99,102,241,.25)" : "rgba(79,70,229,.10)", color: isAdmin ? "#e0f2fe" : "#4338ca", fontWeight: 950, cursor: "pointer" }}>
-            {compact ? "Expand panel" : "Compact panel"}
+            {compact ? "Open diagnostics" : "Hide diagnostics"}
           </button>
           <button type="button" onClick={loadStatus} style={{ border: "none", borderRadius: 999, padding: "9px 13px", background: isAdmin ? "rgba(34,211,238,.20)" : "rgba(79,70,229,.10)", color: isAdmin ? "#e0f2fe" : "#4338ca", fontWeight: 950, cursor: "pointer" }}>
             {statusLoading ? "Checking..." : "Refresh status"}
@@ -553,7 +554,7 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
         </>
       ) : (
         <div style={{ marginTop: 12, fontSize: 12.5, fontWeight: 850, color: isAdmin ? "#bae6fd" : "#475569" }}>
-          Panel compacted. Current status: <strong>{resultStatus}</strong>{pollingJobId ? ` · Polling ${pollingJobId}` : ""}. Use Expand panel to edit prompt or view preview.
+          Panel compacted. Current status: <strong>{resultStatus}</strong>{pollingJobId ? ` · Polling ${pollingJobId}` : ""}. Use Open diagnostics to edit prompt or view preview.
         </div>
       )}
 

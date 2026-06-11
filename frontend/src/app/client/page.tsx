@@ -1,5 +1,4 @@
 "use client";
-import DirectMediaProviderPanel from "../../components/DirectMediaProviderPanel";
 
 import { extractLiveActionDeliverableText } from "../../lib/liveActionResultExtraction";
 
@@ -126,7 +125,7 @@ function CustomerAgentStatusBadge({ active }: { active: boolean }) {
         className={`h-2.5 w-2.5 rounded-full ${
           active ? "bg-emerald-500" : "bg-rose-500"
         }`}
-      /> */}
+      />
       {active ? "ACTIVE" : "INACTIVE"}
     </span>
   );
@@ -2401,11 +2400,6 @@ const primaryAssetUrl =
           <div style={{ ...cardStyle, minHeight: 430 }}>
 
             {/* DIRECT_MEDIA_PROVIDER_CLIENT_PANEL_V2_TOP_VISIBLE */}
-            {/* CLIENT_PORTAL_RUN_AGENT_ONLY_NO_PROVIDER_DIAGNOSTICS_V1 */}
-      {/* DirectMediaProviderPanel intentionally removed from client portal. Clients use Run Agent Task only. */}
-      {/* <DirectMediaProviderPanel mode="client" />
-
-<StepHeader number="01" title="Run AI Agent" />
             <h3 style={cardTitle}>Select agents and launch governed execution.</h3>
             <p style={{ ...mutedText, margin: "6px 0 0" }}>
               Configure your task and run using your saved business profile.
@@ -4180,6 +4174,8 @@ const primaryAssetUrl =
 
 
       <LatestDeliverableViewer />
+      {/* CLIENT_PORTAL_RUN_AGENT_ONLY_NO_PROVIDER_DIAGNOSTICS_V1: Direct provider diagnostics are intentionally not rendered in the client portal. Clients use Run Agent Task only. */}
+
     </main>
   );
 }
