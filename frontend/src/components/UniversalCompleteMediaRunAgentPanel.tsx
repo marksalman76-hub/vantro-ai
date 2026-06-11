@@ -6,6 +6,7 @@ type UniversalCompleteMediaRunAgentPanelProps = {
   selectedAgent?: string;
   businessProfile?: Record<string, string>;
   onResult?: (deliverable: Record<string, unknown>) => void;
+  onConfigChange?: (config: Record<string, unknown>) => void;
 };
 
 type UniversalMediaResult = {
@@ -76,6 +77,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
   selectedAgent,
   businessProfile,
   onResult,
+  onConfigChange,
 }: UniversalCompleteMediaRunAgentPanelProps) {
   const [enabled, setEnabled] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
@@ -111,6 +113,62 @@ export default function UniversalCompleteMediaRunAgentPanel({
   const selectedAgentId = selectedAgent || "social_media_manager_content_creator_agent";
   const business = businessProfile || {};
   const previewUrl = result?.preview_url || result?.signed_preview_url || clientSafeAssetUrl(result);
+
+  // UNIVERSAL_COMPLETE_MEDIA_SHARED_STATE_V1
+  useEffect(() => {
+    onConfigChange?.({
+      enabled,
+      prompt,
+      output_type: outputType,
+      platform,
+      duration_seconds: durationSeconds,
+      aspect_ratio: aspectRatio,
+      language,
+      accent,
+      tone,
+      voice_style: voiceStyle,
+      age_range: ageRange,
+      gender_presentation: genderPresentation,
+      ethnicity_or_cultural_appearance: ethnicityAppearance,
+      avatar_likeness: avatarLikeness,
+      facial_features: facialFeatures,
+      expressions,
+      gestures,
+      wardrobe,
+      background_setting: backgroundSetting,
+      visual_style: visualStyle,
+      camera_movement: cameraMovement,
+      music_style: musicStyle,
+      sound_effects: soundEffects,
+      call_to_action: callToAction,
+    });
+  }, [
+    enabled,
+    prompt,
+    outputType,
+    platform,
+    durationSeconds,
+    aspectRatio,
+    language,
+    accent,
+    tone,
+    voiceStyle,
+    ageRange,
+    genderPresentation,
+    ethnicityAppearance,
+    avatarLikeness,
+    facialFeatures,
+    expressions,
+    gestures,
+    wardrobe,
+    backgroundSetting,
+    visualStyle,
+    cameraMovement,
+    musicStyle,
+    soundEffects,
+    callToAction,
+    onConfigChange,
+  ]);
 
   const canGenerate = useMemo(() => enabled && prompt.trim().length >= 3 && !running, [enabled, prompt, running]);
 

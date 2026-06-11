@@ -599,6 +599,7 @@ export default function ClientPage() {
   const [showDeliverableModal, setShowDeliverableModal] = useState(false);
   const [showMediaPreviewOverlay, setShowMediaPreviewOverlay] = useState(false);
   const [selectedAssetIndex, setSelectedAssetIndex] = useState(0);
+  const [universalCompleteMediaConfig, setUniversalCompleteMediaConfig] = useState<Record<string, unknown>>({});
 
   const [integrations, setIntegrations] = useState<ClientIntegration[]>([]);
   const [executionTimeline, setExecutionTimeline] = useState<ExecutionTimelineEvent[]>([]);
@@ -2407,6 +2408,7 @@ const primaryAssetUrl =
             <UniversalCompleteMediaRunAgentPanel
               selectedAgent={selectedAgents[0] || "social_media_manager_content_creator_agent"}
               businessProfile={businessProfile}
+              onConfigChange={setUniversalCompleteMediaConfig}
               onResult={(deliverable) => {
                 setLiveDeliverable(deliverable as any);
                 setSelectedAssetIndex(0);
@@ -2549,6 +2551,57 @@ const primaryAssetUrl =
                   onClick={async () => {
                     setExecutionState("running");
                     setToastMessage("Execution started. Generating client deliverables...");
+
+                    // CLIENT_RUN_AGENT_COMPLETE_MEDIA_EXECUTION_V1
+                    if ((universalCompleteMediaConfig as any)?.enabled) {
+                      const taskText =
+                        ((document.querySelector("textarea") as HTMLTextAreaElement)?.value || "").trim() ||
+                        String((universalCompleteMediaConfig as any)?.prompt || "").trim() ||
+                        "Create a complete media file";
+
+                      setToastMessage("Complete media workflow started. Generating visual, natural audio, and final synced file...");
+
+                      const response = await fetch("/api/universal-complete-media", {
+                        method: "POST",
+                        cache: "no-store",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          ...(universalCompleteMediaConfig as any),
+                          prompt: String((universalCompleteMediaConfig as any)?.prompt || taskText),
+                          agent_id: selectedAgents[0] || "social_media_manager_content_creator_agent",
+                          source: "client_run_agent_button",
+                        }),
+                      });
+
+                      const data = await response.json();
+
+                      if (!response.ok || !data?.success) {
+                        throw new Error(data?.reason || data?.message || data?.error || "Complete media execution failed");
+                      }
+
+                      const jobId = data?.job_id;
+                      const deliverable = {
+                        title: "Complete media file",
+                        summary: data?.message || "Complete media workflow accepted. The final synced file is being generated.",
+                        output: data?.message || "Complete media workflow accepted.",
+                        generated_output: data?.message || "Complete media workflow accepted.",
+                        content: data?.message || "Complete media workflow accepted.",
+                        preview_url: data?.preview_url || "",
+                        asset_url: data?.asset_url || "",
+                        download_url: data?.download_url || "",
+                        media_url: data?.preview_url || data?.asset_url || "",
+                        generation_jobs: jobId ? [{ job_id: jobId, status: data?.status || "queued", type: "universal_complete_media" }] : [],
+                        tags: ["Complete media", "Client safe", "Generated output"],
+                        created_at: new Date().toISOString(),
+                      };
+
+                      setLiveDeliverable(deliverable as any);
+                      setSelectedAssetIndex(0);
+                      setExecutionState("completed");
+                      setToastMessage(jobId ? `Complete media workflow queued. Job: ${jobId}` : "Complete media workflow queued.");
+                      return;
+                    }
 
                     try {
                       const response = await fetch("/api/delegated-workforce-execution", {
