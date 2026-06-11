@@ -109,6 +109,7 @@ function normalizeExecutionPacket(raw: any) {
 
 import React, { useEffect, useRef, useState } from "react";
 import LatestDeliverableViewer from "./LatestDeliverableViewer";
+import UniversalCompleteMediaRunAgentPanel from "@/components/UniversalCompleteMediaRunAgentPanel";
 
 
 function CustomerAgentStatusBadge({ active }: { active: boolean }) {
@@ -2401,6 +2402,19 @@ const primaryAssetUrl =
 
             {/* DIRECT_MEDIA_PROVIDER_CLIENT_PANEL_V2_TOP_VISIBLE */}
             <h3 style={cardTitle}>Select agents and launch governed execution.</h3>
+
+            {/* CLIENT_RUN_AGENT_UNIVERSAL_COMPLETE_MEDIA_PANEL_V1 */}
+            <UniversalCompleteMediaRunAgentPanel
+              selectedAgent={selectedAgents[0] || "social_media_manager_content_creator_agent"}
+              businessProfile={businessProfile}
+              onResult={(deliverable) => {
+                setLiveDeliverable(deliverable as any);
+                setSelectedAssetIndex(0);
+                setExecutionState("completed");
+                setToastMessage("Complete media file generated and ready for review.");
+              }}
+            />
+
             <p style={{ ...mutedText, margin: "6px 0 0" }}>
               Configure your task and run using your saved business profile.
             </p>
