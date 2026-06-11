@@ -37,8 +37,12 @@ def _write_job(job: Dict[str, Any]) -> Dict[str, Any]:
     job["updated_at"] = _now()
     path = _job_path(job_id)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(job, indent=2, default=str), encoding="utf-8")
     DIRECT_PENDING_JOB_INDEX[job_id] = dict(job)
+
+    temp_path = path.with_suffix(path.suffix + ".tmp")
+    temp_path.write_text(json.dumps(job, indent=2, default=str), encoding="utf-8")
+    temp_path.replace(path)
+
     return job
 
 
