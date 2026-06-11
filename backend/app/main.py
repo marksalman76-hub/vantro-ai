@@ -5341,6 +5341,8 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
         or path == "/admin/direct-media-provider-submit"
         or path.startswith("/admin/direct-media-provider-job-status/")
         or path.startswith("/admin/direct-media-provider-asset/")
+        or path == "/admin/direct-media-provider-compose"
+        or path == "/admin/direct-media-provider-compose-status"
     )
 
     if not is_direct_media_path:
@@ -5404,6 +5406,21 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
 
             job_id = path.rsplit("/", 1)[-1]
             return JSONResponse(content=get_direct_media_provider_job_status(job_id))
+
+        if path == "/admin/direct-media-provider-compose" and request.method.upper() == "POST":
+            from backend.app.runtime.direct_media_provider_execution_runtime import compose_direct_media_video_audio
+
+            try:
+                payload = await request.json()
+            except Exception:
+                payload = {}
+
+            return JSONResponse(content=compose_direct_media_video_audio(payload))
+
+        if path == "/admin/direct-media-provider-compose-status" and request.method.upper() == "GET":
+            from backend.app.runtime.direct_media_provider_execution_runtime import direct_media_composition_status
+
+            return JSONResponse(content=direct_media_composition_status())
 
         if path.startswith("/admin/direct-media-provider-asset/") and request.method.upper() == "GET":
             from pathlib import Path
@@ -5569,4 +5586,24 @@ def admin_direct_media_provider_asset(job_id: str):
         media_type=media_type,
         filename=asset_path.name,
     )
+
+
+# DIRECT_MEDIA_COMPOSITION_ROUTE_V1
+@app.post("/admin/direct-media-provider-compose")
+async def admin_direct_media_provider_compose(request: Request) -> Dict[str, object]:
+    from backend.app.runtime.direct_media_provider_execution_runtime import compose_direct_media_video_audio
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    return compose_direct_media_video_audio(payload)
+
+
+@app.get("/admin/direct-media-provider-compose-status")
+def admin_direct_media_provider_compose_status() -> Dict[str, object]:
+    from backend.app.runtime.direct_media_provider_execution_runtime import direct_media_composition_status
+
+    return direct_media_composition_status()
 

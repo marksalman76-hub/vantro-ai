@@ -7,6 +7,8 @@ import json
 import os
 import re
 import uuid
+import subprocess
+import shutil
 
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -642,6 +644,243 @@ def direct_media_provider_execution_status() -> Dict[str, Any]:
         "openai": provider_map.get("openai", provider_readiness("openai")),
         "sync": provider_map.get("sync", provider_readiness("sync")),
         "external_action_requires_owner_approval": True,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+
+# DIRECT_MEDIA_COMPOSITION_RUNTIME_V1
+def _safe_runtime_asset_path(value: str) -> Path | None:
+    if not value:
+        return None
+
+    try:
+        asset_path = Path(str(value)).resolve()
+        allowed_root = Path("/opt/render/project/src/runtime_outputs").resolve()
+        asset_path.relative_to(allowed_root)
+        if asset_path.exists() and asset_path.is_file():
+            return asset_path
+    except Exception:
+        return None
+
+    return None
+
+
+def _first_existing_asset_path(job: Dict[str, Any], media_type: str) -> Path | None:
+    provider_result = job.get("provider_result") if isinstance(job.get("provider_result"), dict) else {}
+
+    candidates = [
+        job.get("asset_path"),
+        job.get("download_url"),
+        provider_result.get("audio_path"),
+        provider_result.get("video_path"),
+    ]
+
+    if media_type == "video":
+        candidates = [
+            provider_result.get("video_path"),
+            job.get("asset_path"),
+            job.get("download_url"),
+        ]
+
+    if media_type == "audio":
+        candidates = [
+            provider_result.get("audio_path"),
+            job.get("asset_path"),
+            job.get("download_url"),
+        ]
+
+    for value in candidates:
+        path = _safe_runtime_asset_path(str(value or ""))
+        if path:
+            return path
+
+    return None
+
+
+def compose_direct_media_video_audio(payload: Dict[str, Any]) -> Dict[str, Any]:
+    safe_payload = dict(payload or {})
+    video_job_id = str(safe_payload.get("video_job_id") or safe_payload.get("videoJobId") or "").strip()
+    audio_job_id = str(safe_payload.get("audio_job_id") or safe_payload.get("audioJobId") or "").strip()
+    owner_approved = bool(safe_payload.get("owner_approved") or safe_payload.get("owner_approval_granted"))
+
+    composition_job_id = str(safe_payload.get("composition_job_id") or _safe_id("direct_media_composition"))
+
+    base = {
+        "success": False,
+        "job_id": composition_job_id,
+        "composition_job_id": composition_job_id,
+        "video_job_id": video_job_id,
+        "audio_job_id": audio_job_id,
+        "provider": "internal_composer",
+        "media_type": "video",
+        "asset_type": "video",
+        "direct_media_composition": True,
+        "owner_approved": owner_approved,
+        "created_at": _now(),
+        "customer_safe": True,
+        "credential_values_exposed": False,
+        "internal_config_exposed": False,
+    }
+
+    _write_job({**base, "status": "received"})
+
+    if not owner_approved:
+        return _write_job({
+            **base,
+            "status": "blocked_owner_approval_required",
+            "reason": "Direct media composition requires owner approval.",
+        })
+
+    if not video_job_id or not audio_job_id:
+        return _write_job({
+            **base,
+            "status": "blocked_missing_source_jobs",
+            "reason": "video_job_id and audio_job_id are required.",
+        })
+
+    video_job = get_direct_media_provider_job_status(video_job_id)
+    audio_job = get_direct_media_provider_job_status(audio_job_id)
+
+    if video_job.get("status") != "completed" or not video_job.get("playable"):
+        return _write_job({
+            **base,
+            "status": "blocked_video_not_ready",
+            "reason": "Video source job must be completed and playable.",
+            "video_status": video_job.get("status"),
+            "video_playable": bool(video_job.get("playable")),
+        })
+
+    if audio_job.get("status") != "completed" or not audio_job.get("playable"):
+        return _write_job({
+            **base,
+            "status": "blocked_audio_not_ready",
+            "reason": "Audio source job must be completed and playable.",
+            "audio_status": audio_job.get("status"),
+            "audio_playable": bool(audio_job.get("playable")),
+        })
+
+    video_path = _first_existing_asset_path(video_job, "video")
+    audio_path = _first_existing_asset_path(audio_job, "audio")
+
+    if not video_path:
+        return _write_job({
+            **base,
+            "status": "blocked_video_asset_missing",
+            "reason": "Video source file is missing from runtime asset storage.",
+        })
+
+    if not audio_path:
+        return _write_job({
+            **base,
+            "status": "blocked_audio_asset_missing",
+            "reason": "Audio source file is missing from runtime asset storage.",
+        })
+
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        return _write_job({
+            **base,
+            "status": "blocked_ffmpeg_missing",
+            "reason": "ffmpeg is not available in the runtime environment.",
+            "video_asset_path": str(video_path),
+            "audio_asset_path": str(audio_path),
+        })
+
+    out_dir = DIRECT_JOB_DIR / "composed_assets"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    output_path = out_dir / f"{composition_job_id}.mp4"
+
+    command = [
+        ffmpeg,
+        "-y",
+        "-i",
+        str(video_path),
+        "-i",
+        str(audio_path),
+        "-map",
+        "0:v:0",
+        "-map",
+        "1:a:0",
+        "-c:v",
+        "copy",
+        "-c:a",
+        "aac",
+        "-shortest",
+        str(output_path),
+    ]
+
+    running = _write_job({
+        **base,
+        "status": "running",
+        "video_asset_path": str(video_path),
+        "audio_asset_path": str(audio_path),
+        "output_path": str(output_path),
+        "started_at": _now(),
+    })
+
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=180)
+
+        if completed.returncode != 0:
+            return _write_job({
+                **running,
+                "success": False,
+                "status": "composition_failed",
+                "error": (completed.stderr or completed.stdout or "ffmpeg failed")[-1200:],
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            })
+
+        if not output_path.exists() or output_path.stat().st_size <= 0:
+            return _write_job({
+                **running,
+                "success": False,
+                "status": "composition_output_missing",
+                "error": "ffmpeg completed but output file was not created.",
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            })
+
+        return _write_job({
+            **running,
+            "success": True,
+            "status": "completed",
+            "provider_status": "video_audio_composed",
+            "provider_result_status": "video_audio_composed",
+            "playable": True,
+            "preview_ready": True,
+            "download_ready": True,
+            "asset_path": str(output_path),
+            "download_url": str(output_path),
+            "preview_url": f"/api/admin-direct-media-provider-asset?job_id={composition_job_id}",
+            "signed_preview_url": f"/api/admin-direct-media-provider-asset?job_id={composition_job_id}",
+            "video_job_id": video_job_id,
+            "audio_job_id": audio_job_id,
+            "video_size_bytes": output_path.stat().st_size,
+            "completed_at": _now(),
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        })
+
+    except Exception as error:
+        return _write_job({
+            **running,
+            "success": False,
+            "status": "composition_exception",
+            "error": str(error)[:1200],
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        })
+
+
+def direct_media_composition_status() -> Dict[str, Any]:
+    return {
+        "success": True,
+        "direct_media_composition_ready": bool(shutil.which("ffmpeg")),
+        "ffmpeg_available": bool(shutil.which("ffmpeg")),
+        "supported_composition": ["video_plus_audio_to_mp4"],
         "credential_values_exposed": False,
         "customer_safe": True,
     }
