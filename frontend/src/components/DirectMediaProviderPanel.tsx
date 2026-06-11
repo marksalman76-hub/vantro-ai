@@ -113,6 +113,11 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
   const [message, setMessage] = useState("");
   const [pollingJobId, setPollingJobId] = useState("");
   const [compact, setCompact] = useState(false);
+  const [latestVideoJobId, setLatestVideoJobId] = useState("");
+  const [latestAudioJobId, setLatestAudioJobId] = useState("");
+  const [composing, setComposing] = useState(false);
+  const [compositionMessage, setCompositionMessage] = useState("");
+  const [compositionResult, setCompositionResult] = useState<DirectMediaResult | null>(null);
 
   const providerStack = useMemo(() => {
     const remoteStack = Array.isArray(status?.provider_stack) ? status?.provider_stack || [] : [];
@@ -172,6 +177,8 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
 
       if (data?.status === "completed" && data?.playable) {
         setMessage("Direct media generated successfully. Preview is ready.");
+        if (data?.media_type === "video" && data?.job_id) setLatestVideoJobId(data.job_id);
+        if (data?.media_type === "audio" && data?.job_id) setLatestAudioJobId(data.job_id);
         setCompact(false);
         setPollingJobId("");
         return;
@@ -232,6 +239,8 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
         setCompact(true);
       } else if (data?.success && data?.playable) {
         setResult(data);
+        if (data?.media_type === "video" && data?.job_id) setLatestVideoJobId(data.job_id);
+        if (data?.media_type === "audio" && data?.job_id) setLatestAudioJobId(data.job_id);
         setMessage("Direct media generated successfully. Preview is ready.");
       } else {
         setMessage(data?.message || data?.error || data?.status || "Direct media provider execution completed with no playable asset.");
@@ -276,6 +285,59 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
       setPrompt("Create a short premium ecommerce product voiceover for a clean 5 second product promo.");
     }
   }, [provider, selectedProvider?.supports?.join("|")]);
+
+
+  async function composeLatestVideoAndAudio() {
+    if (!isAdmin) {
+      setCompositionMessage("Composition is owner/admin controlled.");
+      return;
+    }
+
+    const videoJobId = latestVideoJobId.trim();
+    const audioJobId = latestAudioJobId.trim();
+
+    if (!videoJobId || !audioJobId) {
+      setCompositionMessage("Generate or enter one completed video job and one completed audio job first.");
+      return;
+    }
+
+    setComposing(true);
+    setCompositionMessage("Composing final MP4 with video and audio...");
+    setCompositionResult(null);
+
+    try {
+      const response = await fetch("/api/admin-direct-media-provider-compose", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          video_job_id: videoJobId,
+          audio_job_id: audioJobId,
+        }),
+      });
+
+      const data = await response.json();
+      setCompositionResult(data);
+
+      if (data?.success && data?.playable) {
+        setResult(data);
+        setCompositionMessage("Final composed video with audio is ready.");
+      } else {
+        setCompositionMessage(data?.reason || data?.message || data?.error || data?.status || "Composition did not produce a playable MP4.");
+      }
+    } catch (error) {
+      setCompositionResult({
+        success: false,
+        status: "composition_frontend_failed",
+        message: error instanceof Error ? error.message : "Composition failed.",
+        credential_values_exposed: false,
+        customer_safe: true,
+      });
+      setCompositionMessage("Composition failed.");
+    } finally {
+      setComposing(false);
+    }
+  }
 
   const shellStyle: React.CSSProperties = {
     border: isAdmin ? "1px solid rgba(34,211,238,.24)" : "1px solid rgba(129,140,248,.20)",
@@ -409,6 +471,84 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
 
             {message ? <span style={{ fontSize: 12.5, fontWeight: 850, color: isAdmin ? "#bae6fd" : "#475569" }}>{message}</span> : null}
           </div>
+
+
+          {/* DIRECT_MEDIA_COMPOSITION_PANEL_CONTROLS_V1 */}
+          {isAdmin ? (
+            <div
+              style={{
+                marginTop: 14,
+                borderRadius: 18,
+                padding: 14,
+                background: "rgba(2,6,23,.36)",
+                border: "1px solid rgba(125,211,252,.18)",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 950, color: isAdmin ? "#f8fafc" : "#0f172a" }}>
+                    Compose final video with audio
+                  </div>
+                  <p style={{ margin: "4px 0 0", fontSize: 12.5, color: isAdmin ? "#bae6fd" : "#64748b" }}>
+                    Use one completed Runway video job and one completed ElevenLabs audio job to create a final MP4.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={composeLatestVideoAndAudio}
+                  disabled={composing || !latestVideoJobId.trim() || !latestAudioJobId.trim()}
+                  style={{
+                    border: "none",
+                    borderRadius: 999,
+                    padding: "10px 14px",
+                    background: composing || !latestVideoJobId.trim() || !latestAudioJobId.trim()
+                      ? "rgba(148,163,184,.35)"
+                      : "linear-gradient(135deg,#22c55e,#06b6d4)",
+                    color: "#ffffff",
+                    fontWeight: 950,
+                    cursor: composing || !latestVideoJobId.trim() || !latestAudioJobId.trim() ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {composing ? "Composing..." : "Compose video + audio"}
+                </button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10, marginTop: 12 }}>
+                <label style={labelStyle}>
+                  Completed video job ID
+                  <input
+                    value={latestVideoJobId}
+                    onChange={(event) => setLatestVideoJobId(event.target.value)}
+                    placeholder="direct_media_job_..."
+                    style={inputStyle}
+                  />
+                </label>
+                <label style={labelStyle}>
+                  Completed audio job ID
+                  <input
+                    value={latestAudioJobId}
+                    onChange={(event) => setLatestAudioJobId(event.target.value)}
+                    placeholder="direct_media_job_..."
+                    style={inputStyle}
+                  />
+                </label>
+              </div>
+
+              {compositionMessage ? (
+                <p style={{ margin: "10px 0 0", fontSize: 12.5, fontWeight: 850, color: isAdmin ? "#bae6fd" : "#475569" }}>
+                  {compositionMessage}
+                </p>
+              ) : null}
+
+              {compositionResult?.job_id ? (
+                <div style={{ marginTop: 8, fontSize: 12, color: isAdmin ? "#bae6fd" : "#64748b" }}>
+                  Composition job: <strong>{compositionResult.job_id}</strong> · Status: <strong>{compositionResult.status || "unknown"}</strong>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+
         </>
       ) : (
         <div style={{ marginTop: 12, fontSize: 12.5, fontWeight: 850, color: isAdmin ? "#bae6fd" : "#475569" }}>
