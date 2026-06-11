@@ -5343,6 +5343,8 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
         or path.startswith("/admin/direct-media-provider-asset/")
         or path == "/admin/direct-media-provider-compose"
         or path == "/admin/direct-media-provider-compose-status"
+        or path == "/admin/universal-complete-media"
+        or path == "/admin/universal-complete-media-status"
     )
 
     if not is_direct_media_path:
@@ -5406,6 +5408,21 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
 
             job_id = path.rsplit("/", 1)[-1]
             return JSONResponse(content=get_direct_media_provider_job_status(job_id))
+
+        if path == "/admin/universal-complete-media" and request.method.upper() == "POST":
+            from backend.app.runtime.direct_media_provider_execution_runtime import start_universal_complete_media_workflow
+
+            try:
+                payload = await request.json()
+            except Exception:
+                payload = {}
+
+            return JSONResponse(content=start_universal_complete_media_workflow(payload))
+
+        if path == "/admin/universal-complete-media-status" and request.method.upper() == "GET":
+            from backend.app.runtime.direct_media_provider_execution_runtime import universal_complete_media_status
+
+            return JSONResponse(content=universal_complete_media_status())
 
         if path == "/admin/direct-media-provider-compose" and request.method.upper() == "POST":
             from backend.app.runtime.direct_media_provider_execution_runtime import compose_direct_media_video_audio
@@ -5606,4 +5623,24 @@ def admin_direct_media_provider_compose_status() -> Dict[str, object]:
     from backend.app.runtime.direct_media_provider_execution_runtime import direct_media_composition_status
 
     return direct_media_composition_status()
+
+
+# UNIVERSAL_COMPLETE_MEDIA_WORKFLOW_ROUTE_V1
+@app.post("/admin/universal-complete-media")
+async def admin_universal_complete_media(request: Request) -> Dict[str, object]:
+    from backend.app.runtime.direct_media_provider_execution_runtime import start_universal_complete_media_workflow
+
+    try:
+        payload = await request.json()
+    except Exception:
+        payload = {}
+
+    return start_universal_complete_media_workflow(payload)
+
+
+@app.get("/admin/universal-complete-media-status")
+def admin_universal_complete_media_status() -> Dict[str, object]:
+    from backend.app.runtime.direct_media_provider_execution_runtime import universal_complete_media_status
+
+    return universal_complete_media_status()
 
