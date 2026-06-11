@@ -2553,10 +2553,32 @@ const primaryAssetUrl =
                     setToastMessage("Execution started. Generating client deliverables...");
 
                     // CLIENT_RUN_AGENT_COMPLETE_MEDIA_EXECUTION_V1
-                    if ((universalCompleteMediaConfig as any)?.enabled) {
+                    // CLIENT_RUN_AGENT_COMPLETE_MEDIA_LOCAL_STORAGE_FALLBACK_V1
+                    let completeMediaConfig: Record<string, unknown> = { ...(universalCompleteMediaConfig as any) };
+                    try {
+                      const storedConfig = window.localStorage.getItem("universal_complete_media_config");
+                      if (storedConfig) {
+                        completeMediaConfig = {
+                          ...completeMediaConfig,
+                          ...JSON.parse(storedConfig),
+                        };
+                      }
+                    } catch {}
+
+                    if ((completeMediaConfig as any)?.enabled) {
+                      const allTextareas = Array.from(document.querySelectorAll("textarea")) as HTMLTextAreaElement[];
+                      const mediaTextarea = allTextareas.find((item) =>
+                        String(item.placeholder || "").toLowerCase().includes("complete media")
+                        || String(item.placeholder || "").toLowerCase().includes("media file")
+                      );
+                      const taskTextarea = allTextareas.find((item) =>
+                        String(item.value || "").trim().length > 0
+                      );
+
                       const taskText =
-                        ((document.querySelector("textarea") as HTMLTextAreaElement)?.value || "").trim() ||
-                        String((universalCompleteMediaConfig as any)?.prompt || "").trim() ||
+                        String((completeMediaConfig as any)?.prompt || "").trim() ||
+                        String(mediaTextarea?.value || "").trim() ||
+                        String(taskTextarea?.value || "").trim() ||
                         "Create a complete media file";
 
                       setToastMessage("Complete media workflow started. Generating visual, natural audio, and final synced file...");
@@ -2567,8 +2589,8 @@ const primaryAssetUrl =
                         credentials: "include",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
-                          ...(universalCompleteMediaConfig as any),
-                          prompt: String((universalCompleteMediaConfig as any)?.prompt || taskText),
+                          ...(completeMediaConfig as any),
+                          prompt: taskText,
                           agent_id: selectedAgents[0] || "social_media_manager_content_creator_agent",
                           source: "client_run_agent_button",
                         }),

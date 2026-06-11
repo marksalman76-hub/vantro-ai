@@ -116,7 +116,8 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
   // UNIVERSAL_COMPLETE_MEDIA_SHARED_STATE_V1
   useEffect(() => {
-    onConfigChange?.({
+    // UNIVERSAL_COMPLETE_MEDIA_LOCAL_STORAGE_BRIDGE_V1
+    const nextConfig = {
       enabled,
       prompt,
       output_type: outputType,
@@ -141,7 +142,14 @@ export default function UniversalCompleteMediaRunAgentPanel({
       music_style: musicStyle,
       sound_effects: soundEffects,
       call_to_action: callToAction,
-    });
+    };
+
+    onConfigChange?.(nextConfig);
+
+    try {
+      window.localStorage.setItem("universal_complete_media_config", JSON.stringify(nextConfig));
+      window.dispatchEvent(new CustomEvent("universal-complete-media-config", { detail: nextConfig }));
+    } catch {}
   }, [
     enabled,
     prompt,

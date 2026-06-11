@@ -972,6 +972,24 @@ const [activeNav, setActiveNav] = useState("Overview");
   return (
     <main className="admin-v2">
           {/* DIRECT_MEDIA_PROVIDER_ADMIN_PANEL_V2_TOP_VISIBLE */}
+
+      {/* ADMIN_RUN_AGENT_UNIVERSAL_COMPLETE_MEDIA_PANEL_V1 */}
+      <section className="rounded-2xl border border-indigo-400/20 bg-slate-950/70 p-5 shadow-lg">
+        <div className="mb-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-indigo-300">Universal complete media</p>
+          <h2 className="mt-1 text-xl font-bold text-white">Admin complete media test</h2>
+          <p className="mt-1 text-sm text-slate-400">
+            Admin-only live test path for the same one-prompt complete media workflow used by the client Run Agent task.
+          </p>
+        </div>
+        <UniversalCompleteMediaRunAgentPanel
+          selectedAgent={"social_media_manager_content_creator_agent"}
+          businessProfile={{}}
+          onResult={() => {}}
+        />
+      </section>
+
+
           <DirectMediaProviderPanel mode="admin" />
 
 
