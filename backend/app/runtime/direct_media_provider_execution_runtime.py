@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict
 import json
 import os
+import re
 import uuid
 
 
@@ -129,6 +130,38 @@ def provider_readiness(provider: str) -> Dict[str, Any]:
     }
 
 
+
+
+
+# DIRECT_MEDIA_SIGNED_PREVIEW_URL_V1
+def _extract_signed_provider_url(provider_result: Dict[str, Any]) -> str:
+    candidates = []
+
+    for key in ["signed_preview_url", "provider_signed_url", "asset_signed_url", "output_url", "url"]:
+        value = provider_result.get(key)
+        if isinstance(value, str) and value.startswith("http"):
+            candidates.append(value)
+
+    output = provider_result.get("output")
+    if isinstance(output, str):
+        candidates.extend(re.findall(r"https?://[^\s'\"\]\)]+", output))
+
+    if isinstance(output, list):
+        for item in output:
+            if isinstance(item, str) and item.startswith("http"):
+                candidates.append(item)
+
+    for url in candidates:
+        if "_jwt=" in url or "token=" in url or "signature=" in url or "X-Amz-Signature=" in url:
+            return url.strip()
+
+    for url in candidates:
+        if url.startswith("http"):
+            return url.strip()
+
+    return ""
+
+
 def _normalise_provider_result(
     *,
     job: Dict[str, Any],
@@ -139,8 +172,10 @@ def _normalise_provider_result(
     provider = str(job.get("provider") or provider_result.get("provider") or "").lower()
     status = str(provider_result.get("status") or ("completed" if success else "provider_failed"))
 
+    signed_preview_url = _extract_signed_provider_url(provider_result)
     preview_url = (
-        provider_result.get("preview_url")
+        signed_preview_url
+        or provider_result.get("preview_url")
         or provider_result.get("video_url_preview")
         or provider_result.get("audio_url_preview")
         or provider_result.get("asset_url")
@@ -180,6 +215,7 @@ def _normalise_provider_result(
         "preview_ready": bool(preview_url),
         "download_ready": bool(download_url),
         "preview_url": preview_url,
+        "signed_preview_url": signed_preview_url,
         "download_url": download_url,
         "asset_path": download_url,
         "provider_job_id": provider_result.get("task_id") or provider_result.get("job_id") or provider_result.get("provider_job_id") or "",
