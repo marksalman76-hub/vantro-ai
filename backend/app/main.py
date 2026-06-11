@@ -5340,6 +5340,7 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
         or path == "/admin/direct-media-provider-execute"
         or path == "/admin/direct-media-provider-submit"
         or path.startswith("/admin/direct-media-provider-job-status/")
+        or path.startswith("/admin/direct-media-provider-asset/")
     )
 
     if not is_direct_media_path:
@@ -5404,6 +5405,62 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
             job_id = path.rsplit("/", 1)[-1]
             return JSONResponse(content=get_direct_media_provider_job_status(job_id))
 
+        if path.startswith("/admin/direct-media-provider-asset/") and request.method.upper() == "GET":
+            from pathlib import Path
+            from fastapi.responses import FileResponse
+            from backend.app.runtime.direct_media_provider_execution_runtime import get_direct_media_provider_job_status
+
+            job_id = path.rsplit("/", 1)[-1]
+            job = get_direct_media_provider_job_status(job_id)
+            asset_path_value = (
+                job.get("asset_path")
+                or job.get("download_url")
+                or (job.get("provider_result") or {}).get("audio_path")
+                or (job.get("provider_result") or {}).get("video_path")
+                or ""
+            )
+
+            asset_path = Path(str(asset_path_value)).resolve()
+            allowed_root = Path("/opt/render/project/src/runtime_outputs").resolve()
+
+            try:
+                asset_path.relative_to(allowed_root)
+            except Exception:
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "success": False,
+                        "error": "direct_media_asset_path_blocked",
+                        "customer_safe": True,
+                        "credential_values_exposed": False,
+                    },
+                )
+
+            if not asset_path.exists() or not asset_path.is_file():
+                return JSONResponse(
+                    status_code=404,
+                    content={
+                        "success": False,
+                        "error": "direct_media_asset_file_missing",
+                        "job_id": job_id,
+                        "customer_safe": True,
+                        "credential_values_exposed": False,
+                    },
+                )
+
+            suffix = asset_path.suffix.lower()
+            media_type = "application/octet-stream"
+            if suffix == ".mp3":
+                media_type = "audio/mpeg"
+            elif suffix == ".wav":
+                media_type = "audio/wav"
+            elif suffix == ".mp4":
+                media_type = "video/mp4"
+            elif suffix in {".png", ".jpg", ".jpeg", ".webp"}:
+                media_type = "image/" + suffix.replace(".", "").replace("jpg", "jpeg")
+
+            return FileResponse(path=str(asset_path), media_type=media_type, filename=asset_path.name)
+
         return JSONResponse(
             status_code=405,
             content={
@@ -5438,4 +5495,78 @@ async def admin_direct_media_provider_submit(request: Request) -> Dict[str, obje
         payload = {}
 
     return start_direct_media_provider_job_async(payload)
+
+
+# DIRECT_MEDIA_ASSET_DELIVERY_ROUTE_V1
+@app.get("/admin/direct-media-provider-asset/{job_id}")
+def admin_direct_media_provider_asset(job_id: str):
+    from pathlib import Path
+    from fastapi.responses import FileResponse, JSONResponse
+    from backend.app.runtime.direct_media_provider_execution_runtime import get_direct_media_provider_job_status
+
+    job = get_direct_media_provider_job_status(job_id)
+    if not job or job.get("status") == "not_found":
+        return JSONResponse(
+            status_code=404,
+            content={
+                "success": False,
+                "error": "direct_media_asset_not_found",
+                "job_id": job_id,
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            },
+        )
+
+    asset_path_value = (
+        job.get("asset_path")
+        or job.get("download_url")
+        or (job.get("provider_result") or {}).get("audio_path")
+        or (job.get("provider_result") or {}).get("video_path")
+        or ""
+    )
+
+    asset_path = Path(str(asset_path_value)).resolve()
+    allowed_root = Path("/opt/render/project/src/runtime_outputs").resolve()
+
+    try:
+        asset_path.relative_to(allowed_root)
+    except Exception:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "success": False,
+                "error": "direct_media_asset_path_blocked",
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            },
+        )
+
+    if not asset_path.exists() or not asset_path.is_file():
+        return JSONResponse(
+            status_code=404,
+            content={
+                "success": False,
+                "error": "direct_media_asset_file_missing",
+                "job_id": job_id,
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            },
+        )
+
+    suffix = asset_path.suffix.lower()
+    media_type = "application/octet-stream"
+    if suffix == ".mp3":
+        media_type = "audio/mpeg"
+    elif suffix == ".wav":
+        media_type = "audio/wav"
+    elif suffix == ".mp4":
+        media_type = "video/mp4"
+    elif suffix in {".png", ".jpg", ".jpeg", ".webp"}:
+        media_type = "image/" + suffix.replace(".", "").replace("jpg", "jpeg")
+
+    return FileResponse(
+        path=str(asset_path),
+        media_type=media_type,
+        filename=asset_path.name,
+    )
 

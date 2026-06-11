@@ -132,7 +132,12 @@ export default function DirectMediaProviderPanel({ mode }: DirectMediaProviderPa
     Boolean(prompt.trim()) &&
     !running;
 
-  const previewUrl = safeText(result?.preview_url || result?.provider_result?.video_url_preview);
+  const proxiedAssetUrl = result?.job_id ? `/api/admin-direct-media-provider-asset?job_id=${encodeURIComponent(result.job_id)}` : "";
+  const previewUrl = safeText(
+    result?.preview_url ||
+      result?.provider_result?.video_url_preview ||
+      (result?.playable && result?.download_ready ? proxiedAssetUrl : "")
+  );
   const resultStatus = safeText(result?.status || result?.provider_status || result?.provider_result?.status, "Not run yet");
 
   async function loadStatus() {
