@@ -35,28 +35,80 @@ function adminHeaders() {
   };
 }
 
-export const dynamic = "force-dynamic";
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-export async function GET() {
   try {
-    const response = await fetch(`${backendBaseUrl()}/admin/universal-complete-media-status`, {
-      method: "GET",
-      headers: adminHeaders(),
-      cache: "no-store",
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
     });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function safeTimeoutResponse(jobId: string, route: string, message: string) {
+  return NextResponse.json(
+    {
+      success: false,
+      status: "status_lookup_timeout",
+      job_id: jobId || null,
+      route,
+      message,
+      polling_required: true,
+      customer_safe: true,
+      credential_values_exposed: false,
+      internal_config_exposed: false,
+    },
+    { status: 202 }
+  );
+}
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
+export async function GET(request: NextRequest) {
+  const jobId = request.nextUrl.searchParams.get("job_id") || "";
+  const qs = jobId ? `?job_id=${encodeURIComponent(jobId)}` : "";
+
+  try {
+    const response = await fetchWithTimeout(
+      `${backendBaseUrl()}/admin/universal-complete-media-status${qs}`,
+      {
+        method: "GET",
+        headers: adminHeaders(),
+        cache: "no-store",
+      },
+      8000
+    );
 
     const data = await response.json().catch(() => ({
       success: false,
       error: "invalid_backend_json",
+      job_id: jobId || null,
+      customer_safe: true,
+      credential_values_exposed: false,
     }));
 
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown proxy error";
+    if (message.toLowerCase().includes("abort") || message.toLowerCase().includes("timeout")) {
+      return safeTimeoutResponse(
+        jobId,
+        "admin-universal-complete-media",
+        "Backend universal complete media status lookup timed out. Returning fast so the popup does not hang."
+      );
+    }
+
     return NextResponse.json(
       {
         success: false,
         error: "admin_universal_complete_media_status_proxy_failed",
-        message: error instanceof Error ? error.message : "Unknown proxy error",
+        message,
+        job_id: jobId || null,
         customer_safe: true,
         credential_values_exposed: false,
       },
@@ -178,16 +230,22 @@ export async function POST(request: NextRequest) {
       internal_config_exposed: false,
     };
 
-    const response = await fetch(`${backendBaseUrl()}/admin/universal-complete-media`, {
-      method: "POST",
-      headers: adminHeaders(),
-      body: JSON.stringify(safePayload),
-      cache: "no-store",
-    });
+    const response = await fetchWithTimeout(
+      `${backendBaseUrl()}/admin/universal-complete-media`,
+      {
+        method: "POST",
+        headers: adminHeaders(),
+        body: JSON.stringify(safePayload),
+        cache: "no-store",
+      },
+      25000
+    );
 
     const data = await response.json().catch(() => ({
       success: false,
       error: "invalid_backend_json",
+      customer_safe: true,
+      credential_values_exposed: false,
     }));
 
     return NextResponse.json(data, { status: response.status });

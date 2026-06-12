@@ -25,52 +25,100 @@ function serverAdminToken() {
   ).trim();
 }
 
-export async function GET(req: NextRequest) {
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
-    const jobId = req.nextUrl.searchParams.get("job_id") || "";
-    if (!jobId) {
-      return NextResponse.json(
-        { success: false, status: "missing_job_id", customer_safe: true, credential_values_exposed: false },
-        { status: 400 }
-      );
-    }
-
-    const token = serverAdminToken();
-    const response = await fetch(`${backendBaseUrl()}/admin/direct-media-provider-job-status/${encodeURIComponent(jobId)}`, {
-      method: "GET",
-      headers: {
-        Authorization: token ? `Bearer ${token}` : "",
-        "x-admin-token": token,
-        "x-actor-role": "client",
-        "x-tenant-id": req.headers.get("x-tenant-id") || req.cookies.get("tenant_id")?.value || "client_portal",
-      },
-      cache: "no-store",
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
     });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
-    const data = await response.json().catch(() => ({
-      success: false,
-      error: "invalid_backend_json",
-      customer_safe: true,
-      credential_values_exposed: false,
-    }));
+function decorateMediaAssetUrls(data: any) {
+  if (data?.composition_job_id) {
+    data.preview_url = `/api/universal-complete-media-asset?job_id=${encodeURIComponent(data.composition_job_id)}`;
+    data.signed_preview_url = data.preview_url;
+    data.download_url = data.preview_url;
+  }
 
-    if (data?.composition_job_id) {
-      data.preview_url = `/api/universal-complete-media-asset?job_id=${encodeURIComponent(data.composition_job_id)}`;
-      data.signed_preview_url = data.preview_url;
-      data.download_url = data.preview_url;
-    }
+  if (data?.job_id && data?.status === "completed" && !data.preview_url) {
+    data.preview_url = `/api/universal-complete-media-asset?job_id=${encodeURIComponent(data.job_id)}`;
+    data.signed_preview_url = data.preview_url;
+    data.download_url = data.preview_url;
+  }
 
-    return NextResponse.json(data, { status: response.status });
-  } catch (error) {
+  return data;
+}
+
+export async function GET(req: NextRequest) {
+  const jobId = req.nextUrl.searchParams.get("job_id") || "";
+
+  if (!jobId) {
     return NextResponse.json(
-      {
-        success: false,
-        error: "universal_complete_media_status_proxy_failed",
-        message: error instanceof Error ? error.message : "Unknown proxy error",
-        customer_safe: true,
-        credential_values_exposed: false,
-      },
-      { status: 500 }
+      { success: false, status: "missing_job_id", customer_safe: true, credential_values_exposed: false },
+      { status: 400 }
     );
   }
+
+  const token = serverAdminToken();
+  const headers: Record<string, string> = {
+    Authorization: token ? `Bearer ${token}` : "",
+    "x-admin-token": token,
+    "x-actor-role": "owner_admin",
+    "x-tenant-id": req.headers.get("x-tenant-id") || req.cookies.get("tenant_id")?.value || "owner_admin",
+    "x-requested-from": "universal_complete_media_status_proxy",
+  };
+
+  const statusUrls = [
+    `${backendBaseUrl()}/admin/universal-complete-media-status?job_id=${encodeURIComponent(jobId)}`,
+    `${backendBaseUrl()}/admin/direct-media-provider-job-status/${encodeURIComponent(jobId)}`,
+  ];
+
+  let lastError = "";
+
+  for (const url of statusUrls) {
+    try {
+      const response = await fetchWithTimeout(
+        url,
+        {
+          method: "GET",
+          headers,
+          cache: "no-store",
+        },
+        7000
+      );
+
+      const data = await response.json().catch(() => ({
+        success: false,
+        error: "invalid_backend_json",
+        job_id: jobId,
+        customer_safe: true,
+        credential_values_exposed: false,
+      }));
+
+      return NextResponse.json(decorateMediaAssetUrls(data), { status: response.status });
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  return NextResponse.json(
+    {
+      success: false,
+      status: "status_lookup_timeout",
+      job_id: jobId,
+      message: "Universal complete media status lookup timed out before a backend response was available.",
+      last_error: lastError,
+      polling_required: true,
+      customer_safe: true,
+      credential_values_exposed: false,
+      internal_config_exposed: false,
+    },
+    { status: 202 }
+  );
 }
