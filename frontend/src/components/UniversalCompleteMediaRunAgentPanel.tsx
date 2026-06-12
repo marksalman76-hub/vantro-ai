@@ -228,6 +228,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
   const portalMode: "admin" | "client" = mode === "admin" ? "admin" : "client";
 
   const [selectedPopupAgent, setSelectedPopupAgent] = useState("auto");
+  const [selectedPopupAgents, setSelectedPopupAgents] = useState<string[]>(["ugc_creative_agent"]);
 
   const providedAgents = selectedAgents?.length
     ? selectedAgents
@@ -412,6 +413,52 @@ export default function UniversalCompleteMediaRunAgentPanel({
     } catch {}
   }, []);
 
+
+  function resolvePopupSelectedAgents() {
+    const availableCreativeAgents =
+      agents.length > 0 ? agents : DEFAULT_CREATIVE_AGENTS;
+
+    if (selectedPopupAgent === "auto") {
+      const bestAgent =
+        availableCreativeAgents.find(isCreativeAgent) ||
+        availableCreativeAgents[0] ||
+        "ugc_creative_agent";
+
+      return [bestAgent];
+    }
+
+    if (selectedPopupAgent === "all") {
+      const allCreativeAgents =
+        availableCreativeAgents.filter(isCreativeAgent).length > 0
+          ? availableCreativeAgents.filter(isCreativeAgent)
+          : DEFAULT_CREATIVE_AGENTS;
+
+      return Array.from(new Set(allCreativeAgents));
+    }
+
+    if (selectedPopupAgent === "custom") {
+      const customAgents =
+        selectedPopupAgents.length > 0
+          ? selectedPopupAgents
+          : ["ugc_creative_agent"];
+
+      return Array.from(new Set(customAgents));
+    }
+
+    return [selectedPopupAgent || "ugc_creative_agent"];
+  }
+
+  function togglePopupAgent(agentId: string) {
+    setSelectedPopupAgents((current) => {
+      if (current.includes(agentId)) {
+        const next = current.filter((agent) => agent !== agentId);
+        return next.length > 0 ? next : ["ugc_creative_agent"];
+      }
+
+      return Array.from(new Set([...current, agentId]));
+    });
+  }
+
   async function runCompleteMediaFromPopup() {
     const cleanPrompt = String(prompt || "").trim();
 
@@ -423,10 +470,9 @@ export default function UniversalCompleteMediaRunAgentPanel({
     setRunning(true);
     setStatusMessage("Creating complete media directly from this popup...");
 
-    const activeCreativeAgent =
-      selectedPopupAgent && selectedPopupAgent !== "auto"
-        ? selectedPopupAgent
-        : primaryAgent || "ugc_creative_agent";
+    const selectedCreativeAgents = resolvePopupSelectedAgents();
+    const activeCreativeAgent = selectedCreativeAgents[0] || "ugc_creative_agent";
+    const multiAgentMediaExecution = selectedCreativeAgents.length > 1;
 
     const directConfig = {
       ...mediaConfig,
@@ -435,12 +481,14 @@ export default function UniversalCompleteMediaRunAgentPanel({
       task: cleanPrompt,
       agent_id: activeCreativeAgent,
       selected_agent: activeCreativeAgent,
-      selected_agents: [activeCreativeAgent],
+      selected_agents: selectedCreativeAgents,
       requested_at: new Date().toISOString(),
       requested_from: "complete_media_popup",
       run_direct_from_popup: true,
       native_popup_execution: true,
       creative_agent_direct_execution: true,
+      multi_agent_media_execution: multiAgentMediaExecution,
+      selected_agent_count: selectedCreativeAgents.length,
     };
 
     const mediaPayload = {
@@ -449,9 +497,9 @@ export default function UniversalCompleteMediaRunAgentPanel({
       portal_mode: portalMode,
       mode: portalMode,
       selected_agent: activeCreativeAgent,
-      selected_agents: [activeCreativeAgent],
+      selected_agents: selectedCreativeAgents,
       agent_id: activeCreativeAgent,
-      agent_ids: [activeCreativeAgent],
+      agent_ids: selectedCreativeAgents,
       business_profile: profile,
       complete_media_config: directConfig,
       media_config: directConfig,
@@ -466,6 +514,8 @@ export default function UniversalCompleteMediaRunAgentPanel({
       run_direct_from_popup: true,
       native_popup_execution: true,
       creative_agent_direct_execution: true,
+      multi_agent_media_execution: multiAgentMediaExecution,
+      selected_agent_count: selectedCreativeAgents.length,
       customer_safe: portalMode !== "admin",
       owner_admin_unrestricted: portalMode === "admin",
     };
@@ -478,8 +528,8 @@ export default function UniversalCompleteMediaRunAgentPanel({
       action_type: "governed_live_provider_generation",
       agent_id: activeCreativeAgent,
       selected_agent: activeCreativeAgent,
-      selected_agents: [activeCreativeAgent],
-      agent_ids: [activeCreativeAgent],
+      selected_agents: selectedCreativeAgents,
+      agent_ids: selectedCreativeAgents,
       task: cleanPrompt,
       prompt: cleanPrompt,
       business_profile: profile,
@@ -488,6 +538,8 @@ export default function UniversalCompleteMediaRunAgentPanel({
       run_direct_from_popup: true,
       native_popup_execution: true,
       creative_agent_direct_execution: true,
+      multi_agent_media_execution: multiAgentMediaExecution,
+      selected_agent_count: selectedCreativeAgents.length,
       owner_admin_unrestricted: portalMode === "admin",
       customer_safe: portalMode !== "admin",
     };
@@ -709,7 +761,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
                     lineHeight: 1.5,
                   }}
                 >
-                  Choose the creative agent inside this popup, enter the media prompt, then click Create complete media now. You do not need to use the main Run Agent section.
+                  Choose one or more creative agents inside this popup, enter the media prompt, then click Create complete media now. You do not need to use the main Run Agent section.
                 </p>
               </div>
 
@@ -731,29 +783,90 @@ export default function UniversalCompleteMediaRunAgentPanel({
             </div>
 
             <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
-              <label
+              <div
                 data-complete-media-agent-selector="true"
                 style={{
                   display: "grid",
-                  gap: 6,
-                  fontSize: 12.5,
-                  fontWeight: 850,
-                  color: portalMode === "admin" ? "#cbd5e1" : "#0f172a",
+                  gap: 10,
+                  borderRadius: 16,
+                  padding: 12,
+                  border: "1px solid rgba(129,140,248,.22)",
+                  background:
+                    portalMode === "admin"
+                      ? "rgba(15,23,42,.42)"
+                      : "rgba(248,250,252,.9)",
                 }}
               >
-                Creative agent
-                <select
-                  value={selectedPopupAgent}
-                  onChange={(event) => setSelectedPopupAgent(event.target.value)}
-                  style={fieldStyle(portalMode)}
+                <label
+                  style={{
+                    display: "grid",
+                    gap: 6,
+                    fontSize: 12.5,
+                    fontWeight: 850,
+                    color: portalMode === "admin" ? "#cbd5e1" : "#0f172a",
+                  }}
                 >
-                  {POPUP_CREATIVE_AGENT_OPTIONS.map((agent) => (
-                    <option key={agent.value} value={agent.value}>
-                      {agent.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+                  Agent selection mode
+                  <select
+                    value={selectedPopupAgent}
+                    onChange={(event) => setSelectedPopupAgent(event.target.value)}
+                    style={fieldStyle(portalMode)}
+                  >
+                    <option value="auto">Auto-select best creative agent</option>
+                    <option value="all">Use all creative agents</option>
+                    <option value="custom">Select multiple creative agents</option>
+                    {POPUP_CREATIVE_AGENT_OPTIONS.filter((agent) => agent.value !== "auto").map((agent) => (
+                      <option key={agent.value} value={agent.value}>
+                        Single: {agent.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                {selectedPopupAgent === "custom" ? (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
+                      gap: 8,
+                    }}
+                  >
+                    {POPUP_CREATIVE_AGENT_OPTIONS.filter((agent) => agent.value !== "auto").map((agent) => (
+                      <label
+                        key={agent.value}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          borderRadius: 12,
+                          padding: "8px 10px",
+                          border: "1px solid rgba(148,163,184,.24)",
+                          color: portalMode === "admin" ? "#e5e7eb" : "#0f172a",
+                          fontSize: 12.5,
+                          fontWeight: 800,
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedPopupAgents.includes(agent.value)}
+                          onChange={() => togglePopupAgent(agent.value)}
+                        />
+                        {agent.label}
+                      </label>
+                    ))}
+                  </div>
+                ) : null}
+
+                <div
+                  style={{
+                    color: portalMode === "admin" ? "#94a3b8" : "#64748b",
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  Selected for this media run: {resolvePopupSelectedAgents().join(", ")}
+                </div>
+              </div>
 
               <label
                 style={{
