@@ -44,6 +44,14 @@ if matrix.exists():
         "Use client-uploaded face/likeness",
         "duration",
         "not ecommerce-only",
+        "Full-Stack AWS Option A Scope Addendum",
+        "Admin portal",
+        "Client portal",
+        "Portal Authority Model",
+        "Billing and credits",
+        "Package enforcement",
+        "Provider execution",
+        "Security/session handling",
     ]:
         if marker.lower() in text.lower():
             ok(f"matrix marker: {marker}")

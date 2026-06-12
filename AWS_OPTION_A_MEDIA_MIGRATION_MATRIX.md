@@ -80,3 +80,65 @@ The frontend may remain on Vercel temporarily, but the production media path mus
 ## Immediate Rule
 
 Do not continue turning the Render runtime into the final media engine. Use Render only for temporary staging while we build the AWS-ready durable interfaces.
+
+---
+
+# Full-Stack AWS Option A Scope Addendum
+
+Updated: 2026-06-13T03:11:16
+
+## Correction
+
+AWS Option A migration is not media-only. The production migration must cover the full paid-client platform stack and both portals.
+
+## Full Stack Areas Covered
+
+| Stack area | AWS migration requirement |
+|---|---|
+| Admin portal | Preserve unrestricted owner/admin authority, full diagnostics, provider details, infrastructure visibility, job controls, retries, refunds, credit assignment, and full audit visibility. |
+| Client portal | Preserve client-safe status, package/credit governance, approvals, privacy-safe outputs, usable assets, billing visibility, and support flows. |
+| Media generation | Move paid-client media execution to durable API + queue + worker + object storage. |
+| Agent execution | Route execution through durable job records, provider events, audit logs, and portal-safe status views. |
+| Billing and credits | Durable credit ledger, package enforcement, usage estimates, provider-cost tracking, refunds, and admin credit assignment. |
+| Package enforcement | Client entitlement checks before paid execution; admin owner bypass preserved. |
+| Approvals | Owner approval controls for governed spend/actions; client request visibility without internal leakage. |
+| Provider execution | Provider adapters run server-side only; provider secrets are never exposed to frontend or client views. |
+| Creative assets | Durable asset storage with S3-backed delivery and portal-safe metadata. |
+| Client uploads | Durable uploads, privacy-safe handling, uploaded likeness consent, and access control. |
+| Generated sites | Durable generated-site records/assets and deployment evidence. |
+| Integrations | Durable integration connection state, health checks, and client-safe connection status. |
+| Execution evidence | Store outputs, provider events, timestamps, screenshots/files when relevant, and audit history. |
+| Learning/memory/governance | Preserve governed learning, memory rules, admin visibility, and client-safe boundaries. |
+| Security/session handling | Portal-specific authentication, authorization, session hardening, and no secret leakage. |
+| Observability | CloudWatch logs, metrics, incident readiness, dead-letter queue visibility, and admin-only diagnostics. |
+| Support flows | Client support requests and admin handling must remain functional after migration. |
+
+## Portal Authority Model
+
+| Capability | Admin / owner portal | Client portal |
+|---|---|---|
+| Execute jobs | Unrestricted owner execution | Governed by package, credits, approvals |
+| View provider diagnostics | Full visibility | Hidden |
+| View provider secrets/config | Never raw secrets, but admin diagnostics allowed | Hidden |
+| Retry/requeue/cancel jobs | Allowed | Limited/client-safe request flow only |
+| Assign credits | Allowed | Not allowed |
+| Spend approvals | Owner/admin controls | Request/status only |
+| Refunds | Admin controls | Request/status only |
+| Uploaded likeness | Full admin audit visibility | Consent-based client control |
+| Assets | Full asset visibility | Own/client-safe assets only |
+| Infrastructure status | Full | Hidden or simplified status only |
+| Audit logs | Full | Own/client-safe history only |
+
+## Non-Negotiable Migration Rule
+
+Do not migrate media in isolation in a way that breaks or ignores the wider stack.
+
+Every AWS-backed production service must preserve:
+- admin/client authority separation
+- package and credit enforcement
+- owner/admin unrestricted operations
+- provider secret protection
+- durable job/status/asset records
+- auditability
+- client-safe output visibility
+
