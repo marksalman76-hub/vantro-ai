@@ -1,4 +1,18 @@
-"use client";
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path.cwd()
+TARGET = ROOT / "frontend" / "src" / "components" / "UniversalCompleteMediaRunAgentPanel.tsx"
+BACKUP_DIR = ROOT / "backups" / f"true_direct_complete_media_popup_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+if not TARGET.exists():
+    raise SystemExit(f"TARGET_NOT_FOUND: {TARGET}")
+
+BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+shutil.copy2(TARGET, BACKUP_DIR / TARGET.name)
+
+NEW_CONTENT = r'''"use client";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -203,14 +217,12 @@ export default function UniversalCompleteMediaRunAgentPanel({
   businessProfile,
   mode = "client",
   onConfigChange,
-  onResult,
 }: {
   selectedAgent?: string;
   selectedAgents?: string[];
   businessProfile?: BusinessProfile;
   mode?: "admin" | "client";
   onConfigChange?: (config: CompleteMediaConfig) => void;
-  onResult?: (deliverable: any) => void;
 }) {
   const portalMode: "admin" | "client" = mode === "admin" ? "admin" : "client";
 
@@ -470,8 +482,6 @@ export default function UniversalCompleteMediaRunAgentPanel({
           ? `Complete media started directly from popup. Job ID: ${jobId}`
           : "Complete media started directly from popup."
       );
-
-      onResult?.(result);
 
       window.dispatchEvent(
         new CustomEvent("universal-complete-media-run-now", {
@@ -783,3 +793,25 @@ export default function UniversalCompleteMediaRunAgentPanel({
     </div>
   );
 }
+'''
+
+TARGET.write_text(NEW_CONTENT, encoding="utf-8")
+
+verify = TARGET.read_text(encoding="utf-8")
+required = [
+    "data-true-direct-complete-media-popup",
+    "data-complete-media-native-execution",
+    "Create complete media now",
+    "/api/admin-universal-complete-media",
+    "/api/universal-complete-media",
+    "This runs directly from the popup without using the main Run Agent section",
+    "DEFAULT_CREATIVE_AGENTS",
+]
+
+missing = [item for item in required if item not in verify]
+if missing:
+    raise SystemExit(f"MISSING_REQUIRED_MARKERS: {missing}")
+
+print("TRUE_DIRECT_COMPLETE_MEDIA_POPUP_REPLACED")
+print(f"Backup folder: {BACKUP_DIR}")
+print(f"Updated: {TARGET}")
