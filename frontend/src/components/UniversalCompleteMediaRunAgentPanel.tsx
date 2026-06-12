@@ -632,36 +632,53 @@ export default function UniversalCompleteMediaRunAgentPanel({
         : `Creating complete media with ${activeCreativeAgent}...`
     );
 
+    const lowerPrompt = cleanPrompt.toLowerCase();
+    const productRelevant =
+      lowerPrompt.includes("product") ||
+      lowerPrompt.includes("skincare") ||
+      lowerPrompt.includes("cream") ||
+      lowerPrompt.includes("serum") ||
+      lowerPrompt.includes("bottle") ||
+      lowerPrompt.includes("package") ||
+      lowerPrompt.includes("packaging") ||
+      lowerPrompt.includes("item") ||
+      lowerPrompt.includes("using a") ||
+      lowerPrompt.includes("holding a");
+
+    const continuityGuardrails = [
+      "Maintain consistent subjects, hands, faces, clothing, props, backgrounds, reflections, object positions, camera movement, and scene physics across the full clip.",
+      "Avoid disappearing objects, morphing props, warped fingers, impossible reflections, mismatched hand movement, sudden object teleporting, or visual continuity breaks.",
+      "Keep physical interactions realistic and temporally consistent.",
+      "When voiceover or narration is requested, pace the visual action so it can align naturally with the spoken script.",
+      productRelevant
+        ? "Because this prompt involves a product or handled object, keep the product visible and visually consistent, maintain accurate hand-product contact, and keep mirror/reflection placement consistent when reflections appear."
+        : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
     const directConfig = {
       ...mediaConfig,
       enabled: true,
       prompt: cleanPrompt,
       task: cleanPrompt,
+      visual_quality_guardrails: continuityGuardrails,
       agent_id: activeCreativeAgent,
       selected_agent: activeCreativeAgent,
       selected_agents: selectedCreativeAgents,
       agent_ids: selectedCreativeAgents,
+      video_provider: "runway",
+      audio_provider: "elevenlabs",
       requested_at: new Date().toISOString(),
       requested_from: "complete_media_popup",
       run_direct_from_popup: true,
       native_popup_execution: true,
       creative_agent_direct_execution: true,
-      direct_media_provider_execute: true,
+      universal_complete_media_workflow: true,
+      one_prompt_complete_media: true,
       multi_agent_media_execution: multiAgentMediaExecution,
       selected_agent_count: selectedCreativeAgents.length,
     };
-
-    const provider =
-      String(outputType || "").toLowerCase().includes("audio")
-        ? "elevenlabs"
-        : "runway";
-
-    const mediaType =
-      String(outputType || "").toLowerCase().includes("audio")
-        ? "audio"
-        : String(outputType || "").toLowerCase().includes("image")
-          ? "image"
-          : "video";
 
     const payload = {
       source: "complete_media_popup",
@@ -669,20 +686,11 @@ export default function UniversalCompleteMediaRunAgentPanel({
       portal_mode: portalMode,
       mode: portalMode,
 
-      provider,
-      provider_id: provider,
-      media_type: mediaType,
-      output_type: directConfig.output_type,
-      platform: directConfig.platform,
-      duration_seconds: directConfig.duration_seconds,
-      aspect_ratio: directConfig.aspect_ratio,
-      language: directConfig.language,
-      accent: directConfig.accent,
-
       prompt: cleanPrompt,
       task: cleanPrompt,
       creative_brief: cleanPrompt,
       user_prompt: cleanPrompt,
+      visual_quality_guardrails: continuityGuardrails,
 
       selected_agent: activeCreativeAgent,
       selected_agents: selectedCreativeAgents,
@@ -694,13 +702,32 @@ export default function UniversalCompleteMediaRunAgentPanel({
       complete_media_config: directConfig,
       media_config: directConfig,
 
+      output_type: directConfig.output_type || outputType,
+      platform: directConfig.platform || platform,
+      duration_seconds: directConfig.duration_seconds || durationSeconds,
+      aspect_ratio: directConfig.aspect_ratio || aspectRatio,
+      language: directConfig.language || language,
+      accent: directConfig.accent || accent,
+      tone: directConfig.tone,
+      voice_style: directConfig.voice_style,
+      call_to_action: directConfig.call_to_action,
+
+      video_provider: "runway",
+      audio_provider: "elevenlabs",
+      provider: "universal_complete_media_workflow",
+      media_type: "complete_video",
+      asset_type: "video",
+
       run_direct_from_popup: true,
       native_popup_execution: true,
       creative_agent_direct_execution: true,
-      direct_media_provider_execute: true,
+      universal_complete_media_workflow: true,
+      one_prompt_complete_media: true,
       multi_agent_media_execution: multiAgentMediaExecution,
       selected_agent_count: selectedCreativeAgents.length,
 
+      owner_approved: portalMode === "admin",
+      owner_approval_granted: portalMode === "admin",
       customer_safe: portalMode !== "admin",
       owner_admin_unrestricted: portalMode === "admin",
     };
@@ -714,7 +741,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
     const endpoint =
       portalMode === "admin"
-        ? "/api/admin-direct-media-provider-execute"
+        ? "/api/admin-universal-complete-media"
         : "/api/universal-complete-media";
 
     try {
@@ -730,7 +757,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
       const result = await response.json().catch(() => ({
         success: false,
-        error: "Invalid JSON response from direct media execution endpoint.",
+        error: "Invalid JSON response from universal complete media endpoint.",
       }));
 
       if (!response.ok || result?.success === false) {
@@ -738,7 +765,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
           result?.error ||
           result?.message ||
           result?.detail ||
-          `Direct media request failed with HTTP ${response.status}.`;
+          `Universal complete media request failed with HTTP ${response.status}.`;
 
         setStatusMessage(String(errorText));
         setRunning(false);
@@ -759,14 +786,14 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
       setStatusMessage(
         jobId
-          ? `Complete media started from popup. Lead agent: ${activeCreativeAgent}. Agents: ${selectedCreativeAgents.length}. Job ID: ${jobId}`
-          : `Complete media started from popup. Lead agent: ${activeCreativeAgent}. Agents: ${selectedCreativeAgents.length}.`
+          ? `Complete media workflow started. Lead agent: ${activeCreativeAgent}. Agents: ${selectedCreativeAgents.length}. Job ID: ${jobId}`
+          : `Complete media workflow started. Lead agent: ${activeCreativeAgent}. Agents: ${selectedCreativeAgents.length}.`
       );
 
       if (jobId) {
         setTimeout(() => {
           void checkPopupMediaJobStatus(jobId);
-        }, 1200);
+        }, 1500);
       }
 
       onResult?.(result);
@@ -781,6 +808,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
             selected_agent: activeCreativeAgent,
             selected_agents: selectedCreativeAgents,
             multi_agent_media_execution: multiAgentMediaExecution,
+            universal_complete_media_workflow: true,
           },
         })
       );
