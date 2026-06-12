@@ -1093,6 +1093,47 @@ def build_universal_complete_media_plan(payload: Dict[str, Any]) -> Dict[str, An
     }
 
 
+
+def _ucm_provider_safe_visual_prompt(prompt: str, max_chars: int = 950) -> str:
+    """
+    Runway promptText currently rejects prompts over 1000 characters.
+    Keep universal complete media planning rich internally, but send providers a concise visual prompt.
+    This is intentionally broad-media safe and not ecommerce-only.
+    """
+    clean = " ".join(str(prompt or "").split()).strip()
+
+    if len(clean) <= max_chars:
+        return clean
+
+    # Prefer complete sentence boundaries so the provider receives a coherent prompt.
+    sentences = re.split(r"(?<=[.!?])\s+", clean)
+    selected = []
+
+    for sentence in sentences:
+        candidate = " ".join(selected + [sentence]).strip()
+        if len(candidate) <= max_chars:
+            selected.append(sentence)
+        else:
+            break
+
+    compressed = " ".join(selected).strip()
+
+    if not compressed:
+        compressed = clean[:max_chars].rsplit(" ", 1)[0].strip()
+
+    continuity = (
+        " Maintain consistent subjects, hands, props, screens, reflections, lighting, "
+        "camera motion, and scene physics. Avoid disappearing objects, warped hands, "
+        "mismatched movement, impossible reflections, and sudden scene changes."
+    )
+
+    room = max_chars - len(compressed)
+    if room > 80 and "Avoid disappearing objects" not in compressed:
+        compressed = (compressed + continuity[:room]).strip()
+
+    return compressed[:max_chars].strip()
+
+
 def _ucm_get_duration_seconds(path_value: str) -> float | None:
     try:
         ffprobe = shutil.which("ffprobe")
@@ -1316,11 +1357,26 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "started_at": _now(),
             })
 
+            provider_visual_prompt = _ucm_provider_safe_visual_prompt(plan["visual_prompt"], 950)
+
+            _write_job({
+                **base_job,
+                "accepted": True,
+                "status": "running_visual_generation",
+                "timed_plan": plan.get("timed_plan"),
+                "quality_requirements": plan.get("quality_requirements"),
+                "visual_prompt_character_count": len(plan.get("visual_prompt") or ""),
+                "provider_visual_prompt_character_count": len(provider_visual_prompt),
+                "provider_visual_prompt_limit": 1000,
+                "provider_visual_prompt_truncated": len(plan.get("visual_prompt") or "") > len(provider_visual_prompt),
+                "started_at": _now(),
+            })
+
             video_result = execute_direct_media_provider_job({
                 "agent_id": controls["agent_id"],
                 "provider": controls["video_provider"],
                 "media_type": "video",
-                "prompt": plan["visual_prompt"],
+                "prompt": provider_visual_prompt,
                 "owner_approved": True,
                 "owner_approval_granted": True,
             })
