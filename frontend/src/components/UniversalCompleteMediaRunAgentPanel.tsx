@@ -468,11 +468,16 @@ export default function UniversalCompleteMediaRunAgentPanel({
     }
 
     setRunning(true);
-    setStatusMessage("Creating complete media directly from this popup...");
 
     const selectedCreativeAgents = resolvePopupSelectedAgents();
     const activeCreativeAgent = selectedCreativeAgents[0] || "ugc_creative_agent";
     const multiAgentMediaExecution = selectedCreativeAgents.length > 1;
+
+    setStatusMessage(
+      multiAgentMediaExecution
+        ? `Creating complete media with ${selectedCreativeAgents.length} creative agents...`
+        : `Creating complete media with ${activeCreativeAgent}...`
+    );
 
     const directConfig = {
       ...mediaConfig,
@@ -482,94 +487,70 @@ export default function UniversalCompleteMediaRunAgentPanel({
       agent_id: activeCreativeAgent,
       selected_agent: activeCreativeAgent,
       selected_agents: selectedCreativeAgents,
+      agent_ids: selectedCreativeAgents,
       requested_at: new Date().toISOString(),
       requested_from: "complete_media_popup",
       run_direct_from_popup: true,
       native_popup_execution: true,
       creative_agent_direct_execution: true,
+      direct_media_provider_execute: true,
       multi_agent_media_execution: multiAgentMediaExecution,
       selected_agent_count: selectedCreativeAgents.length,
     };
 
-    const mediaPayload = {
+    const provider =
+      String(outputType || "").toLowerCase().includes("audio")
+        ? "elevenlabs"
+        : "runway";
+
+    const mediaType =
+      String(outputType || "").toLowerCase().includes("audio")
+        ? "audio"
+        : String(outputType || "").toLowerCase().includes("image")
+          ? "image"
+          : "video";
+
+    const payload = {
       source: "complete_media_popup",
       requested_from: "complete_media_popup",
       portal_mode: portalMode,
       mode: portalMode,
-      selected_agent: activeCreativeAgent,
-      selected_agents: selectedCreativeAgents,
-      agent_id: activeCreativeAgent,
-      agent_ids: selectedCreativeAgents,
-      business_profile: profile,
-      complete_media_config: directConfig,
-      media_config: directConfig,
-      prompt: cleanPrompt,
-      task: cleanPrompt,
+
+      provider,
+      provider_id: provider,
+      media_type: mediaType,
       output_type: directConfig.output_type,
       platform: directConfig.platform,
       duration_seconds: directConfig.duration_seconds,
       aspect_ratio: directConfig.aspect_ratio,
       language: directConfig.language,
       accent: directConfig.accent,
-      run_direct_from_popup: true,
-      native_popup_execution: true,
-      creative_agent_direct_execution: true,
-      multi_agent_media_execution: multiAgentMediaExecution,
-      selected_agent_count: selectedCreativeAgents.length,
-      customer_safe: portalMode !== "admin",
-      owner_admin_unrestricted: portalMode === "admin",
-    };
 
-    const governedRunAgentPayload = {
-      source: "complete_media_popup",
-      requested_from: "complete_media_popup",
-      action: "run_agent",
-      execution_action: "governed_live_provider_generation",
-      action_type: "governed_live_provider_generation",
-      agent_id: activeCreativeAgent,
+      prompt: cleanPrompt,
+      task: cleanPrompt,
+      creative_brief: cleanPrompt,
+      user_prompt: cleanPrompt,
+
       selected_agent: activeCreativeAgent,
       selected_agents: selectedCreativeAgents,
+      agent_id: activeCreativeAgent,
       agent_ids: selectedCreativeAgents,
-      task: cleanPrompt,
-      prompt: cleanPrompt,
+      lead_agent_id: activeCreativeAgent,
+
       business_profile: profile,
       complete_media_config: directConfig,
       media_config: directConfig,
+
       run_direct_from_popup: true,
       native_popup_execution: true,
       creative_agent_direct_execution: true,
+      direct_media_provider_execute: true,
       multi_agent_media_execution: multiAgentMediaExecution,
       selected_agent_count: selectedCreativeAgents.length,
-      owner_admin_unrestricted: portalMode === "admin",
-      customer_safe: portalMode !== "admin",
-    };
 
-    const endpointAttempts =
-      portalMode === "admin"
-        ? [
-            {
-              endpoint: "/api/admin-universal-complete-media",
-              payload: mediaPayload,
-            },
-            {
-              endpoint: "/api/admin-deployment-control",
-              payload: governedRunAgentPayload,
-            },
-            {
-              endpoint: "/api/run-agent",
-              payload: governedRunAgentPayload,
-            },
-          ]
-        : [
-            {
-              endpoint: "/api/universal-complete-media",
-              payload: mediaPayload,
-            },
-            {
-              endpoint: "/api/run-agent",
-              payload: governedRunAgentPayload,
-            },
-          ];
+      customer_safe: portalMode !== "admin",
+      owner_admin_unrestricted: portalMode === "admin",
+    };
 
     try {
       window.localStorage.setItem(
@@ -578,87 +559,78 @@ export default function UniversalCompleteMediaRunAgentPanel({
       );
     } catch {}
 
-    const failedAttempts: string[] = [];
+    const endpoint =
+      portalMode === "admin"
+        ? "/api/admin-direct-media-provider-execute"
+        : "/api/universal-complete-media";
 
-    for (const attempt of endpointAttempts) {
-      try {
-        setStatusMessage(`Creating complete media through ${attempt.endpoint}...`);
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Portal-Mode": portalMode,
+          "X-Requested-From": "complete_media_popup",
+        },
+        body: JSON.stringify(payload),
+      });
 
-        const response = await fetch(attempt.endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Portal-Mode": portalMode,
-            "X-Requested-From": "complete_media_popup",
-          },
-          body: JSON.stringify(attempt.payload),
-        });
+      const result = await response.json().catch(() => ({
+        success: false,
+        error: "Invalid JSON response from direct media execution endpoint.",
+      }));
 
-        const result = await response.json().catch(() => ({
-          success: false,
-          error: "Invalid JSON response from execution endpoint.",
-        }));
-
-        const errorText = String(
+      if (!response.ok || result?.success === false) {
+        const errorText =
           result?.error ||
-            result?.message ||
-            result?.detail ||
-            result?.status ||
-            ""
-        );
+          result?.message ||
+          result?.detail ||
+          `Direct media request failed with HTTP ${response.status}.`;
 
-        const bridgeFailed =
-          errorText.includes("direct_media_provider_bridge_failed") ||
-          errorText.includes("bridge_failed");
-
-        if (!response.ok || result?.success === false || bridgeFailed) {
-          failedAttempts.push(`${attempt.endpoint}: ${errorText || response.status}`);
-          continue;
-        }
-
-        const jobId =
-          result?.media_job_id ||
-          result?.job_id ||
-          result?.execution_id ||
-          result?.request_id ||
-          result?.id ||
-          "";
-
-        setStatusMessage(
-          jobId
-            ? `Complete media started from popup with ${activeCreativeAgent}. Job ID: ${jobId}`
-            : `Complete media started from popup with ${activeCreativeAgent}.`
-        );
-
-        onResult?.(result);
-
-        window.dispatchEvent(
-          new CustomEvent("universal-complete-media-run-now", {
-            detail: {
-              endpoint: attempt.endpoint,
-              payload: attempt.payload,
-              result,
-              native_popup_execution: true,
-              selected_agent: activeCreativeAgent,
-            },
-          })
-        );
-
+        setStatusMessage(String(errorText));
         setRunning(false);
         return;
-      } catch (error) {
-        failedAttempts.push(
-          `${attempt.endpoint}: ${
-            error instanceof Error ? error.message : "request failed"
-          }`
-        );
       }
-    }
 
-    setStatusMessage(
-      `Complete media could not start. Tried: ${failedAttempts.join(" | ")}`
-    );
-    setRunning(false);
+      const jobId =
+        result?.media_job_id ||
+        result?.job_id ||
+        result?.provider_job_id ||
+        result?.execution_id ||
+        result?.request_id ||
+        result?.id ||
+        "";
+
+      setStatusMessage(
+        jobId
+          ? `Complete media started from popup. Lead agent: ${activeCreativeAgent}. Agents: ${selectedCreativeAgents.length}. Job ID: ${jobId}`
+          : `Complete media started from popup. Lead agent: ${activeCreativeAgent}. Agents: ${selectedCreativeAgents.length}.`
+      );
+
+      onResult?.(result);
+
+      window.dispatchEvent(
+        new CustomEvent("universal-complete-media-run-now", {
+          detail: {
+            endpoint,
+            payload,
+            result,
+            native_popup_execution: true,
+            selected_agent: activeCreativeAgent,
+            selected_agents: selectedCreativeAgents,
+            multi_agent_media_execution: multiAgentMediaExecution,
+          },
+        })
+      );
+    } catch (error) {
+      setStatusMessage(
+        error instanceof Error
+          ? error.message
+          : "Complete media popup execution failed."
+      );
+    } finally {
+      setRunning(false);
+    }
   }
 
   if (!shouldShow) return null;
