@@ -1,4 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
+from pathlib import Path
+from datetime import datetime
+import shutil
+
+ROOT = Path.cwd()
+TARGET = ROOT / "frontend" / "src" / "app" / "api" / "admin-universal-complete-media" / "route.ts"
+BACKUP_DIR = ROOT / "backups" / f"admin_universal_complete_media_proxy_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+if not TARGET.exists():
+    raise SystemExit(f"TARGET_NOT_FOUND: {TARGET}")
+
+BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+shutil.copy2(TARGET, BACKUP_DIR / TARGET.name)
+
+original = TARGET.read_text(encoding="utf-8", errors="ignore")
+
+print("CURRENT_ROUTE_PREVIEW_START")
+print(original[:5000])
+print("CURRENT_ROUTE_PREVIEW_END")
+
+new_text = r'''import { NextRequest, NextResponse } from "next/server";
 
 function backendBaseUrl() {
   return (
@@ -204,3 +224,27 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+'''
+
+TARGET.write_text(new_text, encoding="utf-8")
+
+verify = TARGET.read_text(encoding="utf-8")
+required = [
+    "/admin/universal-complete-media",
+    "/admin/universal-complete-media-status",
+    "universal_complete_media_workflow",
+    "one_prompt_complete_media",
+    "video_provider",
+    "audio_provider",
+    "elevenlabs",
+    "runway",
+    "owner_admin_unrestricted",
+]
+
+missing = [item for item in required if item not in verify]
+if missing:
+    raise SystemExit(f"MISSING_REQUIRED_MARKERS: {missing}")
+
+print("ADMIN_UNIVERSAL_COMPLETE_MEDIA_PROXY_FIXED")
+print(f"Backup folder: {BACKUP_DIR}")
+print(f"Updated: {TARGET}")
