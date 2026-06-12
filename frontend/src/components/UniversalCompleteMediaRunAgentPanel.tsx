@@ -73,7 +73,7 @@ const PLATFORMS = [
   "Presentation",
 ];
 
-const DURATIONS = ["5", "10", "15", "30", "45", "60"];
+const DURATIONS = ["5", "10", "15", "25", "30", "45", "60"];
 const ASPECT_RATIOS = ["9:16", "1:1", "16:9", "4:5"];
 
 const CREATIVE_AGENT_KEYWORDS = [
@@ -210,6 +210,69 @@ function SelectField({
   );
 }
 
+
+function detectDurationSecondsFromPrompt(prompt: string): string {
+  const text = String(prompt || "").toLowerCase();
+
+  const directMatch = text.match(/\b(\d{1,3})\s*(?:seconds|second|secs|sec)\b/);
+  if (directMatch?.[1]) {
+    return directMatch[1];
+  }
+
+  const compactMatch = text.match(/\b(\d{1,3})s\b/);
+  if (compactMatch?.[1]) {
+    return compactMatch[1];
+  }
+
+  return "";
+}
+
+function detectAspectRatioFromPrompt(prompt: string): string {
+  const text = String(prompt || "").toLowerCase();
+
+  if (text.includes("16:9") || text.includes("landscape") || text.includes("horizontal") || text.includes("youtube")) {
+    return "16:9";
+  }
+
+  if (text.includes("9:16") || text.includes("vertical") || text.includes("reel") || text.includes("tiktok") || text.includes("shorts")) {
+    return "9:16";
+  }
+
+  if (text.includes("1:1") || text.includes("square")) {
+    return "1:1";
+  }
+
+  if (text.includes("4:5")) {
+    return "4:5";
+  }
+
+  return "";
+}
+
+function buildMediaSettingWarning(prompt: string, durationSeconds: string, aspectRatio: string): string {
+  const detectedDuration = detectDurationSecondsFromPrompt(prompt);
+  const detectedAspectRatio = detectAspectRatioFromPrompt(prompt);
+  const warnings: string[] = [];
+
+  if (detectedDuration && detectedDuration !== String(durationSeconds || "")) {
+    warnings.push(`Prompt asks for ${detectedDuration}s, but selected duration is ${durationSeconds}s.`);
+  }
+
+  if (detectedAspectRatio && detectedAspectRatio !== String(aspectRatio || "")) {
+    warnings.push(`Prompt asks for ${detectedAspectRatio}, but selected aspect ratio is ${aspectRatio}.`);
+  }
+
+  return warnings.join(" ");
+}
+
+function resolveFinalDuration(prompt: string, selectedDuration: string): string {
+  return detectDurationSecondsFromPrompt(prompt) || selectedDuration || "25";
+}
+
+function resolveFinalAspectRatio(prompt: string, selectedAspectRatio: string): string {
+  return detectAspectRatioFromPrompt(prompt) || selectedAspectRatio || "16:9";
+}
+
 export default function UniversalCompleteMediaRunAgentPanel({
   selectedAgent,
   selectedAgents,
@@ -274,8 +337,8 @@ export default function UniversalCompleteMediaRunAgentPanel({
   const [prompt, setPrompt] = useState("");
   const [outputType, setOutputType] = useState("Complete video with voiceover");
   const [platform, setPlatform] = useState("General");
-  const [durationSeconds, setDurationSeconds] = useState("5");
-  const [aspectRatio, setAspectRatio] = useState("9:16");
+  const [durationSeconds, setDurationSeconds] = useState("25");
+  const [aspectRatio, setAspectRatio] = useState("16:9");
   const [language, setLanguage] = useState("English");
   const [accent, setAccent] = useState("");
   const [tone, setTone] = useState("natural, polished, human");
@@ -382,6 +445,33 @@ export default function UniversalCompleteMediaRunAgentPanel({
       profile.services,
     ]
   );
+
+  const detectedPromptDuration = useMemo(() => detectDurationSecondsFromPrompt(prompt), [prompt]);
+  const detectedPromptAspectRatio = useMemo(() => detectAspectRatioFromPrompt(prompt), [prompt]);
+  const finalDurationSeconds = useMemo(
+    () => resolveFinalDuration(prompt, durationSeconds),
+    [prompt, durationSeconds]
+  );
+  const finalAspectRatio = useMemo(
+    () => resolveFinalAspectRatio(prompt, aspectRatio),
+    [prompt, aspectRatio]
+  );
+  const mediaSettingWarning = useMemo(
+    () => buildMediaSettingWarning(prompt, durationSeconds, aspectRatio),
+    [prompt, durationSeconds, aspectRatio]
+  );
+
+  useEffect(() => {
+    if (detectedPromptDuration && detectedPromptDuration !== durationSeconds) {
+      setDurationSeconds(detectedPromptDuration);
+    }
+  }, [detectedPromptDuration]);
+
+  useEffect(() => {
+    if (detectedPromptAspectRatio && detectedPromptAspectRatio !== aspectRatio) {
+      setAspectRatio(detectedPromptAspectRatio);
+    }
+  }, [detectedPromptAspectRatio]);
 
   useEffect(() => {
     onConfigChange?.(mediaConfig);
@@ -696,6 +786,11 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
 
   async function runCompleteMediaFromPopup() {
+    const settingWarning = buildMediaSettingWarning(prompt, durationSeconds, aspectRatio);
+    if (settingWarning) {
+      setStatusMessage(`Media settings warning: ${settingWarning} Using final resolved popup settings.`);
+    }
+
     const cleanPrompt = String(prompt || "").trim();
 
     if (!cleanPrompt) {
@@ -787,8 +882,8 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
       output_type: directConfig.output_type || outputType,
       platform: directConfig.platform || platform,
-      duration_seconds: directConfig.duration_seconds || durationSeconds,
-      aspect_ratio: directConfig.aspect_ratio || aspectRatio,
+      duration_seconds: finalDurationSeconds || directConfig.duration_seconds || durationSeconds,
+      aspect_ratio: finalAspectRatio || directConfig.aspect_ratio || aspectRatio,
       language: directConfig.language || language,
       accent: directConfig.accent || accent,
       tone: directConfig.tone,
@@ -1187,6 +1282,38 @@ export default function UniversalCompleteMediaRunAgentPanel({
                   onChange={setAccent}
                   mode={portalMode}
                 />
+              </div>
+
+              <div
+                data-complete-media-final-settings="true"
+                style={{
+                  marginTop: 12,
+                  border: mediaSettingWarning
+                    ? "1px solid rgba(245,158,11,.35)"
+                    : "1px solid rgba(14,207,188,.24)",
+                  background: mediaSettingWarning
+                    ? "rgba(245,158,11,.08)"
+                    : "rgba(14,207,188,.06)",
+                  borderRadius: 14,
+                  padding: 12,
+                  color: "#dbeafe",
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                }}
+              >
+                <strong style={{ display: "block", color: "#fff", marginBottom: 4 }}>
+                  Final media settings
+                </strong>
+                <span>
+                  Duration: {finalDurationSeconds}s · Aspect ratio: {finalAspectRatio}
+                  {detectedPromptDuration ? ` · Prompt duration detected: ${detectedPromptDuration}s` : ""}
+                  {detectedPromptAspectRatio ? ` · Prompt aspect detected: ${detectedPromptAspectRatio}` : ""}
+                </span>
+                {mediaSettingWarning ? (
+                  <div style={{ marginTop: 8, color: "#fcd34d", fontWeight: 850 }}>
+                    {mediaSettingWarning}
+                  </div>
+                ) : null}
               </div>
 
               <button
