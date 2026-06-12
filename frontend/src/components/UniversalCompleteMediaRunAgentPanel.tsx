@@ -107,6 +107,19 @@ const DEFAULT_CREATIVE_AGENTS = [
   "marketing_specialist_agent",
 ];
 
+const POPUP_CREATIVE_AGENT_OPTIONS = [
+  { value: "auto", label: "Auto-select best creative agent" },
+  { value: "ugc_creative_agent", label: "UGC Creative Agent" },
+  { value: "social_media_manager_content_creator_agent", label: "Social Media / Content Creator Agent" },
+  { value: "ad_creative_agent", label: "Ad Creative Agent" },
+  { value: "campaign_launch_agent", label: "Campaign Launch Agent" },
+  { value: "creative_rotation_agent", label: "Creative Rotation Agent" },
+  { value: "product_image_direction_agent", label: "Product Image Direction Agent" },
+  { value: "product_copywriting_agent", label: "Product Copywriting Agent" },
+  { value: "marketing_specialist_agent", label: "Marketing Specialist Agent" },
+];
+
+
 function isCreativeAgent(agent: string) {
   const value = String(agent || "").toLowerCase();
   return CREATIVE_AGENT_KEYWORDS.some((keyword) => value.includes(keyword));
@@ -214,6 +227,8 @@ export default function UniversalCompleteMediaRunAgentPanel({
 }) {
   const portalMode: "admin" | "client" = mode === "admin" ? "admin" : "client";
 
+  const [selectedPopupAgent, setSelectedPopupAgent] = useState("auto");
+
   const providedAgents = selectedAgents?.length
     ? selectedAgents
     : selectedAgent
@@ -230,8 +245,13 @@ export default function UniversalCompleteMediaRunAgentPanel({
           ? providedAgents
           : DEFAULT_CREATIVE_AGENTS.slice(0, 3);
 
-  const primaryAgent =
+  const autoSelectedCreativeAgent =
     agents.find(isCreativeAgent) || agents[0] || "ugc_creative_agent";
+
+  const primaryAgent =
+    selectedPopupAgent && selectedPopupAgent !== "auto"
+      ? selectedPopupAgent
+      : autoSelectedCreativeAgent;
 
   const shouldShow =
     portalMode === "admin" || agents.some(isCreativeAgent) || providedAgents.length === 0;
@@ -242,6 +262,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
   const [statusMessage, setStatusMessage] = useState(
     "Ready. Click Create complete media now to run directly from this popup."
   );
+
 
   const [prompt, setPrompt] = useState("");
   const [outputType, setOutputType] = useState("Complete video with voiceover");
@@ -341,6 +362,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
       soundEffects,
       callToAction,
       primaryAgent,
+      selectedPopupAgent,
       agents,
       profile.business_niche,
       profile.industry,
@@ -391,33 +413,50 @@ export default function UniversalCompleteMediaRunAgentPanel({
   }, []);
 
   async function runCompleteMediaFromPopup() {
+    const cleanPrompt = String(prompt || "").trim();
+
+    if (!cleanPrompt) {
+      setStatusMessage("Add a media prompt first, then click Create complete media now.");
+      return;
+    }
+
     setRunning(true);
     setStatusMessage("Creating complete media directly from this popup...");
 
+    const activeCreativeAgent =
+      selectedPopupAgent && selectedPopupAgent !== "auto"
+        ? selectedPopupAgent
+        : primaryAgent || "ugc_creative_agent";
+
     const directConfig = {
       ...mediaConfig,
+      enabled: true,
+      prompt: cleanPrompt,
+      task: cleanPrompt,
+      agent_id: activeCreativeAgent,
+      selected_agent: activeCreativeAgent,
+      selected_agents: [activeCreativeAgent],
       requested_at: new Date().toISOString(),
+      requested_from: "complete_media_popup",
+      run_direct_from_popup: true,
+      native_popup_execution: true,
+      creative_agent_direct_execution: true,
     };
 
-    const endpoint =
-      portalMode === "admin"
-        ? "/api/admin-universal-complete-media"
-        : "/api/universal-complete-media";
-
-    const payload = {
+    const mediaPayload = {
       source: "complete_media_popup",
       requested_from: "complete_media_popup",
       portal_mode: portalMode,
       mode: portalMode,
-      selected_agent: primaryAgent,
-      selected_agents: agents,
-      agent_id: primaryAgent,
-      agent_ids: agents,
+      selected_agent: activeCreativeAgent,
+      selected_agents: [activeCreativeAgent],
+      agent_id: activeCreativeAgent,
+      agent_ids: [activeCreativeAgent],
       business_profile: profile,
       complete_media_config: directConfig,
       media_config: directConfig,
-      prompt: directConfig.prompt,
-      task: directConfig.prompt,
+      prompt: cleanPrompt,
+      task: cleanPrompt,
       output_type: directConfig.output_type,
       platform: directConfig.platform,
       duration_seconds: directConfig.duration_seconds,
@@ -431,6 +470,55 @@ export default function UniversalCompleteMediaRunAgentPanel({
       owner_admin_unrestricted: portalMode === "admin",
     };
 
+    const governedRunAgentPayload = {
+      source: "complete_media_popup",
+      requested_from: "complete_media_popup",
+      action: "run_agent",
+      execution_action: "governed_live_provider_generation",
+      action_type: "governed_live_provider_generation",
+      agent_id: activeCreativeAgent,
+      selected_agent: activeCreativeAgent,
+      selected_agents: [activeCreativeAgent],
+      agent_ids: [activeCreativeAgent],
+      task: cleanPrompt,
+      prompt: cleanPrompt,
+      business_profile: profile,
+      complete_media_config: directConfig,
+      media_config: directConfig,
+      run_direct_from_popup: true,
+      native_popup_execution: true,
+      creative_agent_direct_execution: true,
+      owner_admin_unrestricted: portalMode === "admin",
+      customer_safe: portalMode !== "admin",
+    };
+
+    const endpointAttempts =
+      portalMode === "admin"
+        ? [
+            {
+              endpoint: "/api/admin-universal-complete-media",
+              payload: mediaPayload,
+            },
+            {
+              endpoint: "/api/admin-deployment-control",
+              payload: governedRunAgentPayload,
+            },
+            {
+              endpoint: "/api/run-agent",
+              payload: governedRunAgentPayload,
+            },
+          ]
+        : [
+            {
+              endpoint: "/api/universal-complete-media",
+              payload: mediaPayload,
+            },
+            {
+              endpoint: "/api/run-agent",
+              payload: governedRunAgentPayload,
+            },
+          ];
+
     try {
       window.localStorage.setItem(
         "universal_complete_media_config",
@@ -438,60 +526,87 @@ export default function UniversalCompleteMediaRunAgentPanel({
       );
     } catch {}
 
-    try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Portal-Mode": portalMode,
-          "X-Requested-From": "complete_media_popup",
-        },
-        body: JSON.stringify(payload),
-      });
+    const failedAttempts: string[] = [];
 
-      const result = await response.json().catch(() => ({
-        success: false,
-        error: "Invalid JSON response from complete media endpoint.",
-      }));
+    for (const attempt of endpointAttempts) {
+      try {
+        setStatusMessage(`Creating complete media through ${attempt.endpoint}...`);
 
-      if (!response.ok || result?.success === false) {
-        setStatusMessage(
+        const response = await fetch(attempt.endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Portal-Mode": portalMode,
+            "X-Requested-From": "complete_media_popup",
+          },
+          body: JSON.stringify(attempt.payload),
+        });
+
+        const result = await response.json().catch(() => ({
+          success: false,
+          error: "Invalid JSON response from execution endpoint.",
+        }));
+
+        const errorText = String(
           result?.error ||
             result?.message ||
-            `Complete media request failed with HTTP ${response.status}.`
+            result?.detail ||
+            result?.status ||
+            ""
         );
+
+        const bridgeFailed =
+          errorText.includes("direct_media_provider_bridge_failed") ||
+          errorText.includes("bridge_failed");
+
+        if (!response.ok || result?.success === false || bridgeFailed) {
+          failedAttempts.push(`${attempt.endpoint}: ${errorText || response.status}`);
+          continue;
+        }
+
+        const jobId =
+          result?.media_job_id ||
+          result?.job_id ||
+          result?.execution_id ||
+          result?.request_id ||
+          result?.id ||
+          "";
+
+        setStatusMessage(
+          jobId
+            ? `Complete media started from popup with ${activeCreativeAgent}. Job ID: ${jobId}`
+            : `Complete media started from popup with ${activeCreativeAgent}.`
+        );
+
+        onResult?.(result);
+
+        window.dispatchEvent(
+          new CustomEvent("universal-complete-media-run-now", {
+            detail: {
+              endpoint: attempt.endpoint,
+              payload: attempt.payload,
+              result,
+              native_popup_execution: true,
+              selected_agent: activeCreativeAgent,
+            },
+          })
+        );
+
         setRunning(false);
         return;
+      } catch (error) {
+        failedAttempts.push(
+          `${attempt.endpoint}: ${
+            error instanceof Error ? error.message : "request failed"
+          }`
+        );
       }
-
-      const jobId = result?.media_job_id || result?.job_id || result?.id || "";
-      setStatusMessage(
-        jobId
-          ? `Complete media started directly from popup. Job ID: ${jobId}`
-          : "Complete media started directly from popup."
-      );
-
-      onResult?.(result);
-
-      window.dispatchEvent(
-        new CustomEvent("universal-complete-media-run-now", {
-          detail: {
-            endpoint,
-            payload,
-            result,
-            native_popup_execution: true,
-          },
-        })
-      );
-    } catch (error) {
-      setStatusMessage(
-        error instanceof Error
-          ? error.message
-          : "Complete media popup execution failed."
-      );
-    } finally {
-      setRunning(false);
     }
+
+    setStatusMessage(
+      `Complete media could not start. Tried: ${failedAttempts.join(" | ")}`
+    );
+    setRunning(false);
   }
 
   if (!shouldShow) return null;
@@ -529,7 +644,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="Run Agent media options"
+          aria-label="Create Media"
           onClick={() => setPopupOpen(false)}
           style={{
             position: "fixed",
@@ -576,7 +691,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
                     color: portalMode === "admin" ? "#818cf8" : "#4f46e5",
                   }}
                 >
-                  Run Agent media options
+                  Create Media
                 </div>
                 <h3
                   style={{
@@ -584,7 +699,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
                     color: portalMode === "admin" ? "#fff" : "#0f172a",
                   }}
                 >
-                  Complete media output
+                  Create complete media
                 </h3>
                 <p
                   style={{
@@ -594,7 +709,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
                     lineHeight: 1.5,
                   }}
                 >
-                  Configure the media output here, then click Create complete media now. This runs directly from the popup without using the main Run Agent section.
+                  Choose the creative agent inside this popup, enter the media prompt, then click Create complete media now. You do not need to use the main Run Agent section.
                 </p>
               </div>
 
@@ -616,6 +731,30 @@ export default function UniversalCompleteMediaRunAgentPanel({
             </div>
 
             <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
+              <label
+                data-complete-media-agent-selector="true"
+                style={{
+                  display: "grid",
+                  gap: 6,
+                  fontSize: 12.5,
+                  fontWeight: 850,
+                  color: portalMode === "admin" ? "#cbd5e1" : "#0f172a",
+                }}
+              >
+                Creative agent
+                <select
+                  value={selectedPopupAgent}
+                  onChange={(event) => setSelectedPopupAgent(event.target.value)}
+                  style={fieldStyle(portalMode)}
+                >
+                  {POPUP_CREATIVE_AGENT_OPTIONS.map((agent) => (
+                    <option key={agent.value} value={agent.value}>
+                      {agent.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
               <label
                 style={{
                   display: "grid",
