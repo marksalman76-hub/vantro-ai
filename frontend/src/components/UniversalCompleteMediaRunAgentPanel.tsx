@@ -292,7 +292,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
                   Complete media output
                 </h3>
                 <p style={{ margin: "6px 0 0", color: mode === "admin" ? "#94a3b8" : "#64748b", fontSize: 13, lineHeight: 1.5 }}>
-                  Configure optional media output here. The actual execution still happens through the main Run Agent button.
+                  Configure optional media output here, then click Create complete media now to run directly from this popup.
                 </p>
               </div>
 
@@ -366,6 +366,71 @@ export default function UniversalCompleteMediaRunAgentPanel({
               >
                 {advancedOpen ? "Hide advanced media controls" : "Show advanced media controls"}
               </button>
+              <button
+                type="button"
+                data-complete-media-run-now="true"
+                onClick={() => {
+                  try {
+                    const rawConfig = window.localStorage.getItem("universal_complete_media_config");
+                    const config = rawConfig ? JSON.parse(rawConfig) : {};
+                    const nextConfig = {
+                      ...config,
+                      enabled: true,
+                      run_direct_from_popup: true,
+                      requested_from: "complete_media_popup",
+                    };
+
+                    window.localStorage.setItem("universal_complete_media_config", JSON.stringify(nextConfig));
+                    window.dispatchEvent(
+                      new CustomEvent("universal-complete-media-config", {
+                        detail: nextConfig,
+                      })
+                    );
+
+                    const buttons = Array.from(document.querySelectorAll("button"));
+                    const runAgentButton = buttons.find((button) => {
+                      const label = (button.textContent || "").replace(/\s+/g, " ").trim();
+                      return label === "Run Agent";
+                    });
+
+                    if (runAgentButton instanceof HTMLButtonElement) {
+                      runAgentButton.click();
+                    } else {
+                      window.dispatchEvent(
+                        new CustomEvent("universal-complete-media-run-now", {
+                          detail: nextConfig,
+                        })
+                      );
+                    }
+                  } catch {
+                    window.dispatchEvent(
+                      new CustomEvent("universal-complete-media-run-now", {
+                        detail: {
+                          enabled: true,
+                          run_direct_from_popup: true,
+                          requested_from: "complete_media_popup",
+                        },
+                      })
+                    );
+                  }
+                }}
+                style={{
+                  width: "fit-content",
+                  border: "1px solid rgba(34,197,94,.36)",
+                  borderRadius: 999,
+                  padding: "10px 14px",
+                  background:
+                    mode === "admin"
+                      ? "linear-gradient(135deg, rgba(34,197,94,.24), rgba(6,182,212,.16))"
+                      : "linear-gradient(135deg, rgba(34,197,94,.12), rgba(79,70,229,.10))",
+                  color: mode === "admin" ? "#bbf7d0" : "#166534",
+                  fontWeight: 950,
+                  cursor: "pointer",
+                  boxShadow: "0 14px 34px rgba(15,23,42,.18)",
+                }}
+              >
+                Create complete media now
+              </button>
 
               {advancedOpen ? (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))", gap: 10 }}>
@@ -396,7 +461,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
                 fontSize: 12.5,
                 lineHeight: 1.55,
               }}>
-                Saved. Close this popup and click the main <strong>Run Agent</strong> button to execute with these media settings.
+                Saved. Click <strong>Run Agent</strong> to execute with these media settings, or close this popup without running.
               </div>
             </div>
           </div>
