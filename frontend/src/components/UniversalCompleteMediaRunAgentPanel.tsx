@@ -369,49 +369,146 @@ export default function UniversalCompleteMediaRunAgentPanel({
               <button
                 type="button"
                 data-complete-media-run-now="true"
-                onClick={() => {
+                data-complete-media-native-execution="true"
+                onClick={async () => {
+                  const button = document.querySelector('[data-complete-media-native-execution="true"]') as HTMLButtonElement | null;
+                  const statusBox = document.querySelector('[data-complete-media-popup-status="true"]') as HTMLElement | null;
+
+                  const setStatus = (message: string) => {
+                    if (statusBox) statusBox.textContent = message;
+                  };
+
                   try {
+                    if (button) {
+                      button.disabled = true;
+                      button.textContent = "Creating complete media...";
+                    }
+
+                    setStatus("Creating complete media directly from this popup...");
+
                     const rawConfig = window.localStorage.getItem("universal_complete_media_config");
-                    const config = rawConfig ? JSON.parse(rawConfig) : {};
-                    const nextConfig = {
-                      ...config,
+                    const savedConfig = rawConfig ? JSON.parse(rawConfig) : {};
+
+                    const activeAgents = selectedAgents?.length
+                      ? selectedAgents
+                      : selectedAgent
+                        ? [selectedAgent]
+                        : [];
+
+                    const selectedCreativeAgent =
+                      savedConfig.agent_id ||
+                      activeAgents.find((agent) =>
+                        String(agent || "")
+                          .toLowerCase()
+                          .match(/creative|media|video|ugc|ad|campaign|social|image|content/)
+                      ) ||
+                      activeAgents[0] ||
+                      "ugc_creative_agent";
+
+                    const directConfig = {
+                      ...savedConfig,
                       enabled: true,
                       run_direct_from_popup: true,
+                      native_popup_execution: true,
+                      creative_agent_direct_execution: true,
                       requested_from: "complete_media_popup",
+                      requested_at: new Date().toISOString(),
+                      agent_id: selectedCreativeAgent,
+                      selected_agent: selectedCreativeAgent,
+                      selected_agents: activeAgents,
                     };
 
-                    window.localStorage.setItem("universal_complete_media_config", JSON.stringify(nextConfig));
+                    window.localStorage.setItem("universal_complete_media_config", JSON.stringify(directConfig));
                     window.dispatchEvent(
                       new CustomEvent("universal-complete-media-config", {
-                        detail: nextConfig,
+                        detail: directConfig,
                       })
                     );
 
-                    const buttons = Array.from(document.querySelectorAll("button"));
-                    const runAgentButton = buttons.find((button) => {
-                      const label = (button.textContent || "").replace(/\s+/g, " ").trim();
-                      return label === "Run Agent";
+                    const endpoint =
+                      mode === "admin"
+                        ? "/api/admin-universal-complete-media"
+                        : "/api/universal-complete-media";
+
+                    const payload = {
+                      source: "complete_media_popup",
+                      requested_from: "complete_media_popup",
+                      portal_mode: mode,
+                      mode,
+                      selected_agent: selectedCreativeAgent,
+                      selected_agents: activeAgents,
+                      agent_id: selectedCreativeAgent,
+                      agent_ids: activeAgents,
+                      business_profile: businessProfile || {},
+                      complete_media_config: directConfig,
+                      media_config: directConfig,
+                      prompt: directConfig.prompt || "",
+                      task: directConfig.prompt || "",
+                      output_type: directConfig.output_type,
+                      platform: directConfig.platform,
+                      duration_seconds: directConfig.duration_seconds,
+                      aspect_ratio: directConfig.aspect_ratio,
+                      language: directConfig.language,
+                      accent: directConfig.accent,
+                      run_direct_from_popup: true,
+                      native_popup_execution: true,
+                      creative_agent_direct_execution: true,
+                      customer_safe: mode !== "admin",
+                      owner_admin_unrestricted: mode === "admin",
+                    };
+
+                    const response = await fetch(endpoint, {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/json",
+                        "X-Portal-Mode": mode,
+                        "X-Requested-From": "complete_media_popup",
+                      },
+                      body: JSON.stringify(payload),
                     });
 
-                    if (runAgentButton instanceof HTMLButtonElement) {
-                      runAgentButton.click();
-                    } else {
-                      window.dispatchEvent(
-                        new CustomEvent("universal-complete-media-run-now", {
-                          detail: nextConfig,
-                        })
-                      );
+                    const result = await response.json().catch(() => ({
+                      success: false,
+                      error: "Invalid JSON response from complete media endpoint",
+                    }));
+
+                    if (!response.ok || result?.success === false) {
+                      const message =
+                        result?.error ||
+                        result?.message ||
+                        `Complete media request failed with HTTP ${response.status}`;
+                      setStatus(message);
+                      if (button) button.textContent = "Create complete media now";
+                      return;
                     }
-                  } catch {
+
+                    setStatus(
+                      result?.media_job_id
+                        ? `Complete media started from popup. Job ID: ${result.media_job_id}`
+                        : "Complete media started directly from popup."
+                    );
+
                     window.dispatchEvent(
                       new CustomEvent("universal-complete-media-run-now", {
                         detail: {
-                          enabled: true,
-                          run_direct_from_popup: true,
-                          requested_from: "complete_media_popup",
+                          endpoint,
+                          payload,
+                          result,
+                          native_popup_execution: true,
                         },
                       })
                     );
+
+                    if (button) button.textContent = "Complete media started";
+                  } catch (error) {
+                    setStatus(
+                      error instanceof Error
+                        ? error.message
+                        : "Complete media popup execution failed."
+                    );
+                    if (button) button.textContent = "Create complete media now";
+                  } finally {
+                    if (button) button.disabled = false;
                   }
                 }}
                 style={{
@@ -461,7 +558,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
                 fontSize: 12.5,
                 lineHeight: 1.55,
               }}>
-                Saved. Click <strong>Run Agent</strong> to execute with these media settings, or close this popup without running.
+                Ready. Click <strong>Run Agent</strong> to create complete media directly from this popup.
               </div>
             </div>
           </div>
