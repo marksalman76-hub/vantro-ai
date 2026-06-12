@@ -37,6 +37,7 @@ type CreativeMediaAssetsResponse = {
 
 import { useEffect, useState } from "react";
 import { extractLiveActionDeliverableText } from "../../lib/liveActionResultExtraction";
+import UniversalCompleteMediaRunAgentPanel from "@/components/UniversalCompleteMediaRunAgentPanel";
 
 const ADMIN_AGENT_OPTIONS: [string, string][] = [
   ["head_agent", "Head Agent"],
@@ -965,6 +966,100 @@ const [activeNav, setActiveNav] = useState("Overview");
   }
 
 
+
+  async function runAdminAgentWithMediaOptions() {
+    let completeMediaConfig: Record<string, any> = {};
+    try {
+      const storedConfig = window.localStorage.getItem("universal_complete_media_config");
+      completeMediaConfig = storedConfig ? JSON.parse(storedConfig) : {};
+    } catch {}
+
+    const mediaEnabled = Boolean(completeMediaConfig?.enabled);
+    const selectedCreativeAgent = selectedRun.find((agentId) =>
+      String(agentId || "").toLowerCase().includes("creative")
+      || String(agentId || "").toLowerCase().includes("media")
+      || String(agentId || "").toLowerCase().includes("video")
+      || String(agentId || "").toLowerCase().includes("audio")
+      || String(agentId || "").toLowerCase().includes("content")
+      || String(agentId || "").toLowerCase().includes("social")
+      || String(agentId || "").toLowerCase().includes("marketing")
+      || String(agentId || "").toLowerCase().includes("brand")
+      || String(agentId || "").toLowerCase().includes("ads")
+      || String(agentId || "").toLowerCase().includes("copy")
+      || String(agentId || "").toLowerCase().includes("website")
+      || String(agentId || "").toLowerCase().includes("product")
+      || String(agentId || "").toLowerCase().includes("ecommerce")
+    );
+
+    // ADMIN_RUN_AGENT_COMPLETE_MEDIA_ROUTE_V1
+    if (mediaEnabled && selectedCreativeAgent) {
+      try {
+        setRunning(true);
+        showToast("Running complete media workflow through admin protocol...");
+
+        const prompt = String(completeMediaConfig?.prompt || task || "").trim() || "Create a complete media file.";
+        const response = await fetch("/api/admin-universal-complete-media", {
+          method: "POST",
+          cache: "no-store",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...completeMediaConfig,
+            prompt,
+            agent_id: selectedCreativeAgent,
+            source: "admin_run_agent_media_popup",
+            owner_approved: true,
+            actor_role: "owner_admin",
+            tenant_id: "owner_admin",
+          }),
+        });
+
+        const wrapper = await response.json();
+        const result = wrapper?.data || wrapper;
+
+        setRunResult({
+          ...result,
+          success: response.ok && result?.success !== false,
+          status: result?.status || result?.message || "complete_media_workflow_submitted",
+          selected_agent_count: selectedRun.length,
+          results: [
+            {
+              ...result,
+              success: response.ok && result?.success !== false,
+              agent_id: selectedCreativeAgent,
+              provider: result?.provider || "universal_complete_media",
+              message: result?.message || result?.status || "Complete media workflow submitted.",
+              output: result?.message || result?.status || "Complete media workflow submitted.",
+            },
+          ],
+        });
+
+        showToast(result?.message || result?.status || "Complete media workflow submitted.");
+      } catch {
+        showToast("Admin complete media workflow failed before reaching backend.");
+        setRunResult({
+          success: false,
+          status: "admin_complete_media_failed",
+          selected_agent_count: selectedRun.length,
+          results: [
+            {
+              success: false,
+              agent_id: selectedCreativeAgent,
+              provider: "universal_complete_media",
+              message: "Admin complete media workflow failed before reaching backend.",
+            },
+          ],
+        });
+      } finally {
+        setRunning(false);
+      }
+
+      return;
+    }
+
+    return runAdminAgent();
+  }
+
   const navItems = ["Overview", "Run Agent", "Deploy Clients", "Client Registry", "Runtime Health", "Provider Governance", "Orchestration", "Recovery", "Billing", "Operations Store"];
   const runtimeStatus = runtime?.runtime?.platform_status || "online";
   const registryTotal = clientRegistrySummary?.total || clientRegistrySummary?.tenant_count || clientRegistry.length || 0;
@@ -1109,9 +1204,17 @@ const [activeNav, setActiveNav] = useState("Overview");
               <label>Task</label>
               <textarea value={task} onChange={(e) => setTask(e.target.value)} />
 
+              {/* ADMIN_RUN_AGENT_MEDIA_POPUP_V1 */}
+              <UniversalCompleteMediaRunAgentPanel
+                mode="admin"
+                selectedAgents={selectedRun}
+                selectedAgent={selectedRun[0]}
+                businessProfile={{}}
+              />
+
               {running ? <div className="progress"><span /></div> : null}
 
-              <button className="primary" onClick={runAdminAgent} disabled={running}>{running ? "Running..." : selectedRun.length > 1 ? "Run Selected Agents" : "Run Agent"}</button>
+              <button className="primary" onClick={runAdminAgentWithMediaOptions} disabled={running}>{running ? "Running..." : selectedRun.length > 1 ? "Run Selected Agents" : "Run Agent"}</button>
 
               <div className={runResult ? "output has premiumExecutionOutput" : "output premiumExecutionOutput"}>
                 {!runResult ? (
