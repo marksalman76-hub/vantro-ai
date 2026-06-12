@@ -1094,6 +1094,28 @@ def build_universal_complete_media_plan(payload: Dict[str, Any]) -> Dict[str, An
 
 
 
+
+def _ucm_provider_safe_voice_prompt(prompt: str, duration_seconds: int | float = 5) -> str:
+    """
+    Keep voiceover close to the target clip duration.
+    Approximate spoken English at 2.2 words/sec for clear promo narration.
+    """
+    clean = " ".join(str(prompt or "").split()).strip()
+    duration = max(3.0, float(duration_seconds or 5))
+    max_words = max(8, int(duration * 2.2))
+
+    # Prefer quoted voiceover line if present.
+    quoted = re.findall(r"[“\"]([^”\"]{8,260})[”\"]", clean)
+    if quoted:
+        clean = " ".join(quoted).strip()
+
+    words = clean.split()
+    if len(words) > max_words:
+        clean = " ".join(words[:max_words]).strip()
+
+    return clean
+
+
 def _ucm_provider_safe_visual_prompt(prompt: str, max_chars: int = 950) -> str:
     """
     Runway promptText currently rejects prompts over 1000 characters.
@@ -1220,8 +1242,10 @@ def _ucm_compose_with_sync(video_job: Dict[str, Any], audio_job: Dict[str, Any],
         "aac",
         "-b:a",
         "192k",
-        "-af",
-        "loudnorm=I=-16:TP=-1.5:LRA=11,aresample=async=1:first_pts=0",
+        "-ac",
+        "2",
+        "-ar",
+        "44100",
         "-shortest",
         "-movflags",
         "+faststart",
@@ -1236,7 +1260,7 @@ def _ucm_compose_with_sync(video_job: Dict[str, Any], audio_job: Dict[str, Any],
         "video_duration_seconds": video_duration,
         "audio_duration_seconds": audio_duration,
         "output_path": str(output_path),
-        "sync_strategy": "normalise_audio_resample_async_shortest_faststart",
+        "sync_strategy": "safe_stereo_44100hz_aac_shortest_faststart",
         "started_at": _now(),
     })
 
@@ -1403,11 +1427,28 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "timed_plan": plan.get("timed_plan"),
             })
 
+            provider_voice_prompt = _ucm_provider_safe_voice_prompt(
+                plan["voice_prompt"],
+                controls["duration_seconds"],
+            )
+
+            _write_job({
+                **base_job,
+                "accepted": True,
+                "status": "running_audio_generation",
+                "video_job_id": video_result.get("job_id"),
+                "video_provider_job_id": video_result.get("provider_job_id"),
+                "timed_plan": plan.get("timed_plan"),
+                "voice_prompt_character_count": len(plan.get("voice_prompt") or ""),
+                "provider_voice_prompt_character_count": len(provider_voice_prompt),
+                "provider_voice_prompt_words": len(provider_voice_prompt.split()),
+            })
+
             audio_result = execute_direct_media_provider_job({
                 "agent_id": controls["agent_id"],
                 "provider": controls["audio_provider"],
                 "media_type": "audio",
-                "prompt": plan["voice_prompt"],
+                "prompt": provider_voice_prompt,
                 "owner_approved": True,
                 "owner_approval_granted": True,
             })
