@@ -786,10 +786,6 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
 
   async function runCompleteMediaFromPopup() {
-    const settingWarning = buildMediaSettingWarning(prompt, durationSeconds, aspectRatio);
-    if (settingWarning) {
-      setStatusMessage(`Media settings warning: ${settingWarning} Using final resolved popup settings.`);
-    }
 
     const cleanPrompt = String(prompt || "").trim();
 
@@ -882,8 +878,8 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
       output_type: directConfig.output_type || outputType,
       platform: directConfig.platform || platform,
-      duration_seconds: finalDurationSeconds || directConfig.duration_seconds || durationSeconds,
-      aspect_ratio: finalAspectRatio || directConfig.aspect_ratio || aspectRatio,
+      duration_seconds: durationSeconds,
+      aspect_ratio: aspectRatio,
       language: directConfig.language || language,
       accent: directConfig.accent || accent,
       tone: directConfig.tone,
@@ -1305,7 +1301,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
                   Final media settings
                 </strong>
                 <span>
-                  Duration: {finalDurationSeconds}s · Aspect ratio: {finalAspectRatio}
+                  Duration: {durationSeconds}s · Aspect ratio: {aspectRatio}
                   {detectedPromptDuration ? ` · Prompt duration detected: ${detectedPromptDuration}s` : ""}
                   {detectedPromptAspectRatio ? ` · Prompt aspect detected: ${detectedPromptAspectRatio}` : ""}
                 </span>
