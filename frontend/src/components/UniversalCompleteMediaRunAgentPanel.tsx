@@ -566,42 +566,124 @@ export default function UniversalCompleteMediaRunAgentPanel({
       return;
     }
 
-    const statusEndpoint =
+    const isUniversalCompleteMediaJob = String(jobId).startsWith("universal_complete_media_job_");
+
+    const statusEndpoints =
       portalMode === "admin"
-        ? `/api/admin-direct-media-provider-job-status?job_id=${encodeURIComponent(jobId)}`
-        : `/api/universal-complete-media-status?job_id=${encodeURIComponent(jobId)}`;
+        ? [
+            `/api/admin-direct-media-provider-job-status?job_id=${encodeURIComponent(jobId)}`,
+            isUniversalCompleteMediaJob
+              ? `/api/admin-universal-complete-media?job_id=${encodeURIComponent(jobId)}`
+              : "",
+          ].filter(Boolean)
+        : [
+            isUniversalCompleteMediaJob
+              ? `/api/universal-complete-media-status?job_id=${encodeURIComponent(jobId)}`
+              : `/api/universal-complete-media-status?job_id=${encodeURIComponent(jobId)}`,
+          ];
 
     try {
       setStatusMessage(`Checking media job status for ${jobId}...`);
 
-      const response = await fetch(statusEndpoint, {
-        method: "GET",
-        headers: {
-          "X-Portal-Mode": portalMode,
-          "X-Requested-From": "complete_media_popup",
-        },
-      });
+      let lastResult: any = null;
+      let lastHttpStatus = 0;
 
-      const result = await response.json().catch(() => ({
-        success: false,
-        error: "Invalid JSON response from media job status endpoint.",
-      }));
+      for (const statusEndpoint of statusEndpoints) {
+        const response = await fetch(statusEndpoint, {
+          method: "GET",
+          headers: {
+            "X-Portal-Mode": portalMode,
+            "X-Requested-From": "complete_media_popup",
+          },
+          cache: "no-store",
+        });
 
-      if (!response.ok || result?.success === false) {
-        setStatusMessage(
-          result?.error ||
-            result?.message ||
-            `Media job status check failed with HTTP ${response.status}.`
-        );
+        lastHttpStatus = response.status;
+
+        const result = await response.json().catch(() => ({
+          success: false,
+          error: "Invalid JSON response from media job status endpoint.",
+          http_status: response.status,
+        }));
+
+        lastResult = result;
+
+        const resultStatus = extractPopupMediaStatus(result);
+        const resultJobId = extractPopupMediaJobId(result) || jobId;
+
+        const acceptableUniversalStatus =
+          isUniversalCompleteMediaJob &&
+          [
+            "queued",
+            "received",
+            "running",
+            "running_visual_generation",
+            "running_audio_generation",
+            "running_synchronised_composition",
+            "completed",
+            "universal_complete_media_visual_failed",
+            "universal_complete_media_audio_failed",
+            "universal_complete_media_composition_failed",
+            "universal_complete_media_exception",
+          ].includes(String(resultStatus || result?.status || "").trim());
+
+        const statusRouteSucceeded =
+          response.ok &&
+          (
+            result?.success === true ||
+            result?.accepted === true ||
+            Boolean(resultStatus) ||
+            acceptableUniversalStatus ||
+            result?.job_id === jobId ||
+            result?.job_id === resultJobId
+          );
+
+        if (!statusRouteSucceeded) {
+          continue;
+        }
+
+        const extracted = applyPopupMediaJobResult({
+          ...result,
+          job_id: resultJobId,
+        });
+
+        const status = extracted.status || resultStatus || result?.status || "status received";
+
+        setStatusMessage(`Media job ${jobId} status: ${status}`);
+
+        const terminalStatus = String(status || "").toLowerCase();
+        if (
+          terminalStatus === "completed" ||
+          terminalStatus.includes("failed") ||
+          terminalStatus.includes("exception") ||
+          terminalStatus.includes("blocked")
+        ) {
+          setRunning(false);
+        }
+
         return;
       }
 
-      const extracted = applyPopupMediaJobResult(result);
+      const fallbackStatus =
+        extractPopupMediaStatus(lastResult) ||
+        lastResult?.status ||
+        "";
+
+      if (isUniversalCompleteMediaJob && fallbackStatus) {
+        applyPopupMediaJobResult({
+          ...lastResult,
+          job_id: jobId,
+          status: fallbackStatus,
+        });
+        setStatusMessage(`Media job ${jobId} status: ${fallbackStatus}`);
+        return;
+      }
 
       setStatusMessage(
-        extracted.status
-          ? `Media job ${jobId} status: ${extracted.status}`
-          : `Media job ${jobId} status received.`
+        lastResult?.error ||
+          lastResult?.message ||
+          lastResult?.reason ||
+          `Media job status check returned HTTP ${lastHttpStatus || 200}, but the response did not match a supported job status shape.`
       );
     } catch (error) {
       setStatusMessage(
@@ -611,6 +693,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
       );
     }
   }
+
 
   async function runCompleteMediaFromPopup() {
     const cleanPrompt = String(prompt || "").trim();
