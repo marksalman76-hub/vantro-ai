@@ -80,7 +80,12 @@ export default function UniversalCompleteMediaRunAgentPanel({
   onConfigChange,
 }: UniversalCompleteMediaRunAgentPanelProps) {
   const activeAgents = selectedAgents?.length ? selectedAgents : selectedAgent ? [selectedAgent] : [];
-  const mediaCapable = activeAgents.some(isCreativeCapableAgent);
+
+  // ADMIN_MEDIA_POPUP_ALWAYS_VISIBLE_FOR_SELECTED_AGENT_V1
+  // Admin can see the media options whenever an agent is selected. Client remains creative-agent gated.
+  const mediaCapable = mode === "admin"
+    ? activeAgents.length > 0
+    : activeAgents.some(isCreativeCapableAgent);
 
   const [open, setOpen] = useState(false);
   const [enabled, setEnabled] = useState(false);
@@ -213,7 +218,12 @@ export default function UniversalCompleteMediaRunAgentPanel({
     return null;
   }
 
-  const statusText = enabled ? "Complete media enabled" : "Optional media output";
+  const selectedAgentLooksCreative = activeAgents.some(isCreativeCapableAgent);
+  const statusText = enabled
+    ? "Complete media enabled"
+    : mode === "admin" && !selectedAgentLooksCreative
+    ? "Admin override available"
+    : "Optional media output";
 
   return (
     <div data-run-agent-media-popup="true" data-mode={mode} style={{ marginTop: 12 }}>
