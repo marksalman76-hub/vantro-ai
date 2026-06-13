@@ -5699,3 +5699,62 @@ def admin_universal_complete_media_status(job_id: str = "") -> Dict[str, object]
 
     return universal_complete_media_status()
 
+
+# SAFE_RUNWAY_KEY_DIAGNOSTICS_V1
+@app.get("/admin/runway-key-diagnostics")
+def admin_runway_key_diagnostics(
+    x_actor_role: str | None = Header(default=None),
+    x_admin_token: str | None = Header(default=None),
+    authorization: str | None = Header(default=None),
+) -> Dict[str, object]:
+    import hashlib
+    import os
+
+    if not _admin_media_job_authorized(
+        x_actor_role=x_actor_role,
+        x_admin_token=x_admin_token,
+        authorization=authorization,
+    ):
+        return {
+            "success": False,
+            "error": "admin_only",
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
+
+    candidate_names = [
+        "RUNWAY_API_KEY",
+        "RUNWAYML_API_KEY",
+        "RUNWAY_TOKEN",
+        "RUNWAYML_TOKEN",
+        "RUNWAY_API_TOKEN",
+    ]
+
+    keys = []
+    for name in candidate_names:
+        value = str(os.getenv(name) or "").strip()
+        if value:
+            digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
+            keys.append({
+                "env_name": name,
+                "present": True,
+                "length": len(value),
+                "sha256_prefix": digest[:12],
+                "starts_with": value[:4] + "***" if len(value) >= 4 else "***",
+            })
+        else:
+            keys.append({
+                "env_name": name,
+                "present": False,
+                "length": 0,
+            })
+
+    return {
+        "success": True,
+        "status": "runway_key_metadata_only",
+        "keys": keys,
+        "note": "No credential values are exposed. Compare sha256_prefix/length with the intended key locally or in Render.",
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
+
