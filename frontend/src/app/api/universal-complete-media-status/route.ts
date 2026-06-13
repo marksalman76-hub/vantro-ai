@@ -87,10 +87,16 @@ export async function GET(req: NextRequest) {
     "x-requested-from": "universal_complete_media_status_proxy",
   };
 
-  const statusUrls = [
-    `${backendBaseUrl()}/admin/universal-complete-media-status?job_id=${encodeURIComponent(jobId)}`,
-    `${backendBaseUrl()}/admin/direct-media-provider-job-status/${encodeURIComponent(jobId)}`,
-  ];
+  const isUniversalJob = jobId.startsWith("universal_complete_media_job_");
+
+  const statusUrls = isUniversalJob
+    ? [
+        `${backendBaseUrl()}/admin/universal-complete-media-status?job_id=${encodeURIComponent(jobId)}`,
+      ]
+    : [
+        `${backendBaseUrl()}/admin/universal-complete-media-status?job_id=${encodeURIComponent(jobId)}`,
+        `${backendBaseUrl()}/admin/direct-media-provider-job-status/${encodeURIComponent(jobId)}`,
+      ];
 
   let lastError = "";
 
@@ -128,9 +134,11 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(
     {
       success: false,
-      status: "status_lookup_timeout",
+      status: isUniversalJob ? "job_status_not_returned" : "status_lookup_timeout",
       job_id: jobId,
-      message: "Universal complete media status lookup timed out before a backend response was available.",
+      message: isUniversalJob
+        ? "Backend did not return a per-job status for this universal complete media job."
+        : "Universal complete media status lookup timed out before a backend response was available.",
       last_error: lastError,
       polling_required: true,
       customer_safe: true,
