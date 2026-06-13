@@ -51,6 +51,15 @@ function clientSafePayload(data: any) {
   delete clone.raw_provider_status;
   delete clone.provider_result;
   delete clone.error;
+  delete clone.preflight;
+  delete clone.failed_preflight_checks;
+  delete clone.blocked_provider_calls;
+  delete clone.estimated_credit_risk;
+  delete clone.executable_visual_providers;
+  delete clone.non_executable_visual_providers;
+  delete clone.executable_audio_providers;
+  delete clone.selected_visual_provider_order;
+  delete clone.selected_audio_provider;
   clone.customer_safe = true;
   clone.credential_values_exposed = false;
   clone.internal_config_exposed = false;

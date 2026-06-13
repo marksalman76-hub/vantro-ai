@@ -269,6 +269,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
   const [popupMediaPreviewUrl, setPopupMediaPreviewUrl] = useState("");
   const [popupMediaAssetUrl, setPopupMediaAssetUrl] = useState("");
   const [popupMediaFinalOutput, setPopupMediaFinalOutput] = useState("");
+  const [preflightResult, setPreflightResult] = useState<any>(null);
 
 
   const [prompt, setPrompt] = useState("");
@@ -577,6 +578,26 @@ export default function UniversalCompleteMediaRunAgentPanel({
       .join(" | ");
   }
 
+  function preflightSummary(result: any) {
+    if (!result || typeof result !== "object") return "";
+    const failedChecks = Array.isArray(result.failed_preflight_checks)
+      ? result.failed_preflight_checks
+      : [];
+    const risk = result?.estimated_credit_risk?.risk_level;
+    const visualCount = Array.isArray(result.executable_visual_providers)
+      ? result.executable_visual_providers.length
+      : 0;
+    const audioCount = Array.isArray(result.executable_audio_providers)
+      ? result.executable_audio_providers.length
+      : 0;
+
+    if (failedChecks.length > 0) {
+      return `Preflight blocked: ${failedChecks.map((check: any) => check?.reason || check?.check).filter(Boolean).join(" | ")}`;
+    }
+
+    return `Preflight ready. Visual providers: ${visualCount}. Audio providers: ${audioCount}. Credit risk: ${risk || "unknown"}.`;
+  }
+
   async function checkPopupMediaJobStatus(jobIdOverride?: string) {
     const jobId = jobIdOverride || popupMediaJobId;
 
@@ -640,6 +661,9 @@ export default function UniversalCompleteMediaRunAgentPanel({
             "running_audio_generation",
             "running_synchronised_composition",
             "completed",
+            "universal_complete_media_preflight_dry_run",
+            "universal_complete_media_preflight_ready",
+            "universal_complete_media_preflight_blocked",
             "universal_complete_media_visual_failed",
             "visual_failed_all_providers",
             "universal_complete_media_audio_failed",
@@ -720,12 +744,34 @@ export default function UniversalCompleteMediaRunAgentPanel({
   }
 
 
-  async function runCompleteMediaFromPopup() {
+  async function runCompleteMediaFromPopup(options: {
+    dryRun?: boolean;
+    smokeTest?: boolean;
+    creditRiskAcknowledged?: boolean;
+  } = {}) {
     const cleanPrompt = String(prompt || "").trim();
 
     if (!cleanPrompt) {
       setStatusMessage("Add a media prompt first, then click Create complete media now.");
       return;
+    }
+
+    if (!options.dryRun && !options.smokeTest && preflightResult?.status === "universal_complete_media_preflight_blocked") {
+      setStatusMessage(preflightSummary(preflightResult) || "Media generation is not ready to run yet. Please contact support or choose a shorter smoke test.");
+      return;
+    }
+
+    let creditRiskAcknowledged = Boolean(options.creditRiskAcknowledged);
+    const preflightRisk = String(preflightResult?.estimated_credit_risk?.risk_level || "").toLowerCase();
+    if (!options.dryRun && !options.smokeTest && preflightRisk === "high" && !creditRiskAcknowledged) {
+      const confirmed = window.confirm(
+        "This media run has a high estimated provider credit risk. Continue with paid provider execution?"
+      );
+      if (!confirmed) {
+        setStatusMessage("Complete media run cancelled before paid provider execution.");
+        return;
+      }
+      creditRiskAcknowledged = true;
     }
 
     setRunning(true);
@@ -735,7 +781,11 @@ export default function UniversalCompleteMediaRunAgentPanel({
     const multiAgentMediaExecution = selectedCreativeAgents.length > 1;
 
     setStatusMessage(
-      multiAgentMediaExecution
+      options.dryRun
+        ? "Checking media provider readiness..."
+        : options.smokeTest
+          ? `Running a labelled 5s smoke test with ${activeCreativeAgent}...`
+          : multiAgentMediaExecution
         ? `Creating complete media with ${selectedCreativeAgents.length} creative agents...`
         : `Creating complete media with ${activeCreativeAgent}...`
     );
@@ -775,6 +825,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
       selected_agent: activeCreativeAgent,
       selected_agents: selectedCreativeAgents,
       agent_ids: selectedCreativeAgents,
+      duration_seconds: options.smokeTest ? "5" : durationSeconds,
       video_provider: "runway",
       audio_provider: "elevenlabs",
       requested_at: new Date().toISOString(),
@@ -786,6 +837,12 @@ export default function UniversalCompleteMediaRunAgentPanel({
       one_prompt_complete_media: true,
       multi_agent_media_execution: multiAgentMediaExecution,
       selected_agent_count: selectedCreativeAgents.length,
+      dry_run: Boolean(options.dryRun),
+      preflight_only: Boolean(options.dryRun),
+      check_readiness: Boolean(options.dryRun),
+      smoke_test_mode: Boolean(options.smokeTest),
+      smoke_test_label: options.smokeTest ? "5s smoke test" : "",
+      credit_risk_acknowledged: creditRiskAcknowledged,
     };
 
     const payload = {
@@ -812,7 +869,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
       output_type: directConfig.output_type || outputType,
       platform: directConfig.platform || platform,
-      duration_seconds: directConfig.duration_seconds || durationSeconds,
+      duration_seconds: options.smokeTest ? "5" : directConfig.duration_seconds || durationSeconds,
       aspect_ratio: directConfig.aspect_ratio || aspectRatio,
       language: directConfig.language || language,
       accent: directConfig.accent || accent,
@@ -833,6 +890,12 @@ export default function UniversalCompleteMediaRunAgentPanel({
       one_prompt_complete_media: true,
       multi_agent_media_execution: multiAgentMediaExecution,
       selected_agent_count: selectedCreativeAgents.length,
+      dry_run: Boolean(options.dryRun),
+      preflight_only: Boolean(options.dryRun),
+      check_readiness: Boolean(options.dryRun),
+      smoke_test_mode: Boolean(options.smokeTest),
+      smoke_test_label: options.smokeTest ? "5s smoke test" : "",
+      credit_risk_acknowledged: creditRiskAcknowledged,
 
       owner_approved: portalMode === "admin",
       owner_approval_granted: portalMode === "admin",
@@ -881,6 +944,14 @@ export default function UniversalCompleteMediaRunAgentPanel({
       }
 
       const extractedPopupResult = applyPopupMediaJobResult(result);
+      if (
+        options.dryRun ||
+        result?.status === "universal_complete_media_preflight_blocked" ||
+        result?.status === "universal_complete_media_preflight_dry_run" ||
+        result?.estimated_credit_risk
+      ) {
+        setPreflightResult(result);
+      }
 
       const jobId =
         extractedPopupResult.jobId ||
@@ -892,13 +963,20 @@ export default function UniversalCompleteMediaRunAgentPanel({
         result?.id ||
         "";
 
-      setStatusMessage(
-        jobId
-          ? `Complete media workflow started. Lead agent: ${activeCreativeAgent}. Agents: ${selectedCreativeAgents.length}. Job ID: ${jobId}`
-          : `Complete media workflow started. Lead agent: ${activeCreativeAgent}. Agents: ${selectedCreativeAgents.length}.`
-      );
+      const resultStatus = String(result?.status || "");
+      if (options.dryRun || resultStatus.includes("preflight")) {
+        setStatusMessage(
+          `${preflightSummary(result) || result?.message || "Preflight completed."}${jobId ? ` Job ID: ${jobId}` : ""}`
+        );
+      } else {
+        setStatusMessage(
+          jobId
+            ? `Complete media workflow started. Lead agent: ${activeCreativeAgent}. Agents: ${selectedCreativeAgents.length}. Job ID: ${jobId}`
+            : `Complete media workflow started. Lead agent: ${activeCreativeAgent}. Agents: ${selectedCreativeAgents.length}.`
+        );
+      }
 
-      if (jobId) {
+      if (jobId && !options.dryRun && !resultStatus.includes("preflight")) {
         setTimeout(() => {
           void checkPopupMediaJobStatus(jobId);
         }, 1500);
@@ -1258,29 +1336,71 @@ export default function UniversalCompleteMediaRunAgentPanel({
                 </div>
               ) : null}
 
-              <button
-                type="button"
-                data-complete-media-native-execution="true"
-                disabled={running}
-                onClick={runCompleteMediaFromPopup}
-                style={{
-                  width: "fit-content",
-                  border: "1px solid rgba(34,197,94,.36)",
-                  borderRadius: 999,
-                  padding: "10px 14px",
-                  background:
-                    portalMode === "admin"
-                      ? "linear-gradient(135deg, rgba(34,197,94,.24), rgba(6,182,212,.16))"
-                      : "linear-gradient(135deg, rgba(34,197,94,.12), rgba(79,70,229,.10))",
-                  color: portalMode === "admin" ? "#bbf7d0" : "#166534",
-                  fontWeight: 950,
-                  cursor: running ? "wait" : "pointer",
-                  opacity: running ? 0.76 : 1,
-                  boxShadow: "0 14px 34px rgba(15,23,42,.18)",
-                }}
-              >
-                {running ? "Creating complete media..." : "Create complete media now"}
-              </button>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <button
+                  type="button"
+                  data-complete-media-readiness-check="true"
+                  disabled={running}
+                  onClick={() => void runCompleteMediaFromPopup({ dryRun: true })}
+                  style={{
+                    width: "fit-content",
+                    border: "1px solid rgba(59,130,246,.34)",
+                    borderRadius: 999,
+                    padding: "10px 14px",
+                    background: portalMode === "admin" ? "rgba(59,130,246,.14)" : "#fff",
+                    color: portalMode === "admin" ? "#bfdbfe" : "#1d4ed8",
+                    fontWeight: 950,
+                    cursor: running ? "wait" : "pointer",
+                    opacity: running ? 0.76 : 1,
+                  }}
+                >
+                  Check readiness
+                </button>
+
+                <button
+                  type="button"
+                  data-complete-media-smoke-test="true"
+                  disabled={running}
+                  onClick={() => void runCompleteMediaFromPopup({ smokeTest: true })}
+                  style={{
+                    width: "fit-content",
+                    border: "1px solid rgba(245,158,11,.36)",
+                    borderRadius: 999,
+                    padding: "10px 14px",
+                    background: portalMode === "admin" ? "rgba(245,158,11,.14)" : "#fff",
+                    color: portalMode === "admin" ? "#fde68a" : "#92400e",
+                    fontWeight: 950,
+                    cursor: running ? "wait" : "pointer",
+                    opacity: running ? 0.76 : 1,
+                  }}
+                >
+                  Run 5s smoke test
+                </button>
+
+                <button
+                  type="button"
+                  data-complete-media-native-execution="true"
+                  disabled={running || preflightResult?.status === "universal_complete_media_preflight_blocked"}
+                  onClick={() => void runCompleteMediaFromPopup()}
+                  style={{
+                    width: "fit-content",
+                    border: "1px solid rgba(34,197,94,.36)",
+                    borderRadius: 999,
+                    padding: "10px 14px",
+                    background:
+                      portalMode === "admin"
+                        ? "linear-gradient(135deg, rgba(34,197,94,.24), rgba(6,182,212,.16))"
+                        : "linear-gradient(135deg, rgba(34,197,94,.12), rgba(79,70,229,.10))",
+                    color: portalMode === "admin" ? "#bbf7d0" : "#166534",
+                    fontWeight: 950,
+                    cursor: running ? "wait" : preflightResult?.status === "universal_complete_media_preflight_blocked" ? "not-allowed" : "pointer",
+                    opacity: running || preflightResult?.status === "universal_complete_media_preflight_blocked" ? 0.62 : 1,
+                    boxShadow: "0 14px 34px rgba(15,23,42,.18)",
+                  }}
+                >
+                  {running ? "Creating complete media..." : "Create complete media now"}
+                </button>
+              </div>
 
               <div
                 data-complete-media-popup-status="true"

@@ -933,6 +933,8 @@ def direct_media_composition_status() -> Dict[str, Any]:
     }
 
 
+CLIENT_PREFLIGHT_MESSAGE = "Media generation is not ready to run yet. Please contact support or choose a shorter smoke test."
+
 
 # UNIVERSAL_COMPLETE_MEDIA_WORKFLOW_V1
 def _ucm_text(value: Any, default: str = "") -> str:
@@ -945,6 +947,13 @@ def _ucm_bool(value: Any) -> bool:
     if isinstance(value, str):
         return value.strip().lower() in {"1", "true", "yes", "y", "on", "approved"}
     return bool(value)
+
+
+def _ucm_duration_float(value: Any, default: float = 5.0) -> float:
+    try:
+        return max(1.0, min(float(str(value or default).replace("s", "").strip()), 120.0))
+    except Exception:
+        return default
 
 
 def _ucm_controls(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -1011,6 +1020,207 @@ def _ucm_controls(payload: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     return controls
+
+
+def _ucm_live_adapter_credentials_present(provider: str) -> bool:
+    key = str(provider or "").strip().lower()
+    if key == "runway":
+        return bool(runway_safe_key_diagnostics().get("used_env_name"))
+    if key == "kling":
+        return bool(os.getenv("KLING_API_KEY", "").strip()) and bool(os.getenv("KLING_SECRET_KEY", "").strip())
+    if key == "elevenlabs":
+        return bool(os.getenv("ELEVENLABS_API_KEY", "").strip())
+    return False
+
+
+def _ucm_provider_executable(provider: str, media_type: str) -> Dict[str, Any]:
+    key = str(provider or "").strip().lower()
+    readiness = provider_readiness(key)
+    supports = list(readiness.get("supports") or [])
+    direct_enabled = bool(readiness.get("direct_execution_enabled", key in SUPPORTED_PROVIDERS))
+    supported_for_media = media_type in supports or (media_type == "voiceover" and "audio" in supports)
+    live_credentials_present = _ucm_live_adapter_credentials_present(key)
+    executable = bool(direct_enabled and supported_for_media and live_credentials_present)
+
+    reasons = []
+    if not direct_enabled:
+        reasons.append(readiness.get("disabled_reason") or "Direct live adapter is not enabled.")
+    if not supported_for_media:
+        reasons.append(f"Provider is not enabled for {media_type}.")
+    if not live_credentials_present:
+        reasons.append("Required live adapter credentials are missing.")
+
+    return {
+        "provider": key or "unknown",
+        "media_type": media_type,
+        "configured": bool(readiness.get("configured")),
+        "direct_execution_enabled": direct_enabled,
+        "supports": supports,
+        "live_adapter_credentials_present": live_credentials_present,
+        "executable": executable,
+        "blocked_reason": " ".join(str(reason) for reason in reasons if reason).strip(),
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
+
+
+def _ucm_estimated_credit_risk(duration_seconds: float, executable_visual_count: int, *, smoke_test_mode: bool = False) -> Dict[str, Any]:
+    if smoke_test_mode:
+        level = "low"
+    elif duration_seconds <= 5:
+        level = "low"
+    elif duration_seconds <= 15:
+        level = "medium"
+    else:
+        level = "high"
+
+    return {
+        "risk_level": level,
+        "duration_seconds": duration_seconds,
+        "paid_visual_provider_attempts_possible": executable_visual_count,
+        "paid_audio_provider_attempts_possible": 1,
+        "acceptable_without_confirmation": level in {"low", "medium"},
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
+
+
+def _ucm_preflight_universal_media_job(payload: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
+    safe_payload = dict(payload or {})
+    controls = _ucm_controls(safe_payload)
+    smoke_test_mode = _ucm_bool(
+        safe_payload.get("smoke_test_mode")
+        or safe_payload.get("run_smoke_test")
+        or safe_payload.get("five_second_smoke_test")
+    )
+    dry_run_mode = _ucm_bool(
+        safe_payload.get("dry_run")
+        or safe_payload.get("preflight_only")
+        or safe_payload.get("check_readiness")
+        or safe_payload.get("universal_media_dry_run")
+    )
+    credit_risk_acknowledged = _ucm_bool(
+        safe_payload.get("credit_risk_acknowledged")
+        or safe_payload.get("cost_safety_confirmed")
+        or safe_payload.get("paid_provider_risk_confirmed")
+    )
+
+    requested_duration = _ucm_duration_float(controls.get("duration_seconds"), 5.0)
+    estimated_duration = min(requested_duration, 5.0) if smoke_test_mode else requested_duration
+
+    visual_provider_order = _ucm_video_provider_order(controls.get("video_provider"))
+    visual_readiness = [_ucm_provider_executable(provider, "video") for provider in visual_provider_order]
+    executable_visual = [item for item in visual_readiness if item.get("executable")]
+    non_executable_visual = [item for item in visual_readiness if not item.get("executable")]
+
+    audio_provider = str(controls.get("audio_provider") or "elevenlabs").strip().lower()
+    audio_readiness = [_ucm_provider_executable(audio_provider, "audio")]
+    executable_audio = [item for item in audio_readiness if item.get("executable")]
+
+    composition_available = bool(shutil.which("ffmpeg"))
+    estimated_credit_risk = _ucm_estimated_credit_risk(
+        estimated_duration,
+        len(executable_visual),
+        smoke_test_mode=smoke_test_mode,
+    )
+
+    failed_checks: list[Dict[str, Any]] = []
+    blocked_provider_calls: list[Dict[str, Any]] = [
+        {
+            "provider": item.get("provider"),
+            "media_type": "video",
+            "reason": item.get("blocked_reason") or "Visual provider is not executable.",
+        }
+        for item in non_executable_visual
+    ] + [
+        {
+            "provider": item.get("provider"),
+            "media_type": "audio",
+            "reason": item.get("blocked_reason") or "Audio provider is not executable.",
+        }
+        for item in audio_readiness
+        if not item.get("executable")
+    ]
+
+    if not controls.get("prompt"):
+        failed_checks.append({"check": "prompt", "status": "failed", "reason": "A media prompt is required."})
+
+    if smoke_test_mode and requested_duration > 5:
+        failed_checks.append({
+            "check": "smoke_test_duration",
+            "status": "failed",
+            "reason": "Smoke test mode is limited to 5 seconds.",
+        })
+
+    if not executable_visual:
+        failed_checks.append({
+            "check": "visual_provider_readiness",
+            "status": "failed",
+            "reason": "No executable visual provider is available.",
+        })
+
+    if not executable_audio:
+        failed_checks.append({
+            "check": "audio_provider_readiness",
+            "status": "failed",
+            "reason": "No executable audio provider is available.",
+        })
+
+    if not composition_available:
+        failed_checks.append({
+            "check": "composition_path",
+            "status": "failed",
+            "reason": "ffmpeg composition path is not available.",
+        })
+
+    if estimated_credit_risk.get("risk_level") == "high" and not credit_risk_acknowledged:
+        failed_checks.append({
+            "check": "estimated_credit_risk",
+            "status": "failed",
+            "reason": "Estimated provider credit risk is high and requires explicit confirmation.",
+        })
+
+    if smoke_test_mode and not executable_visual:
+        failed_checks.append({
+            "check": "smoke_test_visual_provider",
+            "status": "failed",
+            "reason": "Smoke test mode requires at least one executable visual provider.",
+        })
+
+    blocked = bool(failed_checks)
+    return {
+        "success": not blocked,
+        "status": "universal_complete_media_preflight_blocked" if blocked else "universal_complete_media_preflight_ready",
+        "dry_run": dry_run_mode,
+        "smoke_test_mode": smoke_test_mode,
+        "smoke_test_label": "5s smoke test" if smoke_test_mode else "",
+        "failed_preflight_checks": failed_checks,
+        "blocked_provider_calls": blocked_provider_calls,
+        "estimated_duration_seconds": estimated_duration,
+        "requested_duration_seconds": requested_duration,
+        "estimated_credit_risk": estimated_credit_risk,
+        "executable_visual_providers": executable_visual,
+        "non_executable_visual_providers": non_executable_visual,
+        "executable_audio_providers": executable_audio,
+        "composition_path_available": composition_available,
+        "composition_tool": "ffmpeg" if composition_available else "",
+        "selected_visual_provider_order": [item.get("provider") for item in executable_visual],
+        "selected_audio_provider": executable_audio[0].get("provider") if executable_audio else "",
+        "estimated_stages": [
+            "preflight",
+            "visual_generation",
+            "audio_generation",
+            "captions_timing_metadata",
+            "composition_stitching",
+            "final_asset_delivery",
+        ],
+        "timed_plan": plan.get("timed_plan"),
+        "quality_requirements": plan.get("quality_requirements"),
+        "message": CLIENT_PREFLIGHT_MESSAGE if blocked else "Media generation preflight passed.",
+        "customer_safe": True,
+        "credential_values_exposed": False,
+        "internal_config_exposed": False,
+    }
 
 
 def _ucm_brief_lines(controls: Dict[str, Any]) -> str:
@@ -1421,6 +1631,18 @@ def _ucm_visual_child_jobs(attempts: list[Dict[str, Any]], selected: Dict[str, A
 
 def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str, Any]:
     safe_payload = dict(payload or {})
+    smoke_test_mode = _ucm_bool(
+        safe_payload.get("smoke_test_mode")
+        or safe_payload.get("run_smoke_test")
+        or safe_payload.get("five_second_smoke_test")
+    )
+    if smoke_test_mode:
+        safe_payload["duration_seconds"] = 5
+        safe_payload["duration"] = 5
+        complete_media_config = safe_payload.get("complete_media_config")
+        if isinstance(complete_media_config, dict):
+            complete_media_config["duration_seconds"] = 5
+            complete_media_config["duration"] = 5
     controls = _ucm_controls(safe_payload)
     prompt = controls["prompt"]
     job_id = str(safe_payload.get("job_id") or _safe_id("universal_complete_media_job"))
@@ -1446,10 +1668,14 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
         "owner_approved": owner_approved,
         "child_jobs": {"visual_attempts": []},
         "failed_provider_attempts": [],
+        "failed_preflight_checks": [],
+        "blocked_provider_calls": [],
         "selected_video_job_id": "",
         "selected_video_provider": "",
         "provider_attempt_count": 0,
         "visual_attempt_count": 0,
+        "smoke_test_mode": smoke_test_mode,
+        "smoke_test_label": "5s smoke test" if smoke_test_mode else "",
         "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
         "created_at": _now(),
         "customer_safe": True,
@@ -1467,15 +1693,30 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
             "reason": "Universal complete media workflow requires owner/admin approval for live provider execution.",
         })
 
-    if not prompt:
+    plan = build_universal_complete_media_plan(safe_payload)
+    preflight = _ucm_preflight_universal_media_job(safe_payload, plan)
+    dry_run_mode = bool(preflight.get("dry_run"))
+
+    if dry_run_mode or preflight.get("status") == "universal_complete_media_preflight_blocked":
+        status = (
+            "universal_complete_media_preflight_blocked"
+            if preflight.get("status") == "universal_complete_media_preflight_blocked"
+            else "universal_complete_media_preflight_dry_run"
+        )
         return _write_job({
             **base_job,
-            "success": False,
-            "status": "blocked_missing_prompt",
-            "reason": "A media prompt is required.",
+            **preflight,
+            "success": preflight.get("status") != "universal_complete_media_preflight_blocked",
+            "accepted": True,
+            "status": status,
+            "stage": "preflight",
+            "polling_required": False,
+            "paid_provider_calls_started": False,
+            "external_action_performed": False,
+            "live_provider_call_triggered": False,
+            "message": preflight.get("message") or CLIENT_PREFLIGHT_MESSAGE,
+            "completed_at": _now(),
         })
-
-    plan = build_universal_complete_media_plan(safe_payload)
 
     def _runner() -> None:
         try:
@@ -1483,6 +1724,12 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 **base_job,
                 "accepted": True,
                 "status": "running_visual_generation",
+                "preflight": preflight,
+                "estimated_duration_seconds": preflight.get("estimated_duration_seconds"),
+                "estimated_credit_risk": preflight.get("estimated_credit_risk"),
+                "executable_visual_providers": preflight.get("executable_visual_providers"),
+                "non_executable_visual_providers": preflight.get("non_executable_visual_providers"),
+                "executable_audio_providers": preflight.get("executable_audio_providers"),
                 "timed_plan": plan.get("timed_plan"),
                 "quality_requirements": plan.get("quality_requirements"),
                 "started_at": _now(),
@@ -1507,32 +1754,16 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
             failed_provider_attempts: list[Dict[str, Any]] = []
             video_result: Dict[str, Any] = {}
 
-            for attempt_number, video_provider in enumerate(_ucm_video_provider_order(controls["video_provider"]), start=1):
+            executable_visual_provider_order = [
+                str(item.get("provider") or "").strip().lower()
+                for item in list(preflight.get("executable_visual_providers") or [])
+                if item.get("provider")
+            ]
+
+            for attempt_number, video_provider in enumerate(executable_visual_provider_order, start=1):
                 readiness = provider_readiness(video_provider)
 
-                if video_provider not in SUPPORTED_VIDEO_PROVIDERS:
-                    skipped_result = {
-                        "success": False,
-                        "status": "blocked_provider_adapter_unavailable",
-                        "provider": video_provider,
-                        "reason": f"{video_provider} is not enabled for direct video execution in this runtime.",
-                    }
-                    attempt = _ucm_attempt_record(video_provider, skipped_result, attempt_number)
-                    visual_attempts.append(attempt)
-                    failed_provider_attempts.append(attempt)
-                    _write_job({
-                        **base_job,
-                        "accepted": True,
-                        "status": "running_visual_generation",
-                        "child_jobs": _ucm_visual_child_jobs(visual_attempts),
-                        "failed_provider_attempts": failed_provider_attempts,
-                        "provider_attempt_count": len(visual_attempts),
-                        "visual_attempt_count": len(visual_attempts),
-                        "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
-                    })
-                    continue
-
-                if not readiness.get("configured"):
+                if video_provider not in SUPPORTED_VIDEO_PROVIDERS or not readiness.get("configured"):
                     skipped_result = {
                         "success": False,
                         "status": "blocked_provider_not_configured",
@@ -1550,6 +1781,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                         "failed_provider_attempts": failed_provider_attempts,
                         "provider_attempt_count": len(visual_attempts),
                         "visual_attempt_count": len(visual_attempts),
+                        "non_executable_visual_providers": preflight.get("non_executable_visual_providers"),
                         "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
                     })
                     continue
@@ -1584,6 +1816,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                         "failed_provider_attempts": failed_provider_attempts,
                         "provider_attempt_count": len(visual_attempts),
                         "visual_attempt_count": len(visual_attempts),
+                        "non_executable_visual_providers": preflight.get("non_executable_visual_providers"),
                         "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
                         "timed_plan": plan.get("timed_plan"),
                     })
@@ -1601,6 +1834,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     "failed_provider_attempts": failed_provider_attempts,
                     "provider_attempt_count": len(visual_attempts),
                     "visual_attempt_count": len(visual_attempts),
+                    "non_executable_visual_providers": preflight.get("non_executable_visual_providers"),
                     "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
                 })
 
@@ -1813,6 +2047,17 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
         "polling_required": True,
         "status": "queued",
         "message": "Universal complete media workflow accepted. One prompt will generate visual, natural audio, synchronise, and compose the final playable file.",
+        "preflight": preflight,
+        "paid_provider_calls_started": False,
+        "estimated_duration_seconds": preflight.get("estimated_duration_seconds"),
+        "estimated_credit_risk": preflight.get("estimated_credit_risk"),
+        "executable_visual_providers": preflight.get("executable_visual_providers"),
+        "non_executable_visual_providers": preflight.get("non_executable_visual_providers"),
+        "executable_audio_providers": preflight.get("executable_audio_providers"),
+        "failed_preflight_checks": [],
+        "blocked_provider_calls": [],
+        "smoke_test_mode": smoke_test_mode,
+        "smoke_test_label": "5s smoke test" if smoke_test_mode else "",
         "timed_plan": plan.get("timed_plan"),
         "quality_requirements": plan.get("quality_requirements"),
         "child_jobs": {"visual_attempts": []},
