@@ -15,6 +15,15 @@ type CompleteMediaConfig = {
   language: string;
   accent: string;
   tone: string;
+  business_name: string;
+  product_or_service: string;
+  audience: string;
+  goal: string;
+  offer: string;
+  must_include: string;
+  must_avoid: string;
+  human_avatar_mode: string;
+  visual_references_assets: string;
   voice_style: string;
   age_range: string;
   gender_presentation: string;
@@ -280,6 +289,15 @@ export default function UniversalCompleteMediaRunAgentPanel({
   const [language, setLanguage] = useState("English");
   const [accent, setAccent] = useState("");
   const [tone, setTone] = useState("natural, polished, human");
+  const [businessName, setBusinessName] = useState("");
+  const [productOrService, setProductOrService] = useState("");
+  const [audience, setAudience] = useState("");
+  const [goal, setGoal] = useState("");
+  const [offer, setOffer] = useState("");
+  const [mustInclude, setMustInclude] = useState("");
+  const [mustAvoid, setMustAvoid] = useState("");
+  const [humanAvatarMode, setHumanAvatarMode] = useState("");
+  const [visualReferencesAssets, setVisualReferencesAssets] = useState("");
   const [voiceStyle, setVoiceStyle] = useState("natural conversational voice");
   const [ageRange, setAgeRange] = useState("");
   const [genderPresentation, setGenderPresentation] = useState("");
@@ -310,6 +328,15 @@ export default function UniversalCompleteMediaRunAgentPanel({
       language,
       accent,
       tone,
+      business_name: businessName,
+      product_or_service: productOrService,
+      audience,
+      goal,
+      offer,
+      must_include: mustInclude,
+      must_avoid: mustAvoid,
+      human_avatar_mode: humanAvatarMode,
+      visual_references_assets: visualReferencesAssets,
       voice_style: voiceStyle,
       age_range: ageRange,
       gender_presentation: genderPresentation,
@@ -332,6 +359,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
       target_audience: profile.target_audience || "",
       brand_style: profile.brand_style || profile.brand_voice || profile.notes || "",
       product_or_service_details:
+        productOrService ||
         profile.product_or_service_details ||
         profile.products_services ||
         profile.services ||
@@ -354,6 +382,15 @@ export default function UniversalCompleteMediaRunAgentPanel({
       language,
       accent,
       tone,
+      businessName,
+      productOrService,
+      audience,
+      goal,
+      offer,
+      mustInclude,
+      mustAvoid,
+      humanAvatarMode,
+      visualReferencesAssets,
       voiceStyle,
       ageRange,
       genderPresentation,
@@ -415,6 +452,15 @@ export default function UniversalCompleteMediaRunAgentPanel({
       if (saved?.language) setLanguage(String(saved.language));
       if (saved?.accent) setAccent(String(saved.accent));
       if (saved?.tone) setTone(String(saved.tone));
+      if (saved?.business_name) setBusinessName(String(saved.business_name));
+      if (saved?.product_or_service) setProductOrService(String(saved.product_or_service));
+      if (saved?.audience) setAudience(String(saved.audience));
+      if (saved?.goal) setGoal(String(saved.goal));
+      if (saved?.offer) setOffer(String(saved.offer));
+      if (saved?.must_include) setMustInclude(String(saved.must_include));
+      if (saved?.must_avoid) setMustAvoid(String(saved.must_avoid));
+      if (saved?.human_avatar_mode) setHumanAvatarMode(String(saved.human_avatar_mode));
+      if (saved?.visual_references_assets) setVisualReferencesAssets(String(saved.visual_references_assets));
       if (saved?.voice_style) setVoiceStyle(String(saved.voice_style));
       if (saved?.call_to_action) setCallToAction(String(saved.call_to_action));
     } catch {}
@@ -748,6 +794,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
     dryRun?: boolean;
     smokeTest?: boolean;
     creditRiskAcknowledged?: boolean;
+    useGeneratedScript?: boolean;
   } = {}) {
     const cleanPrompt = String(prompt || "").trim();
 
@@ -843,6 +890,8 @@ export default function UniversalCompleteMediaRunAgentPanel({
       smoke_test_mode: Boolean(options.smokeTest),
       smoke_test_label: options.smokeTest ? "5s smoke test" : "",
       credit_risk_acknowledged: creditRiskAcknowledged,
+      use_generated_script: Boolean(options.useGeneratedScript),
+      script_approved: Boolean(options.useGeneratedScript),
     };
 
     const payload = {
@@ -874,8 +923,19 @@ export default function UniversalCompleteMediaRunAgentPanel({
       language: directConfig.language || language,
       accent: directConfig.accent || accent,
       tone: directConfig.tone,
+      business_name: directConfig.business_name,
+      product_or_service: directConfig.product_or_service,
+      audience: directConfig.audience,
+      goal: directConfig.goal,
+      offer: directConfig.offer,
+      must_include: directConfig.must_include,
+      must_avoid: directConfig.must_avoid,
+      human_avatar_mode: directConfig.human_avatar_mode,
+      visual_references_assets: directConfig.visual_references_assets,
       voice_style: directConfig.voice_style,
       call_to_action: directConfig.call_to_action,
+      use_generated_script: Boolean(options.useGeneratedScript),
+      script_approved: Boolean(options.useGeneratedScript),
 
       video_provider: "runway",
       audio_provider: "elevenlabs",
@@ -1290,6 +1350,30 @@ export default function UniversalCompleteMediaRunAgentPanel({
                   onChange={setAccent}
                   mode={portalMode}
                 />
+                <TextField
+                  label="Business name"
+                  value={businessName}
+                  onChange={setBusinessName}
+                  mode={portalMode}
+                />
+                <TextField
+                  label="Product or service"
+                  value={productOrService}
+                  onChange={setProductOrService}
+                  mode={portalMode}
+                />
+                <TextField
+                  label="Audience"
+                  value={audience}
+                  onChange={setAudience}
+                  mode={portalMode}
+                />
+                <TextField
+                  label="Goal"
+                  value={goal}
+                  onChange={setGoal}
+                  mode={portalMode}
+                />
               </div>
 
               <button
@@ -1318,6 +1402,11 @@ export default function UniversalCompleteMediaRunAgentPanel({
                   }}
                 >
                   <TextField label="Tone" value={tone} onChange={setTone} mode={portalMode} />
+                  <TextField label="Offer" value={offer} onChange={setOffer} mode={portalMode} />
+                  <TextField label="Must include" value={mustInclude} onChange={setMustInclude} mode={portalMode} />
+                  <TextField label="Must avoid" value={mustAvoid} onChange={setMustAvoid} mode={portalMode} />
+                  <TextField label="Human/avatar mode" value={humanAvatarMode} onChange={setHumanAvatarMode} mode={portalMode} />
+                  <TextField label="Visual references/assets" value={visualReferencesAssets} onChange={setVisualReferencesAssets} mode={portalMode} />
                   <TextField label="Voice style" value={voiceStyle} onChange={setVoiceStyle} mode={portalMode} />
                   <TextField label="Age range" value={ageRange} onChange={setAgeRange} mode={portalMode} />
                   <TextField label="Gender presentation" value={genderPresentation} onChange={setGenderPresentation} mode={portalMode} />
@@ -1524,6 +1613,74 @@ export default function UniversalCompleteMediaRunAgentPanel({
                       <strong>Preview URL:</strong> {popupMediaPreviewUrl}
                     </div>
                   )
+                ) : null}
+
+                {preflightResult?.media_script_preview ? (
+                  <div
+                    data-complete-media-script-preview="true"
+                    style={{
+                      display: "grid",
+                      gap: 8,
+                      borderRadius: 14,
+                      padding: 10,
+                      background:
+                        portalMode === "admin"
+                          ? "rgba(59,130,246,.10)"
+                          : "rgba(239,246,255,.9)",
+                      color: portalMode === "admin" ? "#dbeafe" : "#1e3a8a",
+                    }}
+                  >
+                    <strong>{portalMode === "admin" ? "Generated media script packet" : "Generated script preview"}</strong>
+                    {preflightResult.media_script_preview.voiceover_script ? (
+                      <div>
+                        <strong>Voiceover:</strong> {preflightResult.media_script_preview.voiceover_script}
+                      </div>
+                    ) : null}
+                    <div>
+                      <strong>Scenes:</strong> {preflightResult.media_script_preview.scene_count || 0}
+                      {" - "}
+                      <strong>Fit:</strong> {preflightResult.media_script_preview.script_duration_fit || "unknown"}
+                    </div>
+                    {preflightResult.media_script_preview.cta_text ? (
+                      <div>
+                        <strong>CTA:</strong> {preflightResult.media_script_preview.cta_text}
+                      </div>
+                    ) : null}
+                    {portalMode === "admin" && preflightResult?.media_script_packet ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => void runCompleteMediaFromPopup({ useGeneratedScript: true })}
+                          disabled={running}
+                          style={{
+                            width: "fit-content",
+                            border: "1px solid rgba(34,197,94,.34)",
+                            borderRadius: 999,
+                            padding: "8px 12px",
+                            background: "rgba(34,197,94,.13)",
+                            color: "#bbf7d0",
+                            fontWeight: 900,
+                            cursor: running ? "wait" : "pointer",
+                          }}
+                        >
+                          Use generated script
+                        </button>
+                        <pre
+                          style={{
+                            whiteSpace: "pre-wrap",
+                            overflow: "auto",
+                            maxHeight: 260,
+                            borderRadius: 12,
+                            padding: 10,
+                            background: "rgba(2,6,23,.74)",
+                            color: "#e5e7eb",
+                          }}
+                        >
+                          {JSON.stringify(preflightResult.media_script_packet, null, 2)}
+                        </pre>
+                      </>
+                    ) : null}
+                  </div>
                 ) : null}
 
                 {popupMediaFinalOutput ? (

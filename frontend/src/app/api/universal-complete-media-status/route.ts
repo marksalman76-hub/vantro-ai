@@ -89,6 +89,9 @@ function clientSafeStatusPayload(data: any) {
   delete clone.executable_audio_providers;
   delete clone.selected_visual_provider_order;
   delete clone.selected_audio_provider;
+  delete clone.media_script_packet;
+  delete clone.lead_scripting_agent;
+  delete clone.contributing_scripting_agents;
 
   if (Array.isArray(clone.failed_provider_attempts)) {
     clone.failed_provider_attempts = clone.failed_provider_attempts.map((attempt: any) => ({

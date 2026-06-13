@@ -956,67 +956,99 @@ def _ucm_duration_float(value: Any, default: float = 5.0) -> float:
         return default
 
 
+def _ucm_lookup(safe: Dict[str, Any], *keys: str, default: Any = "") -> Any:
+    configs = [
+        safe,
+        safe.get("complete_media_config") if isinstance(safe.get("complete_media_config"), dict) else {},
+        safe.get("media_config") if isinstance(safe.get("media_config"), dict) else {},
+        safe.get("business_profile") if isinstance(safe.get("business_profile"), dict) else {},
+    ]
+    for key in keys:
+        for config in configs:
+            value = config.get(key) if isinstance(config, dict) else None
+            if value not in [None, ""]:
+                return value
+    return default
+
+
 def _ucm_controls(payload: Dict[str, Any]) -> Dict[str, Any]:
     safe = dict(payload or {})
+    selected_agents_value = _ucm_lookup(safe, "selected_agents", "agent_ids", default=[])
+    if isinstance(selected_agents_value, str):
+        selected_agents = [item.strip() for item in selected_agents_value.split(",") if item.strip()]
+    elif isinstance(selected_agents_value, list):
+        selected_agents = [str(item).strip() for item in selected_agents_value if str(item).strip()]
+    else:
+        selected_agents = []
+
+    selected_agent = _ucm_text(
+        _ucm_lookup(safe, "selected_agent", "lead_agent_id", "agent_id", "assigned_agent", "requested_agent")
+        or (selected_agents[0] if selected_agents else "social_media_manager_content_creator_agent")
+    )
 
     controls = {
-        "prompt": _ucm_text(safe.get("prompt") or safe.get("task") or safe.get("media_brief")),
-        "agent_id": _ucm_text(
-            safe.get("agent_id")
-            or safe.get("assigned_agent")
-            or safe.get("requested_agent")
-            or "social_media_manager_content_creator_agent"
-        ),
-        "output_type": _ucm_text(safe.get("output_type") or safe.get("media_output_type") or "complete_video"),
-        "industry": _ucm_text(safe.get("industry") or safe.get("niche")),
-        "target_audience": _ucm_text(safe.get("target_audience")),
-        "platform": _ucm_text(safe.get("platform") or "general"),
-        "duration_seconds": _ucm_text(safe.get("duration_seconds") or safe.get("duration") or "5"),
-        "aspect_ratio": _ucm_text(safe.get("aspect_ratio") or "9:16"),
-        "language": _ucm_text(safe.get("language") or "English"),
-        "accent": _ucm_text(safe.get("accent")),
-        "tone": _ucm_text(safe.get("tone") or "natural, polished, human"),
-        "voice_style": _ucm_text(safe.get("voice_style") or "natural conversational voice"),
-        "age_range": _ucm_text(safe.get("age_range")),
-        "gender_presentation": _ucm_text(safe.get("gender_presentation")),
+        "prompt": _ucm_text(_ucm_lookup(safe, "prompt", "task", "media_brief", "creative_brief", "user_prompt")),
+        "agent_id": selected_agent,
+        "selected_agent": selected_agent,
+        "selected_agents": selected_agents or [selected_agent],
+        "agent_ids": selected_agents or [selected_agent],
+        "multi_agent_media_execution": len(selected_agents or [selected_agent]) > 1,
+        "output_type": _ucm_text(_ucm_lookup(safe, "output_type", "media_output_type", default="complete_video")),
+        "business_name": _ucm_text(_ucm_lookup(safe, "business_name", "company_name", "brand_name")),
+        "product_or_service": _ucm_text(_ucm_lookup(safe, "product_or_service", "product_or_service_details", "products_services", "services")),
+        "audience": _ucm_text(_ucm_lookup(safe, "audience", "target_audience")),
+        "goal": _ucm_text(_ucm_lookup(safe, "goal", "desired_action", "campaign_goal")),
+        "must_include": _ucm_text(_ucm_lookup(safe, "must_include", "required_points")),
+        "must_avoid": _ucm_text(_ucm_lookup(safe, "must_avoid", "avoid", "compliance_notes")),
+        "human_avatar_mode": _ucm_text(_ucm_lookup(safe, "human_avatar_mode", "avatar_mode", "presenter_mode")),
+        "visual_references_assets": _ucm_lookup(safe, "visual_references_assets", "visual_references", "reference_assets", default=[]),
+        "industry": _ucm_text(_ucm_lookup(safe, "industry", "niche")),
+        "target_audience": _ucm_text(_ucm_lookup(safe, "target_audience", "audience")),
+        "platform": _ucm_text(_ucm_lookup(safe, "platform", default="general")),
+        "duration_seconds": _ucm_text(_ucm_lookup(safe, "duration_seconds", "duration", default="5")),
+        "aspect_ratio": _ucm_text(_ucm_lookup(safe, "aspect_ratio", default="9:16")),
+        "language": _ucm_text(_ucm_lookup(safe, "language", default="English")),
+        "accent": _ucm_text(_ucm_lookup(safe, "accent")),
+        "tone": _ucm_text(_ucm_lookup(safe, "tone", default="natural, polished, human")),
+        "voice_style": _ucm_text(_ucm_lookup(safe, "voice_style", default="natural conversational voice")),
+        "age_range": _ucm_text(_ucm_lookup(safe, "age_range")),
+        "gender_presentation": _ucm_text(_ucm_lookup(safe, "gender_presentation")),
         "ethnicity_or_cultural_appearance": _ucm_text(
-            safe.get("ethnicity_or_cultural_appearance")
-            or safe.get("ethnicity")
-            or safe.get("cultural_appearance")
+            _ucm_lookup(safe, "ethnicity_or_cultural_appearance", "ethnicity", "cultural_appearance")
         ),
-        "avatar_likeness": _ucm_text(safe.get("avatar_likeness") or safe.get("ultra_human_likeness")),
-        "face_shape": _ucm_text(safe.get("face_shape")),
-        "skin_tone": _ucm_text(safe.get("skin_tone")),
-        "facial_features": _ucm_text(safe.get("facial_features")),
-        "hair_style": _ucm_text(safe.get("hair_style")),
-        "hair_colour": _ucm_text(safe.get("hair_colour") or safe.get("hair_color")),
-        "eye_colour": _ucm_text(safe.get("eye_colour") or safe.get("eye_color")),
-        "wardrobe": _ucm_text(safe.get("wardrobe") or safe.get("styling")),
-        "expressions": _ucm_text(safe.get("expressions") or safe.get("facial_expressions")),
-        "emotion": _ucm_text(safe.get("emotion")),
-        "eye_contact": _ucm_text(safe.get("eye_contact")),
-        "gestures": _ucm_text(safe.get("gestures") or safe.get("hand_gestures")),
-        "body_language": _ucm_text(safe.get("body_language")),
-        "lip_sync_accuracy": _ucm_text(safe.get("lip_sync_accuracy") or "high when avatar or talking-head output is requested"),
-        "speaking_pace": _ucm_text(safe.get("speaking_pace") or "natural, not rushed"),
-        "camera_framing": _ucm_text(safe.get("camera_framing")),
-        "lighting_style": _ucm_text(safe.get("lighting_style")),
-        "background_setting": _ucm_text(safe.get("background_setting") or safe.get("setting")),
-        "brand_style": _ucm_text(safe.get("brand_style")),
-        "product_or_service_details": _ucm_text(safe.get("product_or_service_details")),
-        "offer": _ucm_text(safe.get("offer") or safe.get("promotion")),
-        "call_to_action": _ucm_text(safe.get("call_to_action") or safe.get("cta")),
-        "captions": _ucm_text(safe.get("captions") or safe.get("subtitles")),
-        "music_style": _ucm_text(safe.get("music_style")),
-        "sound_effects": _ucm_text(safe.get("sound_effects") or safe.get("sfx")),
-        "pacing": _ucm_text(safe.get("pacing") or "smooth, clear, premium"),
-        "visual_style": _ucm_text(safe.get("visual_style")),
-        "camera_movement": _ucm_text(safe.get("camera_movement")),
-        "compliance_notes": _ucm_text(safe.get("compliance_notes")),
-        "number_of_variations": _ucm_text(safe.get("number_of_variations") or "1"),
-        "final_delivery_format": _ucm_text(safe.get("final_delivery_format") or "mp4"),
-        "video_provider": _ucm_text(safe.get("video_provider") or safe.get("provider") or "runway").lower(),
-        "audio_provider": _ucm_text(safe.get("audio_provider") or "elevenlabs").lower(),
+        "avatar_likeness": _ucm_text(_ucm_lookup(safe, "avatar_likeness", "ultra_human_likeness")),
+        "face_shape": _ucm_text(_ucm_lookup(safe, "face_shape")),
+        "skin_tone": _ucm_text(_ucm_lookup(safe, "skin_tone")),
+        "facial_features": _ucm_text(_ucm_lookup(safe, "facial_features")),
+        "hair_style": _ucm_text(_ucm_lookup(safe, "hair_style")),
+        "hair_colour": _ucm_text(_ucm_lookup(safe, "hair_colour", "hair_color")),
+        "eye_colour": _ucm_text(_ucm_lookup(safe, "eye_colour", "eye_color")),
+        "wardrobe": _ucm_text(_ucm_lookup(safe, "wardrobe", "styling")),
+        "expressions": _ucm_text(_ucm_lookup(safe, "expressions", "facial_expressions")),
+        "emotion": _ucm_text(_ucm_lookup(safe, "emotion")),
+        "eye_contact": _ucm_text(_ucm_lookup(safe, "eye_contact")),
+        "gestures": _ucm_text(_ucm_lookup(safe, "gestures", "hand_gestures")),
+        "body_language": _ucm_text(_ucm_lookup(safe, "body_language")),
+        "lip_sync_accuracy": _ucm_text(_ucm_lookup(safe, "lip_sync_accuracy", default="high when avatar or talking-head output is requested")),
+        "speaking_pace": _ucm_text(_ucm_lookup(safe, "speaking_pace", default="natural, not rushed")),
+        "camera_framing": _ucm_text(_ucm_lookup(safe, "camera_framing")),
+        "lighting_style": _ucm_text(_ucm_lookup(safe, "lighting_style")),
+        "background_setting": _ucm_text(_ucm_lookup(safe, "background_setting", "setting")),
+        "brand_style": _ucm_text(_ucm_lookup(safe, "brand_style")),
+        "product_or_service_details": _ucm_text(_ucm_lookup(safe, "product_or_service_details", "product_or_service", "products_services", "services")),
+        "offer": _ucm_text(_ucm_lookup(safe, "offer", "promotion")),
+        "call_to_action": _ucm_text(_ucm_lookup(safe, "call_to_action", "cta")),
+        "captions": _ucm_text(_ucm_lookup(safe, "captions", "subtitles")),
+        "music_style": _ucm_text(_ucm_lookup(safe, "music_style")),
+        "sound_effects": _ucm_text(_ucm_lookup(safe, "sound_effects", "sfx")),
+        "pacing": _ucm_text(_ucm_lookup(safe, "pacing", default="smooth, clear, premium")),
+        "visual_style": _ucm_text(_ucm_lookup(safe, "visual_style")),
+        "camera_movement": _ucm_text(_ucm_lookup(safe, "camera_movement")),
+        "compliance_notes": _ucm_text(_ucm_lookup(safe, "compliance_notes", "must_avoid")),
+        "number_of_variations": _ucm_text(_ucm_lookup(safe, "number_of_variations", default="1")),
+        "final_delivery_format": _ucm_text(_ucm_lookup(safe, "final_delivery_format", default="mp4")),
+        "video_provider": _ucm_text(_ucm_lookup(safe, "video_provider", "provider", default="runway")).lower(),
+        "audio_provider": _ucm_text(_ucm_lookup(safe, "audio_provider", default="elevenlabs")).lower(),
     }
 
     return controls
@@ -1064,6 +1096,207 @@ def _ucm_provider_executable(provider: str, media_type: str) -> Dict[str, Any]:
     }
 
 
+def _ucm_clean_spoken_script(text: str, max_words: int) -> str:
+    clean = " ".join(str(text or "").split()).strip()
+    clean = re.sub(r"(?i)\b(scene\s*\d+|voiceover script|voiceover|caption|visual prompt|production note)\s*[:\-]", "", clean)
+    clean = re.sub(r"[\[\]\{\}]", "", clean)
+    words = clean.split()
+    if len(words) > max_words:
+        clean = " ".join(words[:max_words]).rstrip(" ,;:")
+    return clean.strip()
+
+
+def _ucm_estimate_spoken_duration_seconds(script: str) -> float:
+    words = len(str(script or "").split())
+    if words <= 0:
+        return 0.0
+    return round(words / 2.35, 2)
+
+
+def _ucm_script_duration_fit(script: str, requested_duration: float) -> str:
+    estimated = _ucm_estimate_spoken_duration_seconds(script)
+    if estimated <= 0:
+        return "too_short"
+    if estimated > requested_duration * 1.12:
+        return "too_long"
+    if estimated < max(3.0, requested_duration * 0.35):
+        return "too_short"
+    return "good"
+
+
+def _ucm_split_words(text: str, parts: int) -> list[str]:
+    words = str(text or "").split()
+    if not words:
+        return []
+    part_count = max(1, min(parts, len(words)))
+    chunk_size = max(1, round(len(words) / part_count))
+    chunks = []
+    for index in range(part_count):
+        chunk = " ".join(words[index * chunk_size : (index + 1) * chunk_size]).strip()
+        if chunk:
+            chunks.append(chunk)
+    remainder = " ".join(words[part_count * chunk_size :]).strip()
+    if remainder:
+        if chunks:
+            chunks[-1] = f"{chunks[-1]} {remainder}".strip()
+        else:
+            chunks.append(remainder)
+    return chunks
+
+
+def build_media_script_packet(payload: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
+    controls = _ucm_controls(payload)
+    duration = _ucm_duration_float(controls.get("duration_seconds"), float(plan.get("duration_seconds") or 5.0))
+    provider_safe_segment_seconds = 5
+    segment_count = max(1, int((duration + provider_safe_segment_seconds - 0.01) // provider_safe_segment_seconds))
+    segment_count = min(segment_count, 12)
+    segment_length = round(duration / segment_count, 2)
+    voice_word_limit = max(6, min(int(duration * 2.25), 140))
+
+    business_name = controls.get("business_name") or "the brand"
+    product_or_service = controls.get("product_or_service") or controls.get("product_or_service_details") or "the offer"
+    audience = controls.get("audience") or controls.get("target_audience") or "the intended audience"
+    goal = controls.get("goal") or "build interest and trust"
+    offer = controls.get("offer") or product_or_service
+    cta = controls.get("call_to_action") or "Get started today"
+    tone = controls.get("tone") or "natural, polished, human"
+    must_include = controls.get("must_include")
+    must_avoid = controls.get("must_avoid") or controls.get("compliance_notes")
+
+    base_script = (
+        f"{business_name} helps {audience} with {product_or_service}. "
+        f"If you want to {goal}, this gives you a clear, practical way to move forward. "
+        f"You get {offer}, explained simply and delivered with confidence. "
+        f"{cta}."
+    )
+    if must_include:
+        base_script = f"{base_script} {must_include}."
+
+    voiceover_script = _ucm_clean_spoken_script(base_script, voice_word_limit)
+    if not voiceover_script:
+        voiceover_script = _ucm_clean_spoken_script(
+            f"{product_or_service} is designed for {audience}. {cta}.",
+            voice_word_limit,
+        )
+
+    spoken_chunks = _ucm_split_words(voiceover_script, segment_count)
+    scene_plan = []
+    caption_plan = []
+    for index in range(segment_count):
+        start = round(index * segment_length, 2)
+        end = round(duration if index == segment_count - 1 else (index + 1) * segment_length, 2)
+        spoken_chunk = spoken_chunks[index] if index < len(spoken_chunks) else ""
+        scene_purpose = (
+            "opening hook" if index == 0 else
+            "offer proof and benefit" if index < segment_count - 1 else
+            "clear call to action"
+        )
+        segment_visual_prompt = (
+            f"Premium {controls.get('platform') or 'general'} visual for {business_name}: "
+            f"{scene_purpose}; show {product_or_service} for {audience}; "
+            f"tone {tone}; visual style {controls.get('visual_style') or 'realistic polished commercial'}; "
+            f"background {controls.get('background_setting') or 'clean brand-appropriate setting'}; "
+            f"camera {controls.get('camera_movement') or 'smooth natural movement'}."
+        )
+        scene_plan.append({
+            "scene": index + 1,
+            "start": start,
+            "end": end,
+            "purpose": scene_purpose,
+            "spoken_text": spoken_chunk,
+            "visual_prompt": segment_visual_prompt,
+            "customer_safe": True,
+        })
+        if spoken_chunk:
+            caption_plan.append({
+                "start": start,
+                "end": end,
+                "caption_text": spoken_chunk,
+            })
+
+    visual_reference_note = ""
+    refs = controls.get("visual_references_assets")
+    if isinstance(refs, list) and refs:
+        visual_reference_note = f" Use provided visual references/assets count: {len(refs)}."
+    elif isinstance(refs, str) and refs.strip():
+        visual_reference_note = " Use provided visual references/assets where available."
+
+    provider_visual_prompt = (
+        f"Create a {duration:.0f}s {controls.get('aspect_ratio') or '16:9'} video for {business_name}. "
+        f"Subject: {product_or_service}. Audience: {audience}. Goal: {goal}. "
+        f"Style: {controls.get('visual_style') or 'premium realistic commercial'}; "
+        f"human/avatar mode: {controls.get('human_avatar_mode') or controls.get('avatar_likeness') or 'brand-appropriate presenter or product-led visual'}. "
+        f"Scene prompts: "
+        + " ".join(f"{item['start']}-{item['end']}s {item['visual_prompt']}" for item in scene_plan)
+        + visual_reference_note
+    ).strip()
+
+    quality_guardrails = [
+        "Keep product/service details coherent across all scenes.",
+        "Keep hands, faces, props, object positions, screens, reflections, lighting, and camera movement physically consistent.",
+        "Avoid warped hands, disappearing objects, impossible reflections, text artifacts, and sudden continuity jumps.",
+        "Keep narration and visuals paced together.",
+    ]
+    if must_avoid:
+        quality_guardrails.append(f"Avoid: {must_avoid}.")
+
+    packet = {
+        "client_requirements_summary": controls.get("prompt") or f"{product_or_service} for {audience}",
+        "inferred_business_context": {
+            "business_name": business_name,
+            "industry": controls.get("industry"),
+            "platform": controls.get("platform"),
+            "human_avatar_mode": controls.get("human_avatar_mode"),
+        },
+        "target_audience": audience,
+        "core_offer": offer,
+        "desired_action": goal,
+        "voiceover_script": voiceover_script,
+        "spoken_words_only": True,
+        "scene_plan": scene_plan,
+        "caption_plan": caption_plan,
+        "cta_text": cta,
+        "voice_direction": f"{controls.get('voice_style') or 'natural conversational voice'}; {tone}; {controls.get('language') or 'English'} {controls.get('accent') or ''}".strip(),
+        "music_direction": controls.get("music_style") or "subtle, modern, supportive background bed",
+        "sound_effects_direction": controls.get("sound_effects") or "minimal, clean transitions only if useful",
+        "visual_style_direction": controls.get("visual_style") or "premium realistic commercial visuals",
+        "provider_visual_prompt": _ucm_provider_safe_visual_prompt(provider_visual_prompt, 950),
+        "provider_audio_prompt": voiceover_script,
+        "quality_guardrails": quality_guardrails,
+        "not_spoken_instructions": [
+            "Do not say scene labels, timestamps, production instructions, provider instructions, or quality guardrails.",
+            "Do not read captions as labels.",
+            "Only voiceover_script is spoken audio.",
+        ],
+        "lead_scripting_agent": controls.get("selected_agent") or controls.get("agent_id"),
+        "contributing_agents": controls.get("selected_agents") or [controls.get("agent_id")],
+        "multi_agent_media_execution": bool(controls.get("multi_agent_media_execution")),
+        "requested_duration_seconds": duration,
+        "provider_safe_segment_seconds": provider_safe_segment_seconds,
+        "voiceover_estimated_duration_seconds": _ucm_estimate_spoken_duration_seconds(voiceover_script),
+        "script_duration_fit": _ucm_script_duration_fit(voiceover_script, duration),
+        "script_ready": bool(voiceover_script and scene_plan and provider_visual_prompt),
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
+
+    return packet
+
+
+def _ucm_client_script_preview(packet: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "voiceover_script": packet.get("voiceover_script", ""),
+        "caption_plan": packet.get("caption_plan", []),
+        "cta_text": packet.get("cta_text", ""),
+        "scene_count": len(packet.get("scene_plan") or []),
+        "voice_direction": packet.get("voice_direction", ""),
+        "script_duration_fit": packet.get("script_duration_fit", ""),
+        "voiceover_estimated_duration_seconds": packet.get("voiceover_estimated_duration_seconds", 0),
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
+
+
 def _ucm_estimated_credit_risk(duration_seconds: float, executable_visual_count: int, *, smoke_test_mode: bool = False) -> Dict[str, Any]:
     if smoke_test_mode:
         level = "low"
@@ -1085,7 +1318,7 @@ def _ucm_estimated_credit_risk(duration_seconds: float, executable_visual_count:
     }
 
 
-def _ucm_preflight_universal_media_job(payload: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
+def _ucm_preflight_universal_media_job(payload: Dict[str, Any], plan: Dict[str, Any], media_script_packet: Dict[str, Any]) -> Dict[str, Any]:
     safe_payload = dict(payload or {})
     controls = _ucm_controls(safe_payload)
     smoke_test_mode = _ucm_bool(
@@ -1145,6 +1378,22 @@ def _ucm_preflight_universal_media_job(payload: Dict[str, Any], plan: Dict[str, 
     if not controls.get("prompt"):
         failed_checks.append({"check": "prompt", "status": "failed", "reason": "A media prompt is required."})
 
+    script_ready = bool(media_script_packet.get("script_ready"))
+    voiceover_estimated_duration = float(media_script_packet.get("voiceover_estimated_duration_seconds") or 0.0)
+    script_duration_fit = str(media_script_packet.get("script_duration_fit") or "too_short")
+    if not script_ready:
+        failed_checks.append({
+            "check": "script_readiness",
+            "status": "failed",
+            "reason": "Media script packet is not ready for provider execution.",
+        })
+    if script_duration_fit == "too_long":
+        failed_checks.append({
+            "check": "script_duration_fit",
+            "status": "failed",
+            "reason": "Generated voiceover script is too long for the requested duration.",
+        })
+
     if smoke_test_mode and requested_duration > 5:
         failed_checks.append({
             "check": "smoke_test_duration",
@@ -1199,6 +1448,9 @@ def _ucm_preflight_universal_media_job(payload: Dict[str, Any], plan: Dict[str, 
         "estimated_duration_seconds": estimated_duration,
         "requested_duration_seconds": requested_duration,
         "estimated_credit_risk": estimated_credit_risk,
+        "script_ready": script_ready,
+        "voiceover_estimated_duration_seconds": voiceover_estimated_duration,
+        "script_duration_fit": script_duration_fit,
         "executable_visual_providers": executable_visual,
         "non_executable_visual_providers": non_executable_visual,
         "executable_audio_providers": executable_audio,
@@ -1670,6 +1922,9 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
         "failed_provider_attempts": [],
         "failed_preflight_checks": [],
         "blocked_provider_calls": [],
+        "media_script_packet": {},
+        "media_script_preview": {},
+        "script_ready": False,
         "selected_video_job_id": "",
         "selected_video_provider": "",
         "provider_attempt_count": 0,
@@ -1694,7 +1949,99 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
         })
 
     plan = build_universal_complete_media_plan(safe_payload)
-    preflight = _ucm_preflight_universal_media_job(safe_payload, plan)
+    _write_job({
+        **base_job,
+        "accepted": True,
+        "status": "scripting_media_brief",
+        "stage": "scripting_media_brief",
+        "lead_scripting_agent": controls["selected_agent"],
+        "contributing_scripting_agents": controls["selected_agents"],
+        "paid_provider_calls_started": False,
+        "external_action_performed": False,
+        "live_provider_call_triggered": False,
+        "timed_plan": plan.get("timed_plan"),
+    })
+
+    try:
+        media_script_packet = build_media_script_packet(safe_payload, plan)
+    except Exception as error:
+        return _write_job({
+            **base_job,
+            "success": False,
+            "accepted": True,
+            "status": "media_script_failed",
+            "stage": "scripting_media_brief",
+            "error": str(error)[:1000],
+            "paid_provider_calls_started": False,
+            "external_action_performed": False,
+            "live_provider_call_triggered": False,
+            "completed_at": _now(),
+        })
+
+    media_script_preview = _ucm_client_script_preview(media_script_packet)
+    base_job = {
+        **base_job,
+        "media_script_packet": media_script_packet,
+        "media_script_preview": media_script_preview,
+        "script_ready": bool(media_script_packet.get("script_ready")),
+        "lead_scripting_agent": media_script_packet.get("lead_scripting_agent"),
+        "contributing_scripting_agents": media_script_packet.get("contributing_agents"),
+    }
+    script_approval_required = _ucm_bool(
+        safe_payload.get("script_approval_required")
+        or safe_payload.get("client_script_approval_required")
+        or safe_payload.get("require_script_approval")
+    )
+    script_approved = _ucm_bool(
+        safe_payload.get("script_approved")
+        or safe_payload.get("use_generated_script")
+        or safe_payload.get("script_approval_granted")
+    )
+    requested_dry_run = _ucm_bool(
+        safe_payload.get("dry_run")
+        or safe_payload.get("preflight_only")
+        or safe_payload.get("check_readiness")
+        or safe_payload.get("universal_media_dry_run")
+    )
+    actor_role = str(safe_payload.get("actor_role") or safe_payload.get("portal_mode") or "").lower()
+    admin_actor = actor_role in {"admin", "owner_admin"} or bool(safe_payload.get("owner_admin_unrestricted"))
+
+    _write_job({
+        **base_job,
+        "accepted": True,
+        "status": "media_script_ready",
+        "stage": "media_script_ready",
+        "media_script_packet": media_script_packet,
+        "media_script_preview": media_script_preview,
+        "script_ready": True,
+        "script_approval_required": script_approval_required,
+        "script_approved": script_approved or (admin_actor and not script_approval_required),
+        "lead_scripting_agent": media_script_packet.get("lead_scripting_agent"),
+        "contributing_scripting_agents": media_script_packet.get("contributing_agents"),
+        "paid_provider_calls_started": False,
+    })
+
+    if script_approval_required and not script_approved and not requested_dry_run:
+        return _write_job({
+            **base_job,
+            "success": True,
+            "accepted": True,
+            "status": "media_script_ready",
+            "stage": "awaiting_script_approval",
+            "media_script_packet": media_script_packet,
+            "media_script_preview": media_script_preview,
+            "script_ready": True,
+            "script_approval_required": True,
+            "script_approved": False,
+            "message": "Media script is ready for approval before paid provider execution.",
+            "polling_required": False,
+            "paid_provider_calls_started": False,
+            "external_action_performed": False,
+            "live_provider_call_triggered": False,
+            "completed_at": _now(),
+        })
+
+    preflight = _ucm_preflight_universal_media_job(safe_payload, plan, media_script_packet)
     dry_run_mode = bool(preflight.get("dry_run"))
 
     if dry_run_mode or preflight.get("status") == "universal_complete_media_preflight_blocked":
@@ -1706,6 +2053,9 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
         return _write_job({
             **base_job,
             **preflight,
+            "media_script_packet": media_script_packet,
+            "media_script_preview": media_script_preview,
+            "script_ready": bool(media_script_packet.get("script_ready")),
             "success": preflight.get("status") != "universal_complete_media_preflight_blocked",
             "accepted": True,
             "status": status,
@@ -1725,6 +2075,9 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "accepted": True,
                 "status": "running_visual_generation",
                 "preflight": preflight,
+                "media_script_packet": media_script_packet,
+                "media_script_preview": media_script_preview,
+                "script_ready": bool(media_script_packet.get("script_ready")),
                 "estimated_duration_seconds": preflight.get("estimated_duration_seconds"),
                 "estimated_credit_risk": preflight.get("estimated_credit_risk"),
                 "executable_visual_providers": preflight.get("executable_visual_providers"),
@@ -1735,7 +2088,10 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "started_at": _now(),
             })
 
-            provider_visual_prompt = _ucm_provider_safe_visual_prompt(plan["visual_prompt"], 950)
+            provider_visual_prompt = _ucm_provider_safe_visual_prompt(
+                media_script_packet.get("provider_visual_prompt") or plan["visual_prompt"],
+                950,
+            )
 
             _write_job({
                 **base_job,
@@ -1746,7 +2102,9 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "visual_prompt_character_count": len(plan.get("visual_prompt") or ""),
                 "provider_visual_prompt_character_count": len(provider_visual_prompt),
                 "provider_visual_prompt_limit": 1000,
-                "provider_visual_prompt_truncated": len(plan.get("visual_prompt") or "") > len(provider_visual_prompt),
+                "provider_visual_prompt_truncated": len(str(media_script_packet.get("provider_visual_prompt") or plan.get("visual_prompt") or "")) > len(provider_visual_prompt),
+                "media_script_packet": media_script_packet,
+                "media_script_preview": media_script_preview,
                 "started_at": _now(),
             })
 
@@ -1881,7 +2239,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
             })
 
             provider_voice_prompt = _ucm_provider_safe_voice_prompt(
-                plan["voice_prompt"],
+                media_script_packet.get("voiceover_script") or "",
                 controls["duration_seconds"],
             )
 
@@ -1892,9 +2250,11 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "video_job_id": video_result.get("job_id"),
                 "video_provider_job_id": video_result.get("provider_job_id"),
                 "timed_plan": plan.get("timed_plan"),
-                "voice_prompt_character_count": len(plan.get("voice_prompt") or ""),
+                "voice_prompt_character_count": len(media_script_packet.get("voiceover_script") or ""),
                 "provider_voice_prompt_character_count": len(provider_voice_prompt),
                 "provider_voice_prompt_words": len(provider_voice_prompt.split()),
+                "media_script_packet": media_script_packet,
+                "media_script_preview": media_script_preview,
             })
 
             audio_result = execute_direct_media_provider_job({
