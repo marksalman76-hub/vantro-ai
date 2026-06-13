@@ -5420,7 +5420,36 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
             return JSONResponse(content=start_universal_complete_media_workflow(payload))
 
         if path == "/admin/universal-complete-media-status" and request.method.upper() == "GET":
-            from backend.app.runtime.direct_media_provider_execution_runtime import universal_complete_media_status
+            from backend.app.runtime.direct_media_provider_execution_runtime import (
+                get_direct_media_provider_job_status,
+                universal_complete_media_status,
+            )
+
+            job_id = str(request.query_params.get("job_id") or "").strip()
+            if job_id:
+                job = get_direct_media_provider_job_status(job_id)
+                if job and job.get("status") != "not_found":
+                    return JSONResponse(content={
+                        **job,
+                        "universal_complete_media_status_lookup": True,
+                        "direct_media_provider_execution": False,
+                        "customer_safe": True,
+                        "credential_values_exposed": False,
+                    })
+
+                return JSONResponse(
+                    status_code=202,
+                    content={
+                        "success": False,
+                        "status": "job_status_not_found",
+                        "job_id": job_id,
+                        "message": "Universal complete media job status was not found in the active runtime store.",
+                        "polling_required": True,
+                        "universal_complete_media_status_lookup": True,
+                        "customer_safe": True,
+                        "credential_values_exposed": False,
+                    },
+                )
 
             return JSONResponse(content=universal_complete_media_status())
 
@@ -5639,8 +5668,34 @@ async def admin_universal_complete_media(request: Request) -> Dict[str, object]:
 
 
 @app.get("/admin/universal-complete-media-status")
-def admin_universal_complete_media_status() -> Dict[str, object]:
-    from backend.app.runtime.direct_media_provider_execution_runtime import universal_complete_media_status
+def admin_universal_complete_media_status(job_id: str = "") -> Dict[str, object]:
+    from backend.app.runtime.direct_media_provider_execution_runtime import (
+        get_direct_media_provider_job_status,
+        universal_complete_media_status,
+    )
+
+    safe_job_id = str(job_id or "").strip()
+    if safe_job_id:
+        job = get_direct_media_provider_job_status(safe_job_id)
+        if job and job.get("status") != "not_found":
+            return {
+                **job,
+                "universal_complete_media_status_lookup": True,
+                "direct_media_provider_execution": False,
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            }
+
+        return {
+            "success": False,
+            "status": "job_status_not_found",
+            "job_id": safe_job_id,
+            "message": "Universal complete media job status was not found in the active runtime store.",
+            "polling_required": True,
+            "universal_complete_media_status_lookup": True,
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
 
     return universal_complete_media_status()
 
