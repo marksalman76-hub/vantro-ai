@@ -49,6 +49,19 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
   }
 }
 
+
+function isGenericReadinessPayload(data: any, jobId: string) {
+  if (!data || typeof data !== "object") return false;
+  const returnedJobId = String(data.job_id || data.media_job_id || data.id || "");
+  if (returnedJobId && returnedJobId === jobId) return false;
+
+  return Boolean(
+    data.universal_complete_media_workflow_ready === true &&
+    Array.isArray(data.supported_controls) &&
+    !returnedJobId
+  );
+}
+
 function safeTimeoutResponse(jobId: string, route: string, message: string) {
   return NextResponse.json(
     {
@@ -91,6 +104,23 @@ export async function GET(request: NextRequest) {
       customer_safe: true,
       credential_values_exposed: false,
     }));
+
+    if (jobId && isGenericReadinessPayload(data, jobId)) {
+      return NextResponse.json(
+        {
+          success: false,
+          status: "job_status_not_returned",
+          job_id: jobId,
+          message: "Backend returned universal media workflow readiness instead of the requested job status.",
+          backend_status_available: true,
+          polling_required: true,
+          customer_safe: true,
+          credential_values_exposed: false,
+          internal_config_exposed: false,
+        },
+        { status: 202 }
+      );
+    }
 
     return NextResponse.json(data, { status: response.status });
   } catch (error) {

@@ -39,6 +39,19 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
   }
 }
 
+
+function isGenericReadinessPayload(data: any, jobId: string) {
+  if (!data || typeof data !== "object") return false;
+  const returnedJobId = String(data.job_id || data.media_job_id || data.id || "");
+  if (returnedJobId && returnedJobId === jobId) return false;
+
+  return Boolean(
+    data.universal_complete_media_workflow_ready === true &&
+    Array.isArray(data.supported_controls) &&
+    !returnedJobId
+  );
+}
+
 function decorateMediaAssetUrls(data: any) {
   if (data?.composition_job_id) {
     data.preview_url = `/api/universal-complete-media-asset?job_id=${encodeURIComponent(data.composition_job_id)}`;
@@ -100,6 +113,11 @@ export async function GET(req: NextRequest) {
         customer_safe: true,
         credential_values_exposed: false,
       }));
+
+      if (isGenericReadinessPayload(data, jobId)) {
+        lastError = "Backend returned generic universal media readiness instead of job status.";
+        continue;
+      }
 
       return NextResponse.json(decorateMediaAssetUrls(data), { status: response.status });
     } catch (error) {
