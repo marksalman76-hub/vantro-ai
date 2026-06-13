@@ -68,6 +68,36 @@ function decorateMediaAssetUrls(data: any) {
   return data;
 }
 
+function clientSafeStatusPayload(data: any) {
+  if (!data || typeof data !== "object") return data;
+
+  const clone = { ...data };
+  delete clone.admin_provider_diagnostics;
+  delete clone.safe_provider_diagnostics;
+  delete clone.runway_key_diagnostics;
+  delete clone.direct_provider_snapshot;
+  delete clone.orchestrator_events;
+  delete clone.raw_provider_status;
+  delete clone.provider_result;
+  delete clone.error;
+
+  if (Array.isArray(clone.failed_provider_attempts)) {
+    clone.failed_provider_attempts = clone.failed_provider_attempts.map((attempt: any) => ({
+      provider: attempt?.provider,
+      status: attempt?.status,
+      job_id: attempt?.job_id,
+      safe_error_summary: attempt?.safe_error_summary,
+      customer_safe: true,
+      credential_values_exposed: false,
+    }));
+  }
+
+  clone.customer_safe = true;
+  clone.credential_values_exposed = false;
+  clone.internal_config_exposed = false;
+  return clone;
+}
+
 export async function GET(req: NextRequest) {
   const jobId = req.nextUrl.searchParams.get("job_id") || "";
 
@@ -82,7 +112,7 @@ export async function GET(req: NextRequest) {
   const headers: Record<string, string> = {
     Authorization: token ? `Bearer ${token}` : "",
     "x-admin-token": token,
-    "x-actor-role": "owner_admin",
+    "x-actor-role": "client",
     "x-tenant-id": req.headers.get("x-tenant-id") || req.cookies.get("tenant_id")?.value || "owner_admin",
     "x-requested-from": "universal_complete_media_status_proxy",
   };
@@ -125,7 +155,7 @@ export async function GET(req: NextRequest) {
         continue;
       }
 
-      return NextResponse.json(decorateMediaAssetUrls(data), { status: response.status });
+      return NextResponse.json(clientSafeStatusPayload(decorateMediaAssetUrls(data)), { status: response.status });
     } catch (error) {
       lastError = error instanceof Error ? error.message : String(error);
     }

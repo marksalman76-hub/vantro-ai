@@ -69,6 +69,13 @@ SAFE_PUBLIC_KEYS = {
     "final_media_type",
     "final_duration_seconds",
     "child_jobs",
+    "failed_provider_attempts",
+    "selected_video_job_id",
+    "selected_video_provider",
+    "visual_attempt_count",
+    "provider_attempt_count",
+    "support_failure_message",
+    "progress",
     "current_child_job_id",
     "video_job_id",
     "audio_job_id",
@@ -100,6 +107,9 @@ ADMIN_EXTRA_KEYS = {
     "voice_prompt_words",
     "raw_provider_status",
     "direct_provider_snapshot",
+    "safe_provider_diagnostics",
+    "admin_provider_diagnostics",
+    "runway_key_diagnostics",
     "orchestrator_events",
 }
 
@@ -208,11 +218,25 @@ def _merge_status(parent: Dict[str, Any], direct: Dict[str, Any]) -> Dict[str, A
         "quality_requirements",
         "completed_at",
         "failed_at",
+        "failed_provider_attempts",
+        "selected_video_job_id",
+        "selected_video_provider",
+        "visual_attempt_count",
+        "provider_attempt_count",
+        "safe_provider_diagnostics",
+        "admin_provider_diagnostics",
+        "runway_key_diagnostics",
+        "support_failure_message",
+        "progress",
     ]:
         if key in direct and direct.get(key) not in [None, ""]:
             merged[key] = direct.get(key)
 
     child_jobs = dict(merged.get("child_jobs") or {})
+    direct_child_jobs = direct.get("child_jobs") if isinstance(direct.get("child_jobs"), dict) else {}
+    for key, value in direct_child_jobs.items():
+        child_jobs[key] = value
+
     for child_key, child_id_key, status_key in [
         ("video", "video_job_id", "video_status"),
         ("audio", "audio_job_id", "audio_status"),
@@ -369,29 +393,11 @@ def get_universal_media_pipeline_status(job_id: str, *, audience: str = "client"
             "status_source": "universal_parent_store",
         }
 
-    if direct and direct.get("status") != "not_found":
-        merged = write_universal_parent_job(_merge_status({
-            "job_id": safe_job_id,
-            "parent_job_id": safe_job_id,
-            "status": direct.get("status") or "found_in_direct_store",
-            "created_at": _now(),
-            "provider": "universal_complete_media_workflow",
-            "universal_complete_media_workflow": True,
-            "one_prompt_complete_media": True,
-        }, direct))
-        return {
-            **_public_record(merged, audience=audience),
-            "success": merged.get("success", True),
-            "universal_media_pipeline_orchestrated": True,
-            "durable_parent_job": True,
-            "status_source": "direct_store_recovered",
-        }
-
     return {
         "success": False,
-        "status": "job_status_not_found",
+        "status": "durable_parent_job_missing",
         "job_id": safe_job_id,
-        "message": "Universal complete media job status was not found in the durable parent store or active provider runtime.",
+        "message": "Universal complete media job status was not found in the durable parent store.",
         "polling_required": True,
         "universal_media_pipeline_orchestrated": True,
         "durable_parent_job": True,

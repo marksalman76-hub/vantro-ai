@@ -39,6 +39,14 @@ type PopupMediaJobStatus = {
   status: string;
   message?: string;
   provider?: string;
+  video_job_id?: string;
+  audio_job_id?: string;
+  composition_job_id?: string;
+  selected_video_job_id?: string;
+  selected_video_provider?: string;
+  failed_provider_attempts?: any[];
+  child_jobs?: any;
+  safe_provider_diagnostics?: any;
   created_at?: string;
   updated_at?: string;
   raw_result?: any;
@@ -203,22 +211,35 @@ export default function AdminPage() {
     setPopupMediaPolling(true);
 
     try {
-      const response = await fetch("/api/admin-creative-media-assets", {
-        method: "GET",
-        cache: "no-store",
-      });
+      const [statusResponse, assetsResponse] = await Promise.all([
+        fetch(`/api/admin-universal-complete-media?job_id=${encodeURIComponent(cleanJobId)}`, {
+          method: "GET",
+          cache: "no-store",
+        }),
+        fetch("/api/admin-creative-media-assets", {
+          method: "GET",
+          cache: "no-store",
+        }),
+      ]);
 
-      const data: CreativeMediaAssetsResponse = await response.json();
+      const statusData = await statusResponse.json().catch(() => ({}));
+      const assetsData: CreativeMediaAssetsResponse = await assetsResponse.json();
 
-      if (!response.ok || data?.success === false) {
-        throw new Error(data?.status || "Unable to load creative media assets");
+      if (!assetsResponse.ok || assetsData?.success === false) {
+        throw new Error(assetsData?.status || "Unable to load creative media assets");
       }
 
-      const assets = Array.isArray(data.assets) ? data.assets : [];
+      const assets = Array.isArray(assetsData.assets) ? assetsData.assets : [];
       setCreativeMediaAssets(assets);
 
       const matchedAssets = assets.filter((asset) => assetMatchesMediaJob(asset, cleanJobId));
       const firstAsset = matchedAssets[0];
+      const attemptCount =
+        Array.isArray(statusData?.failed_provider_attempts)
+          ? statusData.failed_provider_attempts.length
+          : Array.isArray(statusData?.child_jobs?.visual_attempts)
+            ? statusData.child_jobs.visual_attempts.length
+            : 0;
 
       setPopupMediaJobStatus((previous) => {
         const seed = baseStatus || previous || {
@@ -230,28 +251,86 @@ export default function AdminPage() {
           ...seed,
           job_id: cleanJobId,
           status: normaliseMediaStatus(
-            firstAsset?.delivery_status ||
+            statusData?.status ||
+              firstAsset?.delivery_status ||
               firstAsset?.status ||
               seed.status ||
               "queued"
           ),
           message:
-            matchedAssets.length > 0
-              ? `${matchedAssets.length} generated asset record(s) matched this popup media job.`
-              : seed.message || "Media job accepted. Waiting for generated asset records.",
-          provider: firstAsset?.provider || seed.provider,
+            statusData?.support_failure_message ||
+            statusData?.message ||
+            (attemptCount > 0
+              ? `${attemptCount} visual provider attempt(s) recorded for this popup media job.`
+              : matchedAssets.length > 0
+                ? `${matchedAssets.length} generated asset record(s) matched this popup media job.`
+                : seed.message || "Media job accepted. Waiting for provider attempts or generated asset records."),
+          provider: statusData?.provider || firstAsset?.provider || seed.provider,
+          video_job_id: statusData?.video_job_id,
+          audio_job_id: statusData?.audio_job_id,
+          composition_job_id: statusData?.composition_job_id,
+          selected_video_job_id: statusData?.selected_video_job_id,
+          selected_video_provider: statusData?.selected_video_provider,
+          failed_provider_attempts: statusData?.failed_provider_attempts,
+          child_jobs: statusData?.child_jobs,
+          safe_provider_diagnostics: statusData?.safe_provider_diagnostics,
+          raw_result: statusData,
           matched_assets: matchedAssets,
           updated_at: new Date().toISOString(),
         };
       });
     } catch (error) {
-      setPopupMediaJobStatus((previous) => ({
-        ...(baseStatus || previous || { job_id: cleanJobId }),
-        job_id: cleanJobId,
-        status: previous?.status || baseStatus?.status || "queued",
-        message: error instanceof Error ? error.message : String(error),
-        updated_at: new Date().toISOString(),
-      }));
+      try {
+        const response = await fetch("/api/admin-creative-media-assets", {
+        method: "GET",
+        cache: "no-store",
+        });
+
+        const data: CreativeMediaAssetsResponse = await response.json();
+
+        if (!response.ok || data?.success === false) {
+          throw new Error(data?.status || "Unable to load creative media assets");
+        }
+
+        const assets = Array.isArray(data.assets) ? data.assets : [];
+        setCreativeMediaAssets(assets);
+
+        const matchedAssets = assets.filter((asset) => assetMatchesMediaJob(asset, cleanJobId));
+        const firstAsset = matchedAssets[0];
+
+        setPopupMediaJobStatus((previous) => {
+          const seed = baseStatus || previous || {
+            job_id: cleanJobId,
+            status: "queued",
+          };
+
+          return {
+            ...seed,
+            job_id: cleanJobId,
+            status: normaliseMediaStatus(
+              firstAsset?.delivery_status ||
+                firstAsset?.status ||
+                seed.status ||
+                "queued"
+            ),
+            message:
+              matchedAssets.length > 0
+                ? `${matchedAssets.length} generated asset record(s) matched this popup media job.`
+                : seed.message || "Media job accepted. Waiting for generated asset records.",
+            provider: firstAsset?.provider || seed.provider,
+            matched_assets: matchedAssets,
+            updated_at: new Date().toISOString(),
+          };
+        });
+      } catch (fallbackError) {
+        setPopupMediaJobStatus((previous) => ({
+          ...(baseStatus || previous || { job_id: cleanJobId }),
+          job_id: cleanJobId,
+          status: previous?.status || baseStatus?.status || "queued",
+          message: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+          updated_at: new Date().toISOString(),
+        }));
+      }
     } finally {
       setPopupMediaPolling(false);
     }
@@ -1435,6 +1514,42 @@ const [activeNav, setActiveNav] = useState("Overview");
                       <span>{popupMediaJobStatus.updated_at ? new Date(popupMediaJobStatus.updated_at).toLocaleTimeString() : "Waiting"}</span>
                     </div>
                   </div>
+
+                  {popupMediaJobStatus.selected_video_job_id || popupMediaJobStatus.audio_job_id || popupMediaJobStatus.composition_job_id ? (
+                    <div className="popupMediaStatusGrid" style={{ marginTop: 10 }}>
+                      <div>
+                        <small>Selected video</small>
+                        <span>{popupMediaJobStatus.selected_video_job_id || popupMediaJobStatus.video_job_id || "Pending"}</span>
+                      </div>
+                      <div>
+                        <small>Video provider</small>
+                        <span>{popupMediaJobStatus.selected_video_provider || "Pending"}</span>
+                      </div>
+                      <div>
+                        <small>Audio child</small>
+                        <span>{popupMediaJobStatus.audio_job_id || "Pending"}</span>
+                      </div>
+                      <div>
+                        <small>Composition child</small>
+                        <span>{popupMediaJobStatus.composition_job_id || "Pending"}</span>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {Array.isArray(popupMediaJobStatus.failed_provider_attempts) && popupMediaJobStatus.failed_provider_attempts.length > 0 ? (
+                    <div className="popupMediaAssetList" style={{ marginTop: 10 }}>
+                      {popupMediaJobStatus.failed_provider_attempts.slice(0, 5).map((attempt: any, index: number) => (
+                        <div className="popupMediaAssetCard" key={`${attempt?.provider || "provider"}-${attempt?.job_id || index}`}>
+                          <div>
+                            <strong>{attempt?.provider || "Provider"} attempt</strong>
+                            <p>Status: {attempt?.status || "failed"}</p>
+                            {attempt?.job_id ? <p className="breakText">Child job: {attempt.job_id}</p> : null}
+                            {attempt?.safe_error_summary ? <p className="warningText">{attempt.safe_error_summary}</p> : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
 
                   {popupMediaJobStatus.matched_assets && popupMediaJobStatus.matched_assets.length > 0 ? (
                     <div className="popupMediaAssetList">

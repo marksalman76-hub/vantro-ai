@@ -132,6 +132,7 @@ def get_runway_live_video_adapter_status() -> Dict[str, Any]:
     api_key_present = bool(
         os.getenv("RUNWAYML_API_SECRET", "").strip()
         or os.getenv("RUNWAY_API_KEY", "").strip()
+        or os.getenv("RUNWAYML_API_KEY", "").strip()
     )
 
     return {
@@ -213,7 +214,11 @@ def run_runway_text_to_video_quality_test(
             "verified_at": _now(),
         }
 
-    runway_secret = os.getenv("RUNWAYML_API_SECRET", "").strip() or os.getenv("RUNWAY_API_KEY", "").strip()
+    runway_secret = (
+        os.getenv("RUNWAYML_API_SECRET", "").strip()
+        or os.getenv("RUNWAY_API_KEY", "").strip()
+        or os.getenv("RUNWAYML_API_KEY", "").strip()
+    )
     if not runway_secret:
         return {
             "success": False,

@@ -40,6 +40,23 @@ function safeHeaders(req: NextRequest) {
   };
 }
 
+function clientSafePayload(data: any) {
+  if (!data || typeof data !== "object") return data;
+  const clone = { ...data };
+  delete clone.admin_provider_diagnostics;
+  delete clone.safe_provider_diagnostics;
+  delete clone.runway_key_diagnostics;
+  delete clone.direct_provider_snapshot;
+  delete clone.orchestrator_events;
+  delete clone.raw_provider_status;
+  delete clone.provider_result;
+  delete clone.error;
+  clone.customer_safe = true;
+  clone.credential_values_exposed = false;
+  clone.internal_config_exposed = false;
+  return clone;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json().catch(() => ({}));
@@ -66,7 +83,7 @@ export async function POST(req: NextRequest) {
       credential_values_exposed: false,
     }));
 
-    return NextResponse.json(data, { status: response.status });
+    return NextResponse.json(clientSafePayload(data), { status: response.status });
   } catch (error) {
     return NextResponse.json(
       {

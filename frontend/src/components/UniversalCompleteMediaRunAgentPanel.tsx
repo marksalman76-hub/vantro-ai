@@ -558,6 +558,25 @@ export default function UniversalCompleteMediaRunAgentPanel({
     return { jobId, status, url, finalOutput };
   }
 
+  function providerAttemptSummary(result: any) {
+    const attempts = Array.isArray(result?.failed_provider_attempts)
+      ? result.failed_provider_attempts
+      : Array.isArray(result?.child_jobs?.visual_attempts)
+        ? result.child_jobs.visual_attempts
+        : [];
+
+    if (!attempts.length) return "";
+
+    return attempts
+      .map((attempt: any) => {
+        const provider = attempt?.provider || "provider";
+        const status = attempt?.status || "failed";
+        const summary = attempt?.safe_error_summary ? `: ${attempt.safe_error_summary}` : "";
+        return `${provider} ${status}${summary}`;
+      })
+      .join(" | ");
+  }
+
   async function checkPopupMediaJobStatus(jobIdOverride?: string) {
     const jobId = jobIdOverride || popupMediaJobId;
 
@@ -571,10 +590,10 @@ export default function UniversalCompleteMediaRunAgentPanel({
     const statusEndpoints =
       portalMode === "admin"
         ? [
-            `/api/admin-direct-media-provider-job-status?job_id=${encodeURIComponent(jobId)}`,
             isUniversalCompleteMediaJob
               ? `/api/admin-universal-complete-media?job_id=${encodeURIComponent(jobId)}`
               : "",
+            `/api/admin-direct-media-provider-job-status?job_id=${encodeURIComponent(jobId)}`,
           ].filter(Boolean)
         : [
             isUniversalCompleteMediaJob
@@ -622,6 +641,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
             "running_synchronised_composition",
             "completed",
             "universal_complete_media_visual_failed",
+            "visual_failed_all_providers",
             "universal_complete_media_audio_failed",
             "universal_complete_media_composition_failed",
             "universal_complete_media_exception",
@@ -649,7 +669,12 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
         const status = extracted.status || resultStatus || result?.status || "status received";
 
-        setStatusMessage(`Media job ${jobId} status: ${status}`);
+        const attempts = providerAttemptSummary(result);
+        setStatusMessage(
+          attempts
+            ? `Media job ${jobId} status: ${status}. Provider attempts: ${attempts}`
+            : `Media job ${jobId} status: ${status}`
+        );
 
         const terminalStatus = String(status || "").toLowerCase();
         if (

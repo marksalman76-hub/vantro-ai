@@ -5410,46 +5410,32 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
             return JSONResponse(content=get_direct_media_provider_job_status(job_id))
 
         if path == "/admin/universal-complete-media" and request.method.upper() == "POST":
-            from backend.app.runtime.direct_media_provider_execution_runtime import start_universal_complete_media_workflow
+            from backend.app.runtime.universal_media_pipeline_orchestrator import accept_universal_media_pipeline_job
 
             try:
                 payload = await request.json()
             except Exception:
                 payload = {}
 
-            return JSONResponse(content=start_universal_complete_media_workflow(payload))
+            portal = "client" if str(x_actor_role or "").strip().lower() == "client" else "admin"
+            return JSONResponse(content=accept_universal_media_pipeline_job(payload, portal=portal))
 
         if path == "/admin/universal-complete-media-status" and request.method.upper() == "GET":
-            from backend.app.runtime.direct_media_provider_execution_runtime import (
-                get_direct_media_provider_job_status,
-                universal_complete_media_status,
-            )
+            from backend.app.runtime.direct_media_provider_execution_runtime import universal_complete_media_status
+            from backend.app.runtime.universal_media_pipeline_orchestrator import get_universal_media_pipeline_status
 
             job_id = str(request.query_params.get("job_id") or "").strip()
             if job_id:
-                job = get_direct_media_provider_job_status(job_id)
-                if job and job.get("status") != "not_found":
-                    return JSONResponse(content={
-                        **job,
-                        "universal_complete_media_status_lookup": True,
-                        "direct_media_provider_execution": False,
-                        "customer_safe": True,
-                        "credential_values_exposed": False,
-                    })
-
-                return JSONResponse(
-                    status_code=202,
-                    content={
-                        "success": False,
-                        "status": "job_status_not_found",
-                        "job_id": job_id,
-                        "message": "Universal complete media job status was not found in the active runtime store.",
-                        "polling_required": True,
-                        "universal_complete_media_status_lookup": True,
-                        "customer_safe": True,
-                        "credential_values_exposed": False,
-                    },
-                )
+                audience = "client" if str(x_actor_role or "").strip().lower() == "client" else "admin"
+                status = get_universal_media_pipeline_status(job_id, audience=audience)
+                http_status = 202 if status.get("status") == "durable_parent_job_missing" else 200
+                return JSONResponse(status_code=http_status, content={
+                    **status,
+                    "universal_complete_media_status_lookup": True,
+                    "direct_media_provider_execution": False,
+                    "customer_safe": True,
+                    "credential_values_exposed": False,
+                })
 
             return JSONResponse(content=universal_complete_media_status())
 
@@ -5657,42 +5643,27 @@ def admin_direct_media_provider_compose_status() -> Dict[str, object]:
 # UNIVERSAL_COMPLETE_MEDIA_WORKFLOW_ROUTE_V1
 @app.post("/admin/universal-complete-media")
 async def admin_universal_complete_media(request: Request) -> Dict[str, object]:
-    from backend.app.runtime.direct_media_provider_execution_runtime import start_universal_complete_media_workflow
+    from backend.app.runtime.universal_media_pipeline_orchestrator import accept_universal_media_pipeline_job
 
     try:
         payload = await request.json()
     except Exception:
         payload = {}
 
-    return start_universal_complete_media_workflow(payload)
+    return accept_universal_media_pipeline_job(payload, portal="admin")
 
 
 @app.get("/admin/universal-complete-media-status")
 def admin_universal_complete_media_status(job_id: str = "") -> Dict[str, object]:
-    from backend.app.runtime.direct_media_provider_execution_runtime import (
-        get_direct_media_provider_job_status,
-        universal_complete_media_status,
-    )
+    from backend.app.runtime.direct_media_provider_execution_runtime import universal_complete_media_status
+    from backend.app.runtime.universal_media_pipeline_orchestrator import get_universal_media_pipeline_status
 
     safe_job_id = str(job_id or "").strip()
     if safe_job_id:
-        job = get_direct_media_provider_job_status(safe_job_id)
-        if job and job.get("status") != "not_found":
-            return {
-                **job,
-                "universal_complete_media_status_lookup": True,
-                "direct_media_provider_execution": False,
-                "customer_safe": True,
-                "credential_values_exposed": False,
-            }
-
         return {
-            "success": False,
-            "status": "job_status_not_found",
-            "job_id": safe_job_id,
-            "message": "Universal complete media job status was not found in the active runtime store.",
-            "polling_required": True,
+            **get_universal_media_pipeline_status(safe_job_id, audience="admin"),
             "universal_complete_media_status_lookup": True,
+            "direct_media_provider_execution": False,
             "customer_safe": True,
             "credential_values_exposed": False,
         }
@@ -5707,9 +5678,6 @@ def admin_runway_key_diagnostics(
     x_admin_token: str | None = Header(default=None),
     authorization: str | None = Header(default=None),
 ) -> Dict[str, object]:
-    import hashlib
-    import os
-
     if not _admin_media_job_authorized(
         x_actor_role=x_actor_role,
         x_admin_token=x_admin_token,
@@ -5722,39 +5690,7 @@ def admin_runway_key_diagnostics(
             "credential_values_exposed": False,
         }
 
-    candidate_names = [
-        "RUNWAY_API_KEY",
-        "RUNWAYML_API_KEY",
-        "RUNWAY_TOKEN",
-        "RUNWAYML_TOKEN",
-        "RUNWAY_API_TOKEN",
-    ]
+    from backend.app.runtime.direct_media_provider_execution_runtime import runway_safe_key_diagnostics
 
-    keys = []
-    for name in candidate_names:
-        value = str(os.getenv(name) or "").strip()
-        if value:
-            digest = hashlib.sha256(value.encode("utf-8")).hexdigest()
-            keys.append({
-                "env_name": name,
-                "present": True,
-                "length": len(value),
-                "sha256_prefix": digest[:12],
-                "starts_with": value[:4] + "***" if len(value) >= 4 else "***",
-            })
-        else:
-            keys.append({
-                "env_name": name,
-                "present": False,
-                "length": 0,
-            })
-
-    return {
-        "success": True,
-        "status": "runway_key_metadata_only",
-        "keys": keys,
-        "note": "No credential values are exposed. Compare sha256_prefix/length with the intended key locally or in Render.",
-        "customer_safe": True,
-        "credential_values_exposed": False,
-    }
+    return runway_safe_key_diagnostics()
 

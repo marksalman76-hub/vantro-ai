@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
+import hashlib
 import json
 import os
 import re
@@ -90,14 +91,56 @@ def _env_present(names: list[str]) -> bool:
     return any(bool(os.getenv(name, "").strip()) for name in names)
 
 
+def runway_safe_key_diagnostics() -> Dict[str, Any]:
+    candidate_names = [
+        "RUNWAYML_API_SECRET",
+        "RUNWAY_API_KEY",
+        "RUNWAYML_API_KEY",
+        "RUNWAY_TOKEN",
+        "RUNWAYML_TOKEN",
+        "RUNWAY_API_TOKEN",
+    ]
+
+    used_env_name = ""
+    keys = []
+    for name in candidate_names:
+        value = str(os.getenv(name) or "").strip()
+        if value and not used_env_name:
+            used_env_name = name
+
+        item: Dict[str, Any] = {
+            "env_name": name,
+            "present": bool(value),
+            "length": len(value) if value else 0,
+        }
+        if value:
+            item["sha256_prefix"] = hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
+        keys.append(item)
+
+    return {
+        "success": True,
+        "status": "runway_key_metadata_only",
+        "provider": "runway",
+        "candidate_env_names": candidate_names,
+        "used_env_name": used_env_name,
+        "configured": bool(used_env_name),
+        "keys": keys,
+        "note": "No credential values are exposed. Use env_name, length, and sha256_prefix to compare the backend key with the intended Runway API key.",
+        "customer_safe": True,
+        "credential_values_exposed": False,
+        "internal_config_exposed": False,
+    }
+
+
 def provider_readiness(provider: str) -> Dict[str, Any]:
     key = str(provider or "").strip().lower()
 
     if key == "runway":
-        configured = _env_present(["RUNWAYML_API_SECRET", "RUNWAY_API_KEY"])
+        configured = _env_present(["RUNWAYML_API_SECRET", "RUNWAY_API_KEY", "RUNWAYML_API_KEY"])
         return {
             "provider": "runway",
             "configured": configured,
+            "env_names": ["RUNWAYML_API_SECRET", "RUNWAY_API_KEY", "RUNWAYML_API_KEY"],
             "supports": ["video"],
             "credential_values_exposed": False,
             "customer_safe": True,
@@ -523,7 +566,7 @@ DIRECT_PROVIDER_STACK = [
         "name": "Runway",
         "category": "video",
         "supports": ["video"],
-        "env_names": ["RUNWAYML_API_SECRET", "RUNWAY_API_KEY"],
+        "env_names": ["RUNWAYML_API_SECRET", "RUNWAY_API_KEY", "RUNWAYML_API_KEY"],
         "direct_execution_enabled": True,
         "disabled_reason": "",
     },
@@ -644,6 +687,9 @@ def direct_media_provider_execution_status() -> Dict[str, Any]:
         "replicate": provider_map.get("replicate", provider_readiness("replicate")),
         "openai": provider_map.get("openai", provider_readiness("openai")),
         "sync": provider_map.get("sync", provider_readiness("sync")),
+        "admin_provider_diagnostics": {
+            "runway": runway_safe_key_diagnostics(),
+        },
         "external_action_requires_owner_approval": True,
         "credential_values_exposed": False,
         "customer_safe": True,
@@ -1319,6 +1365,60 @@ def _ucm_compose_with_sync(video_job: Dict[str, Any], audio_job: Dict[str, Any],
         })
 
 
+def _ucm_provider_failure_summary(result: Dict[str, Any]) -> str:
+    raw = str(
+        result.get("error")
+        or result.get("reason")
+        or result.get("message")
+        or result.get("provider_status")
+        or result.get("status")
+        or "provider_attempt_failed"
+    )
+    clean = re.sub(r"(?i)(api[_ -]?key|secret|token|bearer)\s*[:=]\s*['\"]?[^,'\"\s}]+", r"\1: [redacted]", raw)
+    clean = re.sub(r"sk-[A-Za-z0-9_\-]{12,}", "[redacted]", clean)
+    clean = re.sub(r"rw[a-zA-Z0-9_\-]{12,}", "[redacted]", clean)
+    return clean[:420]
+
+
+def _ucm_video_provider_order(requested_provider: str) -> list[str]:
+    ordered: list[str] = []
+    for provider in [requested_provider, "kling", "replicate", "openai"]:
+        key = str(provider or "").strip().lower()
+        if key and key not in ordered:
+            ordered.append(key)
+    return ordered
+
+
+def _ucm_attempt_record(provider: str, result: Dict[str, Any], attempt_number: int) -> Dict[str, Any]:
+    readiness = provider_readiness(provider)
+    return {
+        "attempt": attempt_number,
+        "stage": "visual",
+        "provider": provider,
+        "job_id": result.get("job_id"),
+        "provider_job_id": result.get("provider_job_id"),
+        "status": result.get("status") or result.get("provider_status") or "provider_attempt_failed",
+        "success": bool(result.get("success") and result.get("status") == "completed" and result.get("playable")),
+        "playable": bool(result.get("playable")),
+        "configured": bool(readiness.get("configured")),
+        "direct_execution_enabled": bool(readiness.get("direct_execution_enabled", provider in SUPPORTED_VIDEO_PROVIDERS)),
+        "safe_error_summary": _ucm_provider_failure_summary(result) if not (result.get("success") and result.get("playable")) else "",
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
+
+
+def _ucm_visual_child_jobs(attempts: list[Dict[str, Any]], selected: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    return {
+        "visual_attempts": attempts,
+        "visual": {
+            "job_id": (selected or {}).get("job_id") or "",
+            "provider": (selected or {}).get("provider") or "",
+            "status": (selected or {}).get("status") or "pending",
+        },
+    }
+
+
 def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str, Any]:
     safe_payload = dict(payload or {})
     controls = _ucm_controls(safe_payload)
@@ -1344,6 +1444,13 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
         "universal_complete_media_workflow": True,
         "one_prompt_complete_media": True,
         "owner_approved": owner_approved,
+        "child_jobs": {"visual_attempts": []},
+        "failed_provider_attempts": [],
+        "selected_video_job_id": "",
+        "selected_video_provider": "",
+        "provider_attempt_count": 0,
+        "visual_attempt_count": 0,
+        "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
         "created_at": _now(),
         "customer_safe": True,
         "credential_values_exposed": False,
@@ -1396,24 +1503,128 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "started_at": _now(),
             })
 
-            video_result = execute_direct_media_provider_job({
-                "agent_id": controls["agent_id"],
-                "provider": controls["video_provider"],
-                "media_type": "video",
-                "prompt": provider_visual_prompt,
-                "owner_approved": True,
-                "owner_approval_granted": True,
-            })
+            visual_attempts: list[Dict[str, Any]] = []
+            failed_provider_attempts: list[Dict[str, Any]] = []
+            video_result: Dict[str, Any] = {}
 
-            if not video_result.get("success") or video_result.get("status") != "completed" or not video_result.get("playable"):
+            for attempt_number, video_provider in enumerate(_ucm_video_provider_order(controls["video_provider"]), start=1):
+                readiness = provider_readiness(video_provider)
+
+                if video_provider not in SUPPORTED_VIDEO_PROVIDERS:
+                    skipped_result = {
+                        "success": False,
+                        "status": "blocked_provider_adapter_unavailable",
+                        "provider": video_provider,
+                        "reason": f"{video_provider} is not enabled for direct video execution in this runtime.",
+                    }
+                    attempt = _ucm_attempt_record(video_provider, skipped_result, attempt_number)
+                    visual_attempts.append(attempt)
+                    failed_provider_attempts.append(attempt)
+                    _write_job({
+                        **base_job,
+                        "accepted": True,
+                        "status": "running_visual_generation",
+                        "child_jobs": _ucm_visual_child_jobs(visual_attempts),
+                        "failed_provider_attempts": failed_provider_attempts,
+                        "provider_attempt_count": len(visual_attempts),
+                        "visual_attempt_count": len(visual_attempts),
+                        "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
+                    })
+                    continue
+
+                if not readiness.get("configured"):
+                    skipped_result = {
+                        "success": False,
+                        "status": "blocked_provider_not_configured",
+                        "provider": video_provider,
+                        "reason": f"{video_provider} credentials are not configured.",
+                    }
+                    attempt = _ucm_attempt_record(video_provider, skipped_result, attempt_number)
+                    visual_attempts.append(attempt)
+                    failed_provider_attempts.append(attempt)
+                    _write_job({
+                        **base_job,
+                        "accepted": True,
+                        "status": "running_visual_generation",
+                        "child_jobs": _ucm_visual_child_jobs(visual_attempts),
+                        "failed_provider_attempts": failed_provider_attempts,
+                        "provider_attempt_count": len(visual_attempts),
+                        "visual_attempt_count": len(visual_attempts),
+                        "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
+                    })
+                    continue
+
+                attempt_job_id = _safe_id("direct_media_job")
+                current_result = execute_direct_media_provider_job({
+                    "job_id": attempt_job_id,
+                    "agent_id": controls["agent_id"],
+                    "provider": video_provider,
+                    "media_type": "video",
+                    "prompt": provider_visual_prompt,
+                    "owner_approved": True,
+                    "owner_approval_granted": True,
+                })
+
+                attempt = _ucm_attempt_record(video_provider, current_result, attempt_number)
+                visual_attempts.append(attempt)
+
+                if current_result.get("success") and current_result.get("status") == "completed" and current_result.get("playable"):
+                    video_result = current_result
+                    _write_job({
+                        **base_job,
+                        "accepted": True,
+                        "status": "running_audio_generation",
+                        "selected_video_job_id": current_result.get("job_id"),
+                        "selected_video_provider": video_provider,
+                        "video_provider": video_provider,
+                        "video_job_id": current_result.get("job_id"),
+                        "video_status": current_result.get("status"),
+                        "video_provider_job_id": current_result.get("provider_job_id"),
+                        "child_jobs": _ucm_visual_child_jobs(visual_attempts, current_result),
+                        "failed_provider_attempts": failed_provider_attempts,
+                        "provider_attempt_count": len(visual_attempts),
+                        "visual_attempt_count": len(visual_attempts),
+                        "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
+                        "timed_plan": plan.get("timed_plan"),
+                    })
+                    break
+
+                failed_provider_attempts.append(attempt)
+                _write_job({
+                    **base_job,
+                    "accepted": True,
+                    "status": "running_visual_generation",
+                    "video_job_id": current_result.get("job_id"),
+                    "video_status": current_result.get("status"),
+                    "video_error": attempt.get("safe_error_summary"),
+                    "child_jobs": _ucm_visual_child_jobs(visual_attempts),
+                    "failed_provider_attempts": failed_provider_attempts,
+                    "provider_attempt_count": len(visual_attempts),
+                    "visual_attempt_count": len(visual_attempts),
+                    "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
+                })
+
+            if not video_result:
+                support_failure_message = (
+                    "Video generation could not complete with the configured providers. "
+                    "Support can review the linked provider attempts and safe diagnostics."
+                )
                 _write_job({
                     **base_job,
                     "success": False,
                     "accepted": True,
                     "status": "universal_complete_media_visual_failed",
-                    "video_job_id": video_result.get("job_id"),
-                    "video_status": video_result.get("status"),
-                    "video_error": video_result.get("error") or video_result.get("reason") or video_result.get("message"),
+                    "video_job_id": visual_attempts[-1].get("job_id") if visual_attempts else "",
+                    "selected_video_job_id": "",
+                    "selected_video_provider": "",
+                    "video_status": "visual_failed_all_providers",
+                    "video_error": failed_provider_attempts[-1].get("safe_error_summary") if failed_provider_attempts else "No configured video provider was available.",
+                    "child_jobs": _ucm_visual_child_jobs(visual_attempts),
+                    "failed_provider_attempts": failed_provider_attempts,
+                    "provider_attempt_count": len(visual_attempts),
+                    "visual_attempt_count": len(visual_attempts),
+                    "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
+                    "support_failure_message": support_failure_message,
                     "completed_at": _now(),
                 })
                 return
@@ -1423,7 +1634,15 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "accepted": True,
                 "status": "running_audio_generation",
                 "video_job_id": video_result.get("job_id"),
+                "selected_video_job_id": video_result.get("job_id"),
+                "selected_video_provider": video_result.get("provider") or controls["video_provider"],
+                "video_provider": video_result.get("provider") or controls["video_provider"],
                 "video_provider_job_id": video_result.get("provider_job_id"),
+                "child_jobs": _ucm_visual_child_jobs(visual_attempts, video_result),
+                "failed_provider_attempts": failed_provider_attempts,
+                "provider_attempt_count": len(visual_attempts),
+                "visual_attempt_count": len(visual_attempts),
+                "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
                 "timed_plan": plan.get("timed_plan"),
             })
 
@@ -1460,9 +1679,20 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     "accepted": True,
                     "status": "universal_complete_media_audio_failed",
                     "video_job_id": video_result.get("job_id"),
+                    "selected_video_job_id": video_result.get("job_id"),
+                    "selected_video_provider": video_result.get("provider") or controls["video_provider"],
                     "audio_job_id": audio_result.get("job_id"),
                     "audio_status": audio_result.get("status"),
                     "audio_error": audio_result.get("error") or audio_result.get("reason") or audio_result.get("message"),
+                    "child_jobs": {
+                        **_ucm_visual_child_jobs(visual_attempts, video_result),
+                        "audio": {
+                            "job_id": audio_result.get("job_id"),
+                            "provider": controls["audio_provider"],
+                            "status": audio_result.get("status"),
+                        },
+                    },
+                    "failed_provider_attempts": failed_provider_attempts,
                     "completed_at": _now(),
                 })
                 return
@@ -1473,6 +1703,17 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "status": "running_synchronised_composition",
                 "video_job_id": video_result.get("job_id"),
                 "audio_job_id": audio_result.get("job_id"),
+                "selected_video_job_id": video_result.get("job_id"),
+                "selected_video_provider": video_result.get("provider") or controls["video_provider"],
+                "child_jobs": {
+                    **_ucm_visual_child_jobs(visual_attempts, video_result),
+                    "audio": {
+                        "job_id": audio_result.get("job_id"),
+                        "provider": controls["audio_provider"],
+                        "status": audio_result.get("status"),
+                    },
+                },
+                "failed_provider_attempts": failed_provider_attempts,
             })
 
             composition_job_id = _safe_id("universal_complete_media_composition")
@@ -1487,8 +1728,24 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     "video_job_id": video_result.get("job_id"),
                     "audio_job_id": audio_result.get("job_id"),
                     "composition_job_id": composition_result.get("job_id"),
+                    "selected_video_job_id": video_result.get("job_id"),
+                    "selected_video_provider": video_result.get("provider") or controls["video_provider"],
                     "composition_status": composition_result.get("status"),
                     "composition_error": composition_result.get("error") or composition_result.get("reason") or composition_result.get("message"),
+                    "child_jobs": {
+                        **_ucm_visual_child_jobs(visual_attempts, video_result),
+                        "audio": {
+                            "job_id": audio_result.get("job_id"),
+                            "provider": controls["audio_provider"],
+                            "status": audio_result.get("status"),
+                        },
+                        "composition": {
+                            "job_id": composition_result.get("job_id"),
+                            "provider": "universal_complete_media_composer",
+                            "status": composition_result.get("status"),
+                        },
+                    },
+                    "failed_provider_attempts": failed_provider_attempts,
                     "completed_at": _now(),
                 })
                 return
@@ -1503,6 +1760,8 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "video_job_id": video_result.get("job_id"),
                 "audio_job_id": audio_result.get("job_id"),
                 "composition_job_id": composition_result.get("job_id"),
+                "selected_video_job_id": video_result.get("job_id"),
+                "selected_video_provider": video_result.get("provider") or controls["video_provider"],
                 "provider_job_id": composition_result.get("job_id"),
                 "playable": True,
                 "preview_ready": True,
@@ -1515,6 +1774,22 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "final_duration_seconds": composition_result.get("final_duration_seconds"),
                 "timed_plan": plan.get("timed_plan"),
                 "quality_requirements": plan.get("quality_requirements"),
+                "child_jobs": {
+                    **_ucm_visual_child_jobs(visual_attempts, video_result),
+                    "audio": {
+                        "job_id": audio_result.get("job_id"),
+                        "provider": controls["audio_provider"],
+                        "status": audio_result.get("status"),
+                    },
+                    "composition": {
+                        "job_id": composition_result.get("job_id"),
+                        "provider": "universal_complete_media_composer",
+                        "status": composition_result.get("status"),
+                    },
+                },
+                "failed_provider_attempts": failed_provider_attempts,
+                "provider_attempt_count": len(visual_attempts),
+                "visual_attempt_count": len(visual_attempts),
                 "completed_at": _now(),
             })
 
@@ -1540,6 +1815,13 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
         "message": "Universal complete media workflow accepted. One prompt will generate visual, natural audio, synchronise, and compose the final playable file.",
         "timed_plan": plan.get("timed_plan"),
         "quality_requirements": plan.get("quality_requirements"),
+        "child_jobs": {"visual_attempts": []},
+        "failed_provider_attempts": [],
+        "selected_video_job_id": "",
+        "selected_video_provider": "",
+        "provider_attempt_count": 0,
+        "visual_attempt_count": 0,
+        "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
     }
 
 
