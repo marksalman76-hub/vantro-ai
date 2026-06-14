@@ -19,6 +19,15 @@ def require(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
+def read_frontend_source() -> dict[str, str]:
+    source_root = ROOT / "frontend/src"
+    files: dict[str, str] = {}
+    for path in source_root.rglob("*"):
+        if path.is_file() and path.suffix in {".tsx", ".ts", ".jsx", ".js"}:
+            files[str(path.relative_to(ROOT)).replace("\\", "/")] = path.read_text(encoding="utf-8", errors="ignore")
+    return files
+
+
 def load_runtime_module():
     path = ROOT / "backend/app/runtime/direct_media_provider_execution_runtime.py"
     spec = importlib.util.spec_from_file_location("duration_runtime_under_test", path)
@@ -35,6 +44,7 @@ def main() -> int:
     popup = read("frontend/src/components/UniversalCompleteMediaRunAgentPanel.tsx")
     client_submit = read("frontend/src/app/api/universal-complete-media/route.ts")
     client_status = read("frontend/src/app/api/universal-complete-media-status/route.ts")
+    frontend_sources = read_frontend_source()
 
     module = load_runtime_module()
     require(module._ucm_segment_count_for_duration(5, 5) == 1, "5s must map to 1 visual segment.")
@@ -178,10 +188,33 @@ def main() -> int:
         "Generated script preview" not in popup,
         "Popup should use the premium Generated media plan heading, not the old script preview heading.",
     )
+    old_heading_hits = [
+        path
+        for path, source in frontend_sources.items()
+        if "Generated media script packet" in source
+    ]
+    require(
+        not old_heading_hits,
+        f"Old raw script packet heading remains in frontend source: {old_heading_hits}",
+    )
     require(
         "portalMode === \"admin\" && preflightResult?.media_script_packet" in popup
         and "JSON.stringify(preflightResult.media_script_packet, null, 2)" in popup,
         "Technical packet JSON must be admin-only and behind the debug toggle.",
+    )
+    require(
+        "technicalScriptPacketOpen ? (" in popup
+        and "JSON.stringify(preflightResult.media_script_packet, null, 2)" in popup
+        and popup.find("technicalScriptPacketOpen ? (") < popup.find("JSON.stringify(preflightResult.media_script_packet, null, 2)"),
+        "Raw script packet JSON must only render behind the collapsed admin technical toggle.",
+    )
+    require(
+        "Complete media popup UX v3" in popup and "portalMode === \"admin\"" in popup,
+        "Admin-only Complete media popup UX v3 build marker is missing.",
+    )
+    require(
+        "Portal payload provider check: video_provider=${payload.video_provider}, audio_provider=${payload.audio_provider}, duration=${payload.duration_seconds}, dry_run=${String(payload.dry_run)}, preflight_only=${String(payload.preflight_only)}" in popup,
+        "Admin portal payload provider check line is missing.",
     )
 
     for marker in [
@@ -210,9 +243,15 @@ def main() -> int:
         "Provider attempt details",
         "Runway called:",
         "Provider job ID:",
+        "Child job ID:",
         "Safe error summary:",
+        "provider_attempt_count:",
+        "visual_attempt_count:",
+        "failed_provider_attempts:",
+        "providerDiagnosticCounts",
         "data-complete-media-retry-provider-failure",
-        "Retry media generation",
+        "Retry 5s media",
+        "runCompleteMediaFromPopup({ smokeTest: true, creditRiskAcknowledged: true })",
         "provider_execution_error",
         "providerFailureResult",
         "setPreflightResult(result)",

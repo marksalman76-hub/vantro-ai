@@ -286,6 +286,8 @@ export default function UniversalCompleteMediaRunAgentPanel({
   const [popupMediaFinalOutput, setPopupMediaFinalOutput] = useState("");
   const [preflightResult, setPreflightResult] = useState<any>(null);
   const [technicalScriptPacketOpen, setTechnicalScriptPacketOpen] = useState(false);
+  const [providerDiagnosticsOpen, setProviderDiagnosticsOpen] = useState(false);
+  const [portalPayloadProviderCheck, setPortalPayloadProviderCheck] = useState("");
 
 
   const [prompt, setPrompt] = useState("");
@@ -588,11 +590,11 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
     if (typeof value === "string") return value;
 
-    try {
-      return JSON.stringify(value, null, 2);
-    } catch {
-      return String(value);
-    }
+    const status = value?.status || value?.delivery_status || value?.composition_status || "ready";
+    const url = extractPopupMediaUrl(value);
+    return url
+      ? `Final media output ${status}. Preview/open the generated asset above.`
+      : `Final media output ${status}.`;
   }
 
   function applyPopupMediaJobResult(result: any) {
@@ -631,6 +633,41 @@ export default function UniversalCompleteMediaRunAgentPanel({
       .join(" | ");
   }
 
+  function isProviderFailureResult(result: any) {
+    const status = String(result?.status || extractPopupMediaStatus(result) || "").toLowerCase();
+    return (
+      status.includes("visual_failed") ||
+      status.includes("provider_failed") ||
+      status.includes("provider_execution_error") ||
+      providerDiagnosticRows(result).length > 0
+    );
+  }
+
+  function friendlyMediaStatus(status: any) {
+    const value = String(status || "").toLowerCase();
+    if (!value) return "Queued";
+    if (value.includes("preflight_blocked")) return "Needs confirmation";
+    if (value.includes("visual_failed") || value.includes("provider_failed") || value.includes("provider_execution_error")) {
+      return "Provider needs attention";
+    }
+    if (value.includes("composition_failed") || value.includes("audio_failed") || value.includes("exception")) {
+      return "Needs attention";
+    }
+    if (value.includes("complete")) return "Completed";
+    if (value.includes("running") || value.includes("processing") || value.includes("progress")) return "Processing";
+    if (value.includes("queued") || value.includes("received") || value.includes("pending")) return "Queued";
+    if (value.includes("blocked")) return "Needs review";
+    return String(status || "Queued").replace(/_/g, " ");
+  }
+
+  function friendlyProviderFailureMessage(result: any, segmentNote = "") {
+    const counts = providerDiagnosticCounts(result);
+    const attemptPhrase = counts.visualAttemptCount > 0
+      ? `${counts.visualAttemptCount} visual provider attempt${counts.visualAttemptCount === 1 ? "" : "s"}`
+      : "the visual provider attempt";
+    return `Media generation needs provider attention.${segmentNote ? ` ${segmentNote}` : ""} No final asset was produced yet. ${attemptPhrase} did not complete. Open provider diagnostics for admin details, then retry a 5s media run when ready.`;
+  }
+
   function providerDiagnosticRows(result: any) {
     const rawAttempts = [
       ...(Array.isArray(result?.failed_provider_attempts) ? result.failed_provider_attempts : []),
@@ -660,6 +697,23 @@ export default function UniversalCompleteMediaRunAgentPanel({
         };
       })
       .filter(Boolean);
+  }
+
+  function providerDiagnosticCounts(result: any) {
+    const failedProviderAttempts = Array.isArray(result?.failed_provider_attempts)
+      ? result.failed_provider_attempts
+      : [];
+    const visualAttempts = Array.isArray(result?.child_jobs?.visual_attempts)
+      ? result.child_jobs.visual_attempts
+      : [];
+    const visualSegments = Array.isArray(result?.child_jobs?.visual_segments)
+      ? result.child_jobs.visual_segments
+      : [];
+    return {
+      providerAttemptCount: failedProviderAttempts.length || visualAttempts.length || visualSegments.length,
+      visualAttemptCount: visualAttempts.length || visualSegments.length || failedProviderAttempts.filter((attempt: any) => String(attempt?.stage || "").includes("visual") || attempt?.segment_index).length,
+      failedProviderAttemptCount: failedProviderAttempts.length,
+    };
   }
 
   function canRetryMediaProviderFailure(result: any) {
@@ -864,20 +918,19 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
         const status = extracted.status || resultStatus || result?.status || "status received";
 
-        const attempts = providerAttemptSummary(result);
         const segmentCount = Number(result?.segment_count || 0);
         const requestedDuration = Number(result?.requested_duration_seconds || result?.estimated_duration_seconds || 0);
         const generatedSegments = Array.isArray(result?.generated_segments) ? result.generated_segments.length : 0;
         const segmentNote = segmentCount > 0
-          ? ` ${requestedDuration || durationSeconds}s requested -> ${segmentCount} visual segment${segmentCount === 1 ? "" : "s"}. Segment progress: ${generatedSegments}/${segmentCount}.`
+          ? `${requestedDuration || durationSeconds}s requested -> ${segmentCount} visual segment${segmentCount === 1 ? "" : "s"}. Segment progress: ${generatedSegments}/${segmentCount}.`
           : "";
         const durationNote = result?.final_duration_seconds
           ? ` Final duration: ${Number(result.final_duration_seconds).toFixed(2)}s. Fulfilled: ${result?.duration_fulfilled === true ? "yes" : "no"}.`
           : "";
         setStatusMessage(
-          attempts
-            ? `Media job ${jobId} status: ${status}.${segmentNote}${durationNote} Provider attempts: ${attempts}`
-            : `Media job ${jobId} status: ${status}.${segmentNote}${durationNote}`
+          isProviderFailureResult(result)
+            ? friendlyProviderFailureMessage(result, segmentNote)
+            : `Media job ${jobId} status: ${friendlyMediaStatus(status)}.${segmentNote ? ` ${segmentNote}` : ""}${durationNote}`
         );
 
         const terminalStatus = String(status || "").toLowerCase();
@@ -906,7 +959,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
           job_id: jobId,
           status: fallbackStatus,
         });
-        setStatusMessage(`Media job ${jobId} status: ${fallbackStatus}`);
+        setStatusMessage(`Media job ${jobId} status: ${friendlyMediaStatus(fallbackStatus)}`);
         return;
       }
 
@@ -1118,6 +1171,10 @@ export default function UniversalCompleteMediaRunAgentPanel({
       owner_admin_unrestricted: portalMode === "admin",
     };
 
+    setPortalPayloadProviderCheck(
+      `Portal payload provider check: video_provider=${payload.video_provider}, audio_provider=${payload.audio_provider}, duration=${payload.duration_seconds}, dry_run=${String(payload.dry_run)}, preflight_only=${String(payload.preflight_only)}`
+    );
+
     try {
       window.localStorage.setItem(
         "universal_complete_media_config",
@@ -1174,16 +1231,10 @@ export default function UniversalCompleteMediaRunAgentPanel({
       }
 
       const resultStatus = String(result?.status || "");
-      const resultProviderAttempts = providerAttemptSummary(result);
       const providerFailureResult =
         response.ok &&
         result?.success === false &&
-        (
-          resultStatus.includes("visual_failed") ||
-          resultStatus.includes("provider_failed") ||
-          resultStatus.includes("provider_execution_error") ||
-          resultProviderAttempts
-        );
+        isProviderFailureResult(result);
 
       if (providerFailureResult) {
         const extracted = applyPopupMediaJobResult(result);
@@ -1194,9 +1245,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
         const segmentNote = segmentCount > 0
           ? `${requestedDuration || durationSeconds}s requested -> ${segmentCount} visual segment${segmentCount === 1 ? "" : "s"}. Segment progress: ${generatedSegments}/${segmentCount}.`
           : "Provider execution stopped before a final asset was produced.";
-        setStatusMessage(
-          `${segmentNote}${resultProviderAttempts ? ` Provider attempts: ${resultProviderAttempts}` : ""}${extracted.jobId ? ` Job ID: ${extracted.jobId}` : ""}`
-        );
+        setStatusMessage(friendlyProviderFailureMessage(result, `${segmentNote}${extracted.jobId ? ` Job ID: ${extracted.jobId}.` : ""}`));
         setRunning(false);
         onResult?.(result);
         return;
@@ -1722,6 +1771,20 @@ export default function UniversalCompleteMediaRunAgentPanel({
                 }}
               >
                 {statusMessage}
+                {portalMode === "admin" && portalPayloadProviderCheck ? (
+                  <div
+                    data-complete-media-payload-provider-check="true"
+                    style={{
+                      marginTop: 8,
+                      paddingTop: 8,
+                      borderTop: "1px solid rgba(148,163,184,.22)",
+                      color: "#bfdbfe",
+                      fontWeight: 850,
+                    }}
+                  >
+                    {portalPayloadProviderCheck}
+                  </div>
+                ) : null}
               </div>
 
               <div
@@ -1741,6 +1804,22 @@ export default function UniversalCompleteMediaRunAgentPanel({
                   lineHeight: 1.55,
                 }}
               >
+                {portalMode === "admin" ? (
+                  <div
+                    data-complete-media-popup-ux-version="v3"
+                    style={{
+                      width: "fit-content",
+                      borderRadius: 999,
+                      padding: "4px 8px",
+                      background: "rgba(59,130,246,.14)",
+                      color: "#bfdbfe",
+                      fontSize: 11,
+                      fontWeight: 950,
+                    }}
+                  >
+                    Complete media popup UX v3
+                  </div>
+                ) : null}
                 <div style={{ fontWeight: 950 }}>Media job result</div>
 
                 {popupMediaJobId ? (
@@ -1751,7 +1830,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
                 {popupMediaJobStatus ? (
                   <div>
-                    <strong>Status:</strong> {popupMediaJobStatus}
+                    <strong>Status:</strong> {friendlyMediaStatus(popupMediaJobStatus)}
                   </div>
                 ) : null}
 
@@ -1966,7 +2045,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
 
                 {portalMode === "admin" && providerDiagnosticRows(preflightResult).length > 0 ? (
                   <div
-                    data-complete-media-provider-diagnostics="true"
+                    data-complete-media-provider-diagnostics-summary="true"
                     style={{
                       display: "grid",
                       gap: 8,
@@ -1977,33 +2056,75 @@ export default function UniversalCompleteMediaRunAgentPanel({
                       border: "1px solid rgba(239,68,68,.28)",
                     }}
                   >
-                    <strong>Provider attempt details</strong>
-                    {providerDiagnosticRows(preflightResult).map((attempt: any, index: number) => (
-                      <div
-                        key={`${attempt.provider}-${attempt.jobId}-${index}`}
-                        style={{
-                          display: "grid",
-                          gap: 3,
-                          borderRadius: 10,
-                          padding: "8px 9px",
-                          background: "rgba(15,23,42,.38)",
-                        }}
-                      >
-                        <div>
-                          <strong>{attempt.provider}</strong> {attempt.status}
-                        </div>
-                        <div>Runway called: {attempt.provider.toLowerCase() === "runway" ? (attempt.runwayCalled ? "yes" : "no") : "not applicable"}</div>
-                        {attempt.providerJobId ? <div>Provider job ID: {attempt.providerJobId}</div> : null}
-                        {attempt.jobId ? <div>Child job ID: {attempt.jobId}</div> : null}
-                        {attempt.safeErrorSummary ? <div>Safe error summary: {attempt.safeErrorSummary}</div> : null}
+                    <strong>Visual generation needs attention</strong>
+                    <div>No final media asset was produced yet. Admin diagnostics are available if you need the provider attempt details.</div>
+                    <button
+                      type="button"
+                      data-complete-media-provider-diagnostics-toggle="true"
+                      onClick={() => setProviderDiagnosticsOpen((value) => !value)}
+                      style={{
+                        width: "fit-content",
+                        border: "1px solid rgba(248,113,113,.38)",
+                        borderRadius: 999,
+                        padding: "8px 12px",
+                        background: "rgba(248,113,113,.12)",
+                        color: "#fecaca",
+                        fontWeight: 950,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {providerDiagnosticsOpen ? "Hide provider diagnostics" : "Show provider diagnostics"}
+                    </button>
+                    {providerDiagnosticsOpen ? (
+                      <div data-complete-media-provider-diagnostics="true" style={{ display: "grid", gap: 8 }}>
+                        <strong>Provider attempt details</strong>
+                        {(() => {
+                          const counts = providerDiagnosticCounts(preflightResult);
+                          return (
+                            <div
+                              data-complete-media-provider-attempt-counts="true"
+                              style={{
+                                display: "grid",
+                                gap: 3,
+                                borderRadius: 10,
+                                padding: "8px 9px",
+                                background: "rgba(15,23,42,.28)",
+                              }}
+                            >
+                              <div>provider_attempt_count: {counts.providerAttemptCount}</div>
+                              <div>visual_attempt_count: {counts.visualAttemptCount}</div>
+                              <div>failed_provider_attempts: {counts.failedProviderAttemptCount}</div>
+                            </div>
+                          );
+                        })()}
+                        {providerDiagnosticRows(preflightResult).map((attempt: any, index: number) => (
+                          <div
+                            key={`${attempt.provider}-${attempt.jobId}-${index}`}
+                            style={{
+                              display: "grid",
+                              gap: 3,
+                              borderRadius: 10,
+                              padding: "8px 9px",
+                              background: "rgba(15,23,42,.38)",
+                            }}
+                          >
+                            <div>
+                              <strong>{attempt.provider}</strong> {attempt.status}
+                            </div>
+                            <div>Runway called: {attempt.provider.toLowerCase() === "runway" ? (attempt.runwayCalled ? "yes" : "no") : "not applicable"}</div>
+                            {attempt.providerJobId ? <div>Provider job ID: {attempt.providerJobId}</div> : null}
+                            {attempt.jobId ? <div>Child job ID: {attempt.jobId}</div> : null}
+                            {attempt.safeErrorSummary ? <div>Safe error summary: {attempt.safeErrorSummary}</div> : null}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    ) : null}
                     {canRetryMediaProviderFailure(preflightResult) ? (
                       <button
                         type="button"
                         data-complete-media-retry-provider-failure="true"
                         disabled={running}
-                        onClick={() => void runCompleteMediaFromPopup({ creditRiskAcknowledged: true })}
+                        onClick={() => void runCompleteMediaFromPopup({ smokeTest: true, creditRiskAcknowledged: true })}
                         style={{
                           width: "fit-content",
                           border: "1px solid rgba(248,113,113,.38)",
@@ -2015,7 +2136,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
                           cursor: running ? "wait" : "pointer",
                         }}
                       >
-                        Retry media generation
+                        Retry 5s media
                       </button>
                     ) : null}
                   </div>
