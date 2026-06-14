@@ -650,6 +650,40 @@ export default function UniversalCompleteMediaRunAgentPanel({
     return `Preflight ready. Visual providers: ${visualCount}. Audio providers: ${audioCount}. Credit risk: ${risk || "unknown"}.`;
   }
 
+  function isPaidMediaConfirmationRequired(result: any) {
+    if (!result || typeof result !== "object") return false;
+    const status = String(result?.status || "").toLowerCase();
+    const failedChecks = Array.isArray(result?.failed_preflight_checks)
+      ? result.failed_preflight_checks
+      : [];
+    const hasCreditRiskCheck = failedChecks.some((check: any) =>
+      String(check?.check || check?.reason || "").toLowerCase().includes("estimated_credit_risk")
+    );
+
+    return (
+      status === "universal_complete_media_preflight_blocked" ||
+      status === "preflight_blocked" ||
+      result?.estimated_credit_risk?.acceptable_without_confirmation === false ||
+      hasCreditRiskCheck
+    );
+  }
+
+  function paidMediaConfirmationSummary(result: any) {
+    const requested = Number(result?.requested_duration_seconds || result?.estimated_duration_seconds || durationSeconds || 0);
+    const segments = Number(result?.segment_count || 0);
+    const visualCalls = Number(result?.estimated_credit_risk?.paid_visual_provider_attempts_possible || segments || 0);
+    const audioCalls = Number(result?.estimated_credit_risk?.paid_audio_provider_attempts_possible || 1);
+    const risk = String(result?.estimated_credit_risk?.risk_level || "unknown");
+
+    return {
+      requested,
+      segments,
+      visualCalls,
+      audioCalls,
+      risk,
+    };
+  }
+
   async function checkPopupMediaJobStatus(jobIdOverride?: string) {
     const jobId = jobIdOverride || popupMediaJobId;
 
@@ -815,6 +849,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
     smokeTest?: boolean;
     creditRiskAcknowledged?: boolean;
     useGeneratedScript?: boolean;
+    confirmPaidMedia?: boolean;
   } = {}) {
     const cleanPrompt = String(prompt || "").trim();
 
@@ -823,12 +858,20 @@ export default function UniversalCompleteMediaRunAgentPanel({
       return;
     }
 
-    if (!options.dryRun && !options.smokeTest && preflightResult?.status === "universal_complete_media_preflight_blocked") {
-      setStatusMessage(preflightSummary(preflightResult) || "Media generation is not ready to run yet. Please contact support or choose a shorter smoke test.");
+    if (
+      !options.dryRun &&
+      !options.smokeTest &&
+      !options.confirmPaidMedia &&
+      isPaidMediaConfirmationRequired(preflightResult)
+    ) {
+      const summary = paidMediaConfirmationSummary(preflightResult);
+      setStatusMessage(
+        `${summary.requested || durationSeconds}s requested requires ${summary.segments || "multiple"} visual segment${summary.segments === 1 ? "" : "s"} and paid provider confirmation. No paid provider calls have started yet.`
+      );
       return;
     }
 
-    let creditRiskAcknowledged = Boolean(options.creditRiskAcknowledged);
+    let creditRiskAcknowledged = Boolean(options.creditRiskAcknowledged || options.confirmPaidMedia);
     const preflightRisk = String(preflightResult?.estimated_credit_risk?.risk_level || "").toLowerCase();
     if (!options.dryRun && !options.smokeTest && preflightRisk === "high" && !creditRiskAcknowledged) {
       const confirmed = window.confirm(
@@ -910,6 +953,8 @@ export default function UniversalCompleteMediaRunAgentPanel({
       smoke_test_mode: Boolean(options.smokeTest),
       smoke_test_label: options.smokeTest ? "5s smoke test" : "",
       credit_risk_acknowledged: creditRiskAcknowledged,
+      cost_safety_confirmed: Boolean(options.confirmPaidMedia),
+      paid_provider_risk_confirmed: Boolean(options.confirmPaidMedia),
       use_generated_script: Boolean(options.useGeneratedScript),
       script_approved: Boolean(options.useGeneratedScript),
     };
@@ -976,6 +1021,8 @@ export default function UniversalCompleteMediaRunAgentPanel({
       smoke_test_mode: Boolean(options.smokeTest),
       smoke_test_label: options.smokeTest ? "5s smoke test" : "",
       credit_risk_acknowledged: creditRiskAcknowledged,
+      cost_safety_confirmed: Boolean(options.confirmPaidMedia),
+      paid_provider_risk_confirmed: Boolean(options.confirmPaidMedia),
 
       owner_approved: portalMode === "admin",
       owner_approval_granted: portalMode === "admin",
@@ -1011,12 +1058,39 @@ export default function UniversalCompleteMediaRunAgentPanel({
         error: "Invalid JSON response from universal complete media endpoint.",
       }));
 
+      if (response.ok && result?.success === false && isPaidMediaConfirmationRequired(result)) {
+        applyPopupMediaJobResult(result);
+        setPreflightResult(result);
+        const summary = paidMediaConfirmationSummary(result);
+        setStatusMessage(
+          `${summary.requested || durationSeconds}s requested requires paid provider confirmation: ${summary.visualCalls} Runway visual call${summary.visualCalls === 1 ? "" : "s"} + ${summary.audioCalls} ElevenLabs audio call${summary.audioCalls === 1 ? "" : "s"}. No paid provider calls have started yet.`
+        );
+        setRunning(false);
+        onResult?.(result);
+        window.dispatchEvent(
+          new CustomEvent("universal-complete-media-run-now", {
+            detail: {
+              endpoint,
+              payload,
+              result,
+              native_popup_execution: true,
+              confirmation_required: true,
+              selected_agent: activeCreativeAgent,
+              selected_agents: selectedCreativeAgents,
+              multi_agent_media_execution: multiAgentMediaExecution,
+              universal_complete_media_workflow: true,
+            },
+          })
+        );
+        return;
+      }
+
       if (!response.ok || result?.success === false) {
         const errorText =
           result?.error ||
           result?.message ||
           result?.detail ||
-          `Universal complete media request failed with HTTP ${response.status}.`;
+          `Universal complete media request returned status ${response.status}.`;
 
         setStatusMessage(String(errorText));
         setRunning(false);
@@ -1639,6 +1713,56 @@ export default function UniversalCompleteMediaRunAgentPanel({
                       <strong>Preview URL:</strong> {popupMediaPreviewUrl}
                     </div>
                   )
+                ) : null}
+
+                {portalMode === "admin" && isPaidMediaConfirmationRequired(preflightResult) ? (
+                  <div
+                    data-complete-media-paid-confirmation-required="true"
+                    style={{
+                      display: "grid",
+                      gap: 10,
+                      borderRadius: 14,
+                      padding: 12,
+                      border: "1px solid rgba(245,158,11,.34)",
+                      background: "rgba(245,158,11,.12)",
+                      color: "#fde68a",
+                    }}
+                  >
+                    <strong>Paid provider confirmation required</strong>
+                    {(() => {
+                      const summary = paidMediaConfirmationSummary(preflightResult);
+                      return (
+                        <>
+                          <div>
+                            {summary.requested || durationSeconds}s requested {"->"} {summary.segments || preflightResult?.segment_count || 0} visual segment{Number(summary.segments || preflightResult?.segment_count || 0) === 1 ? "" : "s"}
+                          </div>
+                          <div>
+                            Estimated paid calls: {summary.visualCalls} Runway visual call{summary.visualCalls === 1 ? "" : "s"} + {summary.audioCalls} ElevenLabs audio call{summary.audioCalls === 1 ? "" : "s"}
+                          </div>
+                          <div>Risk level: {summary.risk}</div>
+                          <div>No paid provider calls have started yet</div>
+                        </>
+                      );
+                    })()}
+                    <button
+                      type="button"
+                      data-complete-media-confirm-paid-run="true"
+                      disabled={running}
+                      onClick={() => void runCompleteMediaFromPopup({ confirmPaidMedia: true })}
+                      style={{
+                        width: "fit-content",
+                        border: "1px solid rgba(34,197,94,.42)",
+                        borderRadius: 999,
+                        padding: "9px 13px",
+                        background: "rgba(34,197,94,.18)",
+                        color: "#bbf7d0",
+                        fontWeight: 950,
+                        cursor: running ? "wait" : "pointer",
+                      }}
+                    >
+                      Confirm and run paid media
+                    </button>
+                  </div>
                 ) : null}
 
                 {preflightResult?.segment_count ? (

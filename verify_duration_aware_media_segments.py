@@ -120,6 +120,38 @@ def main() -> int:
     ]:
         require(marker in popup, f"Frontend segment/duration progress UI missing: {marker}")
 
+    for marker in [
+        "isPaidMediaConfirmationRequired",
+        "universal_complete_media_preflight_blocked",
+        "preflight_blocked",
+        "acceptable_without_confirmation === false",
+        "estimated_credit_risk",
+        "data-complete-media-paid-confirmation-required",
+        "Paid provider confirmation required",
+        "No paid provider calls have started yet",
+        "Confirm and run paid media",
+        "data-complete-media-confirm-paid-run",
+    ]:
+        require(marker in popup, f"Frontend high-credit confirmation UI missing: {marker}")
+
+    for marker in [
+        "confirmPaidMedia?: boolean",
+        "credit_risk_acknowledged: creditRiskAcknowledged",
+        "cost_safety_confirmed: Boolean(options.confirmPaidMedia)",
+        "paid_provider_risk_confirmed: Boolean(options.confirmPaidMedia)",
+        "runCompleteMediaFromPopup({ confirmPaidMedia: true })",
+    ]:
+        require(marker in popup, f"Confirmed paid-media payload/action missing: {marker}")
+
+    require(
+        "result?.success === false && isPaidMediaConfirmationRequired(result)" in popup,
+        "HTTP 200 success=false preflight-blocked responses must map to confirmation-required UI.",
+    )
+    require(
+        "Universal complete media request failed with HTTP" not in popup,
+        "Popup must not show failed-with-HTTP messaging for preflight confirmation states.",
+    )
+
     for proxy in [client_submit, client_status]:
         require("segment_prompt" in proxy and "generated_segments" in proxy, "Client proxy must sanitize segment prompt/internal segment data.")
 
