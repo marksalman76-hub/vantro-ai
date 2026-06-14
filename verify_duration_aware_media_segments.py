@@ -112,7 +112,11 @@ def main() -> int:
     for marker in [
         "data-complete-media-segment-progress",
         "visual segment",
-        "Segment {segment?.segment_index}",
+        "Segment {segment.segmentIndex} of {segment.total}",
+        "data-complete-media-segment-row",
+        "data-complete-media-audio-row",
+        "data-complete-media-composition-row",
+        "This can take several minutes because each 5-second visual segment is generated separately",
         "Duration fulfilled",
         "duration_shortfall_seconds",
         "composition_status",
@@ -150,6 +154,30 @@ def main() -> int:
     require(
         "Universal complete media request failed with HTTP" not in popup,
         "Popup must not show failed-with-HTTP messaging for preflight confirmation states.",
+    )
+    for marker in [
+        "Generated script preview",
+        "Voiceover:",
+        "Scene count:",
+        "Script fit:",
+        "CTA:",
+        "Captions:",
+        "Human/avatar mode:",
+        "Selected creative agent(s):",
+        "Show technical script packet",
+        "data-complete-media-technical-script-toggle",
+        "data-complete-media-technical-script-packet",
+        "technicalScriptPacketOpen ?",
+    ]:
+        require(marker in popup, f"Frontend clean script summary/technical toggle missing: {marker}")
+    require(
+        "Generated media script packet" not in popup,
+        "Popup must not show the old raw packet heading by default.",
+    )
+    require(
+        "portalMode === \"admin\" && preflightResult?.media_script_packet" in popup
+        and "JSON.stringify(preflightResult.media_script_packet, null, 2)" in popup,
+        "Technical packet JSON must be admin-only and behind the debug toggle.",
     )
 
     for proxy in [client_submit, client_status]:

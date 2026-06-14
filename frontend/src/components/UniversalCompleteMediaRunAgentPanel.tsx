@@ -285,6 +285,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
   const [popupMediaAssetUrl, setPopupMediaAssetUrl] = useState("");
   const [popupMediaFinalOutput, setPopupMediaFinalOutput] = useState("");
   const [preflightResult, setPreflightResult] = useState<any>(null);
+  const [technicalScriptPacketOpen, setTechnicalScriptPacketOpen] = useState(false);
 
 
   const [prompt, setPrompt] = useState("");
@@ -682,6 +683,51 @@ export default function UniversalCompleteMediaRunAgentPanel({
       audioCalls,
       risk,
     };
+  }
+
+  function normaliseSegmentStatus(status: any) {
+    const value = String(status || "").toLowerCase();
+    if (value.includes("complete")) return "completed";
+    if (value.includes("fail") || value.includes("error")) return "failed";
+    if (value.includes("run") || value.includes("process") || value.includes("progress")) return "running";
+    if (value.includes("queue") || value.includes("plan")) return "queued";
+    return value || "queued";
+  }
+
+  function segmentProgressRows(result: any) {
+    const segmentCount = Number(result?.segment_count || 0);
+    const planned = Array.isArray(result?.segment_plan) ? result.segment_plan : [];
+    const generated = Array.isArray(result?.generated_segments) ? result.generated_segments : [];
+    const childSegments = Array.isArray(result?.child_jobs?.visual_segments) ? result.child_jobs.visual_segments : [];
+    const visualAttempts = Array.isArray(result?.child_jobs?.visual_attempts) ? result.child_jobs.visual_attempts : [];
+    const missing = Array.isArray(result?.missing_segments) ? result.missing_segments.map((item: any) => Number(item)) : [];
+    const total = segmentCount || planned.length || generated.length || childSegments.length || visualAttempts.length;
+
+    return Array.from({ length: total }, (_, index) => {
+      const segmentIndex = index + 1;
+      const plannedSegment = planned.find((item: any) => Number(item?.segment_index) === segmentIndex) || {};
+      const generatedSegment = generated.find((item: any) => Number(item?.segment_index) === segmentIndex);
+      const childSegment = childSegments.find((item: any) => Number(item?.segment_index) === segmentIndex);
+      const attemptSegment = visualAttempts.find((item: any) => Number(item?.segment_index) === segmentIndex);
+      const matched = generatedSegment || childSegment || attemptSegment || plannedSegment;
+      const status = generatedSegment
+        ? "completed"
+        : normaliseSegmentStatus(matched?.status || (missing.includes(segmentIndex) ? "queued" : "queued"));
+
+      return {
+        segmentIndex,
+        total,
+        status,
+      };
+    });
+  }
+
+  function audioProgressStatus(result: any) {
+    return normaliseSegmentStatus(result?.audio_status || result?.child_jobs?.audio?.status || (result?.audio_job_id ? "completed" : "queued"));
+  }
+
+  function compositionProgressStatus(result: any) {
+    return normaliseSegmentStatus(result?.composition_status || result?.child_jobs?.composition?.status || (result?.composition_job_id ? "completed" : "pending"));
   }
 
   async function checkPopupMediaJobStatus(jobIdOverride?: string) {
@@ -1783,28 +1829,59 @@ export default function UniversalCompleteMediaRunAgentPanel({
                     <strong>
                       {preflightResult.requested_duration_seconds || durationSeconds}s requested {"->"} {preflightResult.segment_count} visual segment{Number(preflightResult.segment_count) === 1 ? "" : "s"}
                     </strong>
-                    {Array.isArray(preflightResult.segment_plan) ? (
-                      <div style={{ display: "grid", gap: 4 }}>
-                        {preflightResult.segment_plan.map((segment: any) => {
-                          const completed = Array.isArray(preflightResult.generated_segments)
-                            ? preflightResult.generated_segments.find((item: any) => Number(item?.segment_index) === Number(segment?.segment_index))
-                            : null;
-                          const missing = Array.isArray(preflightResult.missing_segments)
-                            ? preflightResult.missing_segments.includes(segment?.segment_index)
-                            : false;
-                          const status = completed?.status || segment?.status || (missing ? "queued" : "pending");
-                          return (
-                            <div key={segment?.segment_index || `${segment?.segment_start_seconds}-${segment?.segment_end_seconds}`}>
-                              Segment {segment?.segment_index}/{preflightResult.segment_count}: {status}
-                            </div>
-                          );
-                        })}
+                    <div style={{ opacity: 0.92 }}>
+                      This can take several minutes because each 5-second visual segment is generated separately, then stitched with voiceover into one final video.
+                    </div>
+                    {segmentProgressRows(preflightResult).length > 0 ? (
+                      <div style={{ display: "grid", gap: 6 }}>
+                        {segmentProgressRows(preflightResult).map((segment) => (
+                          <div
+                            key={segment.segmentIndex}
+                            data-complete-media-segment-row="true"
+                            style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              gap: 10,
+                              borderRadius: 10,
+                              padding: "7px 9px",
+                              background: portalMode === "admin" ? "rgba(15,23,42,.36)" : "rgba(255,255,255,.74)",
+                            }}
+                          >
+                            <span>Segment {segment.segmentIndex} of {segment.total}</span>
+                            <strong>{segment.status}</strong>
+                          </div>
+                        ))}
                       </div>
                     ) : null}
-                    <div>
-                      <strong>Audio:</strong> {preflightResult.audio_status || preflightResult.child_jobs?.audio?.status || "queued"}
-                      {" - "}
-                      <strong>Composition:</strong> {preflightResult.composition_status || preflightResult.child_jobs?.composition?.status || "pending"}
+                    <div style={{ display: "grid", gap: 6 }}>
+                      <div
+                        data-complete-media-audio-row="true"
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 10,
+                          borderRadius: 10,
+                          padding: "7px 9px",
+                          background: portalMode === "admin" ? "rgba(15,23,42,.36)" : "rgba(255,255,255,.74)",
+                        }}
+                      >
+                        <span>Voiceover</span>
+                        <strong>{audioProgressStatus(preflightResult)}</strong>
+                      </div>
+                      <div
+                        data-complete-media-composition-row="true"
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          gap: 10,
+                          borderRadius: 10,
+                          padding: "7px 9px",
+                          background: portalMode === "admin" ? "rgba(15,23,42,.36)" : "rgba(255,255,255,.74)",
+                        }}
+                      >
+                        <span>Composition</span>
+                        <strong>{compositionProgressStatus(preflightResult)}</strong>
+                      </div>
                     </div>
                     {preflightResult.final_duration_seconds ? (
                       <div>
@@ -1832,22 +1909,40 @@ export default function UniversalCompleteMediaRunAgentPanel({
                       color: portalMode === "admin" ? "#dbeafe" : "#1e3a8a",
                     }}
                   >
-                    <strong>{portalMode === "admin" ? "Generated media script packet" : "Generated script preview"}</strong>
+                    <strong>Generated script preview</strong>
                     {preflightResult.media_script_preview.voiceover_script ? (
                       <div>
                         <strong>Voiceover:</strong> {preflightResult.media_script_preview.voiceover_script}
                       </div>
                     ) : null}
                     <div>
-                      <strong>Scenes:</strong> {preflightResult.media_script_preview.scene_count || 0}
+                      <strong>Scene count:</strong> {preflightResult.media_script_preview.scene_count || 0}
                       {" - "}
-                      <strong>Fit:</strong> {preflightResult.media_script_preview.script_duration_fit || "unknown"}
+                      <strong>Script fit:</strong> {preflightResult.media_script_preview.script_duration_fit || "unknown"}
                     </div>
                     {preflightResult.media_script_preview.cta_text ? (
                       <div>
                         <strong>CTA:</strong> {preflightResult.media_script_preview.cta_text}
                       </div>
                     ) : null}
+                    {Array.isArray(preflightResult.media_script_preview.caption_plan) && preflightResult.media_script_preview.caption_plan.length > 0 ? (
+                      <div>
+                        <strong>Captions:</strong>
+                        <div style={{ display: "grid", gap: 4, marginTop: 4 }}>
+                          {preflightResult.media_script_preview.caption_plan.slice(0, 6).map((caption: any, index: number) => (
+                            <div key={`${caption?.start || index}-${caption?.caption_text || index}`}>
+                              {index + 1}. {String(caption?.caption_text || caption || "")}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+                    <div>
+                      <strong>Human/avatar mode:</strong> {preflightResult.media_script_packet?.inferred_business_context?.human_avatar_mode || humanAvatarMode || "Not specified"}
+                    </div>
+                    <div>
+                      <strong>Selected creative agent(s):</strong> {(preflightResult.media_script_packet?.contributing_agents || resolvePopupSelectedAgents()).join(", ")}
+                    </div>
                     {portalMode === "admin" && preflightResult?.media_script_packet ? (
                       <>
                         <button
@@ -1867,19 +1962,39 @@ export default function UniversalCompleteMediaRunAgentPanel({
                         >
                           Use generated script
                         </button>
-                        <pre
+                        <button
+                          type="button"
+                          data-complete-media-technical-script-toggle="true"
+                          onClick={() => setTechnicalScriptPacketOpen((value) => !value)}
                           style={{
-                            whiteSpace: "pre-wrap",
-                            overflow: "auto",
-                            maxHeight: 260,
-                            borderRadius: 12,
-                            padding: 10,
-                            background: "rgba(2,6,23,.74)",
-                            color: "#e5e7eb",
+                            width: "fit-content",
+                            border: "1px solid rgba(148,163,184,.34)",
+                            borderRadius: 999,
+                            padding: "8px 12px",
+                            background: "rgba(148,163,184,.12)",
+                            color: portalMode === "admin" ? "#e5e7eb" : "#334155",
+                            fontWeight: 900,
+                            cursor: "pointer",
                           }}
                         >
-                          {JSON.stringify(preflightResult.media_script_packet, null, 2)}
-                        </pre>
+                          {technicalScriptPacketOpen ? "Hide technical script packet" : "Show technical script packet"}
+                        </button>
+                        {technicalScriptPacketOpen ? (
+                          <pre
+                            data-complete-media-technical-script-packet="true"
+                            style={{
+                              whiteSpace: "pre-wrap",
+                              overflow: "auto",
+                              maxHeight: 260,
+                              borderRadius: 12,
+                              padding: 10,
+                              background: "rgba(2,6,23,.74)",
+                              color: "#e5e7eb",
+                            }}
+                          >
+                            {JSON.stringify(preflightResult.media_script_packet, null, 2)}
+                          </pre>
+                        ) : null}
                       </>
                     ) : null}
                   </div>
