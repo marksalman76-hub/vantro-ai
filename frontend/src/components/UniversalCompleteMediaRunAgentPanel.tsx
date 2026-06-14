@@ -84,6 +84,12 @@ const PLATFORMS = [
 
 const DURATIONS = ["5", "10", "15", "25", "30", "45", "60"];
 const ASPECT_RATIOS = ["9:16", "1:1", "16:9", "4:5"];
+const HUMAN_AVATAR_MODES = [
+  "No human/avatar",
+  "Generate new avatar/person",
+  "Use client-uploaded face/likeness",
+  "Use saved brand spokesperson/avatar",
+];
 
 const CREATIVE_AGENT_KEYWORDS = [
   "creative",
@@ -296,7 +302,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
   const [offer, setOffer] = useState("");
   const [mustInclude, setMustInclude] = useState("");
   const [mustAvoid, setMustAvoid] = useState("");
-  const [humanAvatarMode, setHumanAvatarMode] = useState("");
+  const [humanAvatarMode, setHumanAvatarMode] = useState("No human/avatar");
   const [visualReferencesAssets, setVisualReferencesAssets] = useState("");
   const [voiceStyle, setVoiceStyle] = useState("natural conversational voice");
   const [ageRange, setAgeRange] = useState("");
@@ -1405,7 +1411,13 @@ export default function UniversalCompleteMediaRunAgentPanel({
                   <TextField label="Offer" value={offer} onChange={setOffer} mode={portalMode} />
                   <TextField label="Must include" value={mustInclude} onChange={setMustInclude} mode={portalMode} />
                   <TextField label="Must avoid" value={mustAvoid} onChange={setMustAvoid} mode={portalMode} />
-                  <TextField label="Human/avatar mode" value={humanAvatarMode} onChange={setHumanAvatarMode} mode={portalMode} />
+                  <SelectField
+                    label="Human/avatar mode"
+                    value={humanAvatarMode}
+                    onChange={setHumanAvatarMode}
+                    items={HUMAN_AVATAR_MODES}
+                    mode={portalMode}
+                  />
                   <TextField label="Visual references/assets" value={visualReferencesAssets} onChange={setVisualReferencesAssets} mode={portalMode} />
                   <TextField label="Voice style" value={voiceStyle} onChange={setVoiceStyle} mode={portalMode} />
                   <TextField label="Age range" value={ageRange} onChange={setAgeRange} mode={portalMode} />

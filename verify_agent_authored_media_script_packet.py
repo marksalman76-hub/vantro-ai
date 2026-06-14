@@ -53,6 +53,102 @@ def main() -> int:
     require("scripting_media_brief" in runtime, "Scripting stage status is missing.")
     require("media_script_ready" in runtime and "media_script_failed" in runtime, "Script ready/failed statuses are missing.")
 
+    for bad_phrase in [
+        "Generate quote enquiries",
+        "helps Homeowners, trades businesses",
+        "You get Free",
+        "f\"{business_name} helps {audience}",
+        "f\"You get {offer}",
+        "caption_text\": spoken_chunk",
+        "script = f\"{script} {must_include}.\"",
+        "script = f\"{script} {include_value}.\"",
+        "{must_include}.",
+        "str(must_include",
+        "else \"homeowner or trade business owner booking a free quote\"",
+    ]:
+        require(bad_phrase not in runtime, f"Robotic or unsafe script pattern remains in runtime: {bad_phrase}")
+
+    for helper in [
+        "_ucm_humanize_audience",
+        "_ucm_convert_goal_to_customer_benefit",
+        "_ucm_build_service_ad_voiceover",
+        "_ucm_build_marketing_caption_plan",
+        "_ucm_build_scene_specific_visual_plan",
+        "_ucm_natural_must_include_benefits",
+        "_ucm_weave_benefits_into_voiceover",
+        "_ucm_no_human_or_product_led_mode",
+        "_ucm_human_avatar_mode_kind",
+        "_ucm_human_led_final_cta_scene",
+        "_ucm_uploaded_likeness_consent_present",
+    ]:
+        require(f"def {helper}" in runtime, f"Creative-quality helper is missing: {helper}")
+
+    for mode in [
+        "No human/avatar",
+        "Generate new avatar/person",
+        "Use client-uploaded face/likeness",
+        "Use saved brand spokesperson/avatar",
+    ]:
+        require(mode in runtime, f"Locked human/avatar mode is missing from runtime: {mode}")
+        require(mode in popup, f"Locked human/avatar mode is missing from popup: {mode}")
+
+    require(
+        "_ucm_natural_must_include_benefits(controls.get(\"must_include\"), max_items=2)" in runtime,
+        "must_include must be converted into concise natural benefits before voiceover use.",
+    )
+    require(
+        "_ucm_weave_benefits_into_voiceover(script, benefits, max_words)" in runtime,
+        "must_include benefits must be woven into voiceover under the word budget.",
+    )
+
+    for phrase in [
+        "dull, stained concrete",
+        "epoxy flooring",
+        "easy to clean",
+        "free quote",
+    ]:
+        require(phrase in runtime, f"Epoxy-specific positive language is missing: {phrase}")
+
+    for overlay in [
+        "Dull concrete?",
+        "Premium epoxy flooring",
+        "Proper surface preparation",
+        "Durable. Glossy. Easy to clean.",
+        "Book your free quote today",
+    ]:
+        require(overlay in runtime, f"Marketing-overlay caption copy is missing: {overlay}")
+
+    require(
+        "_ucm_build_marketing_caption_plan(controls, duration, segment_count)" in runtime,
+        "Caption generation must use marketing overlays instead of raw narration chunking.",
+    )
+    require(
+        "_ucm_build_scene_specific_visual_plan(controls, voiceover_script, duration, segment_count)" in runtime,
+        "Scene generation must use scene-specific visual planning.",
+    )
+    require(
+        "final polished epoxy floor reveal with CTA text and no people" in runtime,
+        "No-human/product-led epoxy mode must use a final floor reveal with CTA text and no people.",
+    )
+    require(
+        "if _ucm_no_human_or_product_led_mode(controls)" in runtime,
+        "Epoxy CTA scene must check human/avatar mode before showing people.",
+    )
+    require(
+        "_ucm_human_led_final_cta_scene(controls)" in runtime,
+        "Epoxy CTA scene must preserve avatar/person/spokesperson modes through a human-led branch.",
+    )
+    for human_scene in [
+        "human presenter, customer, tradie, or spokesperson booking a free quote",
+        "client-uploaded likeness presenter delivering the free quote CTA with consent confirmed",
+        "saved brand spokesperson/avatar delivering the free quote CTA",
+    ]:
+        require(human_scene in runtime, f"Human/avatar CTA scene support is missing: {human_scene}")
+    require(
+        runtime.find("if _ucm_no_human_or_product_led_mode(controls)") < runtime.find("_ucm_human_led_final_cta_scene(controls)"),
+        "Human-led epoxy CTA scene must be guarded by the human/avatar mode check.",
+    )
+
     for field in [
         "client_requirements_summary",
         "inferred_business_context",

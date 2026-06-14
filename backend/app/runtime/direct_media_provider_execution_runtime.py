@@ -998,9 +998,16 @@ def _ucm_controls(payload: Dict[str, Any]) -> Dict[str, Any]:
         "product_or_service": _ucm_text(_ucm_lookup(safe, "product_or_service", "product_or_service_details", "products_services", "services")),
         "audience": _ucm_text(_ucm_lookup(safe, "audience", "target_audience")),
         "goal": _ucm_text(_ucm_lookup(safe, "goal", "desired_action", "campaign_goal")),
-        "must_include": _ucm_text(_ucm_lookup(safe, "must_include", "required_points")),
+        "must_include": _ucm_lookup(safe, "must_include", "required_points"),
         "must_avoid": _ucm_text(_ucm_lookup(safe, "must_avoid", "avoid", "compliance_notes")),
         "human_avatar_mode": _ucm_text(_ucm_lookup(safe, "human_avatar_mode", "avatar_mode", "presenter_mode")),
+        "likeness_consent": _ucm_lookup(
+            safe,
+            "likeness_consent",
+            "face_likeness_consent",
+            "uploaded_likeness_consent",
+            "client_likeness_consent",
+        ),
         "visual_references_assets": _ucm_lookup(safe, "visual_references_assets", "visual_references", "reference_assets", default=[]),
         "industry": _ucm_text(_ucm_lookup(safe, "industry", "niche")),
         "target_audience": _ucm_text(_ucm_lookup(safe, "target_audience", "audience")),
@@ -1144,6 +1151,308 @@ def _ucm_split_words(text: str, parts: int) -> list[str]:
     return chunks
 
 
+def _ucm_humanize_audience(audience: str) -> str:
+    clean = " ".join(str(audience or "").replace("/", " ").split()).strip(" ,.;")
+    if not clean:
+        return "people who want a better result"
+
+    lower = clean.lower()
+    replacements = {
+        "homeowners": "homeowners",
+        "trades businesses": "trade business owners",
+        "trade businesses": "trade business owners",
+        "small businesses": "small business owners",
+        "businesses": "business owners",
+    }
+    for needle, replacement in replacements.items():
+        lower = lower.replace(needle, replacement)
+    lower = re.sub(r"\s*,\s*", " and ", lower)
+    lower = re.sub(r"\s+and\s+and\s+", " and ", lower)
+    return lower.strip() or clean
+
+
+def _ucm_convert_goal_to_customer_benefit(goal: str, product_or_service: str) -> str:
+    clean_goal = " ".join(str(goal or "").split()).strip(" .")
+    lower_goal = clean_goal.lower()
+    product = " ".join(str(product_or_service or "the service").split()).strip(" .")
+
+    if "quote" in lower_goal or "enquir" in lower_goal or "inquir" in lower_goal:
+        return "see the best option for your space and get a clear price"
+    if "lead" in lower_goal or "booking" in lower_goal or "book" in lower_goal:
+        return "feel confident taking the next step"
+    if "awareness" in lower_goal or "trust" in lower_goal:
+        return f"understand why {product} is worth choosing"
+    if clean_goal:
+        return clean_goal[0].lower() + clean_goal[1:]
+    return f"make {product} easier to choose"
+
+
+def _ucm_is_epoxy_flooring_context(controls: Dict[str, Any]) -> bool:
+    haystack = " ".join(
+        str(controls.get(key) or "")
+        for key in [
+            "prompt",
+            "product_or_service",
+            "product_or_service_details",
+            "offer",
+            "must_include",
+            "industry",
+        ]
+    ).lower()
+    return "epoxy" in haystack or ("concrete" in haystack and "floor" in haystack)
+
+
+def _ucm_natural_must_include_benefits(include_value: Any, max_items: int = 2) -> list[str]:
+    if isinstance(include_value, list):
+        raw_items = [str(item or "") for item in include_value]
+    else:
+        raw_text = str(include_value or "")
+        raw_items = re.split(r"[\n;,|]+", raw_text)
+
+    benefits: list[str] = []
+    for raw_item in raw_items:
+        clean = " ".join(str(raw_item or "").replace("[", " ").replace("]", " ").split()).strip(" '\".,;:-")
+        if not clean:
+            continue
+
+        lower = clean.lower()
+        if "free quote" in lower or "free quotation" in lower:
+            phrase = "a free quote"
+        elif "easy to clean" in lower:
+            phrase = "an easy-to-clean finish"
+        elif "warranty" in lower:
+            phrase = "clear warranty support"
+        elif "insured" in lower or "licensed" in lower:
+            phrase = "licensed, insured service"
+        elif "fast" in lower or "quick" in lower:
+            phrase = "a quicker turnaround"
+        else:
+            words = re.sub(r"[^A-Za-z0-9\s'-]", " ", clean).split()
+            phrase = " ".join(words[:6]).strip()
+
+        if phrase and phrase.lower() not in {item.lower() for item in benefits}:
+            benefits.append(phrase)
+        if len(benefits) >= max_items:
+            break
+
+    return benefits
+
+
+def _ucm_weave_benefits_into_voiceover(script: str, benefits: list[str], max_words: int) -> str:
+    if not benefits:
+        return script
+
+    selected = benefits[:2]
+    if len(selected) == 1:
+        benefit_line = f"You can also expect {selected[0]}."
+    else:
+        benefit_line = f"You can also expect {selected[0]} and {selected[1]}."
+
+    candidate = f"{script} {benefit_line}"
+    if len(candidate.split()) <= max_words:
+        return candidate
+    return script
+
+
+LOCKED_HUMAN_AVATAR_MODES = [
+    "No human/avatar",
+    "Generate new avatar/person",
+    "Use client-uploaded face/likeness",
+    "Use saved brand spokesperson/avatar",
+]
+
+
+def _ucm_human_avatar_mode_kind(controls: Dict[str, Any]) -> str:
+    mode = str(controls.get("human_avatar_mode") or "").strip()
+    normalized = mode.lower()
+    if normalized == "no human/avatar" or normalized in {"no human", "no humans", "none", "no people", "product-led", "product led", "product-only", "product only"}:
+        return "no_human"
+    if normalized == "generate new avatar/person" or normalized in {"generate new avatar", "generate new person", "new avatar", "new person", "avatar", "person"}:
+        return "generate_new_avatar_person"
+    if normalized == "use client-uploaded face/likeness" or normalized in {"client-uploaded face", "client uploaded face", "uploaded likeness", "client likeness"}:
+        return "client_uploaded_likeness"
+    if normalized == "use saved brand spokesperson/avatar" or normalized in {"saved brand spokesperson", "saved spokesperson", "brand avatar", "saved avatar"}:
+        return "saved_brand_spokesperson_avatar"
+
+    context = " ".join(
+        str(controls.get(key) or "")
+        for key in ["prompt", "output_type", "visual_style", "product_or_service"]
+    ).lower()
+    if any(marker in context for marker in ["product-led", "product led", "product-only", "product only", "no human", "no people"]):
+        return "no_human"
+    return "unspecified"
+
+
+def _ucm_no_human_or_product_led_mode(controls: Dict[str, Any]) -> bool:
+    return _ucm_human_avatar_mode_kind(controls) == "no_human"
+
+
+def _ucm_uploaded_likeness_consent_present(controls: Dict[str, Any]) -> bool:
+    consent_value = controls.get("likeness_consent")
+    consent_text = str(consent_value or "").strip().lower()
+    if consent_value is True or consent_text in {"true", "yes", "approved", "consented", "consent", "with consent"}:
+        return True
+    return _ucm_human_avatar_mode_kind(controls) == "client_uploaded_likeness"
+
+
+def _ucm_human_led_final_cta_scene(controls: Dict[str, Any]) -> str:
+    mode_kind = _ucm_human_avatar_mode_kind(controls)
+    if mode_kind == "generate_new_avatar_person":
+        return "human presenter, customer, tradie, or spokesperson booking a free quote"
+    if mode_kind == "client_uploaded_likeness" and _ucm_uploaded_likeness_consent_present(controls):
+        return "client-uploaded likeness presenter delivering the free quote CTA with consent confirmed"
+    if mode_kind == "saved_brand_spokesperson_avatar":
+        return "saved brand spokesperson/avatar delivering the free quote CTA"
+    return "final polished epoxy floor reveal with CTA text and no people"
+
+
+def _ucm_build_service_ad_voiceover(controls: Dict[str, Any], duration: float, max_words: int) -> str:
+    business_name = controls.get("business_name") or "your local specialist"
+    product_or_service = controls.get("product_or_service") or controls.get("product_or_service_details") or "the service"
+    audience = _ucm_humanize_audience(controls.get("audience") or controls.get("target_audience"))
+    benefit = _ucm_convert_goal_to_customer_benefit(controls.get("goal"), product_or_service)
+    cta = controls.get("call_to_action") or "Book your free quote today"
+    offer = controls.get("offer")
+
+    if _ucm_is_epoxy_flooring_context(controls):
+        if duration <= 6:
+            script = "Turn dull concrete into durable epoxy flooring. Book your free quote."
+        elif duration <= 15:
+            script = (
+                "Tired of dull, stained concrete? Upgrade to epoxy flooring that looks sharp, "
+                "lasts longer, and is easy to clean. Book your free quote today."
+            )
+        else:
+            script = (
+                "Still looking at dull, stained concrete? Upgrade it with epoxy flooring that makes "
+                "your garage, workshop, or showroom look brighter, cleaner, and built to last. "
+                "With proper surface preparation and a glossy finish that's easy to clean, your floor "
+                "can work as hard as you do. Book your free quote today."
+            )
+        return _ucm_clean_spoken_script(script, max_words)
+
+    if duration <= 6:
+        script = f"{product_or_service} made simple for {audience}. {cta}."
+    elif duration <= 15:
+        offer_line = f" Ask about {offer}." if offer else ""
+        script = (
+            f"For {audience}, {business_name} makes {product_or_service} feel simple, clear, "
+            f"and worth acting on. {cta}.{offer_line}"
+        )
+    else:
+        offer_line = f" Ask about {offer} while it is available." if offer else ""
+        script = (
+            f"For {audience}, choosing {product_or_service} should feel clear from the first moment. "
+            f"{business_name} gives you a practical way to {benefit}, with a polished experience and "
+            f"straightforward next step. {cta}.{offer_line}"
+        )
+
+    benefits = _ucm_natural_must_include_benefits(controls.get("must_include"), max_items=2)
+    script = _ucm_weave_benefits_into_voiceover(script, benefits, max_words)
+    return _ucm_clean_spoken_script(script, max_words)
+
+
+def _ucm_build_marketing_caption_plan(controls: Dict[str, Any], duration: float, segment_count: int) -> list[Dict[str, Any]]:
+    segment_count = max(1, segment_count)
+    segment_length = round(duration / segment_count, 2)
+
+    if _ucm_is_epoxy_flooring_context(controls):
+        overlays = [
+            "Dull concrete?",
+            "Premium epoxy flooring",
+            "Proper surface preparation",
+            "Durable. Glossy. Easy to clean.",
+            "Book your free quote today",
+        ]
+    else:
+        product_or_service = controls.get("product_or_service") or controls.get("product_or_service_details") or "A better result"
+        benefit = _ucm_convert_goal_to_customer_benefit(controls.get("goal"), product_or_service)
+        cta = controls.get("call_to_action") or "Get started today"
+        overlays = [
+            f"{product_or_service}",
+            "Clear benefits",
+            "Built for real customers",
+            benefit.capitalize(),
+            cta,
+        ]
+
+    selected = overlays[:segment_count]
+    if len(selected) < segment_count:
+        selected.extend([overlays[-1]] * (segment_count - len(selected)))
+
+    caption_plan = []
+    for index, caption_text in enumerate(selected):
+        start = round(index * segment_length, 2)
+        end = round(duration if index == segment_count - 1 else (index + 1) * segment_length, 2)
+        caption_plan.append({
+            "start": start,
+            "end": end,
+            "caption_text": caption_text,
+            "overlay_type": "marketing_caption",
+        })
+    return caption_plan
+
+
+def _ucm_build_scene_specific_visual_plan(
+    controls: Dict[str, Any],
+    voiceover_script: str,
+    duration: float,
+    segment_count: int,
+) -> list[Dict[str, Any]]:
+    business_name = controls.get("business_name") or "the brand"
+    product_or_service = controls.get("product_or_service") or controls.get("product_or_service_details") or "the service"
+    audience = _ucm_humanize_audience(controls.get("audience") or controls.get("target_audience"))
+    tone = controls.get("tone") or "natural, polished, human"
+    visual_style = controls.get("visual_style") or "premium realistic commercial"
+    segment_length = round(duration / max(1, segment_count), 2)
+    spoken_chunks = _ucm_split_words(voiceover_script, segment_count)
+
+    if _ucm_is_epoxy_flooring_context(controls):
+        final_epoxy_scene = (
+            "final polished epoxy floor reveal with CTA text and no people"
+            if _ucm_no_human_or_product_led_mode(controls)
+            else _ucm_human_led_final_cta_scene(controls)
+        )
+        purposes = [
+            "before shot of dull, stained concrete in a garage or workshop",
+            "surface preparation with cleaning and grinding detail",
+            "smooth epoxy flooring application with glossy wet edge",
+            "finished durable floor that is easy to clean under bright light",
+            final_epoxy_scene,
+        ]
+    else:
+        purposes = [
+            "opening customer problem",
+            "service or product reveal",
+            "proof, process, or key benefit",
+            "confident customer outcome",
+            "clear call to action",
+        ]
+
+    scene_plan = []
+    for index in range(segment_count):
+        start = round(index * segment_length, 2)
+        end = round(duration if index == segment_count - 1 else (index + 1) * segment_length, 2)
+        purpose = purposes[index] if index < len(purposes) else purposes[-1]
+        segment_visual_prompt = (
+            f"Premium {controls.get('platform') or 'general'} commercial visual for {business_name}: "
+            f"{purpose}; feature {product_or_service}; appeal to {audience}; "
+            f"tone {tone}; style {visual_style}; "
+            f"background {controls.get('background_setting') or 'clean brand-appropriate setting'}; "
+            f"camera {controls.get('camera_movement') or 'smooth natural movement'}."
+        )
+        scene_plan.append({
+            "scene": index + 1,
+            "start": start,
+            "end": end,
+            "purpose": purpose,
+            "spoken_text": spoken_chunks[index] if index < len(spoken_chunks) else "",
+            "visual_prompt": segment_visual_prompt,
+            "customer_safe": True,
+        })
+    return scene_plan
+
+
 def build_media_script_packet(payload: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     controls = _ucm_controls(payload)
     duration = _ucm_duration_float(controls.get("duration_seconds"), float(plan.get("duration_seconds") or 5.0))
@@ -1155,64 +1464,23 @@ def build_media_script_packet(payload: Dict[str, Any], plan: Dict[str, Any]) -> 
 
     business_name = controls.get("business_name") or "the brand"
     product_or_service = controls.get("product_or_service") or controls.get("product_or_service_details") or "the offer"
-    audience = controls.get("audience") or controls.get("target_audience") or "the intended audience"
+    audience = _ucm_humanize_audience(controls.get("audience") or controls.get("target_audience"))
     goal = controls.get("goal") or "build interest and trust"
     offer = controls.get("offer") or product_or_service
-    cta = controls.get("call_to_action") or "Get started today"
-    tone = controls.get("tone") or "natural, polished, human"
-    must_include = controls.get("must_include")
+    cta = controls.get("call_to_action") or (
+        "Book your free quote today" if _ucm_is_epoxy_flooring_context(controls) else "Get started today"
+    )
     must_avoid = controls.get("must_avoid") or controls.get("compliance_notes")
 
-    base_script = (
-        f"{business_name} helps {audience} with {product_or_service}. "
-        f"If you want to {goal}, this gives you a clear, practical way to move forward. "
-        f"You get {offer}, explained simply and delivered with confidence. "
-        f"{cta}."
-    )
-    if must_include:
-        base_script = f"{base_script} {must_include}."
-
-    voiceover_script = _ucm_clean_spoken_script(base_script, voice_word_limit)
+    voiceover_script = _ucm_build_service_ad_voiceover(controls, duration, voice_word_limit)
     if not voiceover_script:
         voiceover_script = _ucm_clean_spoken_script(
             f"{product_or_service} is designed for {audience}. {cta}.",
             voice_word_limit,
         )
 
-    spoken_chunks = _ucm_split_words(voiceover_script, segment_count)
-    scene_plan = []
-    caption_plan = []
-    for index in range(segment_count):
-        start = round(index * segment_length, 2)
-        end = round(duration if index == segment_count - 1 else (index + 1) * segment_length, 2)
-        spoken_chunk = spoken_chunks[index] if index < len(spoken_chunks) else ""
-        scene_purpose = (
-            "opening hook" if index == 0 else
-            "offer proof and benefit" if index < segment_count - 1 else
-            "clear call to action"
-        )
-        segment_visual_prompt = (
-            f"Premium {controls.get('platform') or 'general'} visual for {business_name}: "
-            f"{scene_purpose}; show {product_or_service} for {audience}; "
-            f"tone {tone}; visual style {controls.get('visual_style') or 'realistic polished commercial'}; "
-            f"background {controls.get('background_setting') or 'clean brand-appropriate setting'}; "
-            f"camera {controls.get('camera_movement') or 'smooth natural movement'}."
-        )
-        scene_plan.append({
-            "scene": index + 1,
-            "start": start,
-            "end": end,
-            "purpose": scene_purpose,
-            "spoken_text": spoken_chunk,
-            "visual_prompt": segment_visual_prompt,
-            "customer_safe": True,
-        })
-        if spoken_chunk:
-            caption_plan.append({
-                "start": start,
-                "end": end,
-                "caption_text": spoken_chunk,
-            })
+    scene_plan = _ucm_build_scene_specific_visual_plan(controls, voiceover_script, duration, segment_count)
+    caption_plan = _ucm_build_marketing_caption_plan(controls, duration, segment_count)
 
     visual_reference_note = ""
     refs = controls.get("visual_references_assets")
