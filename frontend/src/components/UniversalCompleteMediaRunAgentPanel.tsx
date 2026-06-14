@@ -631,6 +631,42 @@ export default function UniversalCompleteMediaRunAgentPanel({
       .join(" | ");
   }
 
+  function providerDiagnosticRows(result: any) {
+    const rawAttempts = [
+      ...(Array.isArray(result?.failed_provider_attempts) ? result.failed_provider_attempts : []),
+      ...(Array.isArray(result?.child_jobs?.visual_segments) ? result.child_jobs.visual_segments : []),
+      ...(Array.isArray(result?.child_jobs?.visual_attempts) ? result.child_jobs.visual_attempts : []),
+    ];
+    const seen = new Set<string>();
+
+    return rawAttempts
+      .filter((attempt: any) => attempt && typeof attempt === "object")
+      .map((attempt: any) => {
+        const key = `${attempt?.provider || "provider"}-${attempt?.job_id || ""}-${attempt?.segment_index || ""}-${attempt?.status || ""}`;
+        if (seen.has(key)) return null;
+        seen.add(key);
+        const provider = String(attempt?.provider || "provider");
+        const providerJobId = String(attempt?.provider_job_id || "");
+        const jobId = String(attempt?.job_id || "");
+        const status = normaliseSegmentStatus(attempt?.status || "failed");
+        const runwayCalled = provider.toLowerCase() === "runway" && Boolean(providerJobId || jobId || !String(attempt?.status || "").includes("blocked"));
+        return {
+          provider,
+          status,
+          jobId,
+          providerJobId,
+          runwayCalled,
+          safeErrorSummary: String(attempt?.safe_error_summary || attempt?.reason || ""),
+        };
+      })
+      .filter(Boolean);
+  }
+
+  function canRetryMediaProviderFailure(result: any) {
+    const status = String(result?.status || popupMediaJobStatus || "").toLowerCase();
+    return portalMode === "admin" && (status.includes("visual_failed") || status.includes("provider_failed") || status.includes("provider_execution_error"));
+  }
+
   function preflightSummary(result: any) {
     if (!result || typeof result !== "object") return "";
     const failedChecks = Array.isArray(result.failed_preflight_checks)
@@ -975,13 +1011,18 @@ export default function UniversalCompleteMediaRunAgentPanel({
       ...mediaConfig,
       enabled: true,
       prompt: cleanPrompt,
+      media_prompt: cleanPrompt,
       task: cleanPrompt,
       visual_quality_guardrails: continuityGuardrails,
       agent_id: activeCreativeAgent,
       selected_agent: activeCreativeAgent,
       selected_agents: selectedCreativeAgents,
       agent_ids: selectedCreativeAgents,
+      media_type: "complete_video",
+      asset_type: "video",
+      output_type: outputType,
       duration_seconds: options.smokeTest ? "5" : durationSeconds,
+      aspect_ratio: aspectRatio,
       video_provider: "runway",
       audio_provider: "elevenlabs",
       requested_at: new Date().toISOString(),
@@ -1012,6 +1053,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
       mode: portalMode,
 
       prompt: cleanPrompt,
+      media_prompt: cleanPrompt,
       task: cleanPrompt,
       creative_brief: cleanPrompt,
       user_prompt: cleanPrompt,
@@ -1131,6 +1173,35 @@ export default function UniversalCompleteMediaRunAgentPanel({
         return;
       }
 
+      const resultStatus = String(result?.status || "");
+      const resultProviderAttempts = providerAttemptSummary(result);
+      const providerFailureResult =
+        response.ok &&
+        result?.success === false &&
+        (
+          resultStatus.includes("visual_failed") ||
+          resultStatus.includes("provider_failed") ||
+          resultStatus.includes("provider_execution_error") ||
+          resultProviderAttempts
+        );
+
+      if (providerFailureResult) {
+        const extracted = applyPopupMediaJobResult(result);
+        setPreflightResult(result);
+        const segmentCount = Number(result?.segment_count || 0);
+        const requestedDuration = Number(result?.requested_duration_seconds || result?.estimated_duration_seconds || durationSeconds || 0);
+        const generatedSegments = Array.isArray(result?.generated_segments) ? result.generated_segments.length : 0;
+        const segmentNote = segmentCount > 0
+          ? `${requestedDuration || durationSeconds}s requested -> ${segmentCount} visual segment${segmentCount === 1 ? "" : "s"}. Segment progress: ${generatedSegments}/${segmentCount}.`
+          : "Provider execution stopped before a final asset was produced.";
+        setStatusMessage(
+          `${segmentNote}${resultProviderAttempts ? ` Provider attempts: ${resultProviderAttempts}` : ""}${extracted.jobId ? ` Job ID: ${extracted.jobId}` : ""}`
+        );
+        setRunning(false);
+        onResult?.(result);
+        return;
+      }
+
       if (!response.ok || result?.success === false) {
         const errorText =
           result?.error ||
@@ -1163,7 +1234,6 @@ export default function UniversalCompleteMediaRunAgentPanel({
         result?.id ||
         "";
 
-      const resultStatus = String(result?.status || "");
       if (options.dryRun || resultStatus.includes("preflight")) {
         setStatusMessage(
           `${preflightSummary(result) || result?.message || "Preflight completed."}${jobId ? ` Job ID: ${jobId}` : ""}`
@@ -1894,6 +1964,63 @@ export default function UniversalCompleteMediaRunAgentPanel({
                   </div>
                 ) : null}
 
+                {portalMode === "admin" && providerDiagnosticRows(preflightResult).length > 0 ? (
+                  <div
+                    data-complete-media-provider-diagnostics="true"
+                    style={{
+                      display: "grid",
+                      gap: 8,
+                      borderRadius: 14,
+                      padding: 10,
+                      background: "rgba(239,68,68,.10)",
+                      color: "#fecaca",
+                      border: "1px solid rgba(239,68,68,.28)",
+                    }}
+                  >
+                    <strong>Provider attempt details</strong>
+                    {providerDiagnosticRows(preflightResult).map((attempt: any, index: number) => (
+                      <div
+                        key={`${attempt.provider}-${attempt.jobId}-${index}`}
+                        style={{
+                          display: "grid",
+                          gap: 3,
+                          borderRadius: 10,
+                          padding: "8px 9px",
+                          background: "rgba(15,23,42,.38)",
+                        }}
+                      >
+                        <div>
+                          <strong>{attempt.provider}</strong> {attempt.status}
+                        </div>
+                        <div>Runway called: {attempt.provider.toLowerCase() === "runway" ? (attempt.runwayCalled ? "yes" : "no") : "not applicable"}</div>
+                        {attempt.providerJobId ? <div>Provider job ID: {attempt.providerJobId}</div> : null}
+                        {attempt.jobId ? <div>Child job ID: {attempt.jobId}</div> : null}
+                        {attempt.safeErrorSummary ? <div>Safe error summary: {attempt.safeErrorSummary}</div> : null}
+                      </div>
+                    ))}
+                    {canRetryMediaProviderFailure(preflightResult) ? (
+                      <button
+                        type="button"
+                        data-complete-media-retry-provider-failure="true"
+                        disabled={running}
+                        onClick={() => void runCompleteMediaFromPopup({ creditRiskAcknowledged: true })}
+                        style={{
+                          width: "fit-content",
+                          border: "1px solid rgba(248,113,113,.38)",
+                          borderRadius: 999,
+                          padding: "8px 12px",
+                          background: "rgba(248,113,113,.14)",
+                          color: "#fecaca",
+                          fontWeight: 950,
+                          cursor: running ? "wait" : "pointer",
+                        }}
+                      >
+                        Retry media generation
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+
                 {preflightResult?.media_script_preview ? (
                   <div
                     data-complete-media-script-preview="true"
@@ -1909,7 +2036,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
                       color: portalMode === "admin" ? "#dbeafe" : "#1e3a8a",
                     }}
                   >
-                    <strong>Generated script preview</strong>
+                    <strong>Generated media plan</strong>
                     {preflightResult.media_script_preview.voiceover_script ? (
                       <div>
                         <strong>Voiceover:</strong> {preflightResult.media_script_preview.voiceover_script}

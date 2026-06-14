@@ -156,7 +156,7 @@ def main() -> int:
         "Popup must not show failed-with-HTTP messaging for preflight confirmation states.",
     )
     for marker in [
-        "Generated script preview",
+        "Generated media plan",
         "Voiceover:",
         "Scene count:",
         "Script fit:",
@@ -175,10 +175,49 @@ def main() -> int:
         "Popup must not show the old raw packet heading by default.",
     )
     require(
+        "Generated script preview" not in popup,
+        "Popup should use the premium Generated media plan heading, not the old script preview heading.",
+    )
+    require(
         "portalMode === \"admin\" && preflightResult?.media_script_packet" in popup
         and "JSON.stringify(preflightResult.media_script_packet, null, 2)" in popup,
         "Technical packet JSON must be admin-only and behind the debug toggle.",
     )
+
+    for marker in [
+        "media_prompt: cleanPrompt",
+        'media_type: "complete_video"',
+        'asset_type: "video"',
+        'video_provider: "runway"',
+        'audio_provider: "elevenlabs"',
+        'duration_seconds: options.smokeTest ? "5" : durationSeconds',
+        'duration_seconds: options.smokeTest ? "5" : directConfig.duration_seconds || durationSeconds',
+        "aspect_ratio: aspectRatio",
+        "selected_agent: activeCreativeAgent",
+        "selected_agents: selectedCreativeAgents",
+        "agent_ids: selectedCreativeAgents",
+        "multi_agent_media_execution: multiAgentMediaExecution",
+        'requested_from: "complete_media_popup"',
+        "dry_run: Boolean(options.dryRun)",
+        "preflight_only: Boolean(options.dryRun)",
+        "smoke_test_mode: Boolean(options.smokeTest)",
+    ]:
+        require(marker in popup, f"Portal create/smoke payload missing required provider field: {marker}")
+
+    for marker in [
+        "providerDiagnosticRows",
+        "data-complete-media-provider-diagnostics",
+        "Provider attempt details",
+        "Runway called:",
+        "Provider job ID:",
+        "Safe error summary:",
+        "data-complete-media-retry-provider-failure",
+        "Retry media generation",
+        "provider_execution_error",
+        "providerFailureResult",
+        "setPreflightResult(result)",
+    ]:
+        require(marker in popup, f"Provider execution error diagnostics/retry UI missing: {marker}")
 
     for proxy in [client_submit, client_status]:
         require("segment_prompt" in proxy and "generated_segments" in proxy, "Client proxy must sanitize segment prompt/internal segment data.")
