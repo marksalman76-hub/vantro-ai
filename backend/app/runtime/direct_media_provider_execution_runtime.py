@@ -1016,7 +1016,7 @@ def _ucm_controls(payload: Dict[str, Any]) -> Dict[str, Any]:
         "aspect_ratio": _ucm_text(_ucm_lookup(safe, "aspect_ratio", default="9:16")),
         "language": _ucm_text(_ucm_lookup(safe, "language", default="English")),
         "accent": _ucm_text(_ucm_lookup(safe, "accent")),
-        "tone": _ucm_text(_ucm_lookup(safe, "tone", default="natural, polished, human")),
+        "tone": _ucm_text(_ucm_lookup(safe, "tone", default="natural, confident, professional, warm")),
         "voice_style": _ucm_text(_ucm_lookup(safe, "voice_style", default="natural conversational voice")),
         "age_range": _ucm_text(_ucm_lookup(safe, "age_range")),
         "gender_presentation": _ucm_text(_ucm_lookup(safe, "gender_presentation")),
@@ -1402,7 +1402,7 @@ def _ucm_build_scene_specific_visual_plan(
     business_name = controls.get("business_name") or "the brand"
     product_or_service = controls.get("product_or_service") or controls.get("product_or_service_details") or "the service"
     audience = _ucm_humanize_audience(controls.get("audience") or controls.get("target_audience"))
-    tone = controls.get("tone") or "natural, polished, human"
+    tone = controls.get("tone") or "natural, confident, professional, warm"
     visual_style = controls.get("visual_style") or "premium realistic commercial"
     segment_length = round(duration / max(1, segment_count), 2)
     spoken_chunks = _ucm_split_words(voiceover_script, segment_count)
@@ -1470,6 +1470,7 @@ def build_media_script_packet(payload: Dict[str, Any], plan: Dict[str, Any]) -> 
     cta = controls.get("call_to_action") or (
         "Book your free quote today" if _ucm_is_epoxy_flooring_context(controls) else "Get started today"
     )
+    tone = controls.get("tone") or "natural, confident, professional, warm"
     must_avoid = controls.get("must_avoid") or controls.get("compliance_notes")
 
     voiceover_script = _ucm_build_service_ad_voiceover(controls, duration, voice_word_limit)

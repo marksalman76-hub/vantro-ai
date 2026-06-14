@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 
@@ -42,6 +43,37 @@ def require_before(text: str, left: str, right: str, message: str) -> None:
     require(left_index < right_index, message)
 
 
+def require_tone_references_are_safe(runtime: str) -> None:
+    tree = ast.parse(runtime)
+    for node in ast.walk(tree):
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+
+        references_tone = any(
+            isinstance(child, ast.Name) and child.id == "tone" and isinstance(child.ctx, ast.Load)
+            for child in ast.walk(node)
+        )
+        if not references_tone:
+            continue
+
+        args = {arg.arg for arg in node.args.args}
+        local_assignments = set()
+        for child in ast.walk(node):
+            if isinstance(child, ast.Assign):
+                for target in child.targets:
+                    if isinstance(target, ast.Name):
+                        local_assignments.add(target.id)
+            elif isinstance(child, ast.AnnAssign) and isinstance(child.target, ast.Name):
+                local_assignments.add(child.target.id)
+            elif isinstance(child, ast.NamedExpr) and isinstance(child.target, ast.Name):
+                local_assignments.add(child.target.id)
+
+        require(
+            "tone" in args or "tone" in local_assignments,
+            f"Function {node.name} references tone without receiving or defining it.",
+        )
+
+
 def main() -> int:
     runtime = read("backend/app/runtime/direct_media_provider_execution_runtime.py")
     parent = read("backend/app/runtime/universal_media_pipeline_orchestrator.py")
@@ -52,6 +84,11 @@ def main() -> int:
     require("build_media_script_packet" in runtime, "Media script packet builder is missing.")
     require("scripting_media_brief" in runtime, "Scripting stage status is missing.")
     require("media_script_ready" in runtime and "media_script_failed" in runtime, "Script ready/failed statuses are missing.")
+    require_tone_references_are_safe(runtime)
+    require(
+        'tone = controls.get("tone") or "natural, confident, professional, warm"' in runtime,
+        "Runtime must define tone locally with the production fallback before using it in script packet generation.",
+    )
 
     for bad_phrase in [
         "Generate quote enquiries",
