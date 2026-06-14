@@ -27,6 +27,8 @@ TERMINAL_STATUSES = {
     "media_script_failed",
     "universal_complete_media_preflight_blocked",
     "universal_complete_media_preflight_dry_run",
+    "completed_duration_shortfall",
+    "composition_duration_shortfall",
     "provider_unavailable",
     "provider_not_ready",
     "universal_complete_media_visual_failed",
@@ -72,6 +74,20 @@ SAFE_PUBLIC_KEYS = {
     "download_url",
     "final_media_type",
     "final_duration_seconds",
+    "requested_duration_seconds",
+    "provider_safe_segment_seconds",
+    "segment_count",
+    "segment_plan",
+    "generated_segments",
+    "missing_segments",
+    "duration_fulfilled",
+    "duration_shortfall_seconds",
+    "audio_duration_seconds",
+    "voice_script",
+    "voice_style",
+    "language",
+    "accent",
+    "tone",
     "child_jobs",
     "failed_provider_attempts",
     "selected_video_job_id",
@@ -207,6 +223,25 @@ def _public_record(record: Dict[str, Any], *, audience: str = "client") -> Dict[
         allowed |= ADMIN_EXTRA_KEYS
 
     clean = {k: v for k, v in dict(record or {}).items() if k in allowed}
+    if audience not in {"admin", "owner", "owner_admin"}:
+        if isinstance(clean.get("segment_plan"), list):
+            clean["segment_plan"] = [
+                {
+                    key: value
+                    for key, value in dict(segment or {}).items()
+                    if key not in {"segment_prompt", "visual_prompt", "provider_prompt"}
+                }
+                for segment in clean.get("segment_plan", [])
+            ]
+        if isinstance(clean.get("generated_segments"), list):
+            clean["generated_segments"] = [
+                {
+                    key: value
+                    for key, value in dict(segment or {}).items()
+                    if key not in {"segment_prompt", "visual_prompt", "provider_result", "safe_error_summary"}
+                }
+                for segment in clean.get("generated_segments", [])
+            ]
     clean["customer_safe"] = True
     clean["credential_values_exposed"] = False
     if audience not in {"admin", "owner", "owner_admin"}:
@@ -234,6 +269,20 @@ def _merge_status(parent: Dict[str, Any], direct: Dict[str, Any]) -> Dict[str, A
         "signed_preview_url",
         "final_media_type",
         "final_duration_seconds",
+        "requested_duration_seconds",
+        "provider_safe_segment_seconds",
+        "segment_count",
+        "segment_plan",
+        "generated_segments",
+        "missing_segments",
+        "duration_fulfilled",
+        "duration_shortfall_seconds",
+        "audio_duration_seconds",
+        "voice_script",
+        "voice_style",
+        "language",
+        "accent",
+        "tone",
         "video_job_id",
         "audio_job_id",
         "composition_job_id",

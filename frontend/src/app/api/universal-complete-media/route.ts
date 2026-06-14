@@ -63,6 +63,18 @@ function clientSafePayload(data: any) {
   delete clone.media_script_packet;
   delete clone.lead_scripting_agent;
   delete clone.contributing_scripting_agents;
+  if (Array.isArray(clone.segment_plan)) {
+    clone.segment_plan = clone.segment_plan.map((segment: any) => {
+      const { segment_prompt, visual_prompt, provider_prompt, ...safeSegment } = segment || {};
+      return safeSegment;
+    });
+  }
+  if (Array.isArray(clone.generated_segments)) {
+    clone.generated_segments = clone.generated_segments.map((segment: any) => {
+      const { segment_prompt, visual_prompt, provider_result, safe_error_summary, ...safeSegment } = segment || {};
+      return safeSegment;
+    });
+  }
   clone.customer_safe = true;
   clone.credential_values_exposed = false;
   clone.internal_config_exposed = false;

@@ -72,12 +72,15 @@ def main() -> int:
     require("execute_direct_media_provider_job" in runtime, "Provider execution function is missing.")
     require(
         "executable_visual_provider_order = [" in runtime
-        and "for attempt_number, video_provider in enumerate(executable_visual_provider_order" in runtime,
+        and "for provider_position, video_provider in enumerate(executable_visual_provider_order" in runtime
+        and "executor.submit(_run_visual_segment, segment)" in runtime,
         "Live visual attempts must iterate only executable preflight providers.",
     )
+    visual_loop_start = runtime.find("for provider_position, video_provider in enumerate(executable_visual_provider_order")
     require(
         "non_executable_visual_providers" in runtime
-        and "blocked_provider_adapter_unavailable" not in runtime[runtime.find("for attempt_number, video_provider in enumerate(executable_visual_provider_order"):],
+        and visual_loop_start >= 0
+        and "blocked_provider_adapter_unavailable" not in runtime[visual_loop_start:],
         "Unavailable fallbacks must be recorded during preflight, not called as live child attempts.",
     )
     require(

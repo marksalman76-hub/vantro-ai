@@ -713,6 +713,8 @@ export default function UniversalCompleteMediaRunAgentPanel({
             "running_audio_generation",
             "running_synchronised_composition",
             "completed",
+            "completed_duration_shortfall",
+            "composition_duration_shortfall",
             "universal_complete_media_preflight_dry_run",
             "universal_complete_media_preflight_ready",
             "universal_complete_media_preflight_blocked",
@@ -742,19 +744,31 @@ export default function UniversalCompleteMediaRunAgentPanel({
           ...result,
           job_id: resultJobId,
         });
+        setPreflightResult(result);
 
         const status = extracted.status || resultStatus || result?.status || "status received";
 
         const attempts = providerAttemptSummary(result);
+        const segmentCount = Number(result?.segment_count || 0);
+        const requestedDuration = Number(result?.requested_duration_seconds || result?.estimated_duration_seconds || 0);
+        const generatedSegments = Array.isArray(result?.generated_segments) ? result.generated_segments.length : 0;
+        const segmentNote = segmentCount > 0
+          ? ` ${requestedDuration || durationSeconds}s requested -> ${segmentCount} visual segment${segmentCount === 1 ? "" : "s"}. Segment progress: ${generatedSegments}/${segmentCount}.`
+          : "";
+        const durationNote = result?.final_duration_seconds
+          ? ` Final duration: ${Number(result.final_duration_seconds).toFixed(2)}s. Fulfilled: ${result?.duration_fulfilled === true ? "yes" : "no"}.`
+          : "";
         setStatusMessage(
           attempts
-            ? `Media job ${jobId} status: ${status}. Provider attempts: ${attempts}`
-            : `Media job ${jobId} status: ${status}`
+            ? `Media job ${jobId} status: ${status}.${segmentNote}${durationNote} Provider attempts: ${attempts}`
+            : `Media job ${jobId} status: ${status}.${segmentNote}${durationNote}`
         );
 
         const terminalStatus = String(status || "").toLowerCase();
         if (
           terminalStatus === "completed" ||
+          terminalStatus === "completed_duration_shortfall" ||
+          terminalStatus === "composition_duration_shortfall" ||
           terminalStatus.includes("failed") ||
           terminalStatus.includes("exception") ||
           terminalStatus.includes("blocked")
@@ -1625,6 +1639,58 @@ export default function UniversalCompleteMediaRunAgentPanel({
                       <strong>Preview URL:</strong> {popupMediaPreviewUrl}
                     </div>
                   )
+                ) : null}
+
+                {preflightResult?.segment_count ? (
+                  <div
+                    data-complete-media-segment-progress="true"
+                    style={{
+                      display: "grid",
+                      gap: 8,
+                      borderRadius: 14,
+                      padding: 10,
+                      background:
+                        portalMode === "admin"
+                          ? "rgba(20,184,166,.10)"
+                          : "rgba(240,253,250,.9)",
+                      color: portalMode === "admin" ? "#ccfbf1" : "#134e4a",
+                    }}
+                  >
+                    <strong>
+                      {preflightResult.requested_duration_seconds || durationSeconds}s requested {"->"} {preflightResult.segment_count} visual segment{Number(preflightResult.segment_count) === 1 ? "" : "s"}
+                    </strong>
+                    {Array.isArray(preflightResult.segment_plan) ? (
+                      <div style={{ display: "grid", gap: 4 }}>
+                        {preflightResult.segment_plan.map((segment: any) => {
+                          const completed = Array.isArray(preflightResult.generated_segments)
+                            ? preflightResult.generated_segments.find((item: any) => Number(item?.segment_index) === Number(segment?.segment_index))
+                            : null;
+                          const missing = Array.isArray(preflightResult.missing_segments)
+                            ? preflightResult.missing_segments.includes(segment?.segment_index)
+                            : false;
+                          const status = completed?.status || segment?.status || (missing ? "queued" : "pending");
+                          return (
+                            <div key={segment?.segment_index || `${segment?.segment_start_seconds}-${segment?.segment_end_seconds}`}>
+                              Segment {segment?.segment_index}/{preflightResult.segment_count}: {status}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                    <div>
+                      <strong>Audio:</strong> {preflightResult.audio_status || preflightResult.child_jobs?.audio?.status || "queued"}
+                      {" - "}
+                      <strong>Composition:</strong> {preflightResult.composition_status || preflightResult.child_jobs?.composition?.status || "pending"}
+                    </div>
+                    {preflightResult.final_duration_seconds ? (
+                      <div>
+                        <strong>Final duration:</strong> {Number(preflightResult.final_duration_seconds).toFixed(2)}s
+                        {" - "}
+                        <strong>Duration fulfilled:</strong> {preflightResult.duration_fulfilled === true ? "true" : "false"}
+                        {Number(preflightResult.duration_shortfall_seconds || 0) > 0 ? ` - Shortfall: ${Number(preflightResult.duration_shortfall_seconds).toFixed(2)}s` : ""}
+                      </div>
+                    ) : null}
+                  </div>
                 ) : null}
 
                 {preflightResult?.media_script_preview ? (

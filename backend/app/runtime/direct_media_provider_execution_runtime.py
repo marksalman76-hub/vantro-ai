@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import json
 import os
@@ -1131,6 +1132,39 @@ def _ucm_script_duration_fit(script: str, requested_duration: float) -> str:
     return "good"
 
 
+def _ucm_segment_count_for_duration(duration_seconds: float, provider_safe_segment_seconds: int = 5) -> int:
+    safe_segment = max(1, int(provider_safe_segment_seconds or 5))
+    duration = max(1.0, float(duration_seconds or safe_segment))
+    return max(1, min(int((duration + safe_segment - 0.01) // safe_segment), 12))
+
+
+def _ucm_duration_tolerance_seconds(requested_duration_seconds: float) -> float:
+    requested = max(0.0, float(requested_duration_seconds or 0.0))
+    if requested <= 10:
+        return 2.0
+    return max(3.0, requested * 0.15)
+
+
+def _ucm_duration_fulfillment(requested_duration_seconds: float, final_duration_seconds: Any) -> Dict[str, Any]:
+    requested = max(0.0, float(requested_duration_seconds or 0.0))
+    try:
+        final_duration = float(final_duration_seconds or 0.0)
+    except Exception:
+        final_duration = 0.0
+    shortfall = max(0.0, round(requested - final_duration, 3))
+    tolerance = _ucm_duration_tolerance_seconds(requested)
+    fulfilled = bool(final_duration > 0 and shortfall <= tolerance)
+    return {
+        "requested_duration_seconds": requested,
+        "final_duration_seconds": final_duration,
+        "duration_tolerance_seconds": tolerance,
+        "duration_shortfall_seconds": shortfall,
+        "duration_fulfilled": fulfilled,
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
+
+
 def _ucm_split_words(text: str, parts: int) -> list[str]:
     words = str(text or "").split()
     if not words:
@@ -1453,6 +1487,40 @@ def _ucm_build_scene_specific_visual_plan(
     return scene_plan
 
 
+def _ucm_build_segment_plan_from_script(
+    media_script_packet: Dict[str, Any],
+    requested_duration_seconds: float,
+    provider_safe_segment_seconds: int = 5,
+) -> list[Dict[str, Any]]:
+    segment_count = _ucm_segment_count_for_duration(requested_duration_seconds, provider_safe_segment_seconds)
+    scene_plan = media_script_packet.get("scene_plan") if isinstance(media_script_packet.get("scene_plan"), list) else []
+    fallback_prompt = str(media_script_packet.get("provider_visual_prompt") or "").strip()
+    segment_plan: list[Dict[str, Any]] = []
+
+    for index in range(segment_count):
+        start = round(index * provider_safe_segment_seconds, 2)
+        end = round(min(requested_duration_seconds, (index + 1) * provider_safe_segment_seconds), 2)
+        matching_scene = scene_plan[index] if index < len(scene_plan) and isinstance(scene_plan[index], dict) else {}
+        segment_prompt = str(matching_scene.get("visual_prompt") or fallback_prompt or "").strip()
+        if not segment_prompt:
+            segment_prompt = f"Premium commercial visual segment {index + 1} for the requested complete media."
+
+        segment_plan.append({
+            "segment_index": index + 1,
+            "segment_start_seconds": start,
+            "segment_end_seconds": end,
+            "segment_duration_seconds": round(max(0.5, end - start), 2),
+            "segment_prompt": segment_prompt,
+            "scene_purpose": matching_scene.get("purpose") or f"visual segment {index + 1}",
+            "provider_safe_segment_seconds": provider_safe_segment_seconds,
+            "status": "planned",
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        })
+
+    return segment_plan
+
+
 def build_media_script_packet(payload: Dict[str, Any], plan: Dict[str, Any]) -> Dict[str, Any]:
     controls = _ucm_controls(payload)
     duration = _ucm_duration_float(controls.get("duration_seconds"), float(plan.get("duration_seconds") or 5.0))
@@ -1482,6 +1550,11 @@ def build_media_script_packet(payload: Dict[str, Any], plan: Dict[str, Any]) -> 
 
     scene_plan = _ucm_build_scene_specific_visual_plan(controls, voiceover_script, duration, segment_count)
     caption_plan = _ucm_build_marketing_caption_plan(controls, duration, segment_count)
+    segment_plan = _ucm_build_segment_plan_from_script(
+        {"scene_plan": scene_plan, "provider_visual_prompt": ""},
+        duration,
+        provider_safe_segment_seconds,
+    )
 
     visual_reference_note = ""
     refs = controls.get("visual_references_assets")
@@ -1523,6 +1596,7 @@ def build_media_script_packet(payload: Dict[str, Any], plan: Dict[str, Any]) -> 
         "voiceover_script": voiceover_script,
         "spoken_words_only": True,
         "scene_plan": scene_plan,
+        "segment_plan": segment_plan,
         "caption_plan": caption_plan,
         "cta_text": cta,
         "voice_direction": f"{controls.get('voice_style') or 'natural conversational voice'}; {tone}; {controls.get('language') or 'English'} {controls.get('accent') or ''}".strip(),
@@ -1542,6 +1616,8 @@ def build_media_script_packet(payload: Dict[str, Any], plan: Dict[str, Any]) -> 
         "multi_agent_media_execution": bool(controls.get("multi_agent_media_execution")),
         "requested_duration_seconds": duration,
         "provider_safe_segment_seconds": provider_safe_segment_seconds,
+        "segment_count": segment_count,
+        "segment_plan": segment_plan,
         "voiceover_estimated_duration_seconds": _ucm_estimate_spoken_duration_seconds(voiceover_script),
         "script_duration_fit": _ucm_script_duration_fit(voiceover_script, duration),
         "script_ready": bool(voiceover_script and scene_plan and provider_visual_prompt),
@@ -1609,6 +1685,14 @@ def _ucm_preflight_universal_media_job(payload: Dict[str, Any], plan: Dict[str, 
 
     requested_duration = _ucm_duration_float(controls.get("duration_seconds"), 5.0)
     estimated_duration = min(requested_duration, 5.0) if smoke_test_mode else requested_duration
+    provider_safe_segment_seconds = int(media_script_packet.get("provider_safe_segment_seconds") or 5)
+    segment_count = 1 if smoke_test_mode else int(
+        media_script_packet.get("segment_count")
+        or _ucm_segment_count_for_duration(estimated_duration, provider_safe_segment_seconds)
+    )
+    segment_plan = list(media_script_packet.get("segment_plan") or [])
+    if smoke_test_mode:
+        segment_plan = segment_plan[:1]
 
     visual_provider_order = _ucm_video_provider_order(controls.get("video_provider"))
     visual_readiness = [_ucm_provider_executable(provider, "video") for provider in visual_provider_order]
@@ -1622,7 +1706,7 @@ def _ucm_preflight_universal_media_job(payload: Dict[str, Any], plan: Dict[str, 
     composition_available = bool(shutil.which("ffmpeg"))
     estimated_credit_risk = _ucm_estimated_credit_risk(
         estimated_duration,
-        len(executable_visual),
+        len(executable_visual) * segment_count,
         smoke_test_mode=smoke_test_mode,
     )
 
@@ -1716,6 +1800,14 @@ def _ucm_preflight_universal_media_job(payload: Dict[str, Any], plan: Dict[str, 
         "blocked_provider_calls": blocked_provider_calls,
         "estimated_duration_seconds": estimated_duration,
         "requested_duration_seconds": requested_duration,
+        "provider_safe_segment_seconds": provider_safe_segment_seconds,
+        "segment_count": segment_count,
+        "segment_plan": segment_plan,
+        "generated_segments": [],
+        "missing_segments": [item.get("segment_index") for item in segment_plan],
+        "final_duration_seconds": 0,
+        "duration_fulfilled": False,
+        "duration_shortfall_seconds": estimated_duration,
         "estimated_credit_risk": estimated_credit_risk,
         "script_ready": script_ready,
         "voiceover_estimated_duration_seconds": voiceover_estimated_duration,
@@ -2096,6 +2188,177 @@ def _ucm_compose_with_sync(video_job: Dict[str, Any], audio_job: Dict[str, Any],
         })
 
 
+def _ucm_compose_segments_with_sync(
+    segment_results: list[Dict[str, Any]],
+    audio_job: Dict[str, Any],
+    composition_job_id: str,
+    requested_duration_seconds: float,
+) -> Dict[str, Any]:
+    completed_segments = [
+        result for result in sorted(segment_results, key=lambda item: int(item.get("segment_index") or 0))
+        if result.get("success") and result.get("playable")
+    ]
+    segment_paths = [_first_existing_asset_path(segment, "video") for segment in completed_segments]
+    segment_paths = [path for path in segment_paths if path]
+    audio_path = _first_existing_asset_path(audio_job, "audio")
+
+    base = {
+        "success": False,
+        "job_id": composition_job_id,
+        "composition_job_id": composition_job_id,
+        "video_job_ids": [item.get("job_id") for item in completed_segments],
+        "audio_job_id": audio_job.get("job_id"),
+        "provider": "universal_complete_media_segment_composer",
+        "media_type": "complete_video",
+        "asset_type": "video",
+        "requested_duration_seconds": requested_duration_seconds,
+        "generated_segments": completed_segments,
+        "composition_segment_count": len(completed_segments),
+        "customer_safe": True,
+        "credential_values_exposed": False,
+        "internal_config_exposed": False,
+        "created_at": _now(),
+    }
+
+    if not segment_paths:
+        return _write_job({**base, "status": "blocked_video_asset_missing", "reason": "No completed visual segment assets were available."})
+    if not audio_path:
+        return _write_job({**base, "status": "blocked_audio_asset_missing", "reason": "Audio source file is missing from runtime asset storage."})
+
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        return _write_job({**base, "status": "blocked_ffmpeg_missing", "reason": "ffmpeg is not available in the runtime environment."})
+
+    out_dir = DIRECT_JOB_DIR / "universal_complete_media_assets"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    concat_path = out_dir / f"{composition_job_id}_segments.txt"
+    output_path = out_dir / f"{composition_job_id}.mp4"
+
+    concat_rows = []
+    for path in segment_paths:
+        safe_path = str(path).replace("'", "'\\''")
+        concat_rows.append(f"file '{safe_path}'")
+    concat_path.write_text("\n".join(concat_rows) + "\n", encoding="utf-8")
+
+    visual_duration = sum(float(_ucm_get_duration_seconds(str(path)) or 0.0) for path in segment_paths)
+    audio_duration = _ucm_get_duration_seconds(str(audio_path))
+    requested = max(1.0, float(requested_duration_seconds or visual_duration or 1.0))
+    pad_duration = max(0.0, round(requested - visual_duration, 3))
+
+    video_filter = "scale=trunc(iw/2)*2:trunc(ih/2)*2,fps=30,format=yuv420p"
+    if pad_duration > 0.05:
+        video_filter = f"{video_filter},tpad=stop_mode=clone:stop_duration={pad_duration}"
+
+    command = [
+        ffmpeg,
+        "-y",
+        "-f",
+        "concat",
+        "-safe",
+        "0",
+        "-i",
+        str(concat_path),
+        "-i",
+        str(audio_path),
+        "-filter_complex",
+        f"[0:v]{video_filter}[v]",
+        "-map",
+        "[v]",
+        "-map",
+        "1:a:0",
+        "-t",
+        f"{requested:.3f}",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "veryfast",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
+        "-ac",
+        "2",
+        "-ar",
+        "44100",
+        "-movflags",
+        "+faststart",
+        str(output_path),
+    ]
+
+    running = _write_job({
+        **base,
+        "status": "running_synchronised_composition",
+        "video_segment_asset_paths": [str(path) for path in segment_paths],
+        "audio_asset_path": str(audio_path),
+        "visual_duration_seconds": visual_duration,
+        "audio_duration_seconds": audio_duration,
+        "output_path": str(output_path),
+        "concat_manifest_path": str(concat_path),
+        "sync_strategy": "concat_visual_segments_then_mix_full_voiceover",
+        "started_at": _now(),
+    })
+
+    try:
+        completed = subprocess.run(command, capture_output=True, text=True, timeout=360)
+        if completed.returncode != 0:
+            return _write_job({
+                **running,
+                "success": False,
+                "status": "synchronised_composition_failed",
+                "error": (completed.stderr or completed.stdout or "ffmpeg failed")[-1200:],
+            })
+
+        if not output_path.exists() or output_path.stat().st_size <= 0:
+            return _write_job({
+                **running,
+                "success": False,
+                "status": "synchronised_composition_output_missing",
+                "error": "ffmpeg completed but output file was not created.",
+            })
+
+        final_duration = _ucm_get_duration_seconds(str(output_path))
+        fulfillment = _ucm_duration_fulfillment(requested, final_duration)
+        status = "completed" if fulfillment.get("duration_fulfilled") else "composition_duration_shortfall"
+
+        return _write_job({
+            **running,
+            **fulfillment,
+            "success": True,
+            "status": status,
+            "provider_status": "universal_complete_media_ready" if status == "completed" else "composition_duration_shortfall",
+            "provider_result_status": "universal_complete_media_ready" if status == "completed" else "composition_duration_shortfall",
+            "playable": True,
+            "preview_ready": True,
+            "download_ready": True,
+            "asset_path": str(output_path),
+            "download_url": str(output_path),
+            "preview_url": f"/api/admin-direct-media-provider-asset?job_id={composition_job_id}",
+            "signed_preview_url": f"/api/admin-direct-media-provider-asset?job_id={composition_job_id}",
+            "final_media_type": "synchronised_segmented_video_with_audio",
+            "video_size_bytes": output_path.stat().st_size,
+            "completed_at": _now(),
+            "quality_requirements": {
+                "all_generated_segments_composed_in_order": True,
+                "natural_non_robotic_audio": True,
+                "avoid_choppy_audio": True,
+                "audio_video_synchronisation_required": True,
+                "duration_fulfillment_required": True,
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            },
+        })
+
+    except Exception as error:
+        return _write_job({
+            **running,
+            "success": False,
+            "status": "synchronised_composition_exception",
+            "error": str(error)[:1200],
+        })
+
+
 def _ucm_provider_failure_summary(result: Dict[str, Any]) -> str:
     raw = str(
         result.get("error")
@@ -2139,9 +2402,35 @@ def _ucm_attempt_record(provider: str, result: Dict[str, Any], attempt_number: i
     }
 
 
+def _ucm_segment_child_record(parent_job_id: str, segment: Dict[str, Any], provider: str, result: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "parent_job_id": parent_job_id,
+        "segment_index": segment.get("segment_index"),
+        "segment_start_seconds": segment.get("segment_start_seconds"),
+        "segment_end_seconds": segment.get("segment_end_seconds"),
+        "segment_duration_seconds": segment.get("segment_duration_seconds"),
+        "segment_prompt": segment.get("segment_prompt"),
+        "provider": provider,
+        "job_id": result.get("job_id"),
+        "provider_job_id": result.get("provider_job_id"),
+        "status": result.get("status") or result.get("provider_status") or "provider_attempt_failed",
+        "success": bool(result.get("success") and result.get("status") == "completed" and result.get("playable")),
+        "playable": bool(result.get("playable")),
+        "preview_url": result.get("preview_url") or result.get("signed_preview_url") or "",
+        "asset_path": result.get("asset_path") or result.get("download_url") or "",
+        "safe_error_summary": _ucm_provider_failure_summary(result) if not (result.get("success") and result.get("playable")) else "",
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
+
+
 def _ucm_visual_child_jobs(attempts: list[Dict[str, Any]], selected: Dict[str, Any] | None = None) -> Dict[str, Any]:
     return {
         "visual_attempts": attempts,
+        "visual_segments": [
+            item for item in attempts
+            if item.get("stage") == "visual_segment" or item.get("segment_index")
+        ],
         "visual": {
             "job_id": (selected or {}).get("job_id") or "",
             "provider": (selected or {}).get("provider") or "",
@@ -2194,6 +2483,15 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
         "media_script_packet": {},
         "media_script_preview": {},
         "script_ready": False,
+        "requested_duration_seconds": controls["duration_seconds"],
+        "provider_safe_segment_seconds": 5,
+        "segment_count": 1,
+        "segment_plan": [],
+        "generated_segments": [],
+        "missing_segments": [],
+        "final_duration_seconds": 0,
+        "duration_fulfilled": False,
+        "duration_shortfall_seconds": 0,
         "selected_video_job_id": "",
         "selected_video_provider": "",
         "provider_attempt_count": 0,
@@ -2248,6 +2546,14 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
         })
 
     media_script_preview = _ucm_client_script_preview(media_script_packet)
+    segment_plan = _ucm_build_segment_plan_from_script(
+        media_script_packet,
+        float(media_script_packet.get("requested_duration_seconds") or controls.get("duration_seconds") or 5),
+        int(media_script_packet.get("provider_safe_segment_seconds") or 5),
+    )
+    media_script_packet["segment_plan"] = segment_plan
+    media_script_packet["segment_count"] = len(segment_plan)
+    missing_segments = [item.get("segment_index") for item in segment_plan]
     base_job = {
         **base_job,
         "media_script_packet": media_script_packet,
@@ -2255,6 +2561,15 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
         "script_ready": bool(media_script_packet.get("script_ready")),
         "lead_scripting_agent": media_script_packet.get("lead_scripting_agent"),
         "contributing_scripting_agents": media_script_packet.get("contributing_agents"),
+        "requested_duration_seconds": media_script_packet.get("requested_duration_seconds"),
+        "provider_safe_segment_seconds": media_script_packet.get("provider_safe_segment_seconds"),
+        "segment_count": len(segment_plan),
+        "segment_plan": segment_plan,
+        "generated_segments": [],
+        "missing_segments": missing_segments,
+        "final_duration_seconds": 0,
+        "duration_fulfilled": False,
+        "duration_shortfall_seconds": media_script_packet.get("requested_duration_seconds"),
     }
     script_approval_required = _ucm_bool(
         safe_payload.get("script_approval_required")
@@ -2357,29 +2672,47 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "started_at": _now(),
             })
 
-            provider_visual_prompt = _ucm_provider_safe_visual_prompt(
-                media_script_packet.get("provider_visual_prompt") or plan["visual_prompt"],
-                950,
-            )
+            segment_plan = list(base_job.get("segment_plan") or media_script_packet.get("segment_plan") or [])
+            if not segment_plan:
+                segment_plan = _ucm_build_segment_plan_from_script(
+                    media_script_packet,
+                    float(media_script_packet.get("requested_duration_seconds") or controls.get("duration_seconds") or 5),
+                    int(media_script_packet.get("provider_safe_segment_seconds") or 5),
+                )
+            requested_duration = float(media_script_packet.get("requested_duration_seconds") or controls.get("duration_seconds") or 5)
+            provider_safe_segment_seconds = int(media_script_packet.get("provider_safe_segment_seconds") or 5)
+            segment_count = len(segment_plan)
+            missing_segments = [item.get("segment_index") for item in segment_plan]
 
             _write_job({
                 **base_job,
                 "accepted": True,
                 "status": "running_visual_generation",
+                "stage": "visual_segments_and_audio",
                 "timed_plan": plan.get("timed_plan"),
                 "quality_requirements": plan.get("quality_requirements"),
                 "visual_prompt_character_count": len(plan.get("visual_prompt") or ""),
-                "provider_visual_prompt_character_count": len(provider_visual_prompt),
+                "provider_visual_prompt_character_count": len(media_script_packet.get("provider_visual_prompt") or ""),
                 "provider_visual_prompt_limit": 1000,
-                "provider_visual_prompt_truncated": len(str(media_script_packet.get("provider_visual_prompt") or plan.get("visual_prompt") or "")) > len(provider_visual_prompt),
+                "provider_visual_prompt_truncated": False,
                 "media_script_packet": media_script_packet,
                 "media_script_preview": media_script_preview,
+                "requested_duration_seconds": requested_duration,
+                "provider_safe_segment_seconds": provider_safe_segment_seconds,
+                "segment_count": segment_count,
+                "segment_plan": [
+                    {**segment, "status": "queued"}
+                    for segment in segment_plan
+                ],
+                "generated_segments": [],
+                "missing_segments": missing_segments,
+                "progress": f"0/{segment_count} visual segments complete; audio queued.",
                 "started_at": _now(),
             })
 
             visual_attempts: list[Dict[str, Any]] = []
             failed_provider_attempts: list[Dict[str, Any]] = []
-            video_result: Dict[str, Any] = {}
+            generated_segments: list[Dict[str, Any]] = []
 
             executable_visual_provider_order = [
                 str(item.get("provider") or "").strip().lower()
@@ -2387,87 +2720,130 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 if item.get("provider")
             ]
 
-            for attempt_number, video_provider in enumerate(executable_visual_provider_order, start=1):
-                readiness = provider_readiness(video_provider)
+            provider_voice_prompt = _ucm_provider_safe_voice_prompt(
+                media_script_packet.get("voiceover_script") or "",
+                controls["duration_seconds"],
+            )
 
-                if video_provider not in SUPPORTED_VIDEO_PROVIDERS or not readiness.get("configured"):
-                    skipped_result = {
-                        "success": False,
-                        "status": "blocked_provider_not_configured",
+            def _run_visual_segment(segment: Dict[str, Any]) -> Dict[str, Any]:
+                segment_attempts: list[Dict[str, Any]] = []
+                for provider_position, video_provider in enumerate(executable_visual_provider_order, start=1):
+                    readiness = provider_readiness(video_provider)
+                    if video_provider not in SUPPORTED_VIDEO_PROVIDERS or not readiness.get("configured"):
+                        skipped_result = {
+                            "success": False,
+                            "status": "blocked_provider_not_configured",
+                            "provider": video_provider,
+                            "reason": f"{video_provider} credentials are not configured.",
+                        }
+                        segment_attempts.append(_ucm_segment_child_record(job_id, segment, video_provider, skipped_result))
+                        continue
+
+                    attempt_job_id = _safe_id("direct_media_job")
+                    current_result = execute_direct_media_provider_job({
+                        "job_id": attempt_job_id,
+                        "agent_id": controls["agent_id"],
                         "provider": video_provider,
-                        "reason": f"{video_provider} credentials are not configured.",
-                    }
-                    attempt = _ucm_attempt_record(video_provider, skipped_result, attempt_number)
-                    visual_attempts.append(attempt)
-                    failed_provider_attempts.append(attempt)
-                    _write_job({
-                        **base_job,
-                        "accepted": True,
-                        "status": "running_visual_generation",
-                        "child_jobs": _ucm_visual_child_jobs(visual_attempts),
-                        "failed_provider_attempts": failed_provider_attempts,
-                        "provider_attempt_count": len(visual_attempts),
-                        "visual_attempt_count": len(visual_attempts),
-                        "non_executable_visual_providers": preflight.get("non_executable_visual_providers"),
-                        "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
+                        "media_type": "video",
+                        "prompt": _ucm_provider_safe_visual_prompt(str(segment.get("segment_prompt") or ""), 950),
+                        "duration_seconds": min(float(segment.get("segment_duration_seconds") or provider_safe_segment_seconds), provider_safe_segment_seconds),
+                        "parent_job_id": job_id,
+                        "segment_index": segment.get("segment_index"),
+                        "segment_start_seconds": segment.get("segment_start_seconds"),
+                        "segment_end_seconds": segment.get("segment_end_seconds"),
+                        "segment_prompt": segment.get("segment_prompt"),
+                        "owner_approved": True,
+                        "owner_approval_granted": True,
                     })
-                    continue
+                    segment_record = _ucm_segment_child_record(job_id, segment, video_provider, current_result)
+                    segment_record["attempt"] = provider_position
+                    segment_record["stage"] = "visual_segment"
+                    segment_attempts.append(segment_record)
+                    if segment_record.get("success"):
+                        return {
+                            **segment_record,
+                            "segment_attempts": segment_attempts,
+                            "provider_result": current_result,
+                        }
 
-                attempt_job_id = _safe_id("direct_media_job")
-                current_result = execute_direct_media_provider_job({
-                    "job_id": attempt_job_id,
+                final_attempt = segment_attempts[-1] if segment_attempts else _ucm_segment_child_record(job_id, segment, "", {"status": "no_provider_attempted"})
+                return {
+                    **final_attempt,
+                    "segment_attempts": segment_attempts,
+                    "provider_result": {},
+                }
+
+            def _run_audio_job() -> Dict[str, Any]:
+                return execute_direct_media_provider_job({
                     "agent_id": controls["agent_id"],
-                    "provider": video_provider,
-                    "media_type": "video",
-                    "prompt": provider_visual_prompt,
+                    "provider": controls["audio_provider"],
+                    "media_type": "audio",
+                    "prompt": provider_voice_prompt,
+                    "duration_seconds": requested_duration,
+                    "parent_job_id": job_id,
+                    "voice_script": media_script_packet.get("voiceover_script") or "",
+                    "voice_style": controls.get("voice_style"),
+                    "language": controls.get("language"),
+                    "accent": controls.get("accent"),
+                    "tone": controls.get("tone"),
                     "owner_approved": True,
                     "owner_approval_granted": True,
                 })
 
-                attempt = _ucm_attempt_record(video_provider, current_result, attempt_number)
-                visual_attempts.append(attempt)
+            audio_result: Dict[str, Any] = {}
+            max_visual_concurrency = max(1, min(3, len(segment_plan)))
+            with ThreadPoolExecutor(max_workers=max_visual_concurrency + 1) as executor:
+                audio_future = executor.submit(_run_audio_job)
+                visual_futures = {
+                    executor.submit(_run_visual_segment, segment): segment
+                    for segment in segment_plan
+                }
 
-                if current_result.get("success") and current_result.get("status") == "completed" and current_result.get("playable"):
-                    video_result = current_result
+                for future in as_completed(visual_futures):
+                    segment_result = future.result()
+                    visual_attempts.extend(segment_result.get("segment_attempts") or [segment_result])
+                    if segment_result.get("success"):
+                        generated_segments.append(segment_result)
+                    else:
+                        failed_provider_attempts.append(segment_result)
+
+                    completed_indices = {item.get("segment_index") for item in generated_segments}
+                    missing_segments = [
+                        item.get("segment_index")
+                        for item in segment_plan
+                        if item.get("segment_index") not in completed_indices
+                    ]
                     _write_job({
                         **base_job,
                         "accepted": True,
-                        "status": "running_audio_generation",
-                        "selected_video_job_id": current_result.get("job_id"),
-                        "selected_video_provider": video_provider,
-                        "video_provider": video_provider,
-                        "video_job_id": current_result.get("job_id"),
-                        "video_status": current_result.get("status"),
-                        "video_provider_job_id": current_result.get("provider_job_id"),
-                        "child_jobs": _ucm_visual_child_jobs(visual_attempts, current_result),
+                        "status": "running_visual_generation",
+                        "stage": "visual_segments_and_audio",
+                        "requested_duration_seconds": requested_duration,
+                        "provider_safe_segment_seconds": provider_safe_segment_seconds,
+                        "segment_count": segment_count,
+                        "segment_plan": [
+                            {
+                                **segment,
+                                "status": "completed" if segment.get("segment_index") in completed_indices else "running",
+                            }
+                            for segment in segment_plan
+                        ],
+                        "generated_segments": generated_segments,
+                        "missing_segments": missing_segments,
+                        "child_jobs": _ucm_visual_child_jobs(visual_attempts, generated_segments[-1] if generated_segments else None),
                         "failed_provider_attempts": failed_provider_attempts,
                         "provider_attempt_count": len(visual_attempts),
-                        "visual_attempt_count": len(visual_attempts),
+                        "visual_attempt_count": len(generated_segments),
                         "non_executable_visual_providers": preflight.get("non_executable_visual_providers"),
                         "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
-                        "timed_plan": plan.get("timed_plan"),
+                        "progress": f"{len(generated_segments)}/{segment_count} visual segments complete; audio running.",
                     })
-                    break
 
-                failed_provider_attempts.append(attempt)
-                _write_job({
-                    **base_job,
-                    "accepted": True,
-                    "status": "running_visual_generation",
-                    "video_job_id": current_result.get("job_id"),
-                    "video_status": current_result.get("status"),
-                    "video_error": attempt.get("safe_error_summary"),
-                    "child_jobs": _ucm_visual_child_jobs(visual_attempts),
-                    "failed_provider_attempts": failed_provider_attempts,
-                    "provider_attempt_count": len(visual_attempts),
-                    "visual_attempt_count": len(visual_attempts),
-                    "non_executable_visual_providers": preflight.get("non_executable_visual_providers"),
-                    "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
-                })
+                audio_result = audio_future.result()
 
-            if not video_result:
+            if len(generated_segments) < len(segment_plan):
                 support_failure_message = (
-                    "Video generation could not complete with the configured providers. "
+                    "Video generation could not complete all requested duration segments with the configured providers. "
                     "Support can review the linked provider attempts and safe diagnostics."
                 )
                 _write_job({
@@ -2475,15 +2851,25 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     "success": False,
                     "accepted": True,
                     "status": "universal_complete_media_visual_failed",
-                    "video_job_id": visual_attempts[-1].get("job_id") if visual_attempts else "",
+                    "video_job_id": generated_segments[-1].get("job_id") if generated_segments else "",
                     "selected_video_job_id": "",
                     "selected_video_provider": "",
-                    "video_status": "visual_failed_all_providers",
+                    "video_status": "visual_segments_incomplete",
                     "video_error": failed_provider_attempts[-1].get("safe_error_summary") if failed_provider_attempts else "No configured video provider was available.",
                     "child_jobs": _ucm_visual_child_jobs(visual_attempts),
                     "failed_provider_attempts": failed_provider_attempts,
                     "provider_attempt_count": len(visual_attempts),
-                    "visual_attempt_count": len(visual_attempts),
+                    "visual_attempt_count": len(generated_segments),
+                    "requested_duration_seconds": requested_duration,
+                    "provider_safe_segment_seconds": provider_safe_segment_seconds,
+                    "segment_count": segment_count,
+                    "segment_plan": segment_plan,
+                    "generated_segments": generated_segments,
+                    "missing_segments": [
+                        item.get("segment_index")
+                        for item in segment_plan
+                        if item.get("segment_index") not in {segment.get("segment_index") for segment in generated_segments}
+                    ],
                     "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
                     "support_failure_message": support_failure_message,
                     "completed_at": _now(),
@@ -2494,45 +2880,44 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 **base_job,
                 "accepted": True,
                 "status": "running_audio_generation",
-                "video_job_id": video_result.get("job_id"),
-                "selected_video_job_id": video_result.get("job_id"),
-                "selected_video_provider": video_result.get("provider") or controls["video_provider"],
-                "video_provider": video_result.get("provider") or controls["video_provider"],
-                "video_provider_job_id": video_result.get("provider_job_id"),
-                "child_jobs": _ucm_visual_child_jobs(visual_attempts, video_result),
+                "video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
+                "selected_video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
+                "selected_video_provider": generated_segments[0].get("provider") if generated_segments else controls["video_provider"],
+                "video_provider": generated_segments[0].get("provider") if generated_segments else controls["video_provider"],
+                "video_provider_job_id": generated_segments[0].get("provider_job_id") if generated_segments else "",
+                "child_jobs": _ucm_visual_child_jobs(visual_attempts, generated_segments[0] if generated_segments else None),
                 "failed_provider_attempts": failed_provider_attempts,
                 "provider_attempt_count": len(visual_attempts),
-                "visual_attempt_count": len(visual_attempts),
+                "visual_attempt_count": len(generated_segments),
+                "requested_duration_seconds": requested_duration,
+                "provider_safe_segment_seconds": provider_safe_segment_seconds,
+                "segment_count": segment_count,
+                "segment_plan": segment_plan,
+                "generated_segments": generated_segments,
+                "missing_segments": [],
                 "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
                 "timed_plan": plan.get("timed_plan"),
             })
-
-            provider_voice_prompt = _ucm_provider_safe_voice_prompt(
-                media_script_packet.get("voiceover_script") or "",
-                controls["duration_seconds"],
-            )
 
             _write_job({
                 **base_job,
                 "accepted": True,
                 "status": "running_audio_generation",
-                "video_job_id": video_result.get("job_id"),
-                "video_provider_job_id": video_result.get("provider_job_id"),
+                "video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
+                "video_provider_job_id": generated_segments[0].get("provider_job_id") if generated_segments else "",
                 "timed_plan": plan.get("timed_plan"),
                 "voice_prompt_character_count": len(media_script_packet.get("voiceover_script") or ""),
                 "provider_voice_prompt_character_count": len(provider_voice_prompt),
                 "provider_voice_prompt_words": len(provider_voice_prompt.split()),
                 "media_script_packet": media_script_packet,
                 "media_script_preview": media_script_preview,
-            })
-
-            audio_result = execute_direct_media_provider_job({
-                "agent_id": controls["agent_id"],
-                "provider": controls["audio_provider"],
-                "media_type": "audio",
-                "prompt": provider_voice_prompt,
-                "owner_approved": True,
-                "owner_approval_granted": True,
+                "audio_job_id": audio_result.get("job_id"),
+                "audio_duration_seconds": _ucm_get_duration_seconds(str(_first_existing_asset_path(audio_result, "audio"))) if audio_result.get("playable") else 0,
+                "voice_script": media_script_packet.get("voiceover_script") or "",
+                "voice_style": controls.get("voice_style"),
+                "language": controls.get("language"),
+                "accent": controls.get("accent"),
+                "tone": controls.get("tone"),
             })
 
             if not audio_result.get("success") or audio_result.get("status") != "completed" or not audio_result.get("playable"):
@@ -2541,14 +2926,14 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     "success": False,
                     "accepted": True,
                     "status": "universal_complete_media_audio_failed",
-                    "video_job_id": video_result.get("job_id"),
-                    "selected_video_job_id": video_result.get("job_id"),
-                    "selected_video_provider": video_result.get("provider") or controls["video_provider"],
+                    "video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
+                    "selected_video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
+                    "selected_video_provider": generated_segments[0].get("provider") if generated_segments else controls["video_provider"],
                     "audio_job_id": audio_result.get("job_id"),
                     "audio_status": audio_result.get("status"),
                     "audio_error": audio_result.get("error") or audio_result.get("reason") or audio_result.get("message"),
                     "child_jobs": {
-                        **_ucm_visual_child_jobs(visual_attempts, video_result),
+                        **_ucm_visual_child_jobs(visual_attempts, generated_segments[0] if generated_segments else None),
                         "audio": {
                             "job_id": audio_result.get("job_id"),
                             "provider": controls["audio_provider"],
@@ -2556,6 +2941,12 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                         },
                     },
                     "failed_provider_attempts": failed_provider_attempts,
+                    "requested_duration_seconds": requested_duration,
+                    "provider_safe_segment_seconds": provider_safe_segment_seconds,
+                    "segment_count": segment_count,
+                    "segment_plan": segment_plan,
+                    "generated_segments": generated_segments,
+                    "missing_segments": [],
                     "completed_at": _now(),
                 })
                 return
@@ -2564,12 +2955,20 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 **base_job,
                 "accepted": True,
                 "status": "running_synchronised_composition",
-                "video_job_id": video_result.get("job_id"),
+                "stage": "composition_stitching",
+                "video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
                 "audio_job_id": audio_result.get("job_id"),
-                "selected_video_job_id": video_result.get("job_id"),
-                "selected_video_provider": video_result.get("provider") or controls["video_provider"],
+                "selected_video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
+                "selected_video_provider": generated_segments[0].get("provider") if generated_segments else controls["video_provider"],
+                "requested_duration_seconds": requested_duration,
+                "provider_safe_segment_seconds": provider_safe_segment_seconds,
+                "segment_count": segment_count,
+                "segment_plan": segment_plan,
+                "generated_segments": generated_segments,
+                "missing_segments": [],
+                "audio_duration_seconds": _ucm_get_duration_seconds(str(_first_existing_asset_path(audio_result, "audio"))) if audio_result.get("playable") else 0,
                 "child_jobs": {
-                    **_ucm_visual_child_jobs(visual_attempts, video_result),
+                    **_ucm_visual_child_jobs(visual_attempts, generated_segments[0] if generated_segments else None),
                     "audio": {
                         "job_id": audio_result.get("job_id"),
                         "provider": controls["audio_provider"],
@@ -2577,26 +2976,38 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     },
                 },
                 "failed_provider_attempts": failed_provider_attempts,
+                "progress": f"Composing {len(generated_segments)}/{segment_count} visual segments with full voiceover.",
             })
 
             composition_job_id = _safe_id("universal_complete_media_composition")
-            composition_result = _ucm_compose_with_sync(video_result, audio_result, composition_job_id)
+            composition_result = _ucm_compose_segments_with_sync(
+                generated_segments,
+                audio_result,
+                composition_job_id,
+                requested_duration,
+            )
 
-            if not composition_result.get("success") or composition_result.get("status") != "completed" or not composition_result.get("playable"):
+            if not composition_result.get("success") or not composition_result.get("playable"):
                 _write_job({
                     **base_job,
                     "success": False,
                     "accepted": True,
                     "status": "universal_complete_media_composition_failed",
-                    "video_job_id": video_result.get("job_id"),
+                    "video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
                     "audio_job_id": audio_result.get("job_id"),
                     "composition_job_id": composition_result.get("job_id"),
-                    "selected_video_job_id": video_result.get("job_id"),
-                    "selected_video_provider": video_result.get("provider") or controls["video_provider"],
+                    "selected_video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
+                    "selected_video_provider": generated_segments[0].get("provider") if generated_segments else controls["video_provider"],
                     "composition_status": composition_result.get("status"),
                     "composition_error": composition_result.get("error") or composition_result.get("reason") or composition_result.get("message"),
+                    "requested_duration_seconds": requested_duration,
+                    "provider_safe_segment_seconds": provider_safe_segment_seconds,
+                    "segment_count": segment_count,
+                    "segment_plan": segment_plan,
+                    "generated_segments": generated_segments,
+                    "missing_segments": [],
                     "child_jobs": {
-                        **_ucm_visual_child_jobs(visual_attempts, video_result),
+                        **_ucm_visual_child_jobs(visual_attempts, generated_segments[0] if generated_segments else None),
                         "audio": {
                             "job_id": audio_result.get("job_id"),
                             "provider": controls["audio_provider"],
@@ -2613,18 +3024,22 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 })
                 return
 
+            fulfillment = _ucm_duration_fulfillment(requested_duration, composition_result.get("final_duration_seconds"))
+            final_status = "completed" if fulfillment.get("duration_fulfilled") else "completed_duration_shortfall"
+
             _write_job({
                 **base_job,
+                **fulfillment,
                 "success": True,
                 "accepted": True,
-                "status": "completed",
-                "provider_status": "universal_complete_media_ready",
-                "provider_result_status": "universal_complete_media_ready",
-                "video_job_id": video_result.get("job_id"),
+                "status": final_status,
+                "provider_status": "universal_complete_media_ready" if final_status == "completed" else "completed_duration_shortfall",
+                "provider_result_status": "universal_complete_media_ready" if final_status == "completed" else "completed_duration_shortfall",
+                "video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
                 "audio_job_id": audio_result.get("job_id"),
                 "composition_job_id": composition_result.get("job_id"),
-                "selected_video_job_id": video_result.get("job_id"),
-                "selected_video_provider": video_result.get("provider") or controls["video_provider"],
+                "selected_video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
+                "selected_video_provider": generated_segments[0].get("provider") if generated_segments else controls["video_provider"],
                 "provider_job_id": composition_result.get("job_id"),
                 "playable": True,
                 "preview_ready": True,
@@ -2633,12 +3048,24 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "download_url": composition_result.get("download_url"),
                 "preview_url": f"/api/admin-direct-media-provider-asset?job_id={composition_result.get('job_id')}",
                 "signed_preview_url": f"/api/admin-direct-media-provider-asset?job_id={composition_result.get('job_id')}",
-                "final_media_type": "synchronised_video_with_audio",
+                "final_media_type": "synchronised_segmented_video_with_audio",
                 "final_duration_seconds": composition_result.get("final_duration_seconds"),
+                "requested_duration_seconds": requested_duration,
+                "provider_safe_segment_seconds": provider_safe_segment_seconds,
+                "segment_count": segment_count,
+                "segment_plan": segment_plan,
+                "generated_segments": generated_segments,
+                "missing_segments": [],
+                "audio_duration_seconds": _ucm_get_duration_seconds(str(_first_existing_asset_path(audio_result, "audio"))) if audio_result.get("playable") else 0,
+                "voice_script": media_script_packet.get("voiceover_script") or "",
+                "voice_style": controls.get("voice_style"),
+                "language": controls.get("language"),
+                "accent": controls.get("accent"),
+                "tone": controls.get("tone"),
                 "timed_plan": plan.get("timed_plan"),
                 "quality_requirements": plan.get("quality_requirements"),
                 "child_jobs": {
-                    **_ucm_visual_child_jobs(visual_attempts, video_result),
+                    **_ucm_visual_child_jobs(visual_attempts, generated_segments[0] if generated_segments else None),
                     "audio": {
                         "job_id": audio_result.get("job_id"),
                         "provider": controls["audio_provider"],
@@ -2652,7 +3079,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 },
                 "failed_provider_attempts": failed_provider_attempts,
                 "provider_attempt_count": len(visual_attempts),
-                "visual_attempt_count": len(visual_attempts),
+                "visual_attempt_count": len(generated_segments),
                 "completed_at": _now(),
             })
 
@@ -2679,6 +3106,15 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
         "preflight": preflight,
         "paid_provider_calls_started": False,
         "estimated_duration_seconds": preflight.get("estimated_duration_seconds"),
+        "requested_duration_seconds": preflight.get("requested_duration_seconds"),
+        "provider_safe_segment_seconds": preflight.get("provider_safe_segment_seconds"),
+        "segment_count": preflight.get("segment_count"),
+        "segment_plan": preflight.get("segment_plan"),
+        "generated_segments": [],
+        "missing_segments": preflight.get("missing_segments"),
+        "final_duration_seconds": 0,
+        "duration_fulfilled": False,
+        "duration_shortfall_seconds": preflight.get("estimated_duration_seconds"),
         "estimated_credit_risk": preflight.get("estimated_credit_risk"),
         "executable_visual_providers": preflight.get("executable_visual_providers"),
         "non_executable_visual_providers": preflight.get("non_executable_visual_providers"),
