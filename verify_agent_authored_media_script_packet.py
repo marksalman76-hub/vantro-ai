@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import importlib.util
 from pathlib import Path
 
 
@@ -74,6 +75,66 @@ def require_tone_references_are_safe(runtime: str) -> None:
         )
 
 
+def load_runtime_module():
+    path = ROOT / "backend/app/runtime/direct_media_provider_execution_runtime.py"
+    spec = importlib.util.spec_from_file_location("agent_script_runtime_under_test", path)
+    if not spec or not spec.loader:
+        raise AssertionError("Could not load direct media runtime module spec.")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def require_complete_voiceover_endings() -> None:
+    module = load_runtime_module()
+    dangling_fragments = [
+        "Book your free",
+        "Book your",
+        "Get your",
+        "Request a",
+        "Contact us for",
+        "Start your",
+    ]
+
+    payload = {
+        "prompt": "Create a 10s no-human epoxy flooring ad for dull concrete.",
+        "business_name": "Prime Epoxy Floors",
+        "product_or_service": "epoxy flooring",
+        "audience": "homeowners and trade business owners",
+        "goal": "book free quote enquiries",
+        "duration_seconds": 10,
+        "human_avatar_mode": "No human/avatar",
+        "call_to_action": "Book your free quote today",
+    }
+    packet = module.build_media_script_packet(payload, {"duration_seconds": 10})
+    voiceover = str(packet.get("voiceover_script") or "").strip()
+    require(voiceover, "10s epoxy voiceover must be generated.")
+    require(voiceover[-1] in ".!?", f"Voiceover must end with a complete sentence: {voiceover}")
+    for fragment in dangling_fragments:
+        require(
+            not voiceover.rstrip(" .!?").endswith(fragment),
+            f"Voiceover ends with dangling CTA fragment {fragment!r}: {voiceover}",
+        )
+    require(
+        "Book your free quote today." in voiceover or "Book your free" not in voiceover,
+        f"Voiceover must include a full CTA or omit it cleanly: {voiceover}",
+    )
+    require(
+        packet.get("provider_audio_prompt") == packet.get("voiceover_script"),
+        "provider_audio_prompt must remain exactly voiceover_script.",
+    )
+
+    truncated = module._ucm_clean_spoken_script(
+        "Tired of dull, stained concrete? Upgrade to epoxy flooring that looks sharp, lasts longer, and is easy to clean. Book your free quote today.",
+        22,
+    )
+    for fragment in dangling_fragments:
+        require(
+            not truncated.rstrip(" .!?").endswith(fragment),
+            f"Cleaner must not leave dangling CTA fragment {fragment!r}: {truncated}",
+        )
+
+
 def main() -> int:
     runtime = read("backend/app/runtime/direct_media_provider_execution_runtime.py")
     parent = read("backend/app/runtime/universal_media_pipeline_orchestrator.py")
@@ -89,6 +150,7 @@ def main() -> int:
         'tone = controls.get("tone") or "natural, confident, professional, warm"' in runtime,
         "Runtime must define tone locally with the production fallback before using it in script packet generation.",
     )
+    require_complete_voiceover_endings()
 
     for bad_phrase in [
         "Generate quote enquiries",
@@ -105,6 +167,16 @@ def main() -> int:
     ]:
         require(bad_phrase not in runtime, f"Robotic or unsafe script pattern remains in runtime: {bad_phrase}")
 
+    for dangling_fragment in [
+        "Book your free",
+        "Book your",
+        "Get your",
+        "Request a",
+        "Contact us for",
+        "Start your",
+    ]:
+        require(dangling_fragment in runtime, f"Dangling CTA fragment guard is missing: {dangling_fragment}")
+
     for helper in [
         "_ucm_humanize_audience",
         "_ucm_convert_goal_to_customer_benefit",
@@ -117,6 +189,8 @@ def main() -> int:
         "_ucm_human_avatar_mode_kind",
         "_ucm_human_led_final_cta_scene",
         "_ucm_uploaded_likeness_consent_present",
+        "_ucm_ends_with_dangling_cta_fragment",
+        "_ucm_sentence_safe_word_trim",
     ]:
         require(f"def {helper}" in runtime, f"Creative-quality helper is missing: {helper}")
 

@@ -1104,13 +1104,57 @@ def _ucm_provider_executable(provider: str, media_type: str) -> Dict[str, Any]:
     }
 
 
+UCM_DANGLING_CTA_FRAGMENTS = [
+    "Book your free",
+    "Book your",
+    "Get your",
+    "Request a",
+    "Contact us for",
+    "Start your",
+]
+
+
+def _ucm_ends_with_dangling_cta_fragment(text: str) -> bool:
+    clean = re.sub(r"[.!?,;:\s]+$", "", str(text or "")).strip().lower()
+    return any(clean.endswith(fragment.lower()) for fragment in UCM_DANGLING_CTA_FRAGMENTS)
+
+
+def _ucm_sentence_safe_word_trim(text: str, max_words: int) -> str:
+    clean = " ".join(str(text or "").split()).strip()
+    if not clean:
+        return ""
+
+    sentences = re.findall(r"[^.!?]+[.!?]", clean)
+    if sentences:
+        selected: list[str] = []
+        for sentence in sentences:
+            candidate = " ".join(selected + [sentence.strip()]).strip()
+            if len(candidate.split()) <= max_words and not _ucm_ends_with_dangling_cta_fragment(candidate):
+                selected.append(sentence.strip())
+        if selected:
+            return " ".join(selected).strip()
+
+    words = clean.split()
+    trimmed = " ".join(words[:max_words]).rstrip(" ,;:")
+    for fragment in UCM_DANGLING_CTA_FRAGMENTS:
+        pattern = re.compile(rf"(?i)(?:^|\s){re.escape(fragment)}$")
+        trimmed = pattern.sub("", trimmed).strip(" ,;:")
+    if trimmed and trimmed[-1] not in ".!?":
+        trimmed = f"{trimmed}."
+    return trimmed
+
+
 def _ucm_clean_spoken_script(text: str, max_words: int) -> str:
     clean = " ".join(str(text or "").split()).strip()
     clean = re.sub(r"(?i)\b(scene\s*\d+|voiceover script|voiceover|caption|visual prompt|production note)\s*[:\-]", "", clean)
     clean = re.sub(r"[\[\]\{\}]", "", clean)
     words = clean.split()
     if len(words) > max_words:
-        clean = " ".join(words[:max_words]).rstrip(" ,;:")
+        clean = _ucm_sentence_safe_word_trim(clean, max_words)
+    if _ucm_ends_with_dangling_cta_fragment(clean):
+        clean = _ucm_sentence_safe_word_trim(clean, max(1, len(clean.split()) - 1))
+    if clean and clean[-1] not in ".!?":
+        clean = f"{clean}."
     return clean.strip()
 
 
@@ -1353,8 +1397,8 @@ def _ucm_build_service_ad_voiceover(controls: Dict[str, Any], duration: float, m
             script = "Turn dull concrete into durable epoxy flooring. Book your free quote."
         elif duration <= 15:
             script = (
-                "Tired of dull, stained concrete? Upgrade to epoxy flooring that looks sharp, "
-                "lasts longer, and is easy to clean. Book your free quote today."
+                "Tired of dull concrete? Upgrade to durable epoxy flooring that looks sharp "
+                "and is easy to clean. Book your free quote today."
             )
         else:
             script = (
