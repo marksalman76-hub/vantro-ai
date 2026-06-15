@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, Mapping
+from pathlib import Path
+from typing import Any, Dict, Iterable, Mapping, MutableMapping
 import hashlib
 import importlib
 import json
@@ -26,6 +27,8 @@ OPTIONAL_MUTATION_FLAGS = {
     "s3_test_object": "AWS_OPTION_A_VALIDATE_S3_TEST_OBJECT",
     "secret_value": "AWS_OPTION_A_VALIDATE_SECRET_VALUE",
 }
+
+LOCAL_ENV_FILE_NAMES = (".env.aws.local", ".env.local")
 
 REQUIRED_ENV_BY_SERVICE = {
     "iam": ("AWS_REGION",),
@@ -79,6 +82,81 @@ def optional_dependency(module_name: str):
         return importlib.import_module(module_name)
     except ModuleNotFoundError:
         return None
+
+
+def redacted_env_value(name: str, value: Any) -> Dict[str, Any]:
+    text = clean_text(value, 5000)
+    return {
+        "name": clean_text(name, 160),
+        "present": bool(text),
+        "redacted": True,
+        "length": len(text),
+        "sha256_12": safe_hash(text),
+    }
+
+
+def parse_local_env_line(line: str) -> tuple[str, str] | None:
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        return None
+    if stripped.startswith("export "):
+        stripped = stripped[len("export "):].strip()
+    if "=" not in stripped:
+        return None
+    key, value = stripped.split("=", 1)
+    key = key.strip()
+    if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", key):
+        return None
+    value = value.strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        value = value[1:-1]
+    elif " #" in value:
+        value = value.split(" #", 1)[0].rstrip()
+    return key, value
+
+
+def empty_local_env_metadata() -> Dict[str, Any]:
+    return {
+        "local_env_loaded": False,
+        "local_env_files_checked": [],
+        "local_env_variables_loaded": [],
+        "local_env_variables_preserved": [],
+        "secret_values_printed": False,
+        "credential_values_exposed": False,
+    }
+
+
+def load_local_validation_env(
+    target_env: MutableMapping[str, str] | None = None,
+    base_dir: str | os.PathLike[str] | None = None,
+) -> Dict[str, Any]:
+    env = target_env if target_env is not None else os.environ
+    root = Path(base_dir) if base_dir is not None else Path(__file__).resolve().parent
+    metadata = empty_local_env_metadata()
+
+    for file_name in LOCAL_ENV_FILE_NAMES:
+        path = root / file_name
+        file_present = path.is_file()
+        metadata["local_env_files_checked"].append({
+            "file_name": file_name,
+            "present": file_present,
+        })
+        if not file_present:
+            continue
+
+        for raw_line in path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            parsed = parse_local_env_line(raw_line)
+            if parsed is None:
+                continue
+            key, value = parsed
+            if key in env:
+                metadata["local_env_variables_preserved"].append(redacted_env_value(key, env.get(key)))
+                continue
+            env[key] = value
+            metadata["local_env_variables_loaded"].append(redacted_env_value(key, value))
+
+    metadata["local_env_loaded"] = bool(metadata["local_env_variables_loaded"])
+    return metadata
 
 
 def safe_error_message(value: Any, limit: int = 500) -> str:
@@ -435,7 +513,19 @@ def validate_secrets(env: Mapping[str, Any]) -> Dict[str, Any]:
     return result
 
 
-def build_default_blocked_result(env: Mapping[str, Any]) -> Dict[str, Any]:
+def add_local_env_metadata(result: Dict[str, Any], metadata: Mapping[str, Any]) -> Dict[str, Any]:
+    result.update({
+        "local_env_loaded": bool(metadata.get("local_env_loaded")),
+        "local_env_files_checked": list(metadata.get("local_env_files_checked", [])),
+        "local_env_variables_loaded": list(metadata.get("local_env_variables_loaded", [])),
+        "local_env_variables_preserved": list(metadata.get("local_env_variables_preserved", [])),
+        "secret_values_printed": False,
+        "credential_values_exposed": False,
+    })
+    return result
+
+
+def build_default_blocked_result(env: Mapping[str, Any], local_env_metadata: Mapping[str, Any] | None = None) -> Dict[str, Any]:
     return {
         "status": "skipped_live_validation_not_enabled",
         "live_validation_enabled": False,
@@ -455,14 +545,30 @@ def build_default_blocked_result(env: Mapping[str, Any]) -> Dict[str, Any]:
         "checked_at": utc_now(),
         "customer_safe": True,
         "credential_values_exposed": False,
+        **add_local_env_metadata({}, local_env_metadata or empty_local_env_metadata()),
     }
 
 
-def run_validation(env: Mapping[str, Any] | None = None) -> Dict[str, Any]:
+def run_validation(
+    env: Mapping[str, Any] | None = None,
+    *,
+    load_local_env: bool | None = None,
+    local_env_base_dir: str | os.PathLike[str] | None = None,
+) -> Dict[str, Any]:
+    should_load_local_env = env is None if load_local_env is None else load_local_env
+    local_env_metadata = empty_local_env_metadata()
+    if should_load_local_env:
+        if env is None:
+            local_env_metadata = load_local_validation_env(os.environ, local_env_base_dir)
+            env = os.environ
+        else:
+            loaded_env = {str(key): str(value) for key, value in env.items()}
+            local_env_metadata = load_local_validation_env(loaded_env, local_env_base_dir)
+            env = loaded_env
     env = dict(env or os.environ)
     live_enabled = enabled(env.get(LIVE_VALIDATION_FLAG))
     if not live_enabled:
-        return build_default_blocked_result(env)
+        return build_default_blocked_result(env, local_env_metadata)
 
     service_results = {}
     validators = {
@@ -484,7 +590,7 @@ def run_validation(env: Mapping[str, Any] | None = None) -> Dict[str, Any]:
         for service, result in service_results.items()
         if result.get("status", "").startswith(("failed", "blocked"))
     }
-    return {
+    result = {
         "status": "completed_with_failures" if failures else "completed",
         "live_validation_enabled": True,
         "service_results": service_results,
@@ -501,11 +607,12 @@ def run_validation(env: Mapping[str, Any] | None = None) -> Dict[str, Any]:
         "customer_safe": True,
         "credential_values_exposed": False,
     }
+    return add_local_env_metadata(result, local_env_metadata)
 
 
 def main() -> int:
     try:
-        result = run_validation(os.environ)
+        result = run_validation()
     except Exception as exc:
         result = {
             "status": "aws_client_error",
@@ -517,6 +624,7 @@ def main() -> int:
             "checked_at": utc_now(),
             "customer_safe": True,
         }
+        add_local_env_metadata(result, empty_local_env_metadata())
     print(json.dumps(result, indent=2, sort_keys=True, default=str))
     if enabled(os.environ.get(FAIL_ON_ERROR_FLAG)) and result.get("status") == "completed_with_failures":
         return 1

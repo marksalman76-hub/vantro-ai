@@ -40,6 +40,8 @@ runtime_data/*.jsonl
 
 # Production secret protection
 .env
+.env.aws.local
+.env.local
 .env.*
 !.env.example
 !.env.template

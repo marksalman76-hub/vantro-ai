@@ -5,6 +5,7 @@ import importlib.util
 import json
 import re
 import sys
+import tempfile
 
 
 ROOT = Path(__file__).resolve().parent
@@ -47,9 +48,64 @@ def main() -> int:
     require(default_result["network_call_attempted"] is False, "Default validation must not attempt network.")
     require(default_result["credentials_required"] is False, "Default validation must not require credentials.")
     require(default_result["secrets_exposed"] is False, "Default validation must not expose secrets.")
+    require(default_result["local_env_loaded"] is False, "Local env files must not be required.")
+    require(default_result["secret_values_printed"] is False, "Default validation must report no secret values printed.")
+    require(default_result["credential_values_exposed"] is False, "Default validation must report no credentials exposed.")
 
     service_flag_without_live = validator.run_validation({"AWS_OPTION_A_VALIDATE_IAM": "true"})
     require(service_flag_without_live["status"] == "skipped_live_validation_not_enabled", "Service flags alone must not run live validation.")
+
+    secret_from_aws_local = "AKIAIOSFODNN7EXAMPLE"
+    secret_from_env_local = "super-secret-provider-value"
+    existing_region = "ap-southeast-2"
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        missing_file_metadata = validator.load_local_validation_env({}, temp_path)
+        require(missing_file_metadata["local_env_loaded"] is False, "Missing local env files must not fail or report loaded.")
+        require(
+            [item["file_name"] for item in missing_file_metadata["local_env_files_checked"]] == [".env.aws.local", ".env.local"],
+            "Local env loader must check the expected redacted file names.",
+        )
+
+        (temp_path / ".env.aws.local").write_text(
+            "\n".join([
+                "AWS_ACCESS_KEY_ID=" + secret_from_aws_local,
+                "AWS_SECRET_ACCESS_KEY=do-not-print-this-secret",
+                "AWS_REGION=us-east-1",
+            ]),
+            encoding="utf-8",
+        )
+        (temp_path / ".env.local").write_text(
+            "\n".join([
+                "AWS_REGION=eu-west-1",
+                "OPENAI_API_KEY=" + secret_from_env_local,
+                "AWS_OPTION_A_VALIDATE_IAM=true",
+            ]),
+            encoding="utf-8",
+        )
+        local_env = {"AWS_REGION": existing_region}
+        loaded_metadata = validator.load_local_validation_env(local_env, temp_path)
+        loaded_json = json.dumps(loaded_metadata, sort_keys=True, default=str)
+        require(loaded_metadata["local_env_loaded"] is True, "Local env values must be loadable from temp files.")
+        require(local_env["AWS_REGION"] == existing_region, "Local env loading must not override existing process env vars.")
+        require(local_env["AWS_ACCESS_KEY_ID"] == secret_from_aws_local, "Local env loader must load values into process memory.")
+        require(local_env["OPENAI_API_KEY"] == secret_from_env_local, "Second local env file must be loaded after AWS local.")
+        require(secret_from_aws_local not in loaded_json, "AWS access key value must not appear in loader output.")
+        require(secret_from_env_local not in loaded_json, "Provider secret value must not appear in loader output.")
+        require("do-not-print-this-secret" not in loaded_json, "AWS secret access key must not appear in loader output.")
+        require('"AWS_ACCESS_KEY_ID"' in loaded_json, "Loader output may include variable names.")
+        require('"length"' in loaded_json and '"sha256_12"' in loaded_json, "Loader output must include only redacted metadata.")
+
+        loaded_run_result = validator.run_validation(
+            {"AWS_REGION": existing_region},
+            load_local_env=True,
+            local_env_base_dir=temp_path,
+        )
+        loaded_run_json = json.dumps(loaded_run_result, sort_keys=True, default=str)
+        require(loaded_run_result["local_env_loaded"] is True, "run_validation must report local env loading when enabled.")
+        require(secret_from_aws_local not in loaded_run_json, "Validation output must not expose loaded AWS access key.")
+        require(secret_from_env_local not in loaded_run_json, "Validation output must not expose loaded provider key.")
+        require("do-not-print-this-secret" not in loaded_run_json, "Validation output must not expose loaded AWS secret key.")
 
     class NoCredentialsError(Exception):
         pass
@@ -105,6 +161,11 @@ def main() -> int:
         "AWS_OPTION_A_VALIDATE_SQS_TEST_MESSAGE",
         "AWS_OPTION_A_VALIDATE_S3_TEST_OBJECT",
         "AWS_OPTION_A_VALIDATE_SECRET_VALUE",
+        ".env.aws.local",
+        ".env.local",
+        "load_local_validation_env",
+        "local_env_loaded",
+        "local_env_files_checked",
     ]:
         require(marker in source, f"Validation script missing live gate marker: {marker}")
 
@@ -162,6 +223,10 @@ def main() -> int:
         "optional_dependency",
     ]:
         require(marker in source, f"Validation script must report missing optional dependencies safely: {marker}")
+
+    gitignore = read(".gitignore")
+    for marker in [".env.aws.local", ".env.local"]:
+        require(marker in gitignore or ".env*" in gitignore, f"{marker} must be ignored by git.")
 
     row_ids = [int(match) for match in re.findall(r"AWS-(\d+)", matrix)]
     require(row_ids, "Migration matrix must contain AWS rows.")
