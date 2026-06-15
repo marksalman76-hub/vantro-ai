@@ -6,6 +6,11 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional
 import uuid
 
 from backend.app.runtime.aws_option_a_runtime_contract import aws_option_a_readiness
+from backend.app.runtime.api_acceptance_entitlement_boundary import (
+    build_api_acceptance_entitlement_decision,
+    build_admin_safe_enforcement_view,
+    build_client_safe_enforcement_view,
+)
 from backend.app.runtime.durable_asset_storage_adapter_boundary import (
     build_admin_safe_asset_view,
     build_asset_reference,
@@ -169,6 +174,7 @@ class AcceptedApiJobEnvelope:
     queue_message: Dict[str, Any] = field(default_factory=dict)
     queue_result: Dict[str, Any] = field(default_factory=dict)
     asset_placeholders: List[Dict[str, Any]] = field(default_factory=list)
+    acceptance_enforcement: Dict[str, Any] = field(default_factory=dict)
     runtime_readiness: Dict[str, Any] = field(default_factory=dict)
     admin_diagnostics: Dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=utc_now)
@@ -214,6 +220,7 @@ def build_api_job_acceptance_envelope(
     queue_message = build_media_queue_message(normalized_payload)
     queue_result = enqueue_media_work_locally_or_noop(queue_message, env=env or {})
     asset_placeholders = build_acceptance_asset_placeholders(normalized_payload, job_id)
+    acceptance_enforcement = build_api_acceptance_entitlement_decision(normalized_payload)
 
     envelope = AcceptedApiJobEnvelope(
         job_id=job_id,
@@ -265,9 +272,11 @@ def build_api_job_acceptance_envelope(
         queue_message=queue_message,
         queue_result=queue_result,
         asset_placeholders=asset_placeholders,
+        acceptance_enforcement=acceptance_enforcement,
         runtime_readiness=readiness,
         admin_diagnostics={
             "boundary": "AWS-05_api_job_acceptance_boundary",
+            "aws_11_entitlement_boundary_attached": True,
             "rds_write_attempted": False,
             "sqs_send_attempted": bool(queue_result.get("sqs_send_attempted")),
             "s3_upload_attempted": False,
@@ -318,6 +327,7 @@ def build_admin_api_job_acceptance_view(envelope_or_payload: Mapping[str, Any] |
         "asset_placeholders": [
             build_admin_safe_asset_view(asset) for asset in envelope.get("asset_placeholders") or []
         ],
+        "acceptance_enforcement": build_admin_safe_enforcement_view(envelope.get("acceptance_enforcement") or {}),
         "runtime_readiness": envelope.get("runtime_readiness") or {},
         "admin_diagnostics": envelope.get("admin_diagnostics") or {},
         "created_at": envelope.get("created_at"),
@@ -353,6 +363,7 @@ def build_client_api_job_acceptance_view(envelope_or_payload: Mapping[str, Any] 
         "asset_placeholders": [
             build_client_safe_asset_view(asset) for asset in envelope.get("asset_placeholders") or []
         ],
+        "acceptance_enforcement": build_client_safe_enforcement_view(envelope.get("acceptance_enforcement") or {}),
         "created_at": envelope.get("created_at"),
         "customer_safe": True,
         "credential_values_exposed": False,
