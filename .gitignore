@@ -50,6 +50,7 @@ logs/*.log
 
 # Local/generated operational artifacts
 .admin-token.local
+.vscode/
 archive/
 full-system-backups/
 runtime_outputs/
@@ -57,3 +58,27 @@ cleanup_report.txt
 frontend_assets.json
 latest_media_assets.json
 tmp_ugc_persistence_payload.json
+
+# Local one-off media incident/debug artifacts
+debug_archive/
+check_*media*.py
+check_*media*.txt
+check_*runway*.py
+check_*runway*.txt
+check_25s_confirmed_job_*.py
+check_25s_confirmed_job_*.txt
+failed_universal_media_job_*.txt
+inspect_*media*.py
+inspect_*media*.txt
+inspect_*popup*.py
+inspect_*popup*.txt
+inspect_*status*.py
+inspect_*status*.txt
+latest_universal_media_job_*.txt
+live_*.py
+live_*.txt
+live_*.json
+local_hash_runway_key*.py
+patch_verify_*.py
+preflight_confirmation_markers.txt
+successful_smoke_media_job.txt
