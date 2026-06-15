@@ -21,6 +21,21 @@ SECRET_CATEGORIES = {
     "observability",
 }
 
+MEDIA_SECRET_CAPABILITY_GROUPS = {
+    "video_generation_providers",
+    "image_generation_providers",
+    "audio_voice_providers",
+    "avatar_human_presenter_providers",
+    "lip_sync_providers",
+    "music_sfx_providers",
+    "caption_transcription_providers",
+    "composition_rendering_services",
+    "storage_delivery_services",
+    "moderation_safety_providers",
+    "fallback_providers",
+    "future_pluggable_provider_adapters",
+}
+
 SENSITIVE_VALUE_KEYS = {
     "value",
     "current_value",
@@ -90,6 +105,7 @@ class SecretInventoryDefinition:
     alternative_env_names: tuple[str, ...] = ()
     optional: bool = False
     future_suffix: str = ""
+    capability_group: str = ""
 
 
 @dataclass(frozen=True)
@@ -101,6 +117,7 @@ class CanonicalSecretReference:
     alternative_env_names: list[str] = field(default_factory=list)
     future_secrets_manager_name: str = ""
     required_for: list[str] = field(default_factory=list)
+    capability_group: str = ""
     tenant_scope: str = "platform"
     rotation_required: bool = True
     rotation_interval: str = "90d"
@@ -127,6 +144,7 @@ SECRET_INVENTORY_DEFINITIONS: tuple[SecretInventoryDefinition, ...] = (
         current_env_name="RUNWAY_API_KEY",
         required_for=("runway_video_generation", "universal_complete_media"),
         future_suffix="providers/runway/api-key",
+        capability_group="video_generation_providers",
     ),
     SecretInventoryDefinition(
         logical_name="elevenlabs_provider_key",
@@ -134,6 +152,7 @@ SECRET_INVENTORY_DEFINITIONS: tuple[SecretInventoryDefinition, ...] = (
         current_env_name="ELEVENLABS_API_KEY",
         required_for=("voiceover_generation", "universal_complete_media"),
         future_suffix="providers/elevenlabs/api-key",
+        capability_group="audio_voice_providers",
     ),
     SecretInventoryDefinition(
         logical_name="kling_provider_key",
@@ -142,6 +161,115 @@ SECRET_INVENTORY_DEFINITIONS: tuple[SecretInventoryDefinition, ...] = (
         required_for=("fallback_video_generation",),
         optional=True,
         future_suffix="providers/kling/api-key",
+        capability_group="fallback_providers",
+    ),
+    SecretInventoryDefinition(
+        logical_name="future_video_generation_provider_adapter",
+        category="media_providers",
+        current_env_name="VIDEO_GENERATION_PROVIDER_API_KEY",
+        required_for=("future_video_generation_adapter", "pluggable_media_stack"),
+        optional=True,
+        future_suffix="providers/media/video-generation/api-key",
+        capability_group="video_generation_providers",
+    ),
+    SecretInventoryDefinition(
+        logical_name="future_image_generation_provider_adapter",
+        category="media_providers",
+        current_env_name="IMAGE_GENERATION_PROVIDER_API_KEY",
+        required_for=("future_image_generation_adapter", "product_visuals", "ad_creative_images"),
+        optional=True,
+        future_suffix="providers/media/image-generation/api-key",
+        capability_group="image_generation_providers",
+    ),
+    SecretInventoryDefinition(
+        logical_name="future_audio_voice_provider_adapter",
+        category="media_providers",
+        current_env_name="AUDIO_VOICE_PROVIDER_API_KEY",
+        required_for=("future_audio_voice_adapter", "voiceover_generation"),
+        optional=True,
+        future_suffix="providers/media/audio-voice/api-key",
+        capability_group="audio_voice_providers",
+    ),
+    SecretInventoryDefinition(
+        logical_name="future_avatar_human_presenter_provider_adapter",
+        category="media_providers",
+        current_env_name="AVATAR_PRESENTER_PROVIDER_API_KEY",
+        required_for=("future_avatar_presenter_adapter", "human_led_media"),
+        optional=True,
+        future_suffix="providers/media/avatar-human-presenter/api-key",
+        capability_group="avatar_human_presenter_providers",
+    ),
+    SecretInventoryDefinition(
+        logical_name="future_lip_sync_provider_adapter",
+        category="media_providers",
+        current_env_name="LIP_SYNC_PROVIDER_API_KEY",
+        required_for=("future_lip_sync_adapter", "avatar_video_sync"),
+        optional=True,
+        future_suffix="providers/media/lip-sync/api-key",
+        capability_group="lip_sync_providers",
+    ),
+    SecretInventoryDefinition(
+        logical_name="future_music_sfx_provider_adapter",
+        category="media_providers",
+        current_env_name="MUSIC_SFX_PROVIDER_API_KEY",
+        required_for=("future_music_sfx_adapter", "soundtrack_generation", "sound_effect_generation"),
+        optional=True,
+        future_suffix="providers/media/music-sfx/api-key",
+        capability_group="music_sfx_providers",
+    ),
+    SecretInventoryDefinition(
+        logical_name="future_caption_transcription_provider_adapter",
+        category="media_providers",
+        current_env_name="CAPTION_TRANSCRIPTION_PROVIDER_API_KEY",
+        required_for=("future_caption_transcription_adapter", "captions", "transcripts"),
+        optional=True,
+        future_suffix="providers/media/caption-transcription/api-key",
+        capability_group="caption_transcription_providers",
+    ),
+    SecretInventoryDefinition(
+        logical_name="future_composition_rendering_service_adapter",
+        category="media_providers",
+        current_env_name="COMPOSITION_RENDERING_SERVICE_API_KEY",
+        required_for=("future_composition_rendering_service", "cloud_rendering", "media_stitching"),
+        optional=True,
+        future_suffix="providers/media/composition-rendering/api-key",
+        capability_group="composition_rendering_services",
+    ),
+    SecretInventoryDefinition(
+        logical_name="future_storage_delivery_service_adapter",
+        category="media_providers",
+        current_env_name="MEDIA_DELIVERY_SERVICE_API_KEY",
+        required_for=("future_media_delivery_service", "signed_asset_delivery", "cdn_delivery"),
+        optional=True,
+        future_suffix="providers/media/storage-delivery/api-key",
+        capability_group="storage_delivery_services",
+    ),
+    SecretInventoryDefinition(
+        logical_name="future_moderation_safety_provider_adapter",
+        category="media_providers",
+        current_env_name="MEDIA_MODERATION_PROVIDER_API_KEY",
+        required_for=("future_media_moderation_adapter", "brand_safety", "content_safety"),
+        optional=True,
+        future_suffix="providers/media/moderation-safety/api-key",
+        capability_group="moderation_safety_providers",
+    ),
+    SecretInventoryDefinition(
+        logical_name="future_fallback_media_provider_adapter",
+        category="media_providers",
+        current_env_name="FALLBACK_MEDIA_PROVIDER_API_KEY",
+        required_for=("future_fallback_media_adapter", "provider_failover"),
+        optional=True,
+        future_suffix="providers/media/fallback/api-key",
+        capability_group="fallback_providers",
+    ),
+    SecretInventoryDefinition(
+        logical_name="future_pluggable_media_provider_adapter",
+        category="media_providers",
+        current_env_name="PLUGGABLE_MEDIA_PROVIDER_API_KEY",
+        required_for=("future_pluggable_provider_adapter", "provider_registry"),
+        optional=True,
+        future_suffix="providers/media/pluggable-adapter/api-key",
+        capability_group="future_pluggable_provider_adapters",
     ),
     SecretInventoryDefinition(
         logical_name="openai_api_key",
@@ -191,6 +319,7 @@ SECRET_INVENTORY_DEFINITIONS: tuple[SecretInventoryDefinition, ...] = (
         rotation_required=False,
         rotation_interval="not-secret-config-reference",
         future_suffix="storage/s3/media-bucket",
+        capability_group="storage_delivery_services",
     ),
     SecretInventoryDefinition(
         logical_name="uploads_s3_bucket_config",
@@ -201,6 +330,7 @@ SECRET_INVENTORY_DEFINITIONS: tuple[SecretInventoryDefinition, ...] = (
         rotation_required=False,
         rotation_interval="not-secret-config-reference",
         future_suffix="storage/s3/uploads-bucket",
+        capability_group="storage_delivery_services",
     ),
     SecretInventoryDefinition(
         logical_name="media_queue_url_config",
@@ -298,6 +428,7 @@ def build_secret_reference(
         alternative_env_names=list(definition.alternative_env_names),
         future_secrets_manager_name=build_future_secret_name(definition, secrets_prefix),
         required_for=list(definition.required_for),
+        capability_group=definition.capability_group,
         tenant_scope=definition.tenant_scope,
         rotation_required=definition.rotation_required,
         rotation_interval=definition.rotation_interval,
@@ -324,11 +455,19 @@ def build_secret_inventory(env: Optional[Mapping[str, Any]] = None) -> Dict[str,
         if ref["required_now"] and not ref["value_present"]
     ]
     categories = sorted({ref["category"] for ref in references})
+    media_capability_groups = sorted(
+        {
+            ref.get("capability_group")
+            for ref in references
+            if ref.get("category") == "media_providers" and ref.get("capability_group")
+        }
+    )
     return {
         "boundary": "aws10_secrets_manager_config_boundary",
         "last_checked_at": utc_now(),
         "secret_references": references,
         "categories": categories,
+        "media_secret_capability_groups": media_capability_groups,
         "category_count": len(categories),
         "total_secret_reference_count": len(references),
         "missing_required_logical_names": missing_required,
@@ -361,6 +500,8 @@ def validate_secret_inventory_no_values(inventory_or_payload: Mapping[str, Any] 
                 errors.append(f"missing_{key}")
         if ref.get("category") not in SECRET_CATEGORIES:
             errors.append("unsupported_secret_category")
+        if ref.get("category") == "media_providers" and ref.get("capability_group") not in MEDIA_SECRET_CAPABILITY_GROUPS:
+            errors.append("unsupported_media_capability_group")
         if not isinstance(ref.get("value_present"), bool):
             errors.append("value_present_must_be_boolean")
         if ref.get("aws_fetch_attempted"):
@@ -389,6 +530,7 @@ def build_admin_safe_secret_readiness_view(env: Optional[Mapping[str, Any]] = No
             "boundary": inventory["boundary"],
             "last_checked_at": inventory["last_checked_at"],
             "categories": inventory["categories"],
+            "media_secret_capability_groups": inventory["media_secret_capability_groups"],
             "category_count": inventory["category_count"],
             "total_secret_reference_count": inventory["total_secret_reference_count"],
             "missing_required_logical_names": inventory["missing_required_logical_names"],
@@ -411,6 +553,7 @@ def build_client_safe_secret_readiness_view(env: Optional[Mapping[str, Any]] = N
         "configuration_readiness": PUBLIC_SECRET_READINESS_LABEL,
         "required_configuration_ready": bool(inventory.get("all_required_values_present")),
         "category_count": inventory.get("category_count"),
+        "media_secret_capability_group_count": len(inventory.get("media_secret_capability_groups") or []),
         "missing_required_count": len(inventory.get("missing_required_logical_names") or []),
         "aws_fetch_attempted": False,
         "secrets_manager_call_attempted": False,
@@ -429,6 +572,7 @@ def build_secrets_manager_boundary_readiness(env: Optional[Mapping[str, Any]] = 
         "boundary": inventory["boundary"],
         "valid": validation["valid"],
         "categories": inventory["categories"],
+        "media_secret_capability_groups": inventory["media_secret_capability_groups"],
         "total_secret_reference_count": inventory["total_secret_reference_count"],
         "required_configuration_ready": inventory["all_required_values_present"],
         "aws_fetch_attempted": False,

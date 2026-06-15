@@ -79,6 +79,16 @@ def main() -> int:
         "CLIENT_PORTAL_SESSION_SECRET": "CLIENT_SESSION_VALUE_MUST_NOT_LEAK",
         "WEBHOOK_SIGNING_SECRET": "WEBHOOK_VALUE_MUST_NOT_LEAK",
         "SENTRY_DSN": "SENTRY_VALUE_MUST_NOT_LEAK",
+        "IMAGE_GENERATION_PROVIDER_API_KEY": "IMAGE_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "AVATAR_PRESENTER_PROVIDER_API_KEY": "AVATAR_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "LIP_SYNC_PROVIDER_API_KEY": "LIPSYNC_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "MUSIC_SFX_PROVIDER_API_KEY": "MUSIC_SFX_VALUE_MUST_NOT_LEAK",
+        "CAPTION_TRANSCRIPTION_PROVIDER_API_KEY": "CAPTION_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "COMPOSITION_RENDERING_SERVICE_API_KEY": "RENDER_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "MEDIA_DELIVERY_SERVICE_API_KEY": "DELIVERY_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "MEDIA_MODERATION_PROVIDER_API_KEY": "MODERATION_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "FALLBACK_MEDIA_PROVIDER_API_KEY": "FALLBACK_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "PLUGGABLE_MEDIA_PROVIDER_API_KEY": "PLUGGABLE_PROVIDER_VALUE_MUST_NOT_LEAK",
     }
     env_before = dict(env)
     inventory = secrets.build_secret_inventory(env)
@@ -114,7 +124,25 @@ def main() -> int:
         "observability",
     }
     require(expected_categories.issubset(set(inventory["categories"])), "AWS-10 must cover the full paid SaaS secret/config surface.")
-    require(inventory["total_secret_reference_count"] >= 15, "AWS-10 inventory should include broad platform secret/config references.")
+    require(inventory["total_secret_reference_count"] >= 25, "AWS-10 inventory should include broad platform secret/config references.")
+    expected_media_capability_groups = {
+        "video_generation_providers",
+        "image_generation_providers",
+        "audio_voice_providers",
+        "avatar_human_presenter_providers",
+        "lip_sync_providers",
+        "music_sfx_providers",
+        "caption_transcription_providers",
+        "composition_rendering_services",
+        "storage_delivery_services",
+        "moderation_safety_providers",
+        "fallback_providers",
+        "future_pluggable_provider_adapters",
+    }
+    require(
+        expected_media_capability_groups.issubset(set(inventory["media_secret_capability_groups"])),
+        "AWS-10B must cover the complete pluggable production media secret surface, not only named current providers.",
+    )
 
     serialized_inventory = str(inventory)
     serialized_admin = str(admin_view)
@@ -131,6 +159,16 @@ def main() -> int:
         "CLIENT_SESSION_VALUE_MUST_NOT_LEAK",
         "WEBHOOK_VALUE_MUST_NOT_LEAK",
         "SENTRY_VALUE_MUST_NOT_LEAK",
+        "IMAGE_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "AVATAR_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "LIPSYNC_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "MUSIC_SFX_VALUE_MUST_NOT_LEAK",
+        "CAPTION_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "RENDER_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "DELIVERY_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "MODERATION_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "FALLBACK_PROVIDER_VALUE_MUST_NOT_LEAK",
+        "PLUGGABLE_PROVIDER_VALUE_MUST_NOT_LEAK",
     ]:
         require(forbidden_value not in serialized_inventory, f"Inventory leaked raw secret value: {forbidden_value}")
         require(forbidden_value not in serialized_admin, f"Admin view leaked raw secret value: {forbidden_value}")
@@ -147,11 +185,36 @@ def main() -> int:
         require(ref["credentials_required_now"] is False, "Secret reference must not require credentials now.")
         require(ref["future_secrets_manager_name"].startswith("/"), "Future Secrets Manager name placeholder must be path-like.")
         require(ref["status"] in {"env_placeholder_present", "missing", "not_configured"}, "Unexpected secret readiness status.")
+        if ref["category"] == "media_providers":
+            require(ref["capability_group"] in expected_media_capability_groups, "Media provider reference missing broad capability group.")
 
     runway_ref = next(ref for ref in inventory["secret_references"] if ref["logical_name"] == "runway_provider_key")
     require(runway_ref["current_env_name"] == "RUNWAY_API_KEY", "Admin inventory must preserve current env name for Runway.")
     require(runway_ref["value_present"] is True, "Runway key presence must be represented as boolean true.")
     require(runway_ref["status"] == "env_placeholder_present", "Present env placeholder should report env_placeholder_present.")
+    require(runway_ref["capability_group"] == "video_generation_providers", "Runway must remain a current video provider example.")
+    elevenlabs_ref = next(ref for ref in inventory["secret_references"] if ref["logical_name"] == "elevenlabs_provider_key")
+    require(elevenlabs_ref["capability_group"] == "audio_voice_providers", "ElevenLabs must remain a current audio/voice provider example.")
+
+    required_future_media_placeholders = {
+        "future_video_generation_provider_adapter",
+        "future_image_generation_provider_adapter",
+        "future_audio_voice_provider_adapter",
+        "future_avatar_human_presenter_provider_adapter",
+        "future_lip_sync_provider_adapter",
+        "future_music_sfx_provider_adapter",
+        "future_caption_transcription_provider_adapter",
+        "future_composition_rendering_service_adapter",
+        "future_storage_delivery_service_adapter",
+        "future_moderation_safety_provider_adapter",
+        "future_fallback_media_provider_adapter",
+        "future_pluggable_media_provider_adapter",
+    }
+    logical_names = {ref["logical_name"] for ref in inventory["secret_references"]}
+    require(
+        required_future_media_placeholders.issubset(logical_names),
+        "AWS-10B must include future/pluggable media provider placeholders.",
+    )
 
     missing_inventory = secrets.build_secret_inventory({})
     missing_runway = next(ref for ref in missing_inventory["secret_references"] if ref["logical_name"] == "runway_provider_key")
@@ -167,8 +230,12 @@ def main() -> int:
         "AWS_MEDIA_QUEUE_URL",
         "JWT_SECRET",
         "ADMIN_PLATFORM_TOKEN",
+        "IMAGE_GENERATION_PROVIDER_API_KEY",
+        "AVATAR_PRESENTER_PROVIDER_API_KEY",
+        "PLUGGABLE_MEDIA_PROVIDER_API_KEY",
         "future_secrets_manager_name",
         "secret_references",
+        "media_secret_capability_groups",
         "missing_required_logical_names",
     ]:
         require(hidden not in serialized_client, f"Client-safe view must hide secret/internal name: {hidden}")
@@ -195,6 +262,8 @@ def main() -> int:
         "no AWS/Secrets Manager call",
         "full paid SaaS secret/config surface",
         "value_present booleans only",
+        "pluggable media provider adapters",
+        "broad media capability groups",
     ]:
         require(marker in matrix, f"Migration matrix missing AWS-10 marker: {marker}")
 
