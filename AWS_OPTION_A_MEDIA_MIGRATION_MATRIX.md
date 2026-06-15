@@ -83,6 +83,86 @@ Do not continue turning the Render runtime into the final media engine. Use Rend
 
 ---
 
+# Source-Aware AWS Option A Implementation Matrix
+
+Updated: 2026-06-15
+
+## Current Source Assumption Inventory
+
+| Area inspected | Current Render/local assumption | Source evidence | AWS Option A implication |
+|---|---|---|---|
+| Backend API startup/config | Backend still relies on environment variables scattered across `backend/app/main.py`, frontend proxies, and docs. No single AWS Option A contract existed before AWS-01. | `backend/app/main.py`, `backend/app/config.py`, `.env.example`, `frontend/src/app/api/**/route.ts` | Add a shared AWS contract first, then wire services row by row without breaking Render/Vercel compatibility. |
+| Media execution | Universal complete media still executes through backend runtime paths; an AWS-ready worker skeleton exists but is not yet the paid production executor. | `backend/app/runtime/direct_media_provider_execution_runtime.py`, `backend/app/workers/media_worker.py` | Move provider execution/composition into the worker only after queue/job/store contracts are stable. |
+| Runtime outputs/local assets | Multiple media paths still write to `runtime_outputs` or local preview paths. | `backend/app/runtime/universal_media_pipeline_orchestrator.py`, `backend/app/runtime/durable_media_asset_store.py`, provider adapters | Replace local object persistence with S3-backed storage while preserving local compatibility during migration. |
+| Job status persistence | Durable local JSON job/queue/asset abstractions exist, but production status still has local store overlays. | `backend/app/runtime/durable_media_job_store.py`, `backend/app/runtime/durable_media_queue.py`, `backend/app/runtime/async_media_job_foundation.py` | Swap local JSON implementations to RDS/SQS adapters behind the same interface. |
+| Provider credentials | Provider readiness and adapters read process env values; frontend proxies redact known secrets. | `backend/app/runtime/*provider*`, `frontend/src/app/api/admin-real-media-generation-providers/route.ts` | Move provider/API keys to Secrets Manager, expose only readiness/diagnostics metadata. |
+| Portal API routes | Frontend proxies continue to point at `BACKEND_URL`/`NEXT_PUBLIC_BACKEND_URL`, allowing Vercel frontend to stay while backend moves to AWS ALB/API. | `frontend/src/app/api/admin-universal-complete-media/route.ts`, `frontend/src/app/api/universal-complete-media/route.ts`, `frontend/src/app/api/run-agent/route.ts` | Keep frontend stable; update backend endpoint and auth contract after API service is deployed. |
+| Billing/credits/package enforcement | Backend has owner/admin bypass and client credit/package gates; frontend has advisory package/credit helpers. | `backend/app/main.py`, `frontend/src/lib/packageCreditEnforcement.ts`, billing API routes | RDS-backed credit ledger and package enforcement must be migrated before paid client cutover. |
+| Admin/client authority separation | Portal authority context already distinguishes unrestricted admin vs client-safe governed execution. | `backend/app/runtime/portal_authority_context.py`, `frontend/src/components/UniversalCompleteMediaRunAgentPanel.tsx` | Preserve this boundary in every AWS API/worker/status/asset route. |
+
+## Ordered Implementation Rows
+
+The target architecture remains the requested full-stack AWS Option A shape:
+ECS/Fargate backend API service; Separate ECS/Fargate media worker service with ffmpeg;
+SQS media queue and dead-letter queue; RDS PostgreSQL durable job/customer/asset/audit data;
+S3 durable media/object storage; CloudWatch logs/metrics/alarms; Secrets Manager; IAM roles;
+and ALB/API routing while the frontend may remain on Vercel during backend/media stabilization.
+
+| Row id | Component | Current state | AWS target | Files likely affected | Risk | Verification command/test | Done criteria |
+|---|---|---|---|---|---|---|---|
+| AWS-01 | AWS environment contract/config foundation | AWS variables are documented in older docs but not codified as a runtime contract. | Shared config contract for ECS API, ECS media worker, RDS, S3, SQS, Secrets Manager, IAM, CloudWatch, with Render/Vercel compatibility defaults. | `backend/app/runtime/aws_option_a_runtime_contract.py`, `.env.example`, `AWS_OPTION_A_MEDIA_MIGRATION_MATRIX.md`, `verify_aws_option_a_runtime_contract.py` | Low | `python -X utf8 verify_aws_option_a_runtime_contract.py` | Contract defaults to local-safe disabled mode, reports missing AWS vars only when enabled, never exposes secret values, matrix/env template updated. |
+| AWS-02 | Durable media job/status model adapter boundary | Local JSON `LocalDurableMediaJobStore` exists under `runtime_outputs`. | Store interface supports local JSON now and RDS PostgreSQL adapter later, with job/customer/asset/audit fields preserved. | `backend/app/runtime/durable_media_job_store.py`, new adapter module, tests | Medium | `python -X utf8 test_durable_media_job_store.py` plus new adapter verifier | API can create/read/update jobs through interface without depending on local paths. |
+| AWS-03 | Media queue adapter boundary | Local file queue exists; worker claims local messages. | Queue interface supports local queue now and SQS + DLQ adapter later. | `backend/app/runtime/durable_media_queue.py`, `backend/app/workers/media_worker.py`, new SQS adapter stub/tests | Medium | `python -X utf8 test_media_worker_foundation.py` plus queue contract verifier | Enqueue/claim/complete/fail semantics are adapter-neutral and DLQ-aware. |
+| AWS-04 | Durable asset storage adapter boundary | Local asset store writes bytes/metadata under `runtime_outputs`. | AssetStore interface supports local now and S3 object storage + signed URLs later. | `backend/app/runtime/durable_media_asset_store.py`, universal asset/status routes | Medium | asset store contract verifier | Assets are referenced by storage key/asset id, not raw local path, and signed delivery remains portal-safe. |
+| AWS-05 | API job acceptance route | Complete media submit can still execute provider work inside web/API path. | ECS backend API accepts jobs quickly, writes RDS job record, enqueues SQS message, returns job id/status. | `backend/app/main.py`, `media_job_acceptance_service.py`, frontend proxy routes | High | portal submit/status verifier, preflight verifier | Admin/client popup receives durable job id without starting paid provider calls inside frontend/Vercel route. |
+| AWS-06 | ECS/Fargate media worker execution | Worker foundation exists but does not yet call live providers. | Separate ECS/Fargate worker with ffmpeg performs script, visual, audio, caption, and composition stages. | `backend/app/workers/media_worker.py`, provider adapters, Dockerfile.worker | High | worker integration smoke with paid calls disabled first | Worker processes queued job stages and stores progress/events durably. |
+| AWS-07 | ffmpeg worker image | ffmpeg composition currently assumes local runtime availability. | Worker container includes ffmpeg and validates codecs/paths on startup. | `Dockerfile.worker`, worker health check, composition runtime | Medium | worker image build + ffmpeg version command | Worker image builds and composition preflight passes. |
+| AWS-08 | RDS PostgreSQL schema | Multiple local JSON/runtime stores and SQL fragments exist. | RDS schema for jobs, assets, events, audits, credits, packages, approvals, integrations, support. | `backend/sql`, migrations, store adapters | High | migration dry-run verifier | Schema covers full-stack SaaS state and preserves authority/audit model. |
+| AWS-09 | S3 media/upload delivery | Local media and uploaded likeness files are not durable production objects. | S3 buckets/prefixes for media outputs, uploads, references, generated assets, signed URLs. | asset store, upload routes, client/admin asset views | High | S3 adapter contract tests with mocked client | Client/admin asset visibility works without local runtime outputs. |
+| AWS-10 | Secrets Manager provider config | Provider keys come from process env. | Secrets Manager ARNs/prefix for Runway, ElevenLabs, Kling, OpenAI, Stripe, email/integrations. | provider readiness/adapters/config | High | secrets contract verifier, no frontend secret leakage tests | Provider readiness checks secret presence without exposing values. |
+| AWS-11 | Credit/package/approval enforcement on API accept | Enforcement exists but is split across backend/frontend advisory paths. | API acceptance enforces client package/credits/approval before paid enqueue; admin bypass preserved. | billing/credit runtime, `main.py`, media accept service | High | credit gate tests, admin/client authority verifier | Client paid jobs block without credits/approval; admin owner remains unrestricted. |
+| AWS-12 | Portal status and diagnostics cutover | Popup polls current backend/proxy status and local overlays. | Status reads RDS-backed events/assets; admin sees diagnostics, client gets safe status. | frontend API routes, popup component, backend status routes | Medium | `verify_complete_media_portal_renderer.py`, e2e status mock | No raw provider internals in client; admin diagnostic toggles still work. |
+| AWS-13 | Observability and DLQ operations | Local logs/status files and admin panels provide partial diagnostics. | CloudWatch logs/metrics/alarms plus DLQ/admin retry/requeue/cancel controls. | worker/API logging, admin provider dashboard, infra templates | Medium | observability config verifier | Admin can see failed stage, provider, job id, DLQ status without secrets. |
+| AWS-14 | Full-stack cutover readiness | Render/Vercel-compatible paths remain primary. | Backend/media path runs on AWS ALB/ECS; frontend may stay Vercel temporarily. | env docs, frontend `BACKEND_URL`, DNS/deploy docs | High | full verifier suite + portal smoke | Paid-client media path no longer depends on Render local runtime outputs or in-memory state. |
+
+## AWS-01 Row 1 Scope
+
+AWS-01 is intentionally a compatibility layer only. It does not:
+- rip out Render
+- change portal routes
+- move frontend hosting
+- enable paid provider calls
+- switch storage/queue/database implementations
+
+It does:
+- define the required AWS Option A environment variables
+- keep `AWS_OPTION_A_ENABLED=false` as the default
+- report missing RDS/S3/SQS/Secrets values only when AWS mode is enabled
+- preserve admin/client authority and self-contained Create Media popup guardrail markers
+- provide `verify_aws_option_a_runtime_contract.py` as the first AWS migration verifier
+
+## AWS-01 Environment Contract
+
+| Variable | Purpose | Required when `AWS_OPTION_A_ENABLED=true` | Secret value? |
+|---|---|---:|---:|
+| `AWS_OPTION_A_ENABLED` | Explicit migration switch; defaults off for Render/Vercel compatibility. | Yes | No |
+| `APP_ENV` | Runtime environment label. | Recommended | No |
+| `AWS_REGION` | Region for ECS, SQS, S3, RDS, Secrets Manager, CloudWatch. | Yes | No |
+| `AWS_BACKEND_SERVICE_MODE` | Service mode marker such as `local_dev` or `aws_option_a`. | Recommended | No |
+| `AWS_MEDIA_WORKER_ENABLED` | Identifies the media worker process when enabled. | Recommended | No |
+| `DATABASE_URL` | RDS PostgreSQL connection URL, or use `AWS_RDS_SECRET_ARN`. | One of this or RDS secret ARN | Yes |
+| `AWS_RDS_SECRET_ARN` | Secrets Manager reference for RDS credentials. | One of this or database URL | No value, ARN only |
+| `AWS_MEDIA_S3_BUCKET` | Durable generated media/object storage bucket. | Yes | No |
+| `AWS_UPLOADS_S3_BUCKET` | Durable client upload/reference/likeness bucket. | Recommended | No |
+| `AWS_MEDIA_QUEUE_URL` | SQS media queue URL. | Yes | No |
+| `AWS_MEDIA_DLQ_URL` | SQS media dead-letter queue URL. | Yes | No |
+| `AWS_PROVIDER_SECRETS_PREFIX` | Secrets Manager prefix for provider/API keys. | Yes | No value, prefix only |
+| `AWS_CLOUDWATCH_LOG_GROUP` | CloudWatch log group for API/worker observability. | Recommended before cutover | No |
+| `AWS_API_TASK_ROLE_ARN` | IAM task role for ECS backend API. | Recommended before deploy | No |
+| `AWS_WORKER_TASK_ROLE_ARN` | IAM task role for ECS media worker. | Recommended before deploy | No |
+
+---
+
 # Full-Stack AWS Option A Scope Addendum
 
 Updated: 2026-06-13T03:11:16
