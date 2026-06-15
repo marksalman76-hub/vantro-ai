@@ -6,6 +6,7 @@ from typing import Any, Dict, Iterable, List, Mapping, Optional
 
 from backend.app.runtime.aws_option_a_runtime_contract import aws_option_a_readiness
 from backend.app.runtime.api_job_acceptance_boundary import build_api_job_acceptance_envelope
+from backend.app.runtime.ffmpeg_worker_readiness_boundary import build_ffmpeg_worker_readiness_contract
 from backend.app.runtime.media_queue_adapter_boundary import build_media_queue_message, validate_media_queue_message
 
 
@@ -192,6 +193,7 @@ class EcsMediaWorkerTaskEnvelope:
     lifecycle_events: List[Dict[str, Any]] = field(default_factory=list)
     future_worker_hooks: Dict[str, Any] = field(default_factory=dict)
     retry_dlq: Dict[str, Any] = field(default_factory=dict)
+    ffmpeg_readiness: Dict[str, Any] = field(default_factory=dict)
     runtime_readiness: Dict[str, Any] = field(default_factory=dict)
     accepted_envelope: Dict[str, Any] = field(default_factory=dict)
     queue_message: Dict[str, Any] = field(default_factory=dict)
@@ -219,6 +221,7 @@ def build_worker_task_envelope(
     queue_message = dict(worker_input.get("queue_message") or {})
     validation = validate_worker_task(worker_input)
     readiness = aws_option_a_readiness(env or {})
+    ffmpeg_readiness = build_ffmpeg_worker_readiness_contract(env=env or {})
 
     task = EcsMediaWorkerTaskEnvelope(
         job_id=clean_text(first_value(queue_message, ("job_id",), envelope.get("job_id") or "pending_worker_job"), 180),
@@ -259,6 +262,7 @@ def build_worker_task_envelope(
             "dlq_enabled_now": False,
             "future_dlq_target": queue_message.get("queue_routing", {}).get("dlq_target") or "media_generation_dead_letter",
         },
+        ffmpeg_readiness=ffmpeg_readiness,
         runtime_readiness=readiness,
         accepted_envelope=envelope,
         queue_message=queue_message,
@@ -348,6 +352,7 @@ def build_admin_worker_result_view(result_or_payload: Mapping[str, Any] | None) 
         "lifecycle_events": task.get("lifecycle_events") or [],
         "future_worker_hooks": task.get("future_worker_hooks") or {},
         "retry_dlq": task.get("retry_dlq") or {},
+        "ffmpeg_readiness": task.get("ffmpeg_readiness") or {},
         "provider_execution_started": result.get("provider_execution_started"),
         "ffmpeg_invoked": result.get("ffmpeg_invoked"),
         "asset_persistence_started": result.get("asset_persistence_started"),
