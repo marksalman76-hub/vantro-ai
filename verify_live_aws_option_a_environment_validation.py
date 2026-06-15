@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import importlib.util
+import json
 import re
 import sys
 
@@ -49,6 +50,50 @@ def main() -> int:
 
     service_flag_without_live = validator.run_validation({"AWS_OPTION_A_VALIDATE_IAM": "true"})
     require(service_flag_without_live["status"] == "skipped_live_validation_not_enabled", "Service flags alone must not run live validation.")
+
+    class NoCredentialsError(Exception):
+        pass
+
+    class FakeStsClient:
+        def get_caller_identity(self):
+            raise NoCredentialsError("Unable to locate credentials")
+
+    class FakeSession:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def client(self, service_name):
+            require(service_name == "sts", "Missing-credential verifier must only exercise STS.")
+            return FakeStsClient()
+
+    class FakeBoto3:
+        Session = FakeSession
+
+    original_optional_dependency = validator.optional_dependency
+
+    def fake_optional_dependency(module_name: str):
+        if module_name == "boto3":
+            return FakeBoto3
+        return original_optional_dependency(module_name)
+
+    validator.optional_dependency = fake_optional_dependency
+    try:
+        missing_credentials_result = validator.run_validation({
+            "AWS_OPTION_A_LIVE_VALIDATION": "true",
+            "AWS_OPTION_A_VALIDATE_IAM": "true",
+        })
+    finally:
+        validator.optional_dependency = original_optional_dependency
+
+    iam_missing_credentials = missing_credentials_result["service_results"]["iam"]
+    missing_credentials_json = json.dumps(missing_credentials_result, sort_keys=True, default=str)
+    require(
+        iam_missing_credentials["status"] == "blocked_missing_aws_credentials",
+        "Missing AWS credentials must return blocked_missing_aws_credentials.",
+    )
+    require("Traceback" not in missing_credentials_json, "Missing credentials must not produce a traceback.")
+    require("AKIA" not in missing_credentials_json and "ASIA" not in missing_credentials_json, "Validation output must not expose access keys.")
+    require("secret access key" not in missing_credentials_json.lower(), "Validation output must not expose secret keys.")
 
     for marker in [
         "AWS_OPTION_A_LIVE_VALIDATION",
@@ -108,6 +153,12 @@ def main() -> int:
     for marker in [
         "blocked_missing_dependency_boto3",
         "blocked_missing_dependency_psycopg",
+        "blocked_missing_aws_credentials",
+        "blocked_aws_config_error",
+        "aws_client_error",
+        "botocore.exceptions",
+        "safe_error_message",
+        "apply_safe_aws_exception",
         "optional_dependency",
     ]:
         require(marker in source, f"Validation script must report missing optional dependencies safely: {marker}")
