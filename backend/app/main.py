@@ -5411,6 +5411,11 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
 
         if path == "/admin/universal-complete-media" and request.method.upper() == "POST":
             from backend.app.runtime.universal_media_pipeline_orchestrator import accept_universal_media_pipeline_job
+            from backend.app.runtime.aws_option_a_route_integration import (
+                apply_route_mode_to_response,
+                build_route_mode_response,
+                evaluate_acceptance_route_mode,
+            )
 
             try:
                 payload = await request.json()
@@ -5418,26 +5423,64 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
                 payload = {}
 
             portal = "client" if str(x_actor_role or "").strip().lower() == "client" else "admin"
-            return JSONResponse(content=accept_universal_media_pipeline_job(payload, portal=portal))
+            route_mode = evaluate_acceptance_route_mode(
+                payload,
+                env=os.environ,
+                query_params=request.query_params,
+                headers=request.headers,
+                audience=portal,
+            )
+            if route_mode.get("short_circuit_route"):
+                return JSONResponse(
+                    status_code=int(route_mode.get("http_status") or 200),
+                    content=build_route_mode_response(route_mode, audience=portal),
+                )
+
+            result = accept_universal_media_pipeline_job(payload, portal=portal)
+            return JSONResponse(content=apply_route_mode_to_response(result, route_mode, audience=portal))
 
         if path == "/admin/universal-complete-media-status" and request.method.upper() == "GET":
             from backend.app.runtime.direct_media_provider_execution_runtime import universal_complete_media_status
             from backend.app.runtime.universal_media_pipeline_orchestrator import get_universal_media_pipeline_status
+            from backend.app.runtime.aws_option_a_route_integration import (
+                apply_route_mode_to_response,
+                build_route_mode_response,
+                evaluate_status_route_mode,
+            )
 
             job_id = str(request.query_params.get("job_id") or "").strip()
+            audience = "client" if str(x_actor_role or "").strip().lower() == "client" else "admin"
+            route_mode = evaluate_status_route_mode(
+                {
+                    "job_id": job_id,
+                    "actor_role": audience,
+                    "requested_by_role": audience,
+                    "package_name": "enterprise" if audience == "admin" else "starter",
+                    "entitlement_status": "admin_unrestricted" if audience == "admin" else "missing",
+                },
+                env=os.environ,
+                query_params=request.query_params,
+                headers=request.headers,
+                audience=audience,
+            )
+            if route_mode.get("short_circuit_route"):
+                return JSONResponse(
+                    status_code=int(route_mode.get("http_status") or 200),
+                    content=build_route_mode_response(route_mode, audience=audience),
+                )
+
             if job_id:
-                audience = "client" if str(x_actor_role or "").strip().lower() == "client" else "admin"
                 status = get_universal_media_pipeline_status(job_id, audience=audience)
                 http_status = 202 if status.get("status") == "durable_parent_job_missing" else 200
                 return JSONResponse(status_code=http_status, content={
-                    **status,
+                    **apply_route_mode_to_response(status, route_mode, audience=audience),
                     "universal_complete_media_status_lookup": True,
                     "direct_media_provider_execution": False,
                     "customer_safe": True,
                     "credential_values_exposed": False,
                 })
 
-            return JSONResponse(content=universal_complete_media_status())
+            return JSONResponse(content=apply_route_mode_to_response(universal_complete_media_status(), route_mode, audience=audience))
 
         if path == "/admin/direct-media-provider-compose" and request.method.upper() == "POST":
             from backend.app.runtime.direct_media_provider_execution_runtime import compose_direct_media_video_audio
@@ -5644,13 +5687,29 @@ def admin_direct_media_provider_compose_status() -> Dict[str, object]:
 @app.post("/admin/universal-complete-media")
 async def admin_universal_complete_media(request: Request) -> Dict[str, object]:
     from backend.app.runtime.universal_media_pipeline_orchestrator import accept_universal_media_pipeline_job
+    from backend.app.runtime.aws_option_a_route_integration import (
+        apply_route_mode_to_response,
+        build_route_mode_response,
+        evaluate_acceptance_route_mode,
+    )
 
     try:
         payload = await request.json()
     except Exception:
         payload = {}
 
-    return accept_universal_media_pipeline_job(payload, portal="admin")
+    route_mode = evaluate_acceptance_route_mode(
+        payload,
+        env=os.environ,
+        query_params=request.query_params,
+        headers=request.headers,
+        audience="admin",
+    )
+    if route_mode.get("short_circuit_route"):
+        return build_route_mode_response(route_mode, audience="admin")
+
+    result = accept_universal_media_pipeline_job(payload, portal="admin")
+    return apply_route_mode_to_response(result, route_mode, audience="admin")
 
 
 @app.get("/admin/universal-complete-media-status")
