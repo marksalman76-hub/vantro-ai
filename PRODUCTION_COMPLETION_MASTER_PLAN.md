@@ -2,17 +2,17 @@
 
 Date: 2026-06-18
 
-Scope: owner-facing production completion plan plus consolidated AWS-20 live infrastructure proof, live no-provider worker consumption/delete proof, AWS-backed synthetic DLQ recovery proof, synthetic durable asset delivery proof, and synthetic production route cutover readiness proof. This document does not approve public launch, AWS cutover, provider calls, media generation, worker loops, Stripe calls, billing or credit mutations, customer traffic, or AWS-21+ work.
+Scope: owner-facing production completion plan plus consolidated AWS-20 live infrastructure proof, live no-provider worker consumption/delete proof, AWS-backed synthetic DLQ recovery proof, synthetic durable asset delivery proof, synthetic production route cutover readiness proof, and synthetic billing/credit spend governance proof. This document does not approve public launch, AWS cutover, provider calls, media generation, worker loops, Stripe live charges, billing or credit mutations, customer traffic, or AWS-21+ work.
 
 ## 1. Executive Owner Summary
 
-Current launch recommendation: no full paid public launch. AWS-20 live infrastructure proof, synthetic durable asset delivery proof, and synthetic production route cutover readiness proof are now closed, but the platform should remain internal-only until billing/credit governance, status UX, provider execution, support recovery, observability, and private-pilot proof exist.
+Current launch recommendation: no full paid public launch. AWS-20 live infrastructure proof, synthetic durable asset delivery proof, synthetic production route cutover readiness proof, and synthetic billing/credit spend governance proof are now closed, but the platform should remain internal-only until real provider final deliverables, Stripe/test billing reconciliation, status UX, support recovery, observability, and private-pilot proof exist.
 
 Current AWS migration readiness: 99%.
 
-Current full SaaS production readiness: 87%.
+Current full SaaS production readiness: 89%.
 
-Biggest blocker: AWS-20 live infrastructure proof, bounded live synthetic durable handoff, local synthetic durable worker lifecycle proof, local synthetic failed-job/DLQ recovery proof, live no-provider worker consumption/delete proof, AWS-backed synthetic DLQ recovery proof, synthetic durable asset storage/retrieval/open/download proof, and synthetic production route cutover readiness proof are closed, but billing/credit reconciliation, real provider-generated final media delivery, live provider execution, and support/observability drills remain unproven. The next launch-critical blocker is billing and credit spend governance before paid provider execution expands.
+Biggest blocker: AWS-20 live infrastructure proof, bounded live synthetic durable handoff, local synthetic durable worker lifecycle proof, local synthetic failed-job/DLQ recovery proof, live no-provider worker consumption/delete proof, AWS-backed synthetic DLQ recovery proof, synthetic durable asset storage/retrieval/open/download proof, synthetic production route cutover readiness proof, and synthetic billing/credit spend governance proof are closed, but real provider-generated final media delivery, Stripe/test billing reconciliation, live provider execution, and support/observability drills remain unproven. The next launch-critical blocker is a capped, owner-approved final deliverable proof that does not bypass billing, credit, package, cost-cap, or recovery controls.
 
 Biggest cost/control risk: paid provider execution and long-form media jobs still require live proof that credits, package approval, provider-cost caps, retries, and failure recovery stay synchronized across real job execution.
 
@@ -47,6 +47,7 @@ One-sentence truth statement: the platform has serious safety architecture, but 
 | AWS migration matrix through AWS-20 | `AWS_OPTION_A_MEDIA_MIGRATION_MATRIX.md` | AWS-01 through AWS-20 boundaries and AWS-20 RDS/SQS/S3 proof are documented without AWS-21+ expansion. | Matrix proof does not enable route cutover, worker execution, provider execution, billing/credit execution, or client delivery. |
 | Frontend build baseline | Production audit records `cd frontend && npm.cmd run build` passed. | Current frontend compiles. | Build success does not prove live user workflow quality. |
 | Media cost and preflight guardrails | `backend/app/runtime/direct_media_provider_execution_runtime.py`; `verify_media_provider_preflight_safety.py`; `verify_duration_aware_media_segments.py`; `verify_complete_media_portal_renderer.py` | Complete media has preflight, duration-aware segments, credit-risk confirmation, and safer portal rendering. | Live provider reliability and real provider-generated final asset delivery under production route conditions remain unproven. |
+| Billing credit spend governance proof | `backend/app/runtime/billing_credit_spend_governance.py`; `verify_billing_credit_spend_governance.py`; existing entitlement and billing ledger boundaries. | Synthetic proof records `billing_credit_governance_attempted=true`, `billing_credit_governance_passed=true`, `package_entitlement_required=true`, `credit_reserve_before_execution_passed=true`, `provider_cost_cap_blocked_without_approval=true`, `owner_override_audited=true`, `credit_finalize_after_success_represented=true`, `credit_reversal_after_failure_represented=true`, `refund_or_reconciliation_shape_present=true`, `client_billing_view_redacted=true`, `admin_billing_diagnostics_redacted=true`, `stripe_live_charge_attempted=false`, `provider_call_attempted=false`, `media_generation_attempted=false`, `real_customer_billing_mutation_attempted=false`, `real_customer_credit_mutation_attempted=false`, `customer_traffic_attempted=false`, `public_cutover_enabled=false`, and `render_removal_attempted=false`. | Proves synthetic/test-mode governance shape only. It does not perform a Stripe live charge, real customer billing mutation, real customer credit mutation, provider call, media generation, customer traffic, public cutover, or Render removal. |
 | Final 27-agent catalogue | Commit `2e1ea9f Lock final 27 agent catalogue visibility`; `verify_final_27_agent_catalogue_visibility.py` | Client-visible catalogue count is 27 and system agents are internal layers. | Agent quality across all workflows still needs sampled production QA. |
 
 ## 3. Current Unproven Areas
@@ -56,7 +57,7 @@ One-sentence truth statement: the platform has serious safety architecture, but 
 - S3 synthetic asset lifecycle: synthetic upload/store, metadata readback, signed/open/download proof, cleanup, and client/admin views are proven; real provider-generated final media delivery through the production route remains unproven.
 - Live provider orchestration under cost caps: Runway/ElevenLabs and fallbacks have guardrails, but provider execution under durable job, cost cap, credit, and status governance is not fully proven.
 - Client popup job status/result UX under real jobs: the portal renderer is structurally improved, but async live status and final asset behavior need evidence.
-- Billing/credit reconciliation under execution: entitlement and ledger boundaries exist, but Stripe, credit reservation, finalization, reversal, refunds, and provider actual cost reconciliation need proof.
+- Billing/credit reconciliation under execution: synthetic governance now proves entitlement, reservation, finalization, reversal/refund shape, admin override audit, and provider-cost cap blocking, but Stripe test/live reconciliation, persistent real ledger mutation, and provider actual-cost reconciliation under real attempts still need proof.
 - Support recovery and DLQ handling: AWS-backed synthetic DLQ-shaped recovery is proven, but production-scale operator recovery from route-cutover worker failures, stuck jobs, billing mismatches, or asset failures is not rehearsed.
 - Load/scale readiness: queue backpressure, concurrent job acceptance, status polling, and provider throttling behavior are not measured.
 - Security/privacy/likeness handling proof: secret redaction exists, but tenant isolation, avatar/likeness consent, retention, and deletion workflows need audit evidence.
@@ -70,7 +71,7 @@ One-sentence truth statement: the platform has serious safety architecture, but 
 | Gate 1: AWS live infrastructure proof | Prove bounded RDS, SQS, and S3 rehearsal resources. | AWS cutover cannot proceed until the foundation actually works. | Closed: RDS rollback-only proof, SQS-focused send proof, and S3-focused marker write/read/delete cleanup proof are recorded with sanitized non-customer evidence. | `aws_option_a_live_rehearsal.py`; `verify_aws_option_a_live_rehearsal.py`; proof docs. | AWS-20 verifier, route/rollback/observability regressions. | Low AWS test-resource usage | Yes for live runs; no for docs-only recording | RDS rollback, SQS non-customer non-executable send, S3 marker write/read/delete all pass with sanitized output and consolidated proof is recorded. | Any secret exposure, customer data, executable queue message, failed cleanup, or broad AWS call. | `Record AWS RDS rollback proof` |
 | Gate 2: Durable job lifecycle proof | Prove accepted jobs persist, queue, process, retry, and finish safely. | Paid workflows need durable state and recoverable status. | Closed for synthetic no-provider/no-billing/no-credit route readiness: live synthetic durable write/send/status handoff, local synthetic worker lifecycle, local synthetic failed-job/DLQ recovery, live no-provider worker consumption/delete, AWS-backed synthetic DLQ recovery, synthetic durable asset delivery, and production route cutover readiness are proven. | Route integration, repository, queue, worker, status, and asset adapters/verifiers. | Durable enqueue verifier; worker lifecycle verifier; status adapter verifier; DLQ/recovery verifier; live no-provider worker verifier; AWS-backed DLQ recovery verifier; synthetic asset delivery verifier; production route cutover readiness verifier. | Possible AWS SQS/RDS/S3 test usage | Yes for live runs; no for this synthetic fixture | Synthetic job accepted, persisted, queued, claimed once, status-updated, deleted/acked, retried/failed/recovered/completed, linked to a cleaned-up synthetic asset, and route-selected safely with no providers. | Duplicate processing, missing terminal state, unsafe retry, failed delete/ack, failed recovery, asset leakage, failed cleanup, unredacted diagnostics, public cutover, provider call, or billing/credit mutation. | `Prove production route cutover readiness` |
 | Gate 3: Admin/client UX proof | Prove users and operators see useful status and recovery actions. | Trust fails when jobs are technically running but UX is confusing. | QA queued/running/failed/retry/completed/final asset states. | Admin/client portal components, status routes, support routes, verifiers. | Frontend build; portal renderer verifier; route fixtures; screenshot QA if available. | No, unless using live AWS/provider fixtures | Sometimes | Client-safe views hide internals; admin sees actionable diagnostics; final outputs open/download. | Raw packet/secrets in client view, stale status, or unclear failure messaging. | `Close launch status and support UX proof` |
-| Gate 4: Billing/credits/spend governance proof | Prove paid work cannot escape package, credit, and approval controls. | This protects customer fairness and owner cost. | Stripe test-mode flow, credit reserve/finalize/reverse, provider cost estimate/actual audit, admin overrides. | Billing, credit, entitlement, Stripe runtimes and verifiers. | Billing ledger verifier; entitlement verifier; Stripe webhook tests; backend compile. | Stripe test/live depending mode | Yes for live or charge-affecting work | Provider execution blocked without entitlement/credit or explicit audited owner override. | Charge without entitlement, credit mismatch, un-audited override, or secret leak. | `Prove billing credit spend governance` |
+| Gate 4: Billing/credits/spend governance proof | Prove paid work cannot escape package, credit, and approval controls. | This protects customer fairness and owner cost. | Closed for synthetic/test-mode governance: entitlement, credit reservation, cost-cap blocking, owner override audit, finalization, reversal/refund, reconciliation shape, and redacted client/admin views are proven without live charges or mutations. Remaining work is Stripe test/live reconciliation and persistent real ledger mutation only when owner-approved. | Billing, credit, entitlement, Stripe runtimes and verifiers. | Billing ledger verifier; entitlement verifier; billing governance verifier; Stripe webhook tests when approved. | No for current synthetic proof; Stripe test/live depending future mode | Yes for live or charge-affecting work | Provider execution is represented as blocked without entitlement/credit or explicit audited owner override. | Live charge without entitlement, credit mismatch, un-audited override, secret leak, or provider execution bypassing cost cap. | `Prove billing credit spend governance` |
 | Gate 5: Observability/support/rollback proof | Prove incidents are detected, diagnosed, and reversible. | Paid SaaS needs operations, not just code. | Redacted logs/metrics/alerts, runbooks, rollback drill, support recovery fixtures. | Observability, admin diagnostics, runbook docs, support routes. | Observability verifier; rollback verifier; incident drill; optional CloudWatch test. | Possible AWS logging usage | Yes for live AWS logging | Owner can identify stuck/failed jobs, rollback, and recover without secret exposure. | No alert path, no runbook, rollback cannot stop execution, or secrets in logs. | `Wire launch observability evidence` |
 | Gate 6: Controlled private paid pilot | Validate a narrow paid workflow with known users and cost caps. | Real customers reveal workflow gaps, but blast radius must be tiny. | Pilot package, spend cap, support rota, refund path, daily review. | Pilot docs, billing config, provider caps, support docs. | Full gate verifier set; pilot checklist; manual owner signoff. | Yes, bounded | Yes | Several controlled paid workflows complete or recover cleanly with reconciled billing and assets. | Any uncontrolled spend, unresolved customer failure, or billing inconsistency. | `Add private paid pilot launch runbook` |
 | Gate 7: Full paid public launch | Open beyond private pilot only after operational proof. | Public launch magnifies every unproven edge case. | Final launch checklist, load/security proof, backup/restore, support staffing. | Launch docs, deployment configs, runbooks, tests. | Full regression, load smoke, security/privacy audit, backup/restore drill. | Yes | Yes | Owner signs full launch after all P0/P1 launch blockers are closed. | Any unresolved P0, missing rollback, missing billing reconciliation, or unreliable media flow. | `Approve full paid public launch readiness` |
@@ -79,13 +80,13 @@ One-sentence truth statement: the platform has serious safety architecture, but 
 
 | Rank | Priority | Work item | Domain | Why it matters | Current evidence | Required implementation | Required verification | Owner approval needed? | Can be done without live spend? | Readiness gain if completed | Dependencies |
 | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | P0 | Billing credit spend governance | Billing/credits | Paid provider execution must be financially safe. | Entitlement and ledger boundaries exist; Stripe/credit reconciliation is not proven. | Reserve, finalize, reverse/refund, package check, admin override audit, provider actual-cost reconciliation. | Billing ledger verifier, entitlement verifier, Stripe test webhook/checkout verifier. | Yes for Stripe test/live | No | +8% SaaS | Production route cutover readiness proof closed |
-| 2 | P0 | Complete media live provider final deliverable proof | Media/provider | Paid customers need a complete output, not just infrastructure and synthetic asset proof. | Preflight, scripting, duration, portal, worker, recovery, asset, and route-readiness proofs exist; real provider-generated final MP4 delivery is not proven through the durable production path. | Owner-approved capped 5s smoke and one confirmed run with durable parent/child status, final asset, cost evidence, and recovery metadata. | Media preflight/script/duration/portal verifiers plus live evidence capture. | Yes for paid providers | No | +4% media | Item 1 |
+| 1 | P0 | Complete media live provider final deliverable proof | Media/provider | Paid customers need a complete output, not just infrastructure and synthetic asset proof. | Preflight, scripting, duration, portal, worker, recovery, asset, route-readiness, and billing-governance proofs exist; real provider-generated final MP4 delivery is not proven through the durable production path. | Owner-approved capped 5s smoke and one confirmed run with durable parent/child status, final asset, cost evidence, and recovery metadata. | Media preflight/script/duration/portal verifiers plus live evidence capture. | Yes for paid providers | No | +4% media | Billing credit spend governance proof closed |
+| 2 | P0 | Stripe test billing reconciliation proof | Billing | Revenue state must match platform access before private pilot. | Synthetic billing governance and ledger shapes exist; Stripe test/live reconciliation is not proven. | Test-mode checkout/webhook/refund/subscription-state reconciliation with redacted audit evidence. | Stripe test verifier and ledger proof. | Yes for Stripe mode | Test mode may spend no money | +5% billing | Item 1 can run as provider-only only if billing remains no-mutation; full pilot needs this |
 | 3 | P0 | Media job status/result visibility inside Create Media popup | Frontend/media | Customers and admins need accurate job state. | Portal renderer guard exists and synthetic asset delivery proof has a client-safe/admin-actionable shape. | Live/durable status mapping for queued, running, failed, retry, complete, preview, and download. | Frontend build, renderer verifier, route fixture tests. | No for fixtures | Yes | +3% client UX | Items 1-2 |
 | 4 | P0 | Client-safe status/errors | Client UX/security | Clients must not see internals or secrets. | Client-safe views exist in several boundaries and live handoff client status was redacted. | End-to-end client error/status filtering. | Client route snapshots and redaction verifier. | No | Yes | +2% client UX | Items 2-3 |
 | 5 | P0 | Admin full diagnostics/support view | Admin ops | Owner needs recovery detail without secrets. | Admin diagnostics exist in AWS/media paths and live handoff diagnostics were hash-only. | Consolidate job, provider, queue, billing, asset, support evidence. | Admin fixture verifier. | No | Yes | +3% admin ops | Items 1-3 |
 | 6 | P0 | Provider-cost and credit ledger reconciliation | Billing/spend | Estimated provider risk must match actual cost and credit usage. | Preflight estimates and placeholder ledger boundaries exist. | Compare provider attempts, actual cost, reservation, finalization, reversal, and admin override evidence. | Provider cost/credit ledger verifier. | Yes for live provider evidence | Partly | +5% billing | Items 1, 3 |
-| 7 | P0 | Stripe/billing reconciliation proof | Billing | Revenue state must match platform access. | Stripe routes and readiness exist. | Test-mode checkout, webhook, refund, subscription state reconciliation. | Stripe test verifier and ledger proof. | Yes for Stripe mode | Test mode may spend no money | +5% billing | Item 6 |
+| 7 | P0 | Persistent billing ledger mutation proof | Billing | Synthetic ledger shapes must become durable only when safe. | No-mutation billing governance proof exists. | Persist reservation/finalization/reversal/refund with idempotency and rollback controls. | Persistent ledger verifier and rollback/reconciliation proof. | Yes for persistent/live mode | Partly | +5% billing | Items 2 and 6 |
 | 8 | P0 | Provider execution cost cap and owner approval proof | Media/spend | Prevents credit burn on failed or long jobs. | Preflight/high-risk confirmation exists. | Tie provider attempts to credit/cost cap and durable job evidence. | Media preflight, duration, provider attempt verifier, pilot smoke. | Yes for live providers | Fixtures yes | +4% media | Items 1, 6 |
 | 9 | P1 | Media output quality proof under broad use cases | Media quality | Commercial output must be client-ready. | Media script quality verifier exists. | Sample multiple industries, durations, platforms, avatar/no-avatar modes. | Fixture QA and owner review set. | No unless live generation | Yes | +3% media | Item 8 |
 | 10 | P1 | Human/avatar likeness consent and quality proof | Privacy/media | Likeness misuse is high trust/legal risk. | Human/avatar modes exist. | Consent record, asset linkage, client-safe messaging, no-human compliance. | Consent/privacy verifier and media fixtures. | Yes for policy | Yes | +3% security | Items 3, 9 |
@@ -97,21 +98,9 @@ One-sentence truth statement: the platform has serious safety architecture, but 
 
 ## 6. The Next 10 Codex Tasks
 
-1. Task name: Prove billing credit spend governance.
-   Goal: enforce package, credit, approval, and provider-cost audit around execution.
-   Why now: production route cutover readiness is proven synthetically; paid launch now needs financial controls to prevent provider spend from escaping entitlement, credit, and owner approval.
-   Files to inspect: billing ledger, entitlement boundary, Stripe routes, media preflight.
-   Files likely changed: billing/credit runtime and verifier.
-   Commands/verifiers: billing ledger verifier, entitlement verifier, Stripe test verifier.
-   Live spend: Stripe test or live depending approval.
-   Owner approval needed: yes for live mode.
-   Expected commit message: `Prove billing credit spend governance`.
-   Done criteria: reserve/finalize/reverse/refund paths reconcile and block unauthorized execution.
-   Do not do list: no unapproved Stripe live charges.
-
-2. Task name: Prove Complete Media live provider final deliverable.
+1. Task name: Prove Complete Media live provider final deliverable.
    Goal: prove a capped provider-generated final asset can persist, surface, and recover through durable job/asset metadata.
-   Why now: customers pay for a completed deliverable, not just synthetic infrastructure proof.
+   Why now: route readiness and synthetic billing/credit spend governance are proven; customers pay for a completed deliverable, not just synthetic infrastructure proof.
    Files to inspect: media provider runtime, durable asset delivery, route/status boundaries, Complete Media popup.
    Files likely changed: media runtime verifier/docs or small asset/status mapping only if a defect is found.
    Commands/verifiers: media preflight/script/duration/portal verifiers, synthetic asset verifier, provider-smoke evidence capture.
@@ -120,6 +109,18 @@ One-sentence truth statement: the platform has serious safety architecture, but 
    Expected commit message: `Prove complete media final asset delivery`.
    Done criteria: provider output is durable, downloadable, client-safe, admin-diagnostic, and reconciled to job status.
    Do not do list: no unbounded provider calls, no public cutover, no billing mutation unless separately approved.
+
+2. Task name: Prove Stripe test billing reconciliation.
+   Goal: prove checkout/webhook/refund/subscription reconciliation in test mode without live charges.
+   Why now: synthetic billing governance is proven, but Stripe test reconciliation is still needed before private paid pilot.
+   Files to inspect: Stripe checkout route, webhook/refund routes, billing ledger boundary, entitlement activation runtime.
+   Files likely changed: Stripe test verifier/runtime guards only if a defect is found.
+   Commands/verifiers: billing governance verifier, billing ledger verifier, Stripe test webhook verifier.
+   Live spend: no real money in test mode; live mode remains disallowed.
+   Owner approval needed: yes for Stripe test-mode actions.
+   Expected commit message: `Prove Stripe test billing reconciliation`.
+   Done criteria: test checkout/webhook/refund shape reconciles to entitlement/ledger without secrets or live charges.
+   Do not do list: no Stripe live charges, no real customer billing mutation.
 
 3. Task name: Prove Complete Media UX under durable status.
    Goal: make client/admin media status, diagnostics, retry, preview, and download reliable.
@@ -244,17 +245,17 @@ One-sentence truth statement: the platform has serious safety architecture, but 
 
 ## 8. Readiness Percentage Model
 
-Current percentages after AWS-20 RDS/SQS/S3 proof consolidation, live synthetic durable handoff proof, synthetic durable worker lifecycle proof, synthetic failed-job/DLQ recovery proof, live no-provider worker consumption/delete proof, AWS-backed synthetic DLQ recovery proof, synthetic durable asset delivery proof, and synthetic production route cutover readiness proof:
+Current percentages after AWS-20 RDS/SQS/S3 proof consolidation, live synthetic durable handoff proof, synthetic durable worker lifecycle proof, synthetic failed-job/DLQ recovery proof, live no-provider worker consumption/delete proof, AWS-backed synthetic DLQ recovery proof, synthetic durable asset delivery proof, synthetic production route cutover readiness proof, and synthetic billing/credit spend governance proof:
 
 | Area | Current readiness |
 | --- | ---: |
 | AWS migration readiness | 99% |
-| Full SaaS production launch readiness | 87% |
+| Full SaaS production launch readiness | 89% |
 | Media generation production readiness | 76% |
 | Durable backend/job readiness | 82% |
 | Client UX readiness | 72% |
 | Admin ops readiness | 83% |
-| Billing/credit readiness | 58% |
+| Billing/credit readiness | 68% |
 | Observability/support readiness | 76% |
 | Security/privacy readiness | 68% |
 
@@ -262,12 +263,12 @@ Target percentages after gate closure:
 
 | Gate closed | AWS migration | Full SaaS launch | Media production | Durable backend/jobs | Client UX | Admin ops | Billing/credit | Observability/support | Security/privacy |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Gate 0 | 99% | 87% | 76% | 82% | 72% | 83% | 58% | 76% | 68% |
-| Gate 1 | 99% | 87% | 76% | 82% | 72% | 83% | 58% | 76% | 68% |
-| Gate 2 | 99% | 87% | 76% | 82% | 72% | 83% | 58% | 76% | 68% |
-| Gate 3 | 96% | 88% | 79% | 82% | 80% | 84% | 61% | 77% | 70% |
-| Gate 4 | 96% | 89% | 82% | 82% | 82% | 85% | 78% | 79% | 72% |
-| Gate 5 | 97% | 92% | 84% | 84% | 84% | 90% | 80% | 88% | 78% |
+| Gate 0 | 99% | 89% | 76% | 82% | 72% | 83% | 68% | 76% | 68% |
+| Gate 1 | 99% | 89% | 76% | 82% | 72% | 83% | 68% | 76% | 68% |
+| Gate 2 | 99% | 89% | 76% | 82% | 72% | 83% | 68% | 76% | 68% |
+| Gate 3 | 96% | 90% | 79% | 82% | 80% | 84% | 69% | 77% | 70% |
+| Gate 4 | 96% | 92% | 82% | 82% | 82% | 85% | 78% | 79% | 72% |
+| Gate 5 | 97% | 93% | 84% | 84% | 84% | 90% | 80% | 88% | 78% |
 | Gate 6 | 98% | 95% | 89% | 88% | 88% | 92% | 86% | 90% | 82% |
 | Gate 7 | 99% | 98% | 94% | 94% | 94% | 96% | 94% | 96% | 92% |
 
@@ -278,7 +279,7 @@ These targets are not automatic. They require verifier evidence, live proof wher
 No-launch conditions:
 - Durable worker lifecycle unproven.
 - Public cutover and paid/customer route execution remain unproven even though synthetic route readiness is proven.
-- Billing/credit/provider spend governance unproven.
+- Stripe test/live reconciliation and persistent billing/credit mutation unproven beyond synthetic governance.
 - Client views expose internal diagnostics, secrets, raw infrastructure identifiers, or raw technical packets.
 - Provider execution can happen without preflight, entitlement/credit approval, or audited owner override.
 - No rollback, support, or incident response path for stuck paid jobs.
@@ -306,16 +307,16 @@ Full public launch conditions:
 
 ## 10. Owner Decision Required Now
 
-Recommended immediate next action: prove billing credit spend governance with no unapproved Stripe live charges or provider calls, while keeping public cutover, customer traffic, and AWS-21+ off unless explicitly owner-approved.
+Recommended immediate next action: prove a capped complete-media final deliverable only after explicit owner approval for paid provider spend, while keeping public cutover, customer traffic, Stripe live charges, and AWS-21+ off unless separately owner-approved.
 
-Why: AWS-20 is now closed for RDS rollback, SQS send, and S3 marker lifecycle proof; bounded live synthetic durable write/send/status handoff is proven; local synthetic worker claim/retry/fail/complete lifecycle is proven; local synthetic failed-job/DLQ recovery is proven; one live no-provider worker receive/status/delete path is proven; AWS-backed synthetic DLQ recovery is proven; synthetic durable asset storage/retrieval/open/download with cleanup is proven; and synthetic production route cutover readiness is proven without providers, billing, credits, customer traffic, public cutover, Render removal, or AWS-21+ work. The next paid SaaS risk is whether billing, credits, package enforcement, refunds/reversals, and provider-cost evidence stay synchronized before real paid provider execution expands.
+Why: AWS-20 is now closed for RDS rollback, SQS send, and S3 marker lifecycle proof; bounded live synthetic durable write/send/status handoff is proven; local synthetic worker claim/retry/fail/complete lifecycle is proven; local synthetic failed-job/DLQ recovery is proven; one live no-provider worker receive/status/delete path is proven; AWS-backed synthetic DLQ recovery is proven; synthetic durable asset storage/retrieval/open/download with cleanup is proven; synthetic production route cutover readiness is proven; and synthetic billing/credit spend governance is proven without providers, media generation, Stripe live charges, real customer billing/credit mutations, customer traffic, public cutover, or Render removal. The next paid SaaS risk is whether a real provider-generated final deliverable can complete under those controls.
 
-What it will prove: billing/credit governance proof should establish whether entitlement, credit reservation, finalization, reversal/refund, admin override, and provider-cost evidence can block or reconcile paid work before real customer traffic is allowed.
+What it will prove: a capped final deliverable proof should establish whether provider output can be produced, persisted, opened/downloaded, statused, and diagnosed without bypassing preflight, credit, package, cost-cap, or recovery controls.
 
-What it will not prove: billing/credit governance proof will not by itself prove media generation quality, real provider-generated final deliverables, public launch readiness, support staffing, load, backup/restore, or private pilot success.
+What it will not prove: a capped final deliverable proof will not by itself prove Stripe live billing, public launch readiness, support staffing, load, backup/restore, security/privacy, or private pilot success.
 
-Whether it spends money: fixture and verifier work spends nothing. Stripe test-mode or live charge-affecting work requires explicit owner approval; live provider calls remain out of scope unless separately approved.
+Whether it spends money: yes if a provider smoke/final deliverable run is owner-approved. Stripe live charges remain out of scope unless separately approved.
 
-Whether it can affect customers: it should not affect customers if tests remain synthetic/test-mode, public cutover remains off, and live customer charges or provider calls remain blocked.
+Whether it can affect customers: it should not affect customers if tests remain synthetic/internal, public cutover remains off, and live customer charges remain blocked.
 
 Whether it requires owner approval: docs and local verifiers do not require live approval. Any Stripe live, provider live, customer-affecting, or additional AWS live action requires explicit owner approval.
