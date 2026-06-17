@@ -2,7 +2,7 @@
 
 Date: 2026-06-17
 
-Scope: original audit and plan only. No production runtime behavior was changed. Post-audit updates now record owner-approved AWS-20 live infrastructure proof and live no-provider worker consumption/delete proof without enabling route cutover, paid provider execution, long-running workers, Stripe, billing, credits, customer traffic, public cutover, or AWS-21+.
+Scope: original audit and plan only. No production runtime behavior was changed. Post-audit updates now record owner-approved AWS-20 live infrastructure proof, live no-provider worker consumption/delete proof, and AWS-backed synthetic DLQ recovery proof without enabling route cutover, paid provider execution, long-running workers, Stripe, billing, credits, customer traffic, public cutover, or AWS-21+.
 
 ## Executive Truth Summary
 
@@ -10,11 +10,11 @@ The platform has made meaningful progress on safety boundaries, media cost contr
 
 Recommendation: no full public paid SaaS launch yet. The correct next state is limited internal-only validation, then a tightly controlled private paid pilot after live AWS rehearsal, durable worker lifecycle proof, billing/credit enforcement proof, observability, and support recovery are verified with synthetic or explicitly approved pilot workloads.
 
-Current production readiness: 79%
+Current production readiness: 80%
 
-AWS migration readiness: 98%
+AWS migration readiness: 99%
 
-Biggest blocker to paid launch: AWS-20 live infrastructure proof, bounded live synthetic durable write/send/status handoff, local synthetic durable worker lifecycle proof, local synthetic failed-job/DLQ recovery proof, and live no-provider worker consumption/delete proof are closed, but live DLQ recovery, final asset delivery, live provider execution, and billing/credit reconciliation are still not live-proven.
+Biggest blocker to paid launch: AWS-20 live infrastructure proof, bounded live synthetic durable write/send/status handoff, local synthetic durable worker lifecycle proof, local synthetic failed-job/DLQ recovery proof, live no-provider worker consumption/delete proof, and AWS-backed synthetic DLQ recovery proof are closed, but final asset delivery, live provider execution, billing/credit reconciliation, and production route cutover readiness are still not live-proven.
 
 Biggest risk to customer trust: a customer can pay or expect a complete result while media generation, status polling, asset delivery, support recovery, or provider failure handling is not yet proven end to end under production-like conditions.
 
@@ -28,8 +28,8 @@ Launch recommendation: limited private pilot only, and only after the P0 criteri
 
 | Area | Current readiness | Basis |
 | --- | ---: | --- |
-| AWS migration readiness | 98% | AWS-01 through AWS-20 boundaries, rollback, observability, route gates, sanitized RDS/SQS/S3 live infrastructure proof, one live synthetic durable write/send/status handoff proof, local synthetic durable worker lifecycle proof, local synthetic failed-job/DLQ recovery proof, and live no-provider worker consumption/delete proof exist; production route cutover and live DLQ recovery are still pending. |
-| Full SaaS production launch readiness | 79% | Frontend build, many guardrails, AWS-20 proof, dry-run route-gated durable handoff proof, one bounded live synthetic durable handoff proof, local synthetic worker lifecycle proof, local synthetic failed-job/DLQ recovery proof, and live no-provider worker consumption/delete proof pass, but live DLQ recovery, billing reconciliation, observability, support runbooks, load, security proof, and final asset delivery are incomplete. |
+| AWS migration readiness | 99% | AWS-01 through AWS-20 boundaries, rollback, observability, route gates, sanitized RDS/SQS/S3 live infrastructure proof, one live synthetic durable write/send/status handoff proof, local synthetic durable worker lifecycle proof, local synthetic failed-job/DLQ recovery proof, live no-provider worker consumption/delete proof, and AWS-backed synthetic DLQ recovery proof exist; production route cutover and final asset delivery are still pending. |
+| Full SaaS production launch readiness | 80% | Frontend build, many guardrails, AWS-20 proof, dry-run route-gated durable handoff proof, one bounded live synthetic durable handoff proof, local synthetic worker lifecycle proof, local synthetic failed-job/DLQ recovery proof, live no-provider worker consumption/delete proof, and AWS-backed synthetic DLQ recovery proof pass, but final asset delivery, billing reconciliation, observability, support runbooks, load, security proof, and provider execution are incomplete. |
 | Media generation production readiness | 72% | Script packet, preflight, duration-aware segments, high-credit confirmation, portal renderer, and provider safety gates exist; live portal/provider reliability is not fully proven. |
 | Billing/credit readiness | 58% | Entitlement and credit ledger boundaries exist, but live/test Stripe flows, durable credit reservation/finalization, refunds, and provider-cost reconciliation are not launch-proven. |
 | Client UX readiness | 68% | Client-safe/admin-safe separation and portal polish are present in key media paths; full status, recovery, billing, and failure UX still need end-to-end QA. |
@@ -37,7 +37,7 @@ Launch recommendation: limited private pilot only, and only after the P0 criteri
 | Observability readiness | 72% | AWS-19 sanitized diagnostics, incident bundles, and local synthetic failure/recovery evidence exist; external logging, alarms, dashboards, and incident drill evidence are not proven. |
 | Security/privacy readiness | 66% | Secrets redaction, client/admin filtering, and secret boundary work exist; tenant isolation, likeness consent, data retention, dependency/security audit, and live secret handling are not fully proven. |
 
-Previous tracked estimates from the migration sequence were AWS 90% and full SaaS 81%. After AWS-20 live infrastructure proof, dry-run route-gated durable handoff proof, bounded live synthetic durable write/send/status proof, local synthetic durable worker lifecycle proof, local synthetic failed-job/DLQ recovery proof, and live no-provider worker consumption/delete proof, AWS migration readiness is 98%, while full SaaS launch readiness is 79% because infrastructure and synthetic lifecycle/recovery proof do not equal paid-launch operational proof.
+Previous tracked estimates from the migration sequence were AWS 90% and full SaaS 81%. After AWS-20 live infrastructure proof, dry-run route-gated durable handoff proof, bounded live synthetic durable write/send/status proof, local synthetic durable worker lifecycle proof, local synthetic failed-job/DLQ recovery proof, live no-provider worker consumption/delete proof, and AWS-backed synthetic DLQ recovery proof, AWS migration readiness is 99%, while full SaaS launch readiness is 80% because infrastructure and synthetic lifecycle/recovery proof do not equal paid-launch operational proof.
 
 ## What Is Proven
 
@@ -52,6 +52,7 @@ Previous tracked estimates from the migration sequence were AWS 90% and full Saa
 | Route-gated durable job handoff dry-run proof | `verify_route_gated_durable_job_handoff.py`; `backend/app/runtime/aws_option_a_route_integration.py`; `verify_aws_option_a_durable_enqueue_dry_run.py`; `verify_durable_media_job_status_adapter.py` | Proves explicit route gates, rollback-safe durable proof record, queue packet preparation, redacted status readback, admin diagnostics, client-safe status, rollback blocking, and no workers/providers/Stripe/billing/credits/public cutover. |
 | Live synthetic durable write/send/status handoff | `backend/app/runtime/aws_option_a_live_durable_handoff.py`; `verify_live_synthetic_durable_handoff.py`; owner-approved 2026-06-17 run | Proves one synthetic non-customer durable DB write/read/status cleanup and one non-customer non-executable SQS handoff. Sanitized proof fields include `live_durable_write_passed=true`, `live_status_readback_passed=true`, `live_queue_send_passed=true`, `rollback_or_cleanup_performed=true`, `rollback_controls_blocked_when_enabled=true`, `durable_job_reference_hash=3f0b5a060474`, and `sqs_message_id_hash_prefix=902b0fcdf208`; workers, providers, Stripe, billing, credits, customer traffic, and public cutover remained off. |
 | Live no-provider worker consumption/delete proof | `backend/app/runtime/aws_option_a_live_no_provider_worker_consumption.py`; `verify_live_no_provider_worker_consumption.py`; owner-approved 2026-06-17 compact live rerun | Proves one synthetic non-customer, non-executable SQS worker message receive, durable claim once, duplicate-claim block, processing status, terminal status, and delete/ack. Sanitized proof fields include `live_worker_consumption_passed=true`, `queue_message_delete_or_ack_passed=true`, `synthetic_job_reference_hash=3bb4afc64527`, and `queue_message_id_hash_prefix=902b0fcdf208`; providers, media generation, Stripe, billing, credits, customer traffic, and public cutover remained off. |
+| AWS-backed synthetic DLQ recovery proof | `backend/app/runtime/aws_backed_synthetic_dlq_recovery.py`; `verify_aws_backed_synthetic_dlq_recovery.py`; owner-approved 2026-06-17 run | Proves synthetic DLQ-shaped failure classification, retry exhaustion/failed-terminal representation, admin recovery action, recovery/readback, redacted client/admin status, rollback blocking, and cleanup against AWS-backed durable status. Sanitized proof fields include `aws_backed_dlq_recovery_passed=true`, `recovery_or_requeue_passed=true`, `synthetic_job_reference_hash=7e1f64978bd4`, and `dlq_reference_hash=7131a9384b2b`; customer queue consumption, providers, media generation, Stripe, billing, credits, customer traffic, and public cutover remained off. |
 | Synthetic durable worker lifecycle proof | `backend/app/runtime/synthetic_durable_worker_lifecycle.py`; `verify_synthetic_durable_worker_lifecycle.py` | Proves local synthetic queued status, claim once, duplicate-claim block, processing status, retry state, terminal failed status, terminal completed status, terminal readback, DLQ/recovery shape, client-safe redaction, admin-safe diagnostics, and rollback blocking. Required proof fields include `synthetic_worker_lifecycle_attempted=true`, `synthetic_worker_lifecycle_passed=true`, `claim_once_passed=true`, `duplicate_claim_blocked=true`, `retry_state_represented=true`, `dlq_or_recovery_shape_present=true`, `provider_call_attempted=false`, `media_generation_attempted=false`, `stripe_call_attempted=false`, `billing_mutation_attempted=false`, `credit_mutation_attempted=false`, and `public_cutover_enabled=false`. |
 | Synthetic failed-job and DLQ recovery proof | `backend/app/runtime/synthetic_failed_job_recovery.py`; `verify_synthetic_failed_job_recovery.py` | Proves local synthetic failure classification, retry exhaustion, redacted DLQ shape, admin recovery action representation, client-safe failed status, admin-safe redacted diagnostics, recovered/requeued state, terminal failed readback, synthetic recovered/completed state, and rollback blocking. Required proof fields include `synthetic_failed_job_recovery_attempted=true`, `synthetic_failed_job_recovery_passed=true`, `failure_classification_passed=true`, `retry_exhaustion_represented=true`, `dlq_shape_present=true`, `dlq_reference_redacted=true`, `admin_recovery_action_represented=true`, `client_safe_failed_status_redacted=true`, `admin_diagnostics_redacted=true`, `recovered_or_requeued_state_represented=true`, `terminal_failed_readback_passed=true`, `terminal_recovered_or_completed_represented=true`, `provider_call_attempted=false`, `media_generation_attempted=false`, `stripe_call_attempted=false`, `billing_mutation_attempted=false`, `credit_mutation_attempted=false`, and `public_cutover_enabled=false`. |
 | Secrets/config boundary | Commit `ee59279 Expand media secret surface coverage`; `backend/app/runtime/secrets_manager_config_boundary.py`; `verify_secrets_manager_config_boundary.py`; broad media provider secret categories are modeled without exposing values. | Proven as readiness surface. |
@@ -67,7 +68,7 @@ Previous tracked estimates from the migration sequence were AWS 90% and full Saa
 ## What Is Not Proven
 
 - Production route cutover writing persistent accepted jobs and sending worker-consumable queue messages under AWS gates.
-- Live AWS-backed DLQ handling and recovery.
+- Production route-cutover worker/DLQ routing under full worker conditions.
 - Live final S3 asset lifecycle with signed/open/download delivery behavior.
 - Secrets Manager retrieval under production IAM with no value exposure.
 - Route cutover writing durable RDS records and sending SQS messages under AWS gates.
@@ -87,7 +88,7 @@ Previous tracked estimates from the migration sequence were AWS 90% and full Saa
 
 | Priority | Domain | Gap | Current evidence | Launch impact | Risk if ignored | Required fix | Verification proof required | Owner approval needed? | Estimated readiness gain | Recommended order |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| P0 | Live DLQ recovery | Local synthetic DLQ/recovery, failed-job recovery, and live no-provider worker consumption/delete are proven, but live queue failure, DLQ routing, and admin recovery are not live-proven. | Queue/DLQ boundaries exist; AWS-20 SQS send, live handoff SQS send, `verify_synthetic_durable_worker_lifecycle.py`, `verify_synthetic_failed_job_recovery.py`, and `verify_live_no_provider_worker_consumption.py` pass. | Blocks reliable media and agent fulfillment. | Paid work can stall or fail without AWS-backed recoverable diagnostics, retry, or terminal status. | Prove bounded AWS-backed failed synthetic job state, DLQ handoff, admin recovery action, and client-safe failure status without paid providers. | Live DLQ/failure verifier with redacted status polling, support action evidence, and no provider/billing side effects. | Yes if AWS-backed | +3% SaaS | 1 |
+| P0 | Final asset delivery | Durable job recovery proof is stronger, but paid customers still need accessible final deliverables. | S3/local asset boundaries exist and AWS-20 S3 marker lifecycle is proven, but signed/open/download final-output delivery is not. | Blocks paid customer value. | A job can complete technically while the customer cannot retrieve the result. | Prove synthetic final asset storage, client-safe open/download, admin-safe recovery metadata, retention, and cleanup. | Durable asset delivery verifier with no public object exposure or raw infrastructure leakage. | Yes if AWS-backed S3 | +4% SaaS | 1 |
 | P0 | Production durable route cutover | Synthetic handoff is proven through a controlled boundary, but production API route cutover remains disabled. | `aws_option_a_live_durable_handoff.py` proof exists without changing production route behavior. | Blocks AWS cutover confidence. | Production route could still fail when wired to the live adapter path. | Wire only after worker/billing/support gates are ready; keep owner approval and rollback controls. | Route cutover verifier plus synthetic production-route fixture with no customer/provider/billing side effects. | Yes | +3% SaaS | 3 |
 | P0 | Billing/credits | Credit ledger is placeholder/no-mutation and Stripe live/test flows are not reconciled. | `billing_credit_ledger_boundary.py`; Stripe routes exist. | Blocks paid SaaS trust and spend governance. | Customers charged without matching credits, or providers called without paid entitlement. | Test-mode Stripe checkout/webhook/refund plus credit reserve/finalize/reverse. | End-to-end billing verifier and audit ledger evidence with no secret output. | Yes | +8% SaaS | 4 |
 | P0 | Media paid-provider control | Preflight is strong, but live portal-to-provider-to-final-asset path needs current proof. | Media preflight, script packet, segment, portal verifiers. | Blocks paid media launch. | Provider credits may burn on incomplete or untracked outputs. | Run explicit 5s smoke and 25s confirmed path with capped owner-approved provider budget. | Durable parent/child attempts, final MP4, provider job IDs, status, cost estimate/actual, no raw secrets. | Yes | +4% media | 5 |
@@ -117,9 +118,8 @@ Closed AWS-20 proof:
 - Secret redaction in every JSON output.
 - Rollback/kill-switch remains able to force compatibility fallback.
 
-Remaining after AWS-20, live synthetic handoff, and live no-provider worker consumption/delete proof:
+Remaining after AWS-20, live synthetic handoff, live no-provider worker consumption/delete proof, and AWS-backed synthetic DLQ recovery proof:
 - Production route cutover remains disabled and must be wired only after worker, billing, support, and rollback proof are ready.
-- Live DLQ recovery proof.
 - Signed final asset delivery proof.
 
 Exit criteria:
@@ -136,7 +136,7 @@ Required proof:
 - Local synthetic worker claim/retry/fail/complete lifecycle is already proven.
 - Local synthetic failed-job and DLQ recovery is already proven.
 - Live no-provider worker queue consumption/delete is already proven.
-- Failed job recovery and DLQ behavior need live AWS-backed evidence.
+- AWS-backed synthetic DLQ recovery is already proven.
 
 Exit criteria:
 - Synthetic job can be accepted, queued, processed, failed/retried, completed, and status-polled without provider spend.
@@ -291,82 +291,82 @@ Current state: not recommended.
 
 ## Immediate Next 10 Actions
 
-1. Objective: prove live AWS-backed DLQ recovery with synthetic jobs.
-   Files likely touched: queue/DLQ adapter, job status adapter, admin diagnostics, support recovery fixtures, and verifier.
-   Commands/verifiers: live DLQ/failure verifier; route/status verifier; rollback verifier; live synthetic handoff safe-default verifier.
-   Expected commit message: `Prove AWS backed DLQ recovery`.
-   Stop condition: failed synthetic jobs are unrecoverable, client sees internals, or provider/billing/customer side effects start.
-
-2. Objective: prove durable asset storage and signed delivery using synthetic assets.
+1. Objective: prove durable asset storage and signed delivery using synthetic assets.
    Files likely touched: S3 asset delivery boundary/live adapter, asset store bridge, asset verifier.
    Commands/verifiers: S3 asset boundary verifier; synthetic asset delivery verifier.
    Expected commit message: `Prove durable asset delivery`.
    Stop condition: public object exposure, client local-path exposure, missing cleanup, or unsigned private asset leak.
 
-3. Objective: run complete media portal path with cost-capped 5s smoke and one owner-approved confirmed run.
+2. Objective: run complete media portal path with cost-capped 5s smoke and one owner-approved confirmed run.
    Files likely touched: only if a defect is found; likely `UniversalCompleteMediaRunAgentPanel.tsx`, direct media runtime, media verifiers.
    Commands/verifiers: frontend build; media preflight verifier; script packet verifier; duration verifier; portal renderer verifier; live evidence capture.
    Expected commit message: `Record complete media pilot execution proof`.
    Stop condition: paid call without preflight/confirmation, final asset missing, stale status, partial CTA/script, or untracked provider attempt.
 
-4. Objective: close billing/credit/Stripe test-mode spend governance.
+3. Objective: close billing/credit/Stripe test-mode spend governance.
    Files likely touched: billing/credit ledger runtime, Stripe route/runtime, entitlement boundary, billing verifiers.
    Commands/verifiers: billing credit ledger verifier; entitlement verifier; Stripe test webhook verifier; backend compile.
    Expected commit message: `Prove billing credit spend governance`.
    Stop condition: provider execution can bypass credit reservation, Stripe event is not idempotent, or refund/reversal cannot be audited.
 
-5. Objective: close client/admin status and support recovery UX for queued, failed, retrying, and completed work.
+4. Objective: close client/admin status and support recovery UX for queued, failed, retrying, and completed work.
    Files likely touched: admin/client portal components, status routes, support routes, renderer verifiers.
    Commands/verifiers: frontend build; portal renderer verifier; support/status route verifier; screenshot QA if available.
    Expected commit message: `Close launch status and support UX proof`.
    Stop condition: client sees raw diagnostics/secrets, admin cannot see recovery evidence, or failed jobs are confusing.
 
-6. Objective: wire and prove redacted observability outputs for launch operations.
+5. Objective: wire and prove redacted observability outputs for launch operations.
    Files likely touched: observability runtime, admin diagnostics routes, runbook docs, verifiers.
    Commands/verifiers: observability verifier; route integration verifier; redaction tests; optional CloudWatch test only with owner approval.
    Expected commit message: `Wire launch observability evidence`.
    Stop condition: external logging emits secrets, no correlation ID, no alertable failure signal, or no rollback instruction.
 
-7. Objective: perform security/privacy/tenant/likeness consent audit and patch blockers.
+6. Objective: perform security/privacy/tenant/likeness consent audit and patch blockers.
    Files likely touched: auth/session/tenant helpers, media asset consent handling, client/admin filters, privacy docs, verifiers.
    Commands/verifiers: tenant isolation tests; redaction tests; dependency/security scan; frontend build.
    Expected commit message: `Close launch security privacy audit`.
    Stop condition: cross-tenant read/write possible, likeness mode lacks consent evidence, or sensitive values appear in client view.
 
-8. Objective: run load and backpressure smoke proof without paid providers.
+7. Objective: run load and backpressure smoke proof without paid providers.
    Files likely touched: synthetic load smoke verifier, queue/status adapters, route diagnostics, and docs if evidence is recorded.
    Commands/verifiers: synthetic load smoke; route/status verifiers; worker no-provider fixtures.
    Expected commit message: `Add launch load smoke proof`.
    Stop condition: customer traffic, paid providers, uncontrolled worker loops, or public cutover start.
 
-9. Objective: prepare and rehearse the controlled private paid pilot runbook.
+8. Objective: prepare and rehearse the controlled private paid pilot runbook.
     Files likely touched: launch runbook doc, incident runbook doc, support/billing/media checklist docs.
     Commands/verifiers: no paid providers unless owner-approved; run all launch gate verifiers; frontend build; backend compile.
     Expected commit message: `Add private paid pilot launch runbook`.
     Stop condition: any P0 unresolved, no owner monitoring plan, no spend cap, no refund/recovery path, or no rollback plan.
 
-10. Objective: prepare final paid launch checklist after private pilot evidence.
+9. Objective: prepare final paid launch checklist after private pilot evidence.
     Files likely touched: production master plan, audit plan, pilot runbook, billing/media/support/security proof docs.
     Commands/verifiers: full gate verifier set, frontend build, backend compile, security/privacy/load proof references.
     Expected commit message: `Prepare final paid launch checklist`.
     Stop condition: any unresolved P0/P1 launch blocker, missing owner signoff, or unclear rollback/refund/support path.
 
+10. Objective: prove backup and restore readiness.
+    Files likely touched: backup/restore runbook, RDS/S3 recovery verifier, evidence/audit docs.
+    Commands/verifiers: restore drill verifier; asset recovery verifier; backend compile.
+    Expected commit message: `Prove backup restore readiness`.
+    Stop condition: customer data exposure, destructive production action, missing rollback, or unclear RPO/RTO.
+
 ## Intentionally Not Changed
 
-- A disabled-by-default live synthetic durable handoff proof boundary was added; no production route, worker, provider, billing, credit, Stripe, media, or frontend behavior was changed.
+- Disabled-by-default proof boundaries were added; no production route, worker, provider, billing, credit, Stripe, media, or frontend behavior was changed.
 - No AWS matrix rows were added.
 - No later migration rows were created.
 - No frontend UI, backend production route, provider, billing, credit, Stripe, worker, or AWS migration cutover behavior was changed.
-- The latest live proof recorded one owner-approved synthetic non-customer, non-executable SQS worker message receive/delete plus durable synthetic status claim/readback; previous live handoff proof recorded one bounded synthetic durable DB write/read/status cleanup and one non-customer non-executable SQS send.
+- The latest live proof recorded one owner-approved AWS-backed synthetic DLQ-shaped recovery/status readback with redacted diagnostics; previous live proofs recorded one synthetic SQS worker message receive/delete, one bounded synthetic durable DB write/read/status cleanup, and one non-customer non-executable SQS send.
 - No provider calls, S3 uploads, Stripe calls, worker loops, media generation, billing mutations, credit mutations, customer traffic, public cutover, or AWS-21+ work occurred.
 - No agent catalogue, media runtime, or portal renderer changes were made.
 
 ## Verification Notes From This Audit
 
 Completed in this proof pass:
-- Safe-default `verify_live_synthetic_durable_handoff.py` passed.
-- Owner-approved live `verify_live_synthetic_durable_handoff.py` passed with sanitized DB/SQS/status proof.
-- Local `verify_synthetic_durable_worker_lifecycle.py` passed with no live AWS calls, worker loop, provider calls, media generation, Stripe, billing, credits, customer traffic, or public cutover.
+- Safe-default `verify_aws_backed_synthetic_dlq_recovery.py` passed before live mode.
+- Owner-approved live `verify_aws_backed_synthetic_dlq_recovery.py` passed with sanitized AWS-backed synthetic DLQ recovery proof.
+- Providers, media generation, Stripe, billing, credits, customer traffic, and public cutover remained off.
 
 Required after this report:
 - Full safe regression suite must pass after live flags are cleared.
