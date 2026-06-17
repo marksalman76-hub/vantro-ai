@@ -63,6 +63,17 @@ def main() -> int:
         "Admin portal payload provider check line is missing.",
     )
     require(
+        'video_provider: "auto"' in component
+        and 'audio_provider: "auto"' in component
+        and 'provider_router_mode: "category_readiness"' in component,
+        "Complete Media popup must request provider selection through the category router.",
+    )
+    require(
+        'video_provider: "runway"' not in component
+        and 'audio_provider: "elevenlabs"' not in component,
+        "Complete Media popup must not hardcode a Runway + ElevenLabs provider pair.",
+    )
+    require(
         "friendlyMediaStatus" in component and "friendlyProviderFailureMessage" in component,
         "Portal must map backend/provider statuses into friendly user-facing copy.",
     )
@@ -85,6 +96,11 @@ def main() -> int:
         "data-complete-media-provider-diagnostics-summary" in component
         and "Visual generation needs attention" in component,
         "Provider failures must show a clean default summary before diagnostics.",
+    )
+    require(
+        "Provider called:" in component
+        and "Runway called:" not in component,
+        "Provider diagnostics must be vendor-neutral in the default admin UI.",
     )
     require(
         "JSON.stringify(preflightResult.media_script_packet, null, 2)" in component

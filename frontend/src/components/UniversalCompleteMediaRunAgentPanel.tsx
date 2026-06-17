@@ -686,13 +686,13 @@ export default function UniversalCompleteMediaRunAgentPanel({
         const providerJobId = String(attempt?.provider_job_id || "");
         const jobId = String(attempt?.job_id || "");
         const status = normaliseSegmentStatus(attempt?.status || "failed");
-        const runwayCalled = provider.toLowerCase() === "runway" && Boolean(providerJobId || jobId || !String(attempt?.status || "").includes("blocked"));
+        const providerCalled = Boolean(providerJobId || jobId || !String(attempt?.status || "").includes("blocked"));
         return {
           provider,
           status,
           jobId,
           providerJobId,
-          runwayCalled,
+          providerCalled,
           safeErrorSummary: String(attempt?.safe_error_summary || attempt?.reason || ""),
         };
       })
@@ -1076,8 +1076,9 @@ export default function UniversalCompleteMediaRunAgentPanel({
       output_type: outputType,
       duration_seconds: options.smokeTest ? "5" : durationSeconds,
       aspect_ratio: aspectRatio,
-      video_provider: "runway",
-      audio_provider: "elevenlabs",
+      video_provider: "auto",
+      audio_provider: "auto",
+      provider_router_mode: "category_readiness",
       requested_at: new Date().toISOString(),
       requested_from: "complete_media_popup",
       run_direct_from_popup: true,
@@ -1143,8 +1144,9 @@ export default function UniversalCompleteMediaRunAgentPanel({
       use_generated_script: Boolean(options.useGeneratedScript),
       script_approved: Boolean(options.useGeneratedScript),
 
-      video_provider: "runway",
-      audio_provider: "elevenlabs",
+      video_provider: "auto",
+      audio_provider: "auto",
+      provider_router_mode: "category_readiness",
       provider: "universal_complete_media_workflow",
       media_type: "complete_video",
       asset_type: "video",
@@ -1208,7 +1210,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
         setPreflightResult(result);
         const summary = paidMediaConfirmationSummary(result);
         setStatusMessage(
-          `${summary.requested || durationSeconds}s requested requires paid provider confirmation: ${summary.visualCalls} Runway visual call${summary.visualCalls === 1 ? "" : "s"} + ${summary.audioCalls} ElevenLabs audio call${summary.audioCalls === 1 ? "" : "s"}. No paid provider calls have started yet.`
+          `${summary.requested || durationSeconds}s requested requires paid provider confirmation: ${summary.visualCalls} visual/media provider call${summary.visualCalls === 1 ? "" : "s"} + ${summary.audioCalls} voice/audio provider call${summary.audioCalls === 1 ? "" : "s"}. No paid provider calls have started yet.`
         );
         setRunning(false);
         onResult?.(result);
@@ -1932,7 +1934,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
                             {summary.requested || durationSeconds}s requested {"->"} {summary.segments || preflightResult?.segment_count || 0} visual segment{Number(summary.segments || preflightResult?.segment_count || 0) === 1 ? "" : "s"}
                           </div>
                           <div>
-                            Estimated paid calls: {summary.visualCalls} Runway visual call{summary.visualCalls === 1 ? "" : "s"} + {summary.audioCalls} ElevenLabs audio call{summary.audioCalls === 1 ? "" : "s"}
+                            Estimated paid calls: {summary.visualCalls} visual/media provider call{summary.visualCalls === 1 ? "" : "s"} + {summary.audioCalls} voice/audio provider call{summary.audioCalls === 1 ? "" : "s"}
                           </div>
                           <div>Risk level: {summary.risk}</div>
                           <div>No paid provider calls have started yet</div>
@@ -2111,7 +2113,7 @@ export default function UniversalCompleteMediaRunAgentPanel({
                             <div>
                               <strong>{attempt.provider}</strong> {attempt.status}
                             </div>
-                            <div>Runway called: {attempt.provider.toLowerCase() === "runway" ? (attempt.runwayCalled ? "yes" : "no") : "not applicable"}</div>
+                            <div>Provider called: {attempt.providerCalled ? "yes" : "no"}</div>
                             {attempt.providerJobId ? <div>Provider job ID: {attempt.providerJobId}</div> : null}
                             {attempt.jobId ? <div>Child job ID: {attempt.jobId}</div> : null}
                             {attempt.safeErrorSummary ? <div>Safe error summary: {attempt.safeErrorSummary}</div> : null}

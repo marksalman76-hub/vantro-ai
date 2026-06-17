@@ -267,6 +267,8 @@ def main() -> int:
         "runway_credential_readiness_verified",
         "elevenlabs_credential_readiness_verified",
         "both_provider_readiness_verified",
+        '"video_provider": "runway"',
+        '"audio_provider": "elevenlabs"',
     ]:
         require(forbidden not in proof_source, f"Complete media proof must not hardcode provider-pair readiness: {forbidden}")
 

@@ -1064,8 +1064,8 @@ def _ucm_controls(payload: Dict[str, Any]) -> Dict[str, Any]:
         "compliance_notes": _ucm_text(_ucm_lookup(safe, "compliance_notes", "must_avoid")),
         "number_of_variations": _ucm_text(_ucm_lookup(safe, "number_of_variations", default="1")),
         "final_delivery_format": _ucm_text(_ucm_lookup(safe, "final_delivery_format", default="mp4")),
-        "video_provider": _ucm_text(_ucm_lookup(safe, "video_provider", "provider", default="runway")).lower(),
-        "audio_provider": _ucm_text(_ucm_lookup(safe, "audio_provider", default="elevenlabs")).lower(),
+        "video_provider": _ucm_text(_ucm_lookup(safe, "video_provider", "provider", default="auto")).lower(),
+        "audio_provider": _ucm_text(_ucm_lookup(safe, "audio_provider", default="auto")).lower(),
     }
 
     return controls
@@ -1111,6 +1111,48 @@ def _ucm_provider_executable(provider: str, media_type: str) -> Dict[str, Any]:
         "customer_safe": True,
         "credential_values_exposed": False,
     }
+
+
+UCM_AUTO_PROVIDER_VALUES = {
+    "",
+    "auto",
+    "best_available",
+    "category_readiness",
+    "category_router",
+    "complete_media",
+    "complete_video",
+    "provider_router",
+    "router",
+    "universal_complete_media",
+    "universal_complete_media_workflow",
+}
+
+
+def _ucm_provider_stack_order_for_media(media_type: str) -> list[str]:
+    aliases = {
+        "video": {"video", "image", "avatar_video", "lip_sync"},
+        "audio": {"audio", "voiceover", "music", "sfx", "sound_effects"},
+    }.get(str(media_type or "").strip().lower(), {str(media_type or "").strip().lower()})
+    ordered: list[str] = []
+    for provider_config in DIRECT_PROVIDER_STACK:
+        provider = str(provider_config.get("provider") or "").strip().lower()
+        category = str(provider_config.get("category") or "").strip().lower()
+        supports = {str(item or "").strip().lower() for item in list(provider_config.get("supports") or [])}
+        category_matches = any(alias and alias in category for alias in aliases)
+        if provider and provider not in ordered and (supports.intersection(aliases) or category_matches):
+            ordered.append(provider)
+    return ordered
+
+
+def _ucm_provider_order_for_media(requested_provider: str, media_type: str) -> list[str]:
+    requested = str(requested_provider or "").strip().lower()
+    ordered: list[str] = []
+    if requested and requested not in UCM_AUTO_PROVIDER_VALUES:
+        ordered.append(requested)
+    for provider in _ucm_provider_stack_order_for_media(media_type):
+        if provider and provider not in ordered:
+            ordered.append(provider)
+    return ordered
 
 
 UCM_DANGLING_CTA_FRAGMENTS = [
@@ -1752,9 +1794,10 @@ def _ucm_preflight_universal_media_job(payload: Dict[str, Any], plan: Dict[str, 
     executable_visual = [item for item in visual_readiness if item.get("executable")]
     non_executable_visual = [item for item in visual_readiness if not item.get("executable")]
 
-    audio_provider = str(controls.get("audio_provider") or "elevenlabs").strip().lower()
-    audio_readiness = [_ucm_provider_executable(audio_provider, "audio")]
+    audio_provider_order = _ucm_audio_provider_order(controls.get("audio_provider"))
+    audio_readiness = [_ucm_provider_executable(provider, "audio") for provider in audio_provider_order]
     executable_audio = [item for item in audio_readiness if item.get("executable")]
+    non_executable_audio = [item for item in audio_readiness if not item.get("executable")]
 
     composition_available = bool(shutil.which("ffmpeg"))
     estimated_credit_risk = _ucm_estimated_credit_risk(
@@ -1777,8 +1820,7 @@ def _ucm_preflight_universal_media_job(payload: Dict[str, Any], plan: Dict[str, 
             "media_type": "audio",
             "reason": item.get("blocked_reason") or "Audio provider is not executable.",
         }
-        for item in audio_readiness
-        if not item.get("executable")
+        for item in non_executable_audio
     ]
 
     if not controls.get("prompt"):
@@ -1868,9 +1910,11 @@ def _ucm_preflight_universal_media_job(payload: Dict[str, Any], plan: Dict[str, 
         "executable_visual_providers": executable_visual,
         "non_executable_visual_providers": non_executable_visual,
         "executable_audio_providers": executable_audio,
+        "non_executable_audio_providers": non_executable_audio,
         "composition_path_available": composition_available,
         "composition_tool": "ffmpeg" if composition_available else "",
         "selected_visual_provider_order": [item.get("provider") for item in executable_visual],
+        "selected_audio_provider_order": [item.get("provider") for item in executable_audio],
         "selected_audio_provider": executable_audio[0].get("provider") if executable_audio else "",
         "estimated_stages": [
             "preflight",
@@ -2428,12 +2472,11 @@ def _ucm_provider_failure_summary(result: Dict[str, Any]) -> str:
 
 
 def _ucm_video_provider_order(requested_provider: str) -> list[str]:
-    ordered: list[str] = []
-    for provider in [requested_provider, "kling", "replicate", "openai"]:
-        key = str(provider or "").strip().lower()
-        if key and key not in ordered:
-            ordered.append(key)
-    return ordered
+    return _ucm_provider_order_for_media(requested_provider, "video")
+
+
+def _ucm_audio_provider_order(requested_provider: str) -> list[str]:
+    return _ucm_provider_order_for_media(requested_provider, "audio")
 
 
 def _ucm_attempt_record(provider: str, result: Dict[str, Any], attempt_number: int) -> Dict[str, Any]:
@@ -2848,6 +2891,14 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
             ]
             if two_provider_smoke_proof and max_visual_provider_calls:
                 executable_visual_provider_order = executable_visual_provider_order[:max_visual_provider_calls]
+            executable_audio_provider_order = [
+                str(item.get("provider") or "").strip().lower()
+                for item in list(preflight.get("executable_audio_providers") or [])
+                if item.get("provider")
+            ]
+            if two_provider_smoke_proof and max_audio_provider_calls:
+                executable_audio_provider_order = executable_audio_provider_order[:max_audio_provider_calls]
+            selected_audio_provider = executable_audio_provider_order[0] if executable_audio_provider_order else ""
 
             provider_voice_prompt = _ucm_provider_safe_voice_prompt(
                 media_script_packet.get("voiceover_script") or "",
@@ -2905,7 +2956,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
             def _run_audio_job() -> Dict[str, Any]:
                 return execute_direct_media_provider_job({
                     "agent_id": controls["agent_id"],
-                    "provider": controls["audio_provider"],
+                    "provider": selected_audio_provider,
                     "media_type": "audio",
                     "prompt": provider_voice_prompt,
                     "duration_seconds": requested_duration,
@@ -2990,7 +3041,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                         **_ucm_visual_child_jobs(visual_attempts, generated_segments[0] if generated_segments else None),
                         "audio": {
                             "job_id": audio_result.get("job_id"),
-                            "provider": controls["audio_provider"],
+                            "provider": selected_audio_provider,
                             "status": audio_result.get("status"),
                         },
                     },
@@ -3105,6 +3156,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     "video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
                     "selected_video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
                     "selected_video_provider": generated_segments[0].get("provider") if generated_segments else controls["video_provider"],
+                    "audio_provider": selected_audio_provider,
                     "audio_job_id": audio_result.get("job_id"),
                     "audio_status": audio_result.get("status"),
                     "audio_error": audio_result.get("error") or audio_result.get("reason") or audio_result.get("message"),
@@ -3112,7 +3164,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                         **_ucm_visual_child_jobs(visual_attempts, generated_segments[0] if generated_segments else None),
                         "audio": {
                             "job_id": audio_result.get("job_id"),
-                            "provider": controls["audio_provider"],
+                            "provider": selected_audio_provider,
                             "status": audio_result.get("status"),
                         },
                     },
@@ -3138,6 +3190,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "stage": "composition_stitching",
                 "video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
                 "audio_job_id": audio_result.get("job_id"),
+                "audio_provider": selected_audio_provider,
                 "selected_video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
                 "selected_video_provider": generated_segments[0].get("provider") if generated_segments else controls["video_provider"],
                 "requested_duration_seconds": requested_duration,
@@ -3151,7 +3204,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     **_ucm_visual_child_jobs(visual_attempts, generated_segments[0] if generated_segments else None),
                     "audio": {
                         "job_id": audio_result.get("job_id"),
-                        "provider": controls["audio_provider"],
+                        "provider": selected_audio_provider,
                         "status": audio_result.get("status"),
                     },
                 },
@@ -3179,6 +3232,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     "status": "universal_complete_media_composition_failed",
                     "video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
                     "audio_job_id": audio_result.get("job_id"),
+                    "audio_provider": selected_audio_provider,
                     "composition_job_id": composition_result.get("job_id"),
                     "selected_video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
                     "selected_video_provider": generated_segments[0].get("provider") if generated_segments else controls["video_provider"],
@@ -3194,7 +3248,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                         **_ucm_visual_child_jobs(visual_attempts, generated_segments[0] if generated_segments else None),
                         "audio": {
                             "job_id": audio_result.get("job_id"),
-                            "provider": controls["audio_provider"],
+                            "provider": selected_audio_provider,
                             "status": audio_result.get("status"),
                         },
                         "composition": {
@@ -3225,6 +3279,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "provider_result_status": "universal_complete_media_ready" if final_status == "completed" else "completed_duration_shortfall",
                 "video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
                 "audio_job_id": audio_result.get("job_id"),
+                "audio_provider": selected_audio_provider,
                 "composition_job_id": composition_result.get("job_id"),
                 "selected_video_job_id": generated_segments[0].get("job_id") if generated_segments else "",
                 "selected_video_provider": generated_segments[0].get("provider") if generated_segments else controls["video_provider"],
@@ -3256,7 +3311,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     **_ucm_visual_child_jobs(visual_attempts, generated_segments[0] if generated_segments else None),
                     "audio": {
                         "job_id": audio_result.get("job_id"),
-                        "provider": controls["audio_provider"],
+                        "provider": selected_audio_provider,
                         "status": audio_result.get("status"),
                     },
                     "composition": {
