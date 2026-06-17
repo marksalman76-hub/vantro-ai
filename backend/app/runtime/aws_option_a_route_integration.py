@@ -19,6 +19,12 @@ from backend.app.runtime.aws_option_a_route_cutover_boundary import (
     enabled,
     redact_secret_values,
 )
+from backend.app.runtime.aws_option_a_rollback_controls import (
+    AWS_OPTION_A_FORCE_COMPATIBILITY_FALLBACK_FLAG,
+    AWS_OPTION_A_KILL_SWITCH_ENABLED_FLAG,
+    AWS_OPTION_A_ROLLBACK_REASON_FLAG,
+    build_aws_option_a_rollback_control_decision,
+)
 from backend.app.runtime.durable_media_job_status_adapter import build_durable_media_job_status_record
 from backend.app.runtime.media_queue_adapter_boundary import build_media_queue_message, validate_media_queue_message
 from backend.app.runtime.rds_repository_persistence_boundary import build_repository_operation_result
@@ -165,6 +171,8 @@ def route_mode_metadata(evaluation_or_decision: Mapping[str, Any], route_kind: s
         "route_mode": clean_text(evaluation_or_decision.get("route_mode"), 120),
         "selected_runtime_path": clean_text(evaluation_or_decision.get("selected_runtime_path"), 180),
         "route_execution_allowed": bool(evaluation_or_decision.get("route_execution_allowed")),
+        "aws_route_blocked_by_rollback": bool(evaluation_or_decision.get("aws_route_blocked_by_rollback")),
+        "compatibility_fallback_selected": bool(evaluation_or_decision.get("compatibility_fallback_selected")),
         "live_routes_switched": False,
         "rds_write_attempted": False,
         "sqs_send_attempted": False,
@@ -403,6 +411,8 @@ def build_durable_enqueue_dry_run_boundary(
         reason = "route_not_ready_or_authority_blocked"
         if clean_text(evaluation_base.get("route_mode")) == ROUTE_MODE_ENABLED_MISSING_VALIDATION:
             reason = "missing_validation_evidence"
+        if evaluation_base.get("aws_route_blocked_by_rollback"):
+            reason = "aws_route_blocked_by_rollback"
         return redact_secret_values({
             "boundary": "aws17_durable_enqueue_dry_run_boundary",
             "status": "not_prepared_until_route_ready",
@@ -520,21 +530,45 @@ def build_route_mode_evaluation(
 ) -> Dict[str, Any]:
     route_intent = aws_route_cutover_intent(env, route_kind)
     diagnostic_requested = diagnostics_requested(payload=payload, query_params=query_params, headers=headers)
-    route_execution_allowed = bool(decision.get("route_execution_allowed"))
-    short_circuit = route_should_short_circuit(decision, route_intent)
+    route_execution_allowed_before_rollback = bool(decision.get("route_execution_allowed"))
+    rollback_control = build_aws_option_a_rollback_control_decision(
+        env=env,
+        route_kind=route_kind,
+        route_intent=route_intent,
+        route_execution_allowed=route_execution_allowed_before_rollback,
+        selected_runtime_path=clean_text(decision.get("selected_runtime_path"), 180),
+        route_mode=clean_text(decision.get("route_mode"), 120),
+    )
+    aws_route_blocked_by_rollback = bool(rollback_control.get("aws_route_blocked_by_rollback"))
+    route_execution_allowed = bool(route_execution_allowed_before_rollback and not aws_route_blocked_by_rollback)
+    selected_runtime_path = (
+        rollback_control.get("selected_runtime_path_after_rollback")
+        if aws_route_blocked_by_rollback
+        else decision.get("selected_runtime_path")
+    )
+    short_circuit = route_should_short_circuit(decision, route_intent) or aws_route_blocked_by_rollback
     evaluation_base = {
         "boundary": "aws16_route_integration_boundary",
         "route_kind": route_kind,
         "audience": normalise_audience(audience),
         "route_mode": decision.get("route_mode"),
-        "selected_runtime_path": decision.get("selected_runtime_path"),
+        "selected_runtime_path": selected_runtime_path,
         "route_execution_allowed": route_execution_allowed,
+        "route_execution_allowed_before_rollback": route_execution_allowed_before_rollback,
         "request_authority_allowed": bool(decision.get("request_authority_allowed")),
         "aws_route_cutover_intent": route_intent,
+        "rollback_control": rollback_control,
+        "rollback_control_active": bool(rollback_control.get("rollback_control_active")),
+        "kill_switch_active": bool(rollback_control.get("kill_switch_active")),
+        "force_compatibility_fallback": bool(rollback_control.get("force_compatibility_fallback")),
+        "rollback_reason_present": bool(rollback_control.get("rollback_reason_present")),
+        "rollback_reason_sanitized": rollback_control.get("rollback_reason_sanitized") or "",
+        "aws_route_blocked_by_rollback": aws_route_blocked_by_rollback,
+        "compatibility_fallback_selected": bool(rollback_control.get("compatibility_fallback_selected")),
         "diagnostics_requested": diagnostic_requested,
         "short_circuit_route": short_circuit,
         "default_response_unchanged": not route_intent and not diagnostic_requested,
-        "status": integration_status(decision, short_circuit),
+        "status": integration_status(decision, short_circuit, rollback_control=rollback_control),
         "http_status": 202 if route_execution_allowed else 200,
         "decision": decision,
         "created_at": utc_now(),
@@ -563,7 +597,17 @@ def build_route_mode_evaluation(
     return redact_secret_values(evaluation_base)
 
 
-def integration_status(decision: Mapping[str, Any], short_circuit: bool) -> str:
+def integration_status(
+    decision: Mapping[str, Any],
+    short_circuit: bool,
+    *,
+    rollback_control: Optional[Mapping[str, Any]] = None,
+) -> str:
+    rollback_control = rollback_control or {}
+    if rollback_control.get("aws_route_blocked_by_rollback"):
+        if rollback_control.get("kill_switch_active"):
+            return "aws_option_a_kill_switch_active"
+        return "aws_option_a_compatibility_fallback_forced"
     route_mode = clean_text(decision.get("route_mode"), 120)
     if route_mode == ROUTE_MODE_DRY_RUN:
         return "aws_option_a_route_dry_run"
@@ -577,6 +621,27 @@ def integration_status(decision: Mapping[str, Any], short_circuit: bool) -> str:
 def build_admin_route_mode_response(evaluation: Mapping[str, Any]) -> Dict[str, Any]:
     decision = evaluation.get("decision") if isinstance(evaluation.get("decision"), dict) else {}
     aws17_boundary = evaluation.get("aws17_durable_enqueue") if isinstance(evaluation.get("aws17_durable_enqueue"), dict) else {}
+    rollback_control = evaluation.get("rollback_control") if isinstance(evaluation.get("rollback_control"), dict) else {}
+    admin_route_diagnostics = decision.get("admin_view") or {}
+    if evaluation.get("aws_route_blocked_by_rollback"):
+        admin_route_diagnostics = {
+            "boundary": "aws18_rollback_control_boundary",
+            "route_kind": evaluation.get("route_kind"),
+            "route_mode": evaluation.get("route_mode"),
+            "selected_runtime_path": evaluation.get("selected_runtime_path"),
+            "route_execution_allowed": False,
+            "rollback_control": rollback_control.get("admin_safe_view") or rollback_control,
+            "missing_gates": decision.get("missing_gates") or [],
+            "validation_ready": bool((decision.get("validation_summary") or {}).get("validation_ready")),
+            "rds_write_attempted": False,
+            "sqs_send_attempted": False,
+            "provider_call_attempted": False,
+            "stripe_call_attempted": False,
+            "credit_mutation_attempted": False,
+            "credential_values_exposed": False,
+            "provider_secret_values_visible": False,
+            "customer_safe": True,
+        }
     return redact_secret_values({
         "success": bool(evaluation.get("route_execution_allowed")),
         "accepted": False,
@@ -586,12 +651,22 @@ def build_admin_route_mode_response(evaluation: Mapping[str, Any]) -> Dict[str, 
         "selected_runtime_path": evaluation.get("selected_runtime_path"),
         "route_execution_allowed": bool(evaluation.get("route_execution_allowed")),
         "message": (
-            "AWS Option A route mode is ready. Durable repository and queue packets are prepared in AWS-17 dry-run mode; no live write or send has occurred."
+            "AWS Option A rollback control is active. Compatibility fallback is selected; no durable write or queue send has occurred."
+            if evaluation.get("aws_route_blocked_by_rollback")
+            else "AWS Option A route mode is ready. Durable repository and queue packets are prepared in AWS-17 dry-run mode; no live write or send has occurred."
             if evaluation.get("route_execution_allowed")
             else "AWS Option A route mode is not ready. Current compatibility runtime remains the safe path."
         ),
         "missing_gates": decision.get("missing_gates") or [],
-        "admin_route_diagnostics": decision.get("admin_view") or {},
+        "admin_route_diagnostics": admin_route_diagnostics,
+        "rollback_control": rollback_control,
+        "rollback_control_active": bool(evaluation.get("rollback_control_active")),
+        "kill_switch_active": bool(evaluation.get("kill_switch_active")),
+        "force_compatibility_fallback": bool(evaluation.get("force_compatibility_fallback")),
+        "rollback_reason_present": bool(evaluation.get("rollback_reason_present")),
+        "rollback_reason_sanitized": evaluation.get("rollback_reason_sanitized") or "",
+        "aws_route_blocked_by_rollback": bool(evaluation.get("aws_route_blocked_by_rollback")),
+        "compatibility_fallback_selected": bool(evaluation.get("compatibility_fallback_selected")),
         "aws17_durable_enqueue": aws17_boundary,
         "durable_repository": aws17_boundary.get("durable_repository") or {},
         "queue_enqueue": aws17_boundary.get("queue_enqueue") or {},
@@ -615,6 +690,21 @@ def build_admin_route_mode_response(evaluation: Mapping[str, Any]) -> Dict[str, 
 
 
 def build_client_route_mode_response(evaluation: Mapping[str, Any]) -> Dict[str, Any]:
+    if evaluation.get("aws_route_blocked_by_rollback"):
+        return {
+            "success": False,
+            "accepted": False,
+            "status": "current_runtime_active",
+            "message": "This request will use the current production runtime path.",
+            "processing_mode": "current_production_runtime",
+            "external_calls_started": False,
+            "paid_provider_calls_started": False,
+            "billing_mutation_attempted": False,
+            "credit_mutation_attempted": False,
+            "sensitive_values_exposed": False,
+            "internal_config_exposed": False,
+            "customer_safe": True,
+        }
     decision = evaluation.get("decision") if isinstance(evaluation.get("decision"), dict) else {}
     client_view = decision.get("client_view") if isinstance(decision.get("client_view"), dict) else {}
     return {
@@ -642,6 +732,7 @@ def build_route_mode_response(evaluation: Mapping[str, Any], *, audience: str = 
 def build_admin_route_diagnostics(evaluation: Mapping[str, Any]) -> Dict[str, Any]:
     decision = evaluation.get("decision") if isinstance(evaluation.get("decision"), dict) else {}
     aws17_boundary = evaluation.get("aws17_durable_enqueue") if isinstance(evaluation.get("aws17_durable_enqueue"), dict) else {}
+    rollback_control = evaluation.get("rollback_control") if isinstance(evaluation.get("rollback_control"), dict) else {}
     return redact_secret_values({
         "boundary": "aws16_route_integration_boundary",
         "status": evaluation.get("status"),
@@ -653,6 +744,14 @@ def build_admin_route_diagnostics(evaluation: Mapping[str, Any]) -> Dict[str, An
         "missing_gates": decision.get("missing_gates") or [],
         "validation_summary": decision.get("validation_summary") or {},
         "final_visible_agent_catalogue": decision.get("final_visible_agent_catalogue") or {},
+        "rollback_control": rollback_control,
+        "rollback_control_active": bool(evaluation.get("rollback_control_active")),
+        "kill_switch_active": bool(evaluation.get("kill_switch_active")),
+        "force_compatibility_fallback": bool(evaluation.get("force_compatibility_fallback")),
+        "rollback_reason_present": bool(evaluation.get("rollback_reason_present")),
+        "rollback_reason_sanitized": evaluation.get("rollback_reason_sanitized") or "",
+        "aws_route_blocked_by_rollback": bool(evaluation.get("aws_route_blocked_by_rollback")),
+        "compatibility_fallback_selected": bool(evaluation.get("compatibility_fallback_selected")),
         "aws17_durable_enqueue": aws17_boundary,
         "durable_repository": aws17_boundary.get("durable_repository") or {},
         "queue_enqueue": aws17_boundary.get("queue_enqueue") or {},
@@ -677,6 +776,19 @@ def build_admin_route_diagnostics(evaluation: Mapping[str, Any]) -> Dict[str, An
 
 
 def build_client_route_diagnostics(evaluation: Mapping[str, Any]) -> Dict[str, Any]:
+    if evaluation.get("aws_route_blocked_by_rollback"):
+        return {
+            "status": "current_runtime_active",
+            "processing_mode": "current_production_runtime",
+            "message": "This request will use the current production runtime path.",
+            "external_calls_started": False,
+            "paid_provider_calls_started": False,
+            "billing_mutation_attempted": False,
+            "credit_mutation_attempted": False,
+            "sensitive_values_exposed": False,
+            "internal_config_exposed": False,
+            "customer_safe": True,
+        }
     decision = evaluation.get("decision") if isinstance(evaluation.get("decision"), dict) else {}
     client_view = decision.get("client_view") if isinstance(decision.get("client_view"), dict) else {}
     return {
