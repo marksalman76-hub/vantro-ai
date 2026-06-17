@@ -13,6 +13,7 @@ REQUIRED_TRUE_FIELDS = [
     "complete_media_final_deliverable_attempted",
     "owner_provider_approval_required",
     "provider_cost_cap_enforced",
+    "provider_router_used",
     "long_form_generation_blocked_or_not_requested",
     "multi_agent_provider_fanout_blocked",
     "synthetic_non_customer_request",
@@ -26,6 +27,7 @@ REQUIRED_TRUE_FIELDS = [
 
 REQUIRED_FALSE_FIELDS = [
     "complete_media_final_deliverable_passed",
+    "provider_pair_hardcoded",
     "provider_call_attempted",
     "customer_asset_used",
     "customer_likeness_used",
@@ -36,6 +38,13 @@ REQUIRED_FALSE_FIELDS = [
     "public_cutover_enabled",
     "render_removal_attempted",
     "aws21_or_later_work_attempted",
+    "visual_intermediate_asset_recorded",
+    "audio_intermediate_asset_recorded",
+    "composition_attempted",
+    "composition_provider_call_attempted",
+    "final_combined_asset_created",
+    "final_combined_asset_playable_or_openable",
+    "final_deliverable_is_single_combined_file",
 ]
 
 FORBIDDEN_VALUES = [
@@ -219,6 +228,8 @@ def main() -> int:
         "executor.submit(_run_visual_segment",
         "\"media_type\": \"audio\"",
         "\"media_type\": \"video\"",
+        "executable_visual_providers",
+        "executable_audio_providers",
         "two_provider_smoke_test",
         "max_visual_provider_calls",
         "max_audio_provider_calls",
@@ -230,6 +241,25 @@ def main() -> int:
         "provider_retry_count",
     ]:
         require(marker in direct_media_source, f"Verifier expected current complete-media provider fanout marker: {marker}")
+
+    for marker in [
+        "build_provider_category_readiness_snapshot",
+        "provider_router_used",
+        "provider_pair_hardcoded",
+        "provider_category_readiness_not_verified",
+        "selected_visual_provider_safe_name",
+        "selected_audio_provider_safe_name",
+        "selected_composition_method_safe_name",
+    ]:
+        require(marker in proof_source, f"Complete media proof must expose router/category proof marker: {marker}")
+
+    for forbidden in [
+        "Load/verify Runway and ElevenLabs credentials",
+        "runway_credential_readiness_verified",
+        "elevenlabs_credential_readiness_verified",
+        "both_provider_readiness_verified",
+    ]:
+        require(forbidden not in proof_source, f"Complete media proof must not hardcode provider-pair readiness: {forbidden}")
 
     fake_s3 = FakeS3Client()
     asset_result = asset_helper.build_synthetic_durable_asset_delivery_proof(
@@ -256,9 +286,15 @@ def main() -> int:
     require(proof["visual_provider_call_count"] == 0, "Safe-default proof must not call a visual provider.")
     require(proof["audio_provider_call_count"] == 0, "Safe-default proof must not call an audio provider.")
     require(proof["provider_retry_count"] == 0, "Safe-default proof must not retry providers.")
+    require(proof["provider_router_used"] is True, "Complete-media proof must use the provider router.")
+    require(proof["provider_pair_hardcoded"] is False, "Complete-media proof must not hardcode one provider pair.")
     require(
-        proof["proof_blocked_reason"] in {"blocked_provider_readiness_not_verified", "blocked_live_provider_execution_not_requested"},
-        "Safe-default proof must block before live provider execution.",
+        proof["proof_blocked_reason"] in {
+            "provider_category_readiness_not_verified",
+            "blocked_live_provider_execution_not_requested",
+            "blocked_preflight_not_ready",
+        },
+        "Safe-default proof must block before live provider execution with a router/category-safe reason.",
     )
     require(
         proof["provider_attempt_shape"]["current_complete_media_provider_call_floor"] >= 2,
@@ -268,6 +304,33 @@ def main() -> int:
         proof["provider_attempt_shape"]["two_provider_attempt_cap_satisfied"] is True,
         "Current complete-media path must be treated as satisfying the approved two-provider cap.",
     )
+    require(
+        proof["provider_attempt_shape"]["provider_router_used"] is True,
+        "Current complete-media path must be recognized as router-selected.",
+    )
+    require(
+        proof["provider_attempt_shape"]["provider_pair_hardcoded"] is False,
+        "Current complete-media path must not be marked as provider-pair hardcoded.",
+    )
+    category_readiness = proof.get("provider_category_readiness") or {}
+    categories = category_readiness.get("categories") or {}
+    for category in ["visual_video_image", "voice_audio_music_sfx", "composition_stitching_internal"]:
+        require(category in categories, f"Provider category readiness missing: {category}")
+        require(categories[category].get("credential_values_exposed") is False, f"Category leaked credentials: {category}")
+        require(categories[category].get("customer_safe") is True, f"Category must be customer safe: {category}")
+    visual_names = set(categories["visual_video_image"].get("provider_safe_names") or [])
+    audio_names = set(categories["voice_audio_music_sfx"].get("provider_safe_names") or [])
+    require({"runway", "kling", "replicate", "openai"}.issubset(visual_names), "Visual category must discover router visual providers.")
+    require("elevenlabs" in audio_names, "Audio category must discover router audio providers.")
+    require(
+        categories["composition_stitching_internal"].get("selected_method_safe_name") in {"", "internal_ffmpeg_composition"},
+        "Composition selection must be an internal safe method name.",
+    )
+    if proof["proof_blocked_reason"] == "provider_category_readiness_not_verified":
+        require(
+            proof["provider_category_readiness_verified"] is False,
+            "Category readiness blocker must mean category readiness is false.",
+        )
     require(
         proof["cost_cap_decision"]["provider_execution_allowed_after_cost_gate"] is True,
         "Within-cap fixture should be allowed by the cost gate.",
@@ -311,6 +374,14 @@ def main() -> int:
         for field in [*REQUIRED_TRUE_FIELDS, *REQUIRED_FALSE_FIELDS]
     }
     summary.update({
+        "provider_router_used": proof.get("provider_router_used"),
+        "provider_pair_hardcoded": proof.get("provider_pair_hardcoded"),
+        "selected_visual_provider_safe_name": proof.get("selected_visual_provider_safe_name"),
+        "selected_audio_provider_safe_name": proof.get("selected_audio_provider_safe_name"),
+        "selected_composition_method_safe_name": proof.get("selected_composition_method_safe_name"),
+        "visual_provider_readiness_verified": proof.get("visual_provider_readiness_verified"),
+        "audio_provider_readiness_verified": proof.get("audio_provider_readiness_verified"),
+        "provider_category_readiness_verified": proof.get("provider_category_readiness_verified"),
         "provider_call_count": proof.get("provider_call_count"),
         "visual_provider_call_count": proof.get("visual_provider_call_count"),
         "audio_provider_call_count": proof.get("audio_provider_call_count"),

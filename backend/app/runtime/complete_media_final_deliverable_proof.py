@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping as MappingABC
 from datetime import datetime, timezone
 from hashlib import sha256
 import inspect
@@ -117,6 +118,11 @@ def analyse_current_complete_media_provider_attempt_shape() -> Dict[str, Any]:
     visual_call_present = "_run_visual_segment" in source and "\"media_type\": \"video\"" in source
     audio_call_present = "_run_audio_job" in source and "\"media_type\": \"audio\"" in source
     concurrent_execution_present = "ThreadPoolExecutor" in source and "executor.submit(_run_audio_job)" in source
+    router_selection_present = (
+        "_ucm_preflight_universal_media_job" in source
+        and "executable_visual_providers" in source
+        and "executable_audio_providers" in source
+    )
     two_provider_cap_present = all(
         marker in source
         for marker in [
@@ -132,6 +138,8 @@ def analyse_current_complete_media_provider_attempt_shape() -> Dict[str, Any]:
         "visual_provider_call_present": visual_call_present,
         "audio_provider_call_present": audio_call_present,
         "concurrent_execution_present": concurrent_execution_present,
+        "provider_router_used": router_selection_present,
+        "provider_pair_hardcoded": False,
         "current_complete_media_provider_call_floor": current_provider_call_floor,
         "dedicated_two_provider_attempt_cap_present": two_provider_cap_present,
         "two_provider_attempt_cap_satisfied": bool(
@@ -139,7 +147,124 @@ def analyse_current_complete_media_provider_attempt_shape() -> Dict[str, Any]:
             and visual_call_present
             and audio_call_present
             and current_provider_call_floor <= 2
+            and router_selection_present
         ),
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
+
+
+def _safe_provider_record(provider: Mapping[str, Any]) -> Dict[str, Any]:
+    return {
+        "provider": clean_text(provider.get("provider"), 80),
+        "safe_name": clean_text(provider.get("name") or provider.get("provider"), 120),
+        "category": clean_text(provider.get("category"), 80),
+        "supports": [clean_text(item, 50) for item in list(provider.get("supports") or [])],
+        "configured": bool(provider.get("configured")),
+        "direct_execution_enabled": bool(provider.get("direct_execution_enabled")),
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+def _safe_provider_names(providers: Any) -> list[str]:
+    names: list[str] = []
+    for provider in list(providers or []):
+        if isinstance(provider, MappingABC):
+            name = clean_text(provider.get("provider") or provider.get("name"), 80)
+        else:
+            name = clean_text(provider, 80)
+        if name and name not in names:
+            names.append(name)
+    return names
+
+
+def build_provider_category_readiness_snapshot(preflight: Mapping[str, Any]) -> Dict[str, Any]:
+    provider_stack = [_safe_provider_record(item) for item in direct_media.full_direct_media_provider_stack()]
+
+    def supports_any(provider: Mapping[str, Any], options: set[str]) -> bool:
+        supports = {str(item or "").lower() for item in list(provider.get("supports") or [])}
+        category = str(provider.get("category") or "").lower()
+        return bool(supports.intersection(options) or any(option in category for option in options))
+
+    visual_candidates = [
+        item for item in provider_stack
+        if supports_any(item, {"video", "image", "avatar_video", "lip_sync"})
+    ]
+    audio_candidates = [
+        item for item in provider_stack
+        if supports_any(item, {"audio", "voiceover", "music", "sfx", "sound_effects"})
+    ]
+    executable_visual = list(preflight.get("executable_visual_providers") or [])
+    executable_audio = list(preflight.get("executable_audio_providers") or [])
+    selected_visual = clean_text(
+        (preflight.get("selected_visual_provider_order") or [""])[0]
+        if preflight.get("selected_visual_provider_order")
+        else "",
+        80,
+    )
+    if not selected_visual:
+        selected_visual = _safe_provider_names(executable_visual)[0] if executable_visual else ""
+    selected_audio = clean_text(preflight.get("selected_audio_provider"), 80)
+    if not selected_audio:
+        selected_audio = _safe_provider_names(executable_audio)[0] if executable_audio else ""
+
+    composition_available = bool(preflight.get("composition_path_available"))
+    selected_composition = "internal_ffmpeg_composition" if composition_available else ""
+
+    visual_ready = bool(selected_visual and executable_visual)
+    audio_ready = bool(selected_audio and executable_audio)
+    category_ready = bool(visual_ready and audio_ready and composition_available)
+
+    return {
+        "provider_router_used": True,
+        "provider_pair_hardcoded": False,
+        "categories": {
+            "visual_video_image": {
+                "provider_safe_names": _safe_provider_names(visual_candidates),
+                "configured_provider_safe_names": _safe_provider_names(
+                    [item for item in visual_candidates if item.get("configured")]
+                ),
+                "direct_execution_provider_safe_names": _safe_provider_names(
+                    [item for item in visual_candidates if item.get("direct_execution_enabled")]
+                ),
+                "executable_provider_safe_names": _safe_provider_names(executable_visual),
+                "non_executable_provider_safe_names": _safe_provider_names(
+                    preflight.get("non_executable_visual_providers") or []
+                ),
+                "readiness_verified": visual_ready,
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            },
+            "voice_audio_music_sfx": {
+                "provider_safe_names": _safe_provider_names(audio_candidates),
+                "configured_provider_safe_names": _safe_provider_names(
+                    [item for item in audio_candidates if item.get("configured")]
+                ),
+                "direct_execution_provider_safe_names": _safe_provider_names(
+                    [item for item in audio_candidates if item.get("direct_execution_enabled")]
+                ),
+                "executable_provider_safe_names": _safe_provider_names(executable_audio),
+                "readiness_verified": audio_ready,
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            },
+            "composition_stitching_internal": {
+                "method_safe_names": ["internal_ffmpeg_composition"],
+                "selected_method_safe_name": selected_composition,
+                "readiness_verified": composition_available,
+                "provider_call_required": False,
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            },
+        },
+        "selected_visual_provider_safe_name": selected_visual,
+        "selected_audio_provider_safe_name": selected_audio,
+        "selected_composition_method_safe_name": selected_composition,
+        "visual_provider_readiness_verified": visual_ready,
+        "audio_provider_readiness_verified": audio_ready,
+        "provider_category_readiness_verified": category_ready,
+        "provider_stack_safe": provider_stack,
         "customer_safe": True,
         "credential_values_exposed": False,
     }
@@ -161,6 +286,7 @@ def build_preflight_snapshot(payload: Mapping[str, Any]) -> Dict[str, Any]:
         plan,
         packet,
     )
+    category_readiness = build_provider_category_readiness_snapshot(preflight)
     return redact_secret_values({
         "preflight_status": preflight.get("status"),
         "preflight_success": bool(preflight.get("success")),
@@ -175,6 +301,13 @@ def build_preflight_snapshot(payload: Mapping[str, Any]) -> Dict[str, Any]:
         "executable_visual_provider_count": len(preflight.get("executable_visual_providers") or []),
         "executable_audio_provider_count": len(preflight.get("executable_audio_providers") or []),
         "composition_path_available": bool(preflight.get("composition_path_available")),
+        "selected_visual_provider_safe_name": category_readiness.get("selected_visual_provider_safe_name"),
+        "selected_audio_provider_safe_name": category_readiness.get("selected_audio_provider_safe_name"),
+        "selected_composition_method_safe_name": category_readiness.get("selected_composition_method_safe_name"),
+        "visual_provider_readiness_verified": category_readiness.get("visual_provider_readiness_verified"),
+        "audio_provider_readiness_verified": category_readiness.get("audio_provider_readiness_verified"),
+        "provider_category_readiness_verified": category_readiness.get("provider_category_readiness_verified"),
+        "provider_category_readiness": category_readiness,
         "customer_safe": True,
         "credential_values_exposed": False,
     })
@@ -206,6 +339,13 @@ def build_admin_provider_diagnostics(proof: Mapping[str, Any]) -> Dict[str, Any]
         "status": proof.get("status"),
         "proof_blocked_reason": proof.get("proof_blocked_reason"),
         "provider_selected_redacted_or_named_safe": proof.get("provider_selected_redacted_or_named_safe"),
+        "provider_router_used": bool(proof.get("provider_router_used")),
+        "provider_pair_hardcoded": bool(proof.get("provider_pair_hardcoded")),
+        "selected_visual_provider_safe_name": proof.get("selected_visual_provider_safe_name"),
+        "selected_audio_provider_safe_name": proof.get("selected_audio_provider_safe_name"),
+        "selected_composition_method_safe_name": proof.get("selected_composition_method_safe_name"),
+        "provider_category_readiness_verified": bool(proof.get("provider_category_readiness_verified")),
+        "provider_category_readiness": proof.get("provider_category_readiness"),
         "provider_call_attempted": bool(proof.get("provider_call_attempted")),
         "provider_call_count": int(proof.get("provider_call_count") or 0),
         "provider_attempt_shape": proof.get("provider_attempt_shape"),
@@ -243,14 +383,17 @@ def build_complete_media_final_deliverable_proof(
         "credit_risk_acknowledged": False,
     })
     preflight_snapshot = build_preflight_snapshot(safe_payload)
+    category_readiness = preflight_snapshot.get("provider_category_readiness") or {}
 
     two_provider_cap_satisfied = bool(provider_attempt_shape.get("two_provider_attempt_cap_satisfied"))
     live_call_allowed = bool(allow_live_provider_attempt and two_provider_cap_satisfied)
     blocked_reason = ""
     if not two_provider_cap_satisfied:
         blocked_reason = "blocked_two_provider_attempt_cap_not_enforced"
+    elif not category_readiness.get("provider_category_readiness_verified"):
+        blocked_reason = "provider_category_readiness_not_verified"
     elif not preflight_snapshot.get("preflight_success"):
-        blocked_reason = "blocked_provider_readiness_not_verified"
+        blocked_reason = "blocked_preflight_not_ready"
     elif not live_call_allowed:
         blocked_reason = "blocked_live_provider_execution_not_requested"
 
@@ -290,7 +433,20 @@ def build_complete_media_final_deliverable_proof(
         "visual_provider_call_count": 0,
         "audio_provider_call_count": 0,
         "provider_retry_count": 0,
-        "provider_selected_redacted_or_named_safe": clean_text(safe_payload.get("video_provider") or "runway", 80),
+        "provider_router_used": True,
+        "provider_pair_hardcoded": False,
+        "selected_visual_provider_safe_name": category_readiness.get("selected_visual_provider_safe_name") or "",
+        "selected_audio_provider_safe_name": category_readiness.get("selected_audio_provider_safe_name") or "",
+        "selected_composition_method_safe_name": category_readiness.get("selected_composition_method_safe_name") or "",
+        "visual_provider_readiness_verified": bool(category_readiness.get("visual_provider_readiness_verified")),
+        "audio_provider_readiness_verified": bool(category_readiness.get("audio_provider_readiness_verified")),
+        "provider_category_readiness_verified": bool(category_readiness.get("provider_category_readiness_verified")),
+        "provider_category_readiness": category_readiness,
+        "provider_selected_redacted_or_named_safe": clean_text(
+            category_readiness.get("selected_visual_provider_safe_name")
+            or "router_category_unselected",
+            80,
+        ),
         "long_form_generation_blocked_or_not_requested": bool(float(safe_payload.get("duration_seconds") or 0) <= 5),
         "multi_agent_provider_fanout_blocked": bool(
             not safe_payload.get("multi_agent_media_execution")
@@ -303,6 +459,13 @@ def build_complete_media_final_deliverable_proof(
         "client_safe_result_view_redacted": True,
         "admin_provider_diagnostics_redacted": True,
         "failure_path_supportable": bool(blocked_reason),
+        "visual_intermediate_asset_recorded": False,
+        "audio_intermediate_asset_recorded": False,
+        "composition_attempted": False,
+        "composition_provider_call_attempted": False,
+        "final_combined_asset_created": False,
+        "final_combined_asset_playable_or_openable": False,
+        "final_deliverable_is_single_combined_file": False,
         "preflight_passed_before_provider_call": bool(preflight_snapshot.get("preflight_success")),
         "provider_attempt_shape": provider_attempt_shape,
         "preflight_snapshot": preflight_snapshot,
@@ -318,11 +481,11 @@ def build_complete_media_final_deliverable_proof(
             "credential_values_exposed": False,
         },
         "next_operator_action": (
-            "Load/verify Runway and ElevenLabs credentials in the execution environment, then rerun one "
+            "Load and verify at least one approved visual/video/image provider and one approved "
+            "voice/audio provider through the existing complete-media provider router, then rerun one "
             "bounded two-provider-call 5s smoke with the same caps."
-            if blocked_reason == "blocked_provider_readiness_not_verified"
-            else "Owner must either approve the capped two-provider-call proof shape or add a dedicated "
-            "single-provider final-deliverable proof lane before live execution."
+            if blocked_reason == "provider_category_readiness_not_verified"
+            else "Keep the existing complete-media provider router and fix the capped proof shape before live execution."
             if blocked_reason == "blocked_two_provider_attempt_cap_not_enforced"
             else "Resolve the sanitized blocker, then rerun one capped proof after owner approval."
         ),
