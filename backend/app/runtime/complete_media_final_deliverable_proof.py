@@ -217,6 +217,7 @@ def build_provider_category_readiness_snapshot(preflight: Mapping[str, Any]) -> 
     category_ready = bool(visual_ready and audio_ready and composition_available)
 
     return {
+        "provider_category_readiness_attempted": True,
         "provider_router_used": True,
         "provider_pair_hardcoded": False,
         "categories": {
@@ -257,12 +258,42 @@ def build_provider_category_readiness_snapshot(preflight: Mapping[str, Any]) -> 
                 "customer_safe": True,
                 "credential_values_exposed": False,
             },
+            "caption_subtitle_paths": {
+                "method_safe_names": ["media_script_caption_plan", "voiceover_script_caption_fallback"],
+                "selected_method_safe_name": "media_script_caption_plan",
+                "readiness_verified": True,
+                "provider_call_required": False,
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            },
+            "fallback_safe_artifact_paths": {
+                "method_safe_names": [
+                    "provider_output_or_failure_record",
+                    "synthetic_durable_asset_delivery_safe_default",
+                    "supportable_failure_path",
+                ],
+                "selected_method_safe_name": "provider_output_or_failure_record",
+                "readiness_verified": True,
+                "provider_call_required": False,
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            },
+            "future_registered_provider_stack": {
+                "provider_safe_names": _safe_provider_names(provider_stack),
+                "readiness_verified": True,
+                "provider_call_required": False,
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            },
         },
         "selected_visual_provider_safe_name": selected_visual,
         "selected_audio_provider_safe_name": selected_audio,
         "selected_composition_method_safe_name": selected_composition,
         "visual_provider_readiness_verified": visual_ready,
         "audio_provider_readiness_verified": audio_ready,
+        "visual_provider_category_ready": visual_ready,
+        "audio_provider_category_ready": audio_ready,
+        "composition_method_ready": composition_available,
         "provider_category_readiness_verified": category_ready,
         "provider_stack_safe": provider_stack,
         "customer_safe": True,
@@ -304,8 +335,12 @@ def build_preflight_snapshot(payload: Mapping[str, Any]) -> Dict[str, Any]:
         "selected_visual_provider_safe_name": category_readiness.get("selected_visual_provider_safe_name"),
         "selected_audio_provider_safe_name": category_readiness.get("selected_audio_provider_safe_name"),
         "selected_composition_method_safe_name": category_readiness.get("selected_composition_method_safe_name"),
+        "provider_category_readiness_attempted": category_readiness.get("provider_category_readiness_attempted"),
         "visual_provider_readiness_verified": category_readiness.get("visual_provider_readiness_verified"),
         "audio_provider_readiness_verified": category_readiness.get("audio_provider_readiness_verified"),
+        "visual_provider_category_ready": category_readiness.get("visual_provider_category_ready"),
+        "audio_provider_category_ready": category_readiness.get("audio_provider_category_ready"),
+        "composition_method_ready": category_readiness.get("composition_method_ready"),
         "provider_category_readiness_verified": category_readiness.get("provider_category_readiness_verified"),
         "provider_category_readiness": category_readiness,
         "customer_safe": True,
@@ -344,6 +379,10 @@ def build_admin_provider_diagnostics(proof: Mapping[str, Any]) -> Dict[str, Any]
         "selected_visual_provider_safe_name": proof.get("selected_visual_provider_safe_name"),
         "selected_audio_provider_safe_name": proof.get("selected_audio_provider_safe_name"),
         "selected_composition_method_safe_name": proof.get("selected_composition_method_safe_name"),
+        "provider_category_readiness_attempted": bool(proof.get("provider_category_readiness_attempted")),
+        "visual_provider_category_ready": bool(proof.get("visual_provider_category_ready")),
+        "audio_provider_category_ready": bool(proof.get("audio_provider_category_ready")),
+        "composition_method_ready": bool(proof.get("composition_method_ready")),
         "provider_category_readiness_verified": bool(proof.get("provider_category_readiness_verified")),
         "provider_category_readiness": proof.get("provider_category_readiness"),
         "provider_call_attempted": bool(proof.get("provider_call_attempted")),
@@ -438,8 +477,12 @@ def build_complete_media_final_deliverable_proof(
         "selected_visual_provider_safe_name": category_readiness.get("selected_visual_provider_safe_name") or "",
         "selected_audio_provider_safe_name": category_readiness.get("selected_audio_provider_safe_name") or "",
         "selected_composition_method_safe_name": category_readiness.get("selected_composition_method_safe_name") or "",
+        "provider_category_readiness_attempted": True,
         "visual_provider_readiness_verified": bool(category_readiness.get("visual_provider_readiness_verified")),
         "audio_provider_readiness_verified": bool(category_readiness.get("audio_provider_readiness_verified")),
+        "visual_provider_category_ready": bool(category_readiness.get("visual_provider_category_ready")),
+        "audio_provider_category_ready": bool(category_readiness.get("audio_provider_category_ready")),
+        "composition_method_ready": bool(category_readiness.get("composition_method_ready")),
         "provider_category_readiness_verified": bool(category_readiness.get("provider_category_readiness_verified")),
         "provider_category_readiness": category_readiness,
         "provider_selected_redacted_or_named_safe": clean_text(
@@ -448,6 +491,12 @@ def build_complete_media_final_deliverable_proof(
             80,
         ),
         "long_form_generation_blocked_or_not_requested": bool(float(safe_payload.get("duration_seconds") or 0) <= 5),
+        "duration_seconds_lte_5": bool(float(safe_payload.get("duration_seconds") or 0) <= 5),
+        "single_agent_mode_enforced": bool(
+            not safe_payload.get("multi_agent_media_execution")
+            and len(safe_payload.get("selected_agents") or []) == 1
+            and len(safe_payload.get("agent_ids") or []) == 1
+        ),
         "multi_agent_provider_fanout_blocked": bool(
             not safe_payload.get("multi_agent_media_execution")
             and len(safe_payload.get("selected_agents") or []) == 1

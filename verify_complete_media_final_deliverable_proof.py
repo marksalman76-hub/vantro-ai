@@ -13,7 +13,10 @@ REQUIRED_TRUE_FIELDS = [
     "complete_media_final_deliverable_attempted",
     "owner_provider_approval_required",
     "provider_cost_cap_enforced",
+    "provider_category_readiness_attempted",
     "provider_router_used",
+    "duration_seconds_lte_5",
+    "single_agent_mode_enforced",
     "long_form_generation_blocked_or_not_requested",
     "multi_agent_provider_fanout_blocked",
     "synthetic_non_customer_request",
@@ -250,6 +253,12 @@ def main() -> int:
         "selected_visual_provider_safe_name",
         "selected_audio_provider_safe_name",
         "selected_composition_method_safe_name",
+        "provider_category_readiness_attempted",
+        "visual_provider_category_ready",
+        "audio_provider_category_ready",
+        "composition_method_ready",
+        "duration_seconds_lte_5",
+        "single_agent_mode_enforced",
     ]:
         require(marker in proof_source, f"Complete media proof must expose router/category proof marker: {marker}")
 
@@ -288,6 +297,9 @@ def main() -> int:
     require(proof["provider_retry_count"] == 0, "Safe-default proof must not retry providers.")
     require(proof["provider_router_used"] is True, "Complete-media proof must use the provider router.")
     require(proof["provider_pair_hardcoded"] is False, "Complete-media proof must not hardcode one provider pair.")
+    require(proof["provider_category_readiness_attempted"] is True, "Provider category readiness must be attempted.")
+    require(proof["duration_seconds_lte_5"] is True, "Complete-media proof must stay at 5 seconds or less.")
+    require(proof["single_agent_mode_enforced"] is True, "Complete-media proof must enforce single-agent mode.")
     require(
         proof["proof_blocked_reason"] in {
             "provider_category_readiness_not_verified",
@@ -314,7 +326,23 @@ def main() -> int:
     )
     category_readiness = proof.get("provider_category_readiness") or {}
     categories = category_readiness.get("categories") or {}
-    for category in ["visual_video_image", "voice_audio_music_sfx", "composition_stitching_internal"]:
+    require(category_readiness.get("provider_category_readiness_attempted") is True, "Category readiness snapshot must be marked attempted.")
+    require(
+        proof["visual_provider_category_ready"] == proof["visual_provider_readiness_verified"],
+        "Visual category alias must match visual readiness.",
+    )
+    require(
+        proof["audio_provider_category_ready"] == proof["audio_provider_readiness_verified"],
+        "Audio category alias must match audio readiness.",
+    )
+    for category in [
+        "visual_video_image",
+        "voice_audio_music_sfx",
+        "composition_stitching_internal",
+        "caption_subtitle_paths",
+        "fallback_safe_artifact_paths",
+        "future_registered_provider_stack",
+    ]:
         require(category in categories, f"Provider category readiness missing: {category}")
         require(categories[category].get("credential_values_exposed") is False, f"Category leaked credentials: {category}")
         require(categories[category].get("customer_safe") is True, f"Category must be customer safe: {category}")
@@ -325,6 +353,18 @@ def main() -> int:
     require(
         categories["composition_stitching_internal"].get("selected_method_safe_name") in {"", "internal_ffmpeg_composition"},
         "Composition selection must be an internal safe method name.",
+    )
+    require(
+        "media_script_caption_plan" in set(categories["caption_subtitle_paths"].get("method_safe_names") or []),
+        "Caption/subtitle category must expose script caption path.",
+    )
+    require(
+        "provider_output_or_failure_record" in set(categories["fallback_safe_artifact_paths"].get("method_safe_names") or []),
+        "Fallback/safe artifact category must expose supportable provider output/failure path.",
+    )
+    require(
+        visual_names.issubset(set(categories["future_registered_provider_stack"].get("provider_safe_names") or [])),
+        "Future registered provider stack must include discovered visual providers.",
     )
     if proof["proof_blocked_reason"] == "provider_category_readiness_not_verified":
         require(
@@ -379,8 +419,12 @@ def main() -> int:
         "selected_visual_provider_safe_name": proof.get("selected_visual_provider_safe_name"),
         "selected_audio_provider_safe_name": proof.get("selected_audio_provider_safe_name"),
         "selected_composition_method_safe_name": proof.get("selected_composition_method_safe_name"),
+        "provider_category_readiness_attempted": proof.get("provider_category_readiness_attempted"),
         "visual_provider_readiness_verified": proof.get("visual_provider_readiness_verified"),
         "audio_provider_readiness_verified": proof.get("audio_provider_readiness_verified"),
+        "visual_provider_category_ready": proof.get("visual_provider_category_ready"),
+        "audio_provider_category_ready": proof.get("audio_provider_category_ready"),
+        "composition_method_ready": proof.get("composition_method_ready"),
         "provider_category_readiness_verified": proof.get("provider_category_readiness_verified"),
         "provider_call_count": proof.get("provider_call_count"),
         "visual_provider_call_count": proof.get("visual_provider_call_count"),
