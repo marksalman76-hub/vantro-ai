@@ -25,6 +25,7 @@ from backend.app.runtime.aws_option_a_rollback_controls import (
     AWS_OPTION_A_ROLLBACK_REASON_FLAG,
     build_aws_option_a_rollback_control_decision,
 )
+from backend.app.runtime.aws_option_a_observability import build_aws_option_a_observability_bundle
 from backend.app.runtime.durable_media_job_status_adapter import build_durable_media_job_status_record
 from backend.app.runtime.media_queue_adapter_boundary import build_media_queue_message, validate_media_queue_message
 from backend.app.runtime.rds_repository_persistence_boundary import build_repository_operation_result
@@ -594,6 +595,10 @@ def build_route_mode_evaluation(
         env=env,
         route_kind=route_kind,
     )
+    evaluation_base["aws19_observability"] = build_aws_option_a_observability_bundle(
+        payload=payload,
+        evaluation=evaluation_base,
+    )
     return redact_secret_values(evaluation_base)
 
 
@@ -622,7 +627,28 @@ def build_admin_route_mode_response(evaluation: Mapping[str, Any]) -> Dict[str, 
     decision = evaluation.get("decision") if isinstance(evaluation.get("decision"), dict) else {}
     aws17_boundary = evaluation.get("aws17_durable_enqueue") if isinstance(evaluation.get("aws17_durable_enqueue"), dict) else {}
     rollback_control = evaluation.get("rollback_control") if isinstance(evaluation.get("rollback_control"), dict) else {}
-    admin_route_diagnostics = decision.get("admin_view") or {}
+    observability = evaluation.get("aws19_observability") if isinstance(evaluation.get("aws19_observability"), dict) else {}
+    admin_snapshot = observability.get("admin_diagnostic_snapshot") if isinstance(observability.get("admin_diagnostic_snapshot"), dict) else {}
+    incident_event = observability.get("incident_event") if isinstance(observability.get("incident_event"), dict) else {}
+    admin_route_diagnostics = {
+        "boundary": "aws19_observability_boundary",
+        "route_kind": evaluation.get("route_kind"),
+        "route_mode": evaluation.get("route_mode"),
+        "selected_runtime_path": evaluation.get("selected_runtime_path"),
+        "route_execution_allowed": bool(evaluation.get("route_execution_allowed")),
+        "missing_gates": decision.get("missing_gates") or [],
+        "validation_ready": bool((decision.get("validation_summary") or {}).get("validation_ready")),
+        "observability": admin_snapshot,
+        "incident_event": incident_event,
+        "rds_write_attempted": False,
+        "sqs_send_attempted": False,
+        "provider_call_attempted": False,
+        "stripe_call_attempted": False,
+        "credit_mutation_attempted": False,
+        "credential_values_exposed": False,
+        "provider_secret_values_visible": False,
+        "customer_safe": True,
+    }
     if evaluation.get("aws_route_blocked_by_rollback"):
         admin_route_diagnostics = {
             "boundary": "aws18_rollback_control_boundary",
@@ -631,6 +657,8 @@ def build_admin_route_mode_response(evaluation: Mapping[str, Any]) -> Dict[str, 
             "selected_runtime_path": evaluation.get("selected_runtime_path"),
             "route_execution_allowed": False,
             "rollback_control": rollback_control.get("admin_safe_view") or rollback_control,
+            "observability": admin_snapshot,
+            "incident_event": incident_event,
             "missing_gates": decision.get("missing_gates") or [],
             "validation_ready": bool((decision.get("validation_summary") or {}).get("validation_ready")),
             "rds_write_attempted": False,
@@ -667,6 +695,8 @@ def build_admin_route_mode_response(evaluation: Mapping[str, Any]) -> Dict[str, 
         "rollback_reason_sanitized": evaluation.get("rollback_reason_sanitized") or "",
         "aws_route_blocked_by_rollback": bool(evaluation.get("aws_route_blocked_by_rollback")),
         "compatibility_fallback_selected": bool(evaluation.get("compatibility_fallback_selected")),
+        "aws19_observability": admin_snapshot,
+        "incident_event": incident_event,
         "aws17_durable_enqueue": aws17_boundary,
         "durable_repository": aws17_boundary.get("durable_repository") or {},
         "queue_enqueue": aws17_boundary.get("queue_enqueue") or {},
@@ -690,6 +720,8 @@ def build_admin_route_mode_response(evaluation: Mapping[str, Any]) -> Dict[str, 
 
 
 def build_client_route_mode_response(evaluation: Mapping[str, Any]) -> Dict[str, Any]:
+    observability = evaluation.get("aws19_observability") if isinstance(evaluation.get("aws19_observability"), dict) else {}
+    client_snapshot = observability.get("client_diagnostic_snapshot") if isinstance(observability.get("client_diagnostic_snapshot"), dict) else {}
     if evaluation.get("aws_route_blocked_by_rollback"):
         return {
             "success": False,
@@ -703,6 +735,7 @@ def build_client_route_mode_response(evaluation: Mapping[str, Any]) -> Dict[str,
             "credit_mutation_attempted": False,
             "sensitive_values_exposed": False,
             "internal_config_exposed": False,
+            "support_status": client_snapshot,
             "customer_safe": True,
         }
     decision = evaluation.get("decision") if isinstance(evaluation.get("decision"), dict) else {}
@@ -719,6 +752,7 @@ def build_client_route_mode_response(evaluation: Mapping[str, Any]) -> Dict[str,
         "credit_mutation_attempted": False,
         "sensitive_values_exposed": False,
         "internal_config_exposed": False,
+        "support_status": client_snapshot,
         "customer_safe": True,
     }
 
@@ -733,6 +767,9 @@ def build_admin_route_diagnostics(evaluation: Mapping[str, Any]) -> Dict[str, An
     decision = evaluation.get("decision") if isinstance(evaluation.get("decision"), dict) else {}
     aws17_boundary = evaluation.get("aws17_durable_enqueue") if isinstance(evaluation.get("aws17_durable_enqueue"), dict) else {}
     rollback_control = evaluation.get("rollback_control") if isinstance(evaluation.get("rollback_control"), dict) else {}
+    observability = evaluation.get("aws19_observability") if isinstance(evaluation.get("aws19_observability"), dict) else {}
+    admin_snapshot = observability.get("admin_diagnostic_snapshot") if isinstance(observability.get("admin_diagnostic_snapshot"), dict) else {}
+    incident_event = observability.get("incident_event") if isinstance(observability.get("incident_event"), dict) else {}
     return redact_secret_values({
         "boundary": "aws16_route_integration_boundary",
         "status": evaluation.get("status"),
@@ -752,6 +789,8 @@ def build_admin_route_diagnostics(evaluation: Mapping[str, Any]) -> Dict[str, An
         "rollback_reason_sanitized": evaluation.get("rollback_reason_sanitized") or "",
         "aws_route_blocked_by_rollback": bool(evaluation.get("aws_route_blocked_by_rollback")),
         "compatibility_fallback_selected": bool(evaluation.get("compatibility_fallback_selected")),
+        "aws19_observability": admin_snapshot,
+        "incident_event": incident_event,
         "aws17_durable_enqueue": aws17_boundary,
         "durable_repository": aws17_boundary.get("durable_repository") or {},
         "queue_enqueue": aws17_boundary.get("queue_enqueue") or {},
@@ -776,6 +815,8 @@ def build_admin_route_diagnostics(evaluation: Mapping[str, Any]) -> Dict[str, An
 
 
 def build_client_route_diagnostics(evaluation: Mapping[str, Any]) -> Dict[str, Any]:
+    observability = evaluation.get("aws19_observability") if isinstance(evaluation.get("aws19_observability"), dict) else {}
+    client_snapshot = observability.get("client_diagnostic_snapshot") if isinstance(observability.get("client_diagnostic_snapshot"), dict) else {}
     if evaluation.get("aws_route_blocked_by_rollback"):
         return {
             "status": "current_runtime_active",
@@ -787,6 +828,7 @@ def build_client_route_diagnostics(evaluation: Mapping[str, Any]) -> Dict[str, A
             "credit_mutation_attempted": False,
             "sensitive_values_exposed": False,
             "internal_config_exposed": False,
+            "support_status": client_snapshot,
             "customer_safe": True,
         }
     decision = evaluation.get("decision") if isinstance(evaluation.get("decision"), dict) else {}
@@ -801,6 +843,7 @@ def build_client_route_diagnostics(evaluation: Mapping[str, Any]) -> Dict[str, A
         "credit_mutation_attempted": False,
         "sensitive_values_exposed": False,
         "internal_config_exposed": False,
+        "support_status": client_snapshot,
         "customer_safe": True,
     }
 
