@@ -395,6 +395,7 @@ def execute_direct_media_provider_job(payload: Dict[str, Any]) -> Dict[str, Any]
             result = run_runway_text_to_video_quality_test(
                 prompt_text=prompt,
                 test_label=f"{job_id}_{agent_id}_runway_direct",
+                duration=_ucm_int(safe_payload.get("duration_seconds"), 5, 1, 5),
                 allow_live_execution=True,
             )
             return _normalise_provider_result(job=running_job, provider_result=result, media_type="video")
@@ -955,6 +956,14 @@ def _ucm_duration_float(value: Any, default: float = 5.0) -> float:
         return max(1.0, min(float(str(value or default).replace("s", "").strip()), 120.0))
     except Exception:
         return default
+
+
+def _ucm_int(value: Any, default: int = 0, minimum: int = 0, maximum: int = 100) -> int:
+    try:
+        parsed = int(float(str(value if value not in [None, ""] else default).strip()))
+    except Exception:
+        parsed = default
+    return max(minimum, min(parsed, maximum))
 
 
 def _ucm_lookup(safe: Dict[str, Any], *keys: str, default: Any = "") -> Any:
@@ -2462,6 +2471,8 @@ def _ucm_segment_child_record(parent_job_id: str, segment: Dict[str, Any], provi
         "playable": bool(result.get("playable")),
         "preview_url": result.get("preview_url") or result.get("signed_preview_url") or "",
         "asset_path": result.get("asset_path") or result.get("download_url") or "",
+        "external_action_performed": bool(result.get("external_action_performed")),
+        "live_provider_call_triggered": bool(result.get("live_provider_call_triggered")),
         "safe_error_summary": _ucm_provider_failure_summary(result) if not (result.get("success") and result.get("playable")) else "",
         "customer_safe": True,
         "credential_values_exposed": False,
@@ -2501,6 +2512,15 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
     prompt = controls["prompt"]
     job_id = str(safe_payload.get("job_id") or _safe_id("universal_complete_media_job"))
     owner_approved = _ucm_bool(safe_payload.get("owner_approved") or safe_payload.get("owner_approval_granted"))
+    two_provider_smoke_proof = _ucm_bool(
+        safe_payload.get("two_provider_smoke_test")
+        or safe_payload.get("two_provider_call_smoke_test")
+        or safe_payload.get("complete_media_final_deliverable_proof")
+    )
+    max_visual_provider_calls = _ucm_int(safe_payload.get("max_visual_provider_calls"), 1 if two_provider_smoke_proof else 0, 0, 10)
+    max_audio_provider_calls = _ucm_int(safe_payload.get("max_audio_provider_calls"), 1 if two_provider_smoke_proof else 0, 0, 10)
+    max_total_provider_calls = _ucm_int(safe_payload.get("max_total_provider_calls"), 2 if two_provider_smoke_proof else 0, 0, 20)
+    max_provider_retries = _ucm_int(safe_payload.get("max_provider_retries"), 0, 0, 10)
 
     base_job = {
         "success": True,
@@ -2539,6 +2559,15 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
         "selected_video_job_id": "",
         "selected_video_provider": "",
         "provider_attempt_count": 0,
+        "provider_call_count": 0,
+        "visual_provider_call_count": 0,
+        "audio_provider_call_count": 0,
+        "provider_retry_count": 0,
+        "max_visual_provider_calls": max_visual_provider_calls,
+        "max_audio_provider_calls": max_audio_provider_calls,
+        "max_total_provider_calls": max_total_provider_calls,
+        "max_provider_retries": max_provider_retries,
+        "two_provider_smoke_test": two_provider_smoke_proof,
         "visual_attempt_count": 0,
         "smoke_test_mode": smoke_test_mode,
         "smoke_test_label": "5s smoke test" if smoke_test_mode else "",
@@ -2696,6 +2725,51 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
             "completed_at": _now(),
         })
 
+    if two_provider_smoke_proof:
+        smoke_cap_failures: list[Dict[str, Any]] = []
+        requested_duration_for_cap = float(preflight.get("requested_duration_seconds") or controls.get("duration_seconds") or 0)
+        segment_count_for_cap = int(preflight.get("segment_count") or 0)
+        expected_visual_calls = segment_count_for_cap
+        expected_audio_calls = 1
+        expected_total_calls = expected_visual_calls + expected_audio_calls
+        selected_agent_count = len(controls.get("selected_agents") or [])
+
+        if requested_duration_for_cap > 5:
+            smoke_cap_failures.append({"check": "duration_cap", "reason": "Two-provider smoke proof is limited to 5 seconds."})
+        if segment_count_for_cap != 1:
+            smoke_cap_failures.append({"check": "visual_segment_cap", "reason": "Two-provider smoke proof allows exactly one visual segment."})
+        if expected_visual_calls > max_visual_provider_calls:
+            smoke_cap_failures.append({"check": "visual_provider_call_cap", "reason": "Visual provider call cap would be exceeded."})
+        if expected_audio_calls > max_audio_provider_calls:
+            smoke_cap_failures.append({"check": "audio_provider_call_cap", "reason": "Audio provider call cap would be exceeded."})
+        if expected_total_calls > max_total_provider_calls:
+            smoke_cap_failures.append({"check": "total_provider_call_cap", "reason": "Total provider call cap would be exceeded."})
+        if max_provider_retries != 0:
+            smoke_cap_failures.append({"check": "provider_retry_cap", "reason": "Provider retries must be zero for this smoke proof."})
+        if selected_agent_count != 1 or _ucm_bool(safe_payload.get("multi_agent_media_execution")):
+            smoke_cap_failures.append({"check": "multi_agent_provider_fanout", "reason": "Two-provider smoke proof requires exactly one selected agent and no multi-agent fanout."})
+
+        if smoke_cap_failures:
+            return _write_job({
+                **base_job,
+                **preflight,
+                "success": False,
+                "accepted": True,
+                "status": "universal_complete_media_smoke_cap_blocked",
+                "stage": "preflight",
+                "failed_preflight_checks": list(preflight.get("failed_preflight_checks") or []) + smoke_cap_failures,
+                "two_provider_smoke_test": True,
+                "provider_call_count": 0,
+                "visual_provider_call_count": 0,
+                "audio_provider_call_count": 0,
+                "provider_retry_count": 0,
+                "paid_provider_calls_started": False,
+                "external_action_performed": False,
+                "live_provider_call_triggered": False,
+                "message": "Complete media smoke proof is blocked by provider call caps.",
+                "completed_at": _now(),
+            })
+
     def _runner() -> None:
         try:
             _write_job({
@@ -2758,11 +2832,22 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
             failed_provider_attempts: list[Dict[str, Any]] = []
             generated_segments: list[Dict[str, Any]] = []
 
+            def _visual_live_call_count() -> int:
+                return sum(1 for item in visual_attempts if item.get("live_provider_call_triggered"))
+
+            def _audio_live_call_count(result: Dict[str, Any] | None = None) -> int:
+                return 1 if result and result.get("live_provider_call_triggered") else 0
+
+            def _provider_call_count(result: Dict[str, Any] | None = None) -> int:
+                return _visual_live_call_count() + _audio_live_call_count(result)
+
             executable_visual_provider_order = [
                 str(item.get("provider") or "").strip().lower()
                 for item in list(preflight.get("executable_visual_providers") or [])
                 if item.get("provider")
             ]
+            if two_provider_smoke_proof and max_visual_provider_calls:
+                executable_visual_provider_order = executable_visual_provider_order[:max_visual_provider_calls]
 
             provider_voice_prompt = _ucm_provider_safe_voice_prompt(
                 media_script_packet.get("voiceover_script") or "",
@@ -2877,6 +2962,10 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                         "child_jobs": _ucm_visual_child_jobs(visual_attempts, generated_segments[-1] if generated_segments else None),
                         "failed_provider_attempts": failed_provider_attempts,
                         "provider_attempt_count": len(visual_attempts),
+                        "provider_call_count": _provider_call_count(),
+                        "visual_provider_call_count": _visual_live_call_count(),
+                        "audio_provider_call_count": 0,
+                        "provider_retry_count": 0,
                         "visual_attempt_count": len(generated_segments),
                         "non_executable_visual_providers": preflight.get("non_executable_visual_providers"),
                         "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
@@ -2884,6 +2973,37 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     })
 
                 audio_result = audio_future.result()
+
+            if two_provider_smoke_proof and _provider_call_count(audio_result) > max_total_provider_calls:
+                _write_job({
+                    **base_job,
+                    "success": False,
+                    "accepted": True,
+                    "status": "universal_complete_media_smoke_cap_exceeded",
+                    "requested_duration_seconds": requested_duration,
+                    "provider_safe_segment_seconds": provider_safe_segment_seconds,
+                    "segment_count": segment_count,
+                    "segment_plan": segment_plan,
+                    "generated_segments": generated_segments,
+                    "missing_segments": missing_segments,
+                    "child_jobs": {
+                        **_ucm_visual_child_jobs(visual_attempts, generated_segments[0] if generated_segments else None),
+                        "audio": {
+                            "job_id": audio_result.get("job_id"),
+                            "provider": controls["audio_provider"],
+                            "status": audio_result.get("status"),
+                        },
+                    },
+                    "failed_provider_attempts": failed_provider_attempts,
+                    "provider_attempt_count": len(visual_attempts),
+                    "provider_call_count": _provider_call_count(audio_result),
+                    "visual_provider_call_count": _visual_live_call_count(),
+                    "audio_provider_call_count": _audio_live_call_count(audio_result),
+                    "provider_retry_count": 0,
+                    "support_failure_message": "Provider call cap was exceeded; support must review before any retry.",
+                    "completed_at": _now(),
+                })
+                return
 
             if len(generated_segments) < len(segment_plan):
                 support_failure_message = (
@@ -2916,6 +3036,10 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     ],
                     "safe_provider_diagnostics": {"runway": runway_safe_key_diagnostics()},
                     "support_failure_message": support_failure_message,
+                    "provider_call_count": _provider_call_count(audio_result),
+                    "visual_provider_call_count": _visual_live_call_count(),
+                    "audio_provider_call_count": _audio_live_call_count(audio_result),
+                    "provider_retry_count": 0,
                     "completed_at": _now(),
                 })
                 return
@@ -2932,6 +3056,10 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "child_jobs": _ucm_visual_child_jobs(visual_attempts, generated_segments[0] if generated_segments else None),
                 "failed_provider_attempts": failed_provider_attempts,
                 "provider_attempt_count": len(visual_attempts),
+                "provider_call_count": _provider_call_count(audio_result),
+                "visual_provider_call_count": _visual_live_call_count(),
+                "audio_provider_call_count": _audio_live_call_count(audio_result),
+                "provider_retry_count": 0,
                 "visual_attempt_count": len(generated_segments),
                 "requested_duration_seconds": requested_duration,
                 "provider_safe_segment_seconds": provider_safe_segment_seconds,
@@ -2962,6 +3090,10 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 "language": controls.get("language"),
                 "accent": controls.get("accent"),
                 "tone": controls.get("tone"),
+                "provider_call_count": _provider_call_count(audio_result),
+                "visual_provider_call_count": _visual_live_call_count(),
+                "audio_provider_call_count": _audio_live_call_count(audio_result),
+                "provider_retry_count": 0,
             })
 
             if not audio_result.get("success") or audio_result.get("status") != "completed" or not audio_result.get("playable"):
@@ -2985,6 +3117,10 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                         },
                     },
                     "failed_provider_attempts": failed_provider_attempts,
+                    "provider_call_count": _provider_call_count(audio_result),
+                    "visual_provider_call_count": _visual_live_call_count(),
+                    "audio_provider_call_count": _audio_live_call_count(audio_result),
+                    "provider_retry_count": 0,
                     "requested_duration_seconds": requested_duration,
                     "provider_safe_segment_seconds": provider_safe_segment_seconds,
                     "segment_count": segment_count,
@@ -3020,6 +3156,10 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     },
                 },
                 "failed_provider_attempts": failed_provider_attempts,
+                "provider_call_count": _provider_call_count(audio_result),
+                "visual_provider_call_count": _visual_live_call_count(),
+                "audio_provider_call_count": _audio_live_call_count(audio_result),
+                "provider_retry_count": 0,
                 "progress": f"Composing {len(generated_segments)}/{segment_count} visual segments with full voiceover.",
             })
 
@@ -3064,6 +3204,10 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                         },
                     },
                     "failed_provider_attempts": failed_provider_attempts,
+                    "provider_call_count": _provider_call_count(audio_result),
+                    "visual_provider_call_count": _visual_live_call_count(),
+                    "audio_provider_call_count": _audio_live_call_count(audio_result),
+                    "provider_retry_count": 0,
                     "completed_at": _now(),
                 })
                 return
@@ -3123,6 +3267,10 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                 },
                 "failed_provider_attempts": failed_provider_attempts,
                 "provider_attempt_count": len(visual_attempts),
+                "provider_call_count": _provider_call_count(audio_result),
+                "visual_provider_call_count": _visual_live_call_count(),
+                "audio_provider_call_count": _audio_live_call_count(audio_result),
+                "provider_retry_count": 0,
                 "visual_attempt_count": len(generated_segments),
                 "completed_at": _now(),
             })

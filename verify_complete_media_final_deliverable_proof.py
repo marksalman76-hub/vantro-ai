@@ -219,14 +219,17 @@ def main() -> int:
         "executor.submit(_run_visual_segment",
         "\"media_type\": \"audio\"",
         "\"media_type\": \"video\"",
+        "two_provider_smoke_test",
+        "max_visual_provider_calls",
+        "max_audio_provider_calls",
+        "max_total_provider_calls",
+        "max_provider_retries",
+        "executable_visual_provider_order = executable_visual_provider_order[:max_visual_provider_calls]",
+        "visual_provider_call_count",
+        "audio_provider_call_count",
+        "provider_retry_count",
     ]:
         require(marker in direct_media_source, f"Verifier expected current complete-media provider fanout marker: {marker}")
-
-    require(
-        "complete_media_final_deliverable_provider_call_limit" not in direct_media_source
-        and "max_provider_call_count" not in direct_media_source,
-        "If a dedicated provider-call cap was added, update this verifier to allow the live proof path.",
-    )
 
     fake_s3 = FakeS3Client()
     asset_result = asset_helper.build_synthetic_durable_asset_delivery_proof(
@@ -250,17 +253,20 @@ def main() -> int:
         require(proof.get(field) is False, f"Required proof field must be false: {field}")
 
     require(proof["provider_call_count"] == 0, "Blocked proof must not call providers.")
+    require(proof["visual_provider_call_count"] == 0, "Safe-default proof must not call a visual provider.")
+    require(proof["audio_provider_call_count"] == 0, "Safe-default proof must not call an audio provider.")
+    require(proof["provider_retry_count"] == 0, "Safe-default proof must not retry providers.")
     require(
-        proof["proof_blocked_reason"] == "blocked_no_one_provider_attempt_complete_media_path",
-        "Proof must block because current complete-media path cannot satisfy the one-provider-attempt cap.",
+        proof["proof_blocked_reason"] in {"blocked_provider_readiness_not_verified", "blocked_live_provider_execution_not_requested"},
+        "Safe-default proof must block before live provider execution.",
     )
     require(
         proof["provider_attempt_shape"]["current_complete_media_provider_call_floor"] >= 2,
         "Current complete-media path must be recognized as visual plus audio provider calls.",
     )
     require(
-        proof["provider_attempt_shape"]["one_provider_attempt_cap_satisfied"] is False,
-        "Current complete-media path must not be treated as satisfying the one-provider cap.",
+        proof["provider_attempt_shape"]["two_provider_attempt_cap_satisfied"] is True,
+        "Current complete-media path must be treated as satisfying the approved two-provider cap.",
     )
     require(
         proof["cost_cap_decision"]["provider_execution_allowed_after_cost_gate"] is True,
@@ -271,8 +277,8 @@ def main() -> int:
         "Over-cap fixture must be blocked without owner approval.",
     )
     require(
-        "two-provider-call 5s complete-media smoke" in proof["next_operator_action"],
-        "Next operator action must name the explicit approval needed.",
+        "provider" in proof["next_operator_action"].lower(),
+        "Next operator action must name the provider readiness or approval action needed.",
     )
 
     client_view = proof["client_safe_result_view"]
@@ -293,7 +299,7 @@ def main() -> int:
         "complete_media_final_deliverable_attempted=true",
         "complete_media_final_deliverable_passed=false",
         "provider_call_attempted=false",
-        "blocked_no_one_provider_attempt_complete_media_path",
+        "provider_call_count=0",
     ]:
         require(
             marker in master_plan or marker in audit_plan or marker in matrix,
@@ -306,6 +312,9 @@ def main() -> int:
     }
     summary.update({
         "provider_call_count": proof.get("provider_call_count"),
+        "visual_provider_call_count": proof.get("visual_provider_call_count"),
+        "audio_provider_call_count": proof.get("audio_provider_call_count"),
+        "provider_retry_count": proof.get("provider_retry_count"),
         "proof_blocked_reason": proof.get("proof_blocked_reason"),
         "provider_selected_redacted_or_named_safe": proof.get("provider_selected_redacted_or_named_safe"),
         "synthetic_job_reference_hash": proof.get("synthetic_job_reference_hash"),

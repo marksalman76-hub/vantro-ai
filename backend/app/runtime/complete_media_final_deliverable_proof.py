@@ -89,6 +89,13 @@ def synthetic_complete_media_request(overrides: Optional[Mapping[str, Any]] = No
         "cost_safety_confirmed": True,
         "paid_provider_risk_confirmed": True,
         "credit_risk_acknowledged": True,
+        "two_provider_smoke_test": True,
+        "two_provider_call_smoke_test": True,
+        "complete_media_final_deliverable_proof": True,
+        "max_visual_provider_calls": 1,
+        "max_audio_provider_calls": 1,
+        "max_total_provider_calls": 2,
+        "max_provider_retries": 0,
         "provider_estimated_cost": 1,
         "provider_cost_cap": 2,
         "approval_required_for_spend": True,
@@ -110,10 +117,15 @@ def analyse_current_complete_media_provider_attempt_shape() -> Dict[str, Any]:
     visual_call_present = "_run_visual_segment" in source and "\"media_type\": \"video\"" in source
     audio_call_present = "_run_audio_job" in source and "\"media_type\": \"audio\"" in source
     concurrent_execution_present = "ThreadPoolExecutor" in source and "executor.submit(_run_audio_job)" in source
-    provider_call_limit_present = (
-        "complete_media_final_deliverable_provider_call_limit" in source
-        or "provider_call_limit" in source
-        or "max_provider_call_count" in source
+    two_provider_cap_present = all(
+        marker in source
+        for marker in [
+            "two_provider_smoke_test",
+            "max_visual_provider_calls",
+            "max_audio_provider_calls",
+            "max_total_provider_calls",
+            "max_provider_retries",
+        ]
     )
     current_provider_call_floor = int(visual_call_present) + int(audio_call_present)
     return {
@@ -121,9 +133,12 @@ def analyse_current_complete_media_provider_attempt_shape() -> Dict[str, Any]:
         "audio_provider_call_present": audio_call_present,
         "concurrent_execution_present": concurrent_execution_present,
         "current_complete_media_provider_call_floor": current_provider_call_floor,
-        "dedicated_one_provider_attempt_cap_present": provider_call_limit_present,
-        "one_provider_attempt_cap_satisfied": bool(
-            provider_call_limit_present and current_provider_call_floor <= 1
+        "dedicated_two_provider_attempt_cap_present": two_provider_cap_present,
+        "two_provider_attempt_cap_satisfied": bool(
+            two_provider_cap_present
+            and visual_call_present
+            and audio_call_present
+            and current_provider_call_floor <= 2
         ),
         "customer_safe": True,
         "credential_values_exposed": False,
@@ -229,13 +244,13 @@ def build_complete_media_final_deliverable_proof(
     })
     preflight_snapshot = build_preflight_snapshot(safe_payload)
 
-    one_provider_cap_satisfied = bool(provider_attempt_shape.get("one_provider_attempt_cap_satisfied"))
-    live_call_allowed = bool(allow_live_provider_attempt and one_provider_cap_satisfied)
+    two_provider_cap_satisfied = bool(provider_attempt_shape.get("two_provider_attempt_cap_satisfied"))
+    live_call_allowed = bool(allow_live_provider_attempt and two_provider_cap_satisfied)
     blocked_reason = ""
-    if not one_provider_cap_satisfied:
-        blocked_reason = "blocked_no_one_provider_attempt_complete_media_path"
+    if not two_provider_cap_satisfied:
+        blocked_reason = "blocked_two_provider_attempt_cap_not_enforced"
     elif not preflight_snapshot.get("preflight_success"):
-        blocked_reason = "blocked_preflight_not_ready"
+        blocked_reason = "blocked_provider_readiness_not_verified"
     elif not live_call_allowed:
         blocked_reason = "blocked_live_provider_execution_not_requested"
 
@@ -250,7 +265,7 @@ def build_complete_media_final_deliverable_proof(
         {"status": "accepted", "customer_safe": True},
         {"status": "preflight", "customer_safe": True},
         {
-            "status": "blocked_before_provider_call" if blocked_reason else "ready_for_single_provider_attempt",
+            "status": "blocked_before_provider_call" if blocked_reason else "ready_for_two_provider_attempt",
             "customer_safe": True,
         },
     ]
@@ -272,6 +287,9 @@ def build_complete_media_final_deliverable_proof(
         ),
         "provider_call_attempted": provider_call_attempted,
         "provider_call_count": provider_call_count,
+        "visual_provider_call_count": 0,
+        "audio_provider_call_count": 0,
+        "provider_retry_count": 0,
         "provider_selected_redacted_or_named_safe": clean_text(safe_payload.get("video_provider") or "runway", 80),
         "long_form_generation_blocked_or_not_requested": bool(float(safe_payload.get("duration_seconds") or 0) <= 5),
         "multi_agent_provider_fanout_blocked": bool(
@@ -300,10 +318,12 @@ def build_complete_media_final_deliverable_proof(
             "credential_values_exposed": False,
         },
         "next_operator_action": (
-            "Owner must either explicitly approve a two-provider-call 5s complete-media smoke "
-            "(one visual call plus one audio call) with a capped budget, or add a dedicated "
+            "Load/verify Runway and ElevenLabs credentials in the execution environment, then rerun one "
+            "bounded two-provider-call 5s smoke with the same caps."
+            if blocked_reason == "blocked_provider_readiness_not_verified"
+            else "Owner must either approve the capped two-provider-call proof shape or add a dedicated "
             "single-provider final-deliverable proof lane before live execution."
-            if blocked_reason == "blocked_no_one_provider_attempt_complete_media_path"
+            if blocked_reason == "blocked_two_provider_attempt_cap_not_enforced"
             else "Resolve the sanitized blocker, then rerun one capped proof after owner approval."
         ),
         "synthetic_job_reference_hash": safe_hash(safe_payload.get("job_id")),
