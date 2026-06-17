@@ -18,6 +18,7 @@ AWS_OPTION_A_REHEARSAL_RDS_WRITE_ENABLED_FLAG = "AWS_OPTION_A_REHEARSAL_RDS_WRIT
 AWS_OPTION_A_REHEARSAL_SQS_SEND_ENABLED_FLAG = "AWS_OPTION_A_REHEARSAL_SQS_SEND_ENABLED"
 AWS_OPTION_A_REHEARSAL_S3_WRITE_ENABLED_FLAG = "AWS_OPTION_A_REHEARSAL_S3_WRITE_ENABLED"
 AWS_OPTION_A_REHEARSAL_CLEANUP_ENABLED_FLAG = "AWS_OPTION_A_REHEARSAL_CLEANUP_ENABLED"
+AWS_OPTION_A_REHEARSAL_ONLY_SQS_FLAG = "AWS_OPTION_A_REHEARSAL_ONLY_SQS"
 
 REHEARSAL_JOB_PREFIX = "aws20_rehearsal_non_customer"
 REHEARSAL_DIAGNOSTIC_VERSION = "aws20_live_rehearsal_v1"
@@ -91,7 +92,10 @@ def redact_secret_values(value: Any) -> Any:
             if isinstance(item, bool):
                 cleaned[key] = item
             elif any(marker in key_l for marker in SECRET_KEY_MARKERS):
-                cleaned[key] = "[redacted]"
+                if key_l.endswith("_present") or "hash" in key_l or key_l.endswith("_length"):
+                    cleaned[key] = redact_secret_values(item)
+                else:
+                    cleaned[key] = "[redacted]"
             else:
                 cleaned[key] = redact_secret_values(item)
         return cleaned
@@ -137,9 +141,125 @@ def safe_exception_status(exc: BaseException) -> str:
 def safe_exception_details(exc: BaseException) -> Dict[str, Any]:
     return {
         "error_type": clean_text(exc.__class__.__name__, 120),
+        "error_code": safe_error_code(exc),
         "safe_error_summary": sanitize_text(str(exc), 300),
         "credential_values_exposed": False,
         "secret_values_exposed": False,
+    }
+
+
+def safe_error_code(exc: BaseException) -> str:
+    response = getattr(exc, "response", None)
+    if isinstance(response, Mapping):
+        error = response.get("Error")
+        if isinstance(error, Mapping):
+            return clean_text(error.get("Code"), 120)
+    return ""
+
+
+def sqs_queue_type(queue_url: str) -> str:
+    if not queue_url:
+        return "unknown"
+    return "fifo" if queue_url.lower().endswith(".fifo") else "standard"
+
+
+def sqs_next_operator_action(category: str) -> str:
+    actions = {
+        "missing_queue_url": "Set AWS_MEDIA_QUEUE_URL to the intended AWS-20 test media queue URL.",
+        "missing_region": "Set AWS_REGION to the queue region and rerun the SQS-focused rehearsal.",
+        "invalid_credentials_or_signature": "Reload AWS credentials and confirm they match the queue account and region.",
+        "access_denied": "Grant the rehearsal principal sqs:SendMessage on the test queue.",
+        "nonexistent_queue": "Confirm the queue exists and the configured queue reference matches the intended region/account.",
+        "region_mismatch": "Confirm AWS_REGION matches the configured SQS queue region.",
+        "fifo_parameter_missing": "Confirm FIFO queue settings; the rehearsal should send MessageGroupId and MessageDeduplicationId.",
+        "queue_policy_denied": "Review the queue resource policy for the rehearsal principal.",
+        "malformed_message": "Inspect rehearsal message attributes and size; keep it synthetic and non-executable.",
+        "network_or_endpoint": "Check local network, AWS endpoint reachability, and proxy/VPC endpoint configuration.",
+        "missing_boto3_dependency": "Install boto3 in the rehearsal Python environment, then rerun only the SQS-focused rehearsal.",
+        "unknown_sqs_error": "Review sanitized error type/code and rerun only after the operator identifies the queue-side cause.",
+    }
+    return actions.get(category or "unknown_sqs_error", actions["unknown_sqs_error"])
+
+
+def categorize_sqs_failure(exc: Optional[BaseException] = None, *, queue_url: str = "", region_present: bool = True) -> str:
+    if not queue_url:
+        return "missing_queue_url"
+    if not region_present:
+        return "missing_region"
+    if exc is None:
+        return "unknown_sqs_error"
+
+    code = safe_error_code(exc)
+    code_l = code.lower()
+    name_l = exc.__class__.__name__.lower()
+    message_l = str(exc).lower()
+    status = safe_exception_status(exc)
+
+    if status == "blocked_missing_aws_credentials" or code_l in {
+        "invalidclienttokenid",
+        "signaturedoesnotmatch",
+        "unrecognizedclientexception",
+        "expiredtoken",
+        "authfailure",
+    }:
+        return "invalid_credentials_or_signature"
+    if status == "blocked_aws_config_error":
+        return "missing_region" if "region" in message_l else "unknown_sqs_error"
+    if code_l in {"aws.simplequeueservice.nonexistentqueue", "queuedoesnotexist", "nonexistentqueue"}:
+        return "nonexistent_queue"
+    if "does not exist for this wsdl version" in message_l or "queue does not exist" in message_l:
+        return "region_mismatch" if "region" in message_l else "nonexistent_queue"
+    if code_l in {"accessdenied", "accessdeniedexception", "unauthorizedoperation"}:
+        return "queue_policy_denied" if "policy" in message_l else "access_denied"
+    if "not authorized" in message_l or "access denied" in message_l:
+        return "queue_policy_denied" if "policy" in message_l else "access_denied"
+    if code_l in {"missingparameter", "invalidparameter", "invalidparametervalue"} and (
+        "messagegroupid" in message_l or "messagededuplicationid" in message_l or "fifo" in message_l
+    ):
+        return "fifo_parameter_missing"
+    if code_l in {"invalidmessagecontents", "invalidparameter", "invalidparametervalue", "malformedquerystring"}:
+        return "malformed_message"
+    if "endpoint" in name_l or "connecttimeout" in name_l or "readtimeout" in name_l or "connection" in name_l:
+        return "network_or_endpoint"
+    if "endpoint" in message_l or "timed out" in message_l or "could not connect" in message_l:
+        return "network_or_endpoint"
+    return "unknown_sqs_error"
+
+
+def build_sqs_diagnostic_fields(
+    *,
+    env: Mapping[str, Any],
+    queue_url: str,
+    job_id: str,
+    body_size: int = 0,
+    attempted: bool = False,
+    passed: bool = False,
+    message_id: Any = "",
+    exc: Optional[BaseException] = None,
+) -> Dict[str, Any]:
+    queue_kind = sqs_queue_type(queue_url)
+    category = "" if passed else categorize_sqs_failure(
+        exc,
+        queue_url=queue_url,
+        region_present=bool(clean_text(env.get("AWS_REGION")) or clean_text(env.get("AWS_DEFAULT_REGION"))),
+    )
+    return {
+        "sqs_attempted": attempted,
+        "sqs_passed": passed,
+        "sqs_error_type": clean_text(exc.__class__.__name__, 120) if exc else "",
+        "sqs_error_code": safe_error_code(exc) if exc else "",
+        "sqs_error_category": category,
+        "sqs_region_present": bool(clean_text(env.get("AWS_REGION")) or clean_text(env.get("AWS_DEFAULT_REGION"))),
+        "sqs_queue_url_present": bool(queue_url),
+        "sqs_queue_url_hash_prefix": safe_hash(queue_url, 12),
+        "sqs_queue_type_standard_or_fifo": queue_kind,
+        "sqs_message_group_id_required_or_used": queue_kind == "fifo",
+        "sqs_message_deduplication_id_used": queue_kind == "fifo",
+        "sqs_message_non_customer": True,
+        "sqs_message_non_executable": True,
+        "sqs_message_body_size": body_size,
+        "sqs_message_id_hash_prefix": safe_hash(message_id, 12),
+        "next_operator_action": "" if passed else sqs_next_operator_action(category),
     }
 
 
@@ -180,6 +300,7 @@ def rehearsal_flags(env: Mapping[str, Any]) -> Dict[str, Any]:
         "sqs_send_enabled": enabled(env.get(AWS_OPTION_A_REHEARSAL_SQS_SEND_ENABLED_FLAG)),
         "s3_write_enabled": enabled(env.get(AWS_OPTION_A_REHEARSAL_S3_WRITE_ENABLED_FLAG)),
         "cleanup_enabled": enabled(env.get(AWS_OPTION_A_REHEARSAL_CLEANUP_ENABLED_FLAG)),
+        "sqs_only_mode": enabled(env.get(AWS_OPTION_A_REHEARSAL_ONLY_SQS_FLAG)),
     }
 
 
@@ -267,14 +388,6 @@ def run_sqs_rehearsal(env: Mapping[str, Any], job_id: str) -> Dict[str, Any]:
     result = base_resource_result("sqs")
     queue_url = clean_text(env.get("AWS_MEDIA_QUEUE_URL"), 2000)
     result["queue_reference"] = redacted_ref(queue_url)
-    if not queue_url:
-        result["status"] = "blocked_missing_media_queue_url"
-        return redact_secret_values(result)
-    sqs, blocked = build_boto3_client("sqs", env)
-    if blocked:
-        result["status"] = blocked
-        return redact_secret_values(result)
-
     body = {
         "job_id": job_id,
         "task_type": "aws20_rehearsal_non_customer",
@@ -286,9 +399,50 @@ def run_sqs_rehearsal(env: Mapping[str, Any], job_id: str) -> Dict[str, Any]:
         "customer_id": "aws20_rehearsal_non_customer",
         "created_at": utc_now(),
     }
+    body_text = json.dumps(body, sort_keys=True)
+    result.update(build_sqs_diagnostic_fields(
+        env=env,
+        queue_url=queue_url,
+        job_id=job_id,
+        body_size=len(body_text.encode("utf-8")),
+    ))
+    if not queue_url:
+        result["status"] = "blocked_missing_media_queue_url"
+        result["sqs_error_category"] = "missing_queue_url"
+        result["next_operator_action"] = sqs_next_operator_action("missing_queue_url")
+        return redact_secret_values(result)
+    try:
+        sqs, blocked = build_boto3_client("sqs", env)
+    except Exception as exc:
+        category = categorize_sqs_failure(exc, queue_url=queue_url, region_present=bool(clean_text(env.get("AWS_REGION")) or clean_text(env.get("AWS_DEFAULT_REGION"))))
+        result.update(build_sqs_diagnostic_fields(
+            env=env,
+            queue_url=queue_url,
+            job_id=job_id,
+            body_size=len(body_text.encode("utf-8")),
+            exc=exc,
+        ))
+        result.update({
+            "status": safe_exception_status(exc),
+            "error": safe_exception_details(exc),
+            "sqs_error_category": category,
+            "next_operator_action": sqs_next_operator_action(category),
+        })
+        return redact_secret_values(result)
+    if blocked:
+        result["status"] = blocked
+        category = (
+            "missing_boto3_dependency"
+            if blocked == "blocked_missing_dependency_boto3"
+            else ("missing_region" if not result.get("sqs_region_present") else "unknown_sqs_error")
+        )
+        result["sqs_error_category"] = category
+        result["next_operator_action"] = sqs_next_operator_action(category)
+        return redact_secret_values(result)
+
     kwargs = {
         "QueueUrl": queue_url,
-        "MessageBody": json.dumps(body, sort_keys=True),
+        "MessageBody": body_text,
         "MessageAttributes": {
             "aws20_rehearsal": {"StringValue": "true", "DataType": "String"},
             "non_executable": {"StringValue": "true", "DataType": "String"},
@@ -304,6 +458,7 @@ def run_sqs_rehearsal(env: Mapping[str, Any], job_id: str) -> Dict[str, Any]:
         "network_call_attempted": True,
         "sqs_send_attempted": True,
         "message_marked_non_executable": True,
+        "sqs_attempted": True,
     })
     try:
         response = getattr(sqs, "send_message")(**kwargs)
@@ -312,8 +467,32 @@ def run_sqs_rehearsal(env: Mapping[str, Any], job_id: str) -> Dict[str, Any]:
             "message_id_hash": safe_hash(response.get("MessageId")),
             "md5_present": bool(response.get("MD5OfMessageBody")),
         })
+        result.update(build_sqs_diagnostic_fields(
+            env=env,
+            queue_url=queue_url,
+            job_id=job_id,
+            body_size=len(body_text.encode("utf-8")),
+            attempted=True,
+            passed=True,
+            message_id=response.get("MessageId"),
+        ))
     except Exception as exc:
-        result.update({"status": safe_exception_status(exc), "error": safe_exception_details(exc)})
+        category = categorize_sqs_failure(exc, queue_url=queue_url, region_present=bool(clean_text(env.get("AWS_REGION")) or clean_text(env.get("AWS_DEFAULT_REGION"))))
+        result.update(build_sqs_diagnostic_fields(
+            env=env,
+            queue_url=queue_url,
+            job_id=job_id,
+            body_size=len(body_text.encode("utf-8")),
+            attempted=True,
+            passed=False,
+            exc=exc,
+        ))
+        result.update({
+            "status": safe_exception_status(exc),
+            "error": safe_exception_details(exc),
+            "sqs_error_category": category,
+            "next_operator_action": sqs_next_operator_action(category),
+        })
     return redact_secret_values(result)
 
 
@@ -391,9 +570,10 @@ def build_aws20_live_rehearsal(
         for resource in ("rds", "sqs", "s3"):
             resource_results[resource] = skipped_resource(resource, block)
     else:
+        sqs_only_mode = bool(flags.get("sqs_only_mode"))
         resource_results["rds"] = (
             run_rds_rehearsal(env, job_id, bool(flags.get("cleanup_enabled")))
-            if flags.get("rds_write_enabled")
+            if flags.get("rds_write_enabled") and not sqs_only_mode
             else skipped_resource("rds", "skipped_resource_flag_disabled")
         )
         resource_results["sqs"] = (
@@ -403,7 +583,7 @@ def build_aws20_live_rehearsal(
         )
         resource_results["s3"] = (
             run_s3_rehearsal(env, job_id, bool(flags.get("cleanup_enabled")))
-            if flags.get("s3_write_enabled")
+            if flags.get("s3_write_enabled") and not sqs_only_mode
             else skipped_resource("s3", "skipped_resource_flag_disabled")
         )
 
@@ -430,8 +610,12 @@ def build_aws20_live_rehearsal(
             "rds_status": resource_results["rds"].get("status"),
             "sqs_status": resource_results["sqs"].get("status"),
             "s3_status": resource_results["s3"].get("status"),
+            "sqs_error_category": resource_results["sqs"].get("sqs_error_category"),
+            "sqs_next_operator_action": resource_results["sqs"].get("next_operator_action"),
+            "sqs_queue_url_hash_prefix": resource_results["sqs"].get("sqs_queue_url_hash_prefix"),
             "live_rehearsal_attempted": live_attempted,
             "cleanup_enabled": bool(flags.get("cleanup_enabled")),
+            "sqs_only_mode": bool(flags.get("sqs_only_mode")),
             "blocked_reason": block,
             "rehearsal_job_reference_hash": safe_hash(job_id),
         },

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 import importlib.util
+import json
 import os
 import re
 import sys
@@ -91,6 +92,10 @@ def assert_no_forbidden_values(value: object, label: str) -> None:
         "runway_api_key=",
     ]:
         require(forbidden not in text, f"{label} leaked forbidden value: {forbidden}")
+
+
+def print_sanitized_live_result(result: dict) -> None:
+    print("AWS_OPTION_A_LIVE_REHEARSAL_SANITIZED_RESULT:" + json.dumps(result, sort_keys=True))
 
 
 def dangerous_env() -> dict:
@@ -203,9 +208,10 @@ def run_owner_approved_live_mode_if_requested(helper) -> str:
         return "LIVE_AWS_REHEARSAL_SKIPPED_SAFE_DEFAULT_MODE"
 
     result = helper.build_aws20_live_rehearsal(env=os.environ, actor_role="admin", payload={})
-    require(result["status"] == "live_rehearsal_executed", "Owner-approved live mode should execute at least one resource rehearsal.")
     assert_no_provider_finance_side_effects(result, "owner-approved live rehearsal")
     assert_no_forbidden_values(result, "owner-approved live rehearsal")
+    print_sanitized_live_result(result)
+    require(result["status"] == "live_rehearsal_executed", "Owner-approved live mode should execute at least one resource rehearsal.")
 
     env = os.environ
     resource_results = result["resource_results"]
@@ -213,8 +219,32 @@ def run_owner_approved_live_mode_if_requested(helper) -> str:
         require(resource_results["rds"]["status"] == "passed", "RDS rehearsal flag was enabled but did not pass.")
         require(resource_results["rds"]["transaction_rolled_back"] is True, "RDS rehearsal must roll back transaction.")
     if helper.enabled(env.get(helper.AWS_OPTION_A_REHEARSAL_SQS_SEND_ENABLED_FLAG)):
-        require(resource_results["sqs"]["status"] == "passed", "SQS rehearsal flag was enabled but did not pass.")
+        sqs = resource_results["sqs"]
+        for field in [
+            "sqs_attempted",
+            "sqs_passed",
+            "sqs_error_type",
+            "sqs_error_code",
+            "sqs_error_category",
+            "sqs_region_present",
+            "sqs_queue_url_present",
+            "sqs_queue_url_hash_prefix",
+            "sqs_queue_type_standard_or_fifo",
+            "sqs_message_group_id_required_or_used",
+            "sqs_message_deduplication_id_used",
+            "sqs_message_non_customer",
+            "sqs_message_non_executable",
+            "sqs_message_body_size",
+            "sqs_message_id_hash_prefix",
+            "next_operator_action",
+        ]:
+            require(field in sqs, f"SQS diagnostic field missing: {field}")
+        require(sqs["sqs_message_non_customer"] is True, "SQS rehearsal message must be non-customer.")
+        require(sqs["sqs_message_non_executable"] is True, "SQS rehearsal message must be non-executable.")
+        require(str(sqs.get("sqs_queue_url_hash_prefix") or "").strip() != "", "SQS must expose a queue URL hash prefix, not a raw URL.")
+        require(resource_results["sqs"]["status"] == "passed", f"SQS rehearsal flag was enabled but did not pass; category={sqs.get('sqs_error_category')}; action={sqs.get('next_operator_action')}")
         require(resource_results["sqs"]["message_marked_non_executable"] is True, "SQS rehearsal message must be non-executable.")
+        require(resource_results["sqs"]["sqs_passed"] is True, "SQS diagnostics must mark pass only after send succeeds.")
     if helper.enabled(env.get(helper.AWS_OPTION_A_REHEARSAL_S3_WRITE_ENABLED_FLAG)):
         require(resource_results["s3"]["status"] == "passed", "S3 rehearsal flag was enabled but did not pass.")
         require(resource_results["s3"]["read_back_passed"] is True, "S3 rehearsal must read back marker.")
@@ -248,11 +278,43 @@ def main() -> int:
         "AWS_OPTION_A_REHEARSAL_SQS_SEND_ENABLED",
         "AWS_OPTION_A_REHEARSAL_S3_WRITE_ENABLED",
         "AWS_OPTION_A_REHEARSAL_CLEANUP_ENABLED",
+        "AWS_OPTION_A_REHEARSAL_ONLY_SQS",
         "aws20_live_rehearsal_boundary",
         "aws20_rehearsal_non_customer",
         "build_aws20_live_rehearsal",
     ]:
         require(marker in source, f"AWS-20 source missing marker: {marker}")
+    for marker in [
+        "sqs_attempted",
+        "sqs_passed",
+        "sqs_error_type",
+        "sqs_error_code",
+        "sqs_error_category",
+        "sqs_region_present",
+        "sqs_queue_url_present",
+        "sqs_queue_url_hash_prefix",
+        "sqs_queue_type_standard_or_fifo",
+        "sqs_message_group_id_required_or_used",
+        "sqs_message_deduplication_id_used",
+        "sqs_message_non_customer",
+        "sqs_message_non_executable",
+        "sqs_message_body_size",
+        "sqs_message_id_hash_prefix",
+        "next_operator_action",
+        "missing_queue_url",
+        "missing_region",
+        "invalid_credentials_or_signature",
+        "access_denied",
+        "nonexistent_queue",
+        "region_mismatch",
+        "fifo_parameter_missing",
+        "queue_policy_denied",
+        "malformed_message",
+        "network_or_endpoint",
+        "missing_boto3_dependency",
+        "unknown_sqs_error",
+    ]:
+        require(marker in source, f"AWS-20 SQS diagnostics missing marker: {marker}")
 
     run_safe_default_tests(helper)
     live_mode_status = run_owner_approved_live_mode_if_requested(helper)
