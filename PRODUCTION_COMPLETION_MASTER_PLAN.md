@@ -10,9 +10,9 @@ Current launch recommendation: no full paid public launch. AWS-20 live infrastru
 
 Current AWS migration readiness: 95%.
 
-Current full SaaS production readiness: 74%.
+Current full SaaS production readiness: 75%.
 
-Biggest blocker: AWS-20 live infrastructure proof is closed, but durable job lifecycle and route cutover remain unproven. The next launch-critical blocker is proving synthetic durable job acceptance, persistence, queue send, worker claim, status updates, retries/failures, and recovery without providers or customer traffic.
+Biggest blocker: AWS-20 live infrastructure proof is closed and route-gated synthetic durable job handoff is proven in dry-run, but live durable route cutover, worker claim, retries/failures, and recovery remain unproven. The next launch-critical blocker is proving a bounded live synthetic durable write/send/status path without workers, providers, billing, credits, or customer traffic.
 
 Biggest cost/control risk: paid provider execution and long-form media jobs still require live proof that credits, package approval, provider-cost caps, retries, and failure recovery stay synchronized across real job execution.
 
@@ -34,6 +34,7 @@ One-sentence truth statement: the platform has serious safety architecture, but 
 | AWS-20 consolidated live infrastructure proof | Sanitized RDS rollback-only, SQS-focused, and S3-focused runs recorded in production docs. | RDS rollback path: proven. SQS send: proven. S3 write/read/delete cleanup: proven. | AWS-20 is formally closed, but this does not mean public launch, durable worker execution, provider execution, billing/credit execution, or client delivery is complete. |
 | AWS route gates | `backend/app/runtime/aws_option_a_route_integration.py`; `verify_aws_option_a_route_cutover_boundary.py`; `verify_aws_option_a_route_integration.py` | AWS route behavior stays behind explicit route, validation, and operation flags; default path remains compatibility runtime. | Live durable route cutover is not enabled or proven. |
 | Dry-run durable enqueue | Commit `45c61bf Add AWS durable enqueue dry-run boundary`; `verify_aws_option_a_durable_enqueue_dry_run.py` | Durable repository and queue packets are prepared in dry-run mode without RDS write or SQS send. | Live write/send remains unproven. |
+| Route-gated synthetic durable job handoff | `verify_route_gated_durable_job_handoff.py`; `backend/app/runtime/aws_option_a_route_integration.py`; `verify_durable_media_job_status_adapter.py` | Proves explicit AWS route flags are required, a synthetic non-customer accepted job gets a rollback-safe durable proof record, queue handoff is prepared through the approved boundary, status readback is prepared with a redacted customer-safe status, admin diagnostics are actionable, rollback blocks execution, and no worker, provider, Stripe, billing, credit, public cutover, or AWS call starts. Markers: `durable_repository_dry_run_prepared`, `queue_enqueue_dry_run_prepared`, `durable_status_read_dry_run_prepared`. | Dry-run proof only; does not perform live durable RDS write, SQS send, worker claim, DLQ recovery, provider execution, billing/credit mutation, or final asset delivery. |
 | Rollback controls | Commit `8eb71c9 Add AWS rollback control boundary`; `backend/app/runtime/aws_option_a_rollback_controls.py`; `verify_aws_option_a_rollback_controls.py` | Kill switch and forced compatibility fallback can block route execution and report sanitized admin/client states. | Live incident rollback drill is not proven. |
 | Observability diagnostics | Commit `0b943fb Add AWS observability diagnostics boundary`; `backend/app/runtime/aws_option_a_observability.py`; `verify_aws_option_a_observability.py` | Redacted diagnostic bundle and incident event shapes exist without CloudWatch/external logging side effects. | Live CloudWatch/alerting/dashboard proof is not present. |
 | AWS migration matrix through AWS-20 | `AWS_OPTION_A_MEDIA_MIGRATION_MATRIX.md` | AWS-01 through AWS-20 boundaries and AWS-20 RDS/SQS/S3 proof are documented without AWS-21+ expansion. | Matrix proof does not enable route cutover, worker execution, provider execution, billing/credit execution, or client delivery. |
@@ -43,7 +44,7 @@ One-sentence truth statement: the platform has serious safety architecture, but 
 
 ## 3. Current Unproven Areas
 
-- Durable AWS job lifecycle after AWS-20: RDS rollback, SQS send, and S3 marker write/read/delete cleanup are proven individually, but accepted jobs are not yet proven to persist, enqueue, be claimed by workers, update status, retry/fail safely, or deliver final assets under route cutover.
+- Live durable AWS job lifecycle after AWS-20 and dry-run route handoff: RDS rollback, SQS send, S3 marker write/read/delete cleanup, and local route-gated durable handoff proof are complete, but accepted jobs are not yet proven to persist and enqueue through live route cutover, be claimed by workers, update status, retry/fail safely, or deliver final assets.
 - Durable worker lifecycle: worker claim, idempotency, retries, terminal status, and DLQ handling are not live-proven.
 - S3 final asset lifecycle: upload, signed/open/download path, retention, cleanup, and client/admin views are not proven live.
 - Live provider orchestration under cost caps: Runway/ElevenLabs and fallbacks have guardrails, but provider execution under durable job, cost cap, credit, and status governance is not fully proven.
@@ -71,7 +72,7 @@ One-sentence truth statement: the platform has serious safety architecture, but 
 
 | Rank | Priority | Work item | Domain | Why it matters | Current evidence | Required implementation | Required verification | Owner approval needed? | Can be done without live spend? | Readiness gain if completed | Dependencies |
 | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | P0 | Prove durable queue/storage cutover with synthetic job | AWS/backend | AWS-20 proves infrastructure primitives, but paid workflows need route-gated durable write/send/status proof. | Route gates and dry-run durable enqueue exist; live route cutover remains disabled. | Plan and run the next owner-approved synthetic durable write/send/status proof without providers, workers, billing, or customer traffic. | Route integration, durable enqueue, rollback, observability, and redaction verifiers. | Yes for live AWS | Partly | +2% SaaS | AWS-20 closed |
+| 1 | P0 | Prove live durable queue/storage cutover with synthetic job | AWS/backend | Dry-run handoff proves route planning, but paid workflows need bounded live write/send/status evidence. | AWS-20 closed; route-gated synthetic durable job handoff proof exists in dry-run. | Plan and run the next owner-approved synthetic durable write/send/status proof without providers, workers, billing, credits, or customer traffic. | Route integration, durable enqueue, route-gated handoff, rollback, observability, and redaction verifiers. | Yes for live AWS | Partly | +2% SaaS | AWS-20 and dry-run handoff proof closed |
 | 2 | P0 | Durable worker lifecycle proof | Backend/jobs | Paid work needs reliable async execution after enqueue. | Dry-run durable enqueue exists; no live worker claim proof. | Synthetic worker claim, retry, terminal status, idempotency, and stuck-job recovery. | Worker lifecycle verifier and status verifier. | Yes if AWS-backed | Partly | +5% SaaS | Item 1 |
 | 3 | P0 | SQS DLQ/failed job recovery proof | Backend/ops | Failed jobs must be recoverable and supportable. | Queue/DLQ boundaries exist; AWS-20 SQS send is proven. | DLQ fixture, failed-job status, admin recovery path. | DLQ/failure verifier. | Yes if live AWS | Partly | +3% ops | Item 2 |
 | 4 | P0 | Media job status/result visibility inside Create Media popup | Frontend/media | Customers and admins need accurate job state. | Portal renderer guard exists. | Live/durable status mapping for queued, running, failed, retry, complete. | Frontend build, renderer verifier, route fixture tests. | No for fixtures | Yes | +3% client UX | Item 2 |
@@ -91,16 +92,16 @@ One-sentence truth statement: the platform has serious safety architecture, but 
 
 ## 6. The Next 10 Codex Tasks
 
-1. Task name: Prove durable queue/storage cutover with synthetic job.
-   Goal: prove route-gated durable job persistence, queue send, and status read without workers, providers, billing, or customer traffic.
-   Why now: AWS-20 infrastructure primitives are proven, but paid SaaS needs durable job execution evidence.
+1. Task name: Prove live durable queue/storage cutover with synthetic job.
+   Goal: prove bounded live durable job persistence, queue send, and status read without workers, providers, billing, credits, or customer traffic.
+   Why now: AWS-20 infrastructure primitives and dry-run route-gated durable handoff are proven, but paid SaaS needs live durable job execution evidence before workers or providers.
    Files to inspect: route integration, repository adapter, queue adapter, status adapter, rollback controls, observability.
    Files likely changed: verifier and minimal route/status adapter code only if gaps are found.
-   Commands/verifiers: route cutover verifier, route integration verifier, durable enqueue dry-run verifier, rollback verifier, observability verifier.
+   Commands/verifiers: route cutover verifier, route integration verifier, durable enqueue dry-run verifier, route-gated durable handoff verifier, rollback verifier, observability verifier.
    Live spend: possible low AWS RDS/SQS test-resource usage if owner approves a live synthetic proof.
    Owner approval needed: yes for live AWS-backed proof.
-   Expected commit message: `Prove durable route job handoff`.
-   Done criteria: synthetic accepted job is persisted, queued, status-readable, redacted, rollback-safe, and non-provider.
+   Expected commit message: `Prove live durable route job handoff`.
+   Done criteria: synthetic accepted job is live-persisted, queued, status-readable, redacted, rollback-safe, and non-provider.
    Do not do list: no paid providers, workers, media generation, Stripe, billing, credits, customer traffic, public cutover, or AWS-21.
 
 2. Task name: Prove durable worker lifecycle with synthetic jobs.
@@ -237,7 +238,7 @@ Current percentages after AWS-20 RDS/SQS/S3 proof consolidation:
 | Area | Current readiness |
 | --- | ---: |
 | AWS migration readiness | 95% |
-| Full SaaS production launch readiness | 74% |
+| Full SaaS production launch readiness | 75% |
 | Media generation production readiness | 72% |
 | Durable backend/job readiness | 62% |
 | Client UX readiness | 68% |
@@ -250,8 +251,8 @@ Target percentages after gate closure:
 
 | Gate closed | AWS migration | Full SaaS launch | Media production | Durable backend/jobs | Client UX | Admin ops | Billing/credit | Observability/support | Security/privacy |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Gate 0 | 95% | 74% | 72% | 62% | 68% | 74% | 58% | 70% | 66% |
-| Gate 1 | 95% | 74% | 72% | 65% | 68% | 76% | 58% | 72% | 67% |
+| Gate 0 | 95% | 75% | 72% | 64% | 68% | 75% | 58% | 71% | 66% |
+| Gate 1 | 95% | 75% | 72% | 65% | 68% | 76% | 58% | 72% | 67% |
 | Gate 2 | 96% | 82% | 75% | 78% | 70% | 79% | 60% | 75% | 68% |
 | Gate 3 | 96% | 85% | 79% | 80% | 80% | 83% | 61% | 77% | 70% |
 | Gate 4 | 96% | 89% | 82% | 82% | 82% | 85% | 78% | 79% | 72% |
@@ -294,11 +295,11 @@ Full public launch conditions:
 
 ## 10. Owner Decision Required Now
 
-Recommended immediate next action: prove a route-gated synthetic durable job handoff with RDS/SQS status evidence, while keeping workers, providers, billing, credits, customer traffic, public cutover, and AWS-21+ off unless explicitly owner-approved.
+Recommended immediate next action: prove one bounded live synthetic durable write/send/status handoff with RDS/SQS evidence, while keeping workers, providers, billing, credits, customer traffic, public cutover, and AWS-21+ off unless explicitly owner-approved.
 
-Why: AWS-20 is now closed for RDS rollback, SQS send, and S3 marker lifecycle proof. The next paid SaaS risk is whether accepted jobs can be durably recorded, queued, observed, recovered, and later processed safely.
+Why: AWS-20 is now closed for RDS rollback, SQS send, and S3 marker lifecycle proof, and dry-run route-gated durable handoff is proven. The next paid SaaS risk is whether accepted jobs can be live-persisted, queued, observed, recovered, and later processed safely.
 
-What it will prove: a synthetic durable handoff will establish whether the AWS route and repository/queue path can move beyond dry-run preparation without provider or billing side effects.
+What it will prove: a bounded live synthetic durable handoff will establish whether the AWS route and repository/queue path can move beyond dry-run preparation without provider or billing side effects.
 
 What it will not prove: durable handoff proof will not by itself prove worker processing, DLQ recovery, provider execution, media generation, billing, credits, Stripe, customer readiness, public launch readiness, or final asset delivery.
 
