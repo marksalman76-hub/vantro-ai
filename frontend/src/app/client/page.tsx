@@ -1,6 +1,6 @@
-import { applyProductionMediaRouteToPayload } from "@/lib/productionMediaRoutePolicy";
-"use client";
+﻿"use client";
 
+import { applyProductionMediaRouteToPayload } from "@/lib/productionMediaRoutePolicy";
 import { extractLiveActionDeliverableText } from "../../lib/liveActionResultExtraction";
 
 function renderMediaPackSummary(result: any) {
@@ -1501,7 +1501,7 @@ const primaryAssetUrl =
                   textShadow: darkModeEnabled ? "0 0 16px rgba(34,197,94,.65)" : "none",
                 }}
               >
-                ●
+                â—
               </span>
               <span style={{ color: accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444" }}>
                 {accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "ACTIVE" : "INACTIVE"}
@@ -1526,7 +1526,7 @@ const primaryAssetUrl =
                 fontSize: 12,
               }}
             >
-              <span>{activationLocked ? "🔒" : "🔓"}</span>
+              <span>{activationLocked ? "ðŸ”’" : "ðŸ”“"}</span>
               <span>
                 {activationLocked ? "AGENTS LOCKED" : "AGENTS UNLOCKED"}
               </span>
@@ -1563,7 +1563,7 @@ const primaryAssetUrl =
                   fontSize: 12,
                 }}
               >
-                <span>🛡️</span>
+                <span>ðŸ›¡ï¸</span>
                 <span>{ownerAdminReviewRequiredForChanges ? "CHANGES REQUIRE APPROVAL" : "CHANGE PROTECTED"}</span>
               </div>
             )}
@@ -1582,7 +1582,7 @@ const primaryAssetUrl =
                 position: "relative",
               }}
             >
-              🔔
+              ðŸ””
               <span
                 style={{
                   position: "absolute",
@@ -1639,8 +1639,8 @@ const primaryAssetUrl =
                     <div style={{ fontWeight: 800, color: darkModeEnabled ? "#ffffff" : "var(--color-dark)" }}>{clientDisplayName}</div>
                     <div style={{ fontSize: 12, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>{clientEmail || accountPackage}</div>
                     <div style={{ fontSize: 12, fontWeight: 700, marginTop: 4, color: darkModeEnabled ? "#94a3b8" : "var(--color-muted)" }}>
-                      <span style={{ color: accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444", marginRight: 6 }}>●</span>
-                      {accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "ACTIVE" : "INACTIVE"} · Paid plan
+                      <span style={{ color: accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "#22c55e" : "#ef4444", marginRight: 6 }}>â—</span>
+                      {accountStatus === "active" || accountStatus === "paid" || accountStatus === "trialing" ? "ACTIVE" : "INACTIVE"} Â· Paid plan
                     </div>
                   </div>
                 </div>
@@ -1653,7 +1653,7 @@ const primaryAssetUrl =
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
-                  ⚙️ Settings
+                  âš™ï¸ Settings
                 </button>
 
                 <button
@@ -1669,7 +1669,7 @@ const primaryAssetUrl =
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
-                  👤 Profile
+                  ðŸ‘¤ Profile
                 </button>
 
                 <button
@@ -1679,7 +1679,7 @@ const primaryAssetUrl =
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
-                  💳 Update payment
+                  ðŸ’³ Update payment
                 </button>
 
                 <button
@@ -1690,7 +1690,7 @@ const primaryAssetUrl =
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
-                  🔐 Password reset
+                  ðŸ” Password reset
                 </button>
 
                 <button
@@ -1701,7 +1701,7 @@ const primaryAssetUrl =
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
-                  🛡️ 2FA
+                  ðŸ›¡ï¸ 2FA
                 </button>
 
                 <button
@@ -1712,7 +1712,7 @@ const primaryAssetUrl =
                   }}
                   style={{ width: "100%", border: "none", borderTop: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6", background: "transparent", padding: "12px 8px", textAlign: "left", fontWeight: 800, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
-                  {darkModeEnabled ? "☀️ Switch to light mode" : "🌙 Toggle dark / light mode"}
+                  {darkModeEnabled ? "â˜€ï¸ Switch to light mode" : "ðŸŒ™ Toggle dark / light mode"}
                 </button>
 
                 <button
@@ -1725,7 +1725,7 @@ const primaryAssetUrl =
                   }}
                   style={{ width: "100%", border: "none", borderTop: "1px solid #edf1f6", background: "transparent", padding: "12px 8px", textAlign: "left", fontWeight: 800, cursor: "pointer", color: "#ef4444" }}
                 >
-                  🚪 Logout
+                  ðŸšª Logout
                 </button>
               </div>
             </details>
@@ -2016,7 +2016,7 @@ const primaryAssetUrl =
           <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start", marginBottom: 18, flexWrap: "wrap" }}>
             <div>
               <div style={{ color: "var(--color-brand)", fontSize: 11.5, fontWeight: 850, letterSpacing: 1.4, textTransform: "uppercase", marginBottom: 7 }}>
-                Business profile intelligence ✨
+                Business profile intelligence âœ¨
               </div>
               <h2 style={{ margin: 0, fontSize: 25, letterSpacing: -0.8 }}>
                 Business context for tailored AI execution
@@ -2028,7 +2028,7 @@ const primaryAssetUrl =
 
             <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
               <div style={{ background: darkModeEnabled ? "rgba(79,70,229,.20)" : "rgba(238,242,255,.95)", color: "var(--color-brand)", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12 }}>
-                ● {businessProfileSaved ? "Saved" : "Not saved yet"}
+                â— {businessProfileSaved ? "Saved" : "Not saved yet"}
               </div>
               <button type="button" onClick={() => setToastMessage("Add business details, save the profile, then future AI executions will use this context.")} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#cbd5e1" : "#334155", padding: "9px 13px", borderRadius: 12, fontWeight: 850, fontSize: 12, cursor: "pointer" }}>
                 ? How it works
@@ -2042,16 +2042,16 @@ const primaryAssetUrl =
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 12, position: "relative", zIndex: 20, pointerEvents: "auto" }}>
             {[
-              ["business_name", "◆", "Business name", "Type business name here", "input", "normal"],
-              ["business_niche", "▦", "Business niche", "Describe your business niche, product category, and market position", "textarea", "normal"],
-              ["products_services", "◇", "Products & services", "Main products, bundles, offers", "textarea", "normal"],
-              ["target_audience", "♙", "Target audience", "Customer type, location, needs", "textarea", "normal"],
-              ["competitors", "♕", "Competitors", "Competitor names, websites, market examples", "textarea", "normal"],
-              ["offers", "⌑", "Offers", "Current promotions, bundles, guarantees", "textarea", "normal"],
-              ["brand_voice", "◁", "Brand voice", "Premium, playful, clinical, bold, friendly", "textarea", "normal"],
-              ["positioning", "◎", "Positioning", "Why customers should choose you", "textarea", "normal"],
-              ["goals", "⚑", "Goals", "Sales, launches, retention, growth", "textarea", "normal"],
-              ["notes", "◌", "Key differentiators", "What makes your business unique? Benefits, values, or competitive advantages.", "textarea", "normal"],
+              ["business_name", "â—†", "Business name", "Type business name here", "input", "normal"],
+              ["business_niche", "â–¦", "Business niche", "Describe your business niche, product category, and market position", "textarea", "normal"],
+              ["products_services", "â—‡", "Products & services", "Main products, bundles, offers", "textarea", "normal"],
+              ["target_audience", "â™™", "Target audience", "Customer type, location, needs", "textarea", "normal"],
+              ["competitors", "â™•", "Competitors", "Competitor names, websites, market examples", "textarea", "normal"],
+              ["offers", "âŒ‘", "Offers", "Current promotions, bundles, guarantees", "textarea", "normal"],
+              ["brand_voice", "â—", "Brand voice", "Premium, playful, clinical, bold, friendly", "textarea", "normal"],
+              ["positioning", "â—Ž", "Positioning", "Why customers should choose you", "textarea", "normal"],
+              ["goals", "âš‘", "Goals", "Sales, launches, retention, growth", "textarea", "normal"],
+              ["notes", "â—Œ", "Key differentiators", "What makes your business unique? Benefits, values, or competitive advantages.", "textarea", "normal"],
             ].map(([key, icon, label, placeholder, fieldType, size]) => (
               <div
                 key={String(key)}
@@ -2148,9 +2148,9 @@ const primaryAssetUrl =
 
           <div style={{ marginTop: 14, borderRadius: 16, border: darkModeEnabled ? "1px solid rgba(129,140,248,.22)" : "1px solid rgba(79,70,229,.10)", background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", padding: 10, boxShadow: darkModeEnabled ? "0 14px 34px rgba(0,0,0,.28)" : "0 10px 28px rgba(15,23,42,.04)", position: "relative", zIndex: 25 }}>
             <div style={{ display: "grid", gridTemplateColumns: "180px 180px 180px 1fr", gap: 10, alignItems: "center" }}>
-              <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "8px 10px", height: 34, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "#fff", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>▣ Save business profile</button>
-              <button type="button" onClick={loadBusinessProfile} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>↻ Reset to last save</button>
-              <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>◉ Preview profile</button>
+              <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "8px 10px", height: 34, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "#fff", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>â–£ Save business profile</button>
+              <button type="button" onClick={loadBusinessProfile} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>â†» Reset to last save</button>
+              <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>â—‰ Preview profile</button>
               <div style={{ borderLeft: "1px solid rgba(79,70,229,.12)", paddingLeft: 14, minHeight: 44, display: "flex", flexDirection: "column", justifyContent: "center" }}>
                 <div style={{ fontWeight: 900, color: darkModeEnabled ? "#f8fafc" : "#0f172a", fontSize: 12.5, marginBottom: 2 }}>One workspace. One business.</div>
                 <div style={{ color: darkModeEnabled ? "#94a3b8" : "#64748b", fontSize: 11.4, lineHeight: 1.3 }}>You can refine this profile, but changing business identity requires approval unless Enterprise multi-business access is enabled.</div>
@@ -2158,7 +2158,7 @@ const primaryAssetUrl =
               </div>
             </div>
             <div style={{ marginTop: 8, borderRadius: 11, border: darkModeEnabled ? "1px solid rgba(129,140,248,.22)" : "1px solid rgba(79,70,229,.10)", background: darkModeEnabled ? "rgba(30,41,59,.88)" : "rgba(238,242,255,.50)", padding: "7px 11px", color: darkModeEnabled ? "#94a3b8" : "#475569", fontSize: 11.7, lineHeight: 1.35, fontWeight: 700 }}>
-              ✨ Pro tip: The more specific you are, the better your AI agents can create content, copy, and strategies tailored to your business.
+              âœ¨ Pro tip: The more specific you are, the better your AI agents can create content, copy, and strategies tailored to your business.
             </div>
           </div>
         </section>
@@ -2433,14 +2433,14 @@ const primaryAssetUrl =
                     const active = selectedAgents.includes(agent);
                     const agentName = getAgentDisplayName(agent);
                     const agentIcon =
-                      agentName.toLowerCase().includes("research") ? "⌕" :
-                      agentName.toLowerCase().includes("copy") ? "✎" :
-                      agentName.toLowerCase().includes("ugc") ? "▣" :
-                      agentName.toLowerCase().includes("image") ? "▧" :
-                      agentName.toLowerCase().includes("crm") ? "♟" :
-                      agentName.toLowerCase().includes("email") ? "✉" :
-                      agentName.toLowerCase().includes("analytics") ? "↗" :
-                      agentName.toLowerCase().includes("influencer") ? "★" :
+                      agentName.toLowerCase().includes("research") ? "âŒ•" :
+                      agentName.toLowerCase().includes("copy") ? "âœŽ" :
+                      agentName.toLowerCase().includes("ugc") ? "â–£" :
+                      agentName.toLowerCase().includes("image") ? "â–§" :
+                      agentName.toLowerCase().includes("crm") ? "â™Ÿ" :
+                      agentName.toLowerCase().includes("email") ? "âœ‰" :
+                      agentName.toLowerCase().includes("analytics") ? "â†—" :
+                      agentName.toLowerCase().includes("influencer") ? "â˜…" :
                       "AI";
 
                     return (
@@ -2480,7 +2480,7 @@ const primaryAssetUrl =
                             fontWeight: 900,
                           }}
                         >
-                          {active ? "✓" : ""}
+                          {active ? "âœ“" : ""}
                         </span>
                         <span
                           style={{
@@ -2524,7 +2524,7 @@ const primaryAssetUrl =
                       boxShadow: "0 8px 20px rgba(15,23,42,.04)",
                     }}
                   >
-                    View full catalogue →
+                    View full catalogue â†’
                   </button>
                 ) : null}
               </div>
@@ -2683,13 +2683,13 @@ const primaryAssetUrl =
                     boxShadow: "0 12px 26px rgba(37,99,235,.18)",
                   }}
                 >
-                  {executionState === "running" ? "Generating..." : "✨ Run Agent"}
+                  {executionState === "running" ? "Generating..." : "âœ¨ Run Agent"}
                 </button>
               </div>
             </div>
 
             <div style={{ marginTop: 12, color: "var(--color-muted)", fontSize: 12 }}>
-              ⓘ Runs use your saved business profile.
+              â“˜ Runs use your saved business profile.
             </div>
           </div>
 
@@ -2707,7 +2707,7 @@ const primaryAssetUrl =
                 ["Business profile applied", "Context loaded", "Live"],
                 ["Deliverable status", executionState === "completed" ? "Ready" : "Pending", liveDeliverable?.created_at || "Live"],
                 ["Client review", reviewStatus === "approved" ? "Approved" : reviewStatus === "rejected" ? "Revision requested" : "Pending", reviewStatus === "approved" ? "Complete" : "Open"],
-                ["Execution ready", "Next", "—"],
+                ["Execution ready", "Next", "â€”"],
               ].map(([title, status, time], index) => (
                 <div key={title} style={{ display: "grid", gridTemplateColumns: "30px minmax(0,1fr) auto", gap: 9, alignItems: "center" }}>
                   <div
@@ -2772,7 +2772,7 @@ const primaryAssetUrl =
                     boxShadow: "0 4px 12px rgba(37,99,235,.08)",
                   }}
                 >
-                  ✦
+                  âœ¦
                 </div>
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 900, color: "var(--color-dark)" }}>
@@ -2892,7 +2892,7 @@ const primaryAssetUrl =
                     : "Run selected agents to generate a new client deliverable.",
                   status: liveDeliverable ? "Ready" : "Waiting",
                   tone: liveDeliverable ? "#22c55e" : "var(--color-brand)",
-                  icon: liveDeliverable ? "✓" : "→",
+                  icon: liveDeliverable ? "âœ“" : "â†’",
                 },
                 {
                   title: executionState === "completed" ? "Autonomous execution completed" : executionState === "running" ? "Execution running" : "Execution prepared",
@@ -2901,7 +2901,7 @@ const primaryAssetUrl =
                     : "Governed execution is prepared for the selected agents.",
                   status: executionState === "completed" ? "Complete" : executionState === "running" ? "Running" : "Prepared",
                   tone: executionState === "running" ? "#f59e0b" : "#06b6d4",
-                  icon: executionState === "running" ? "…" : "⚡",
+                  icon: executionState === "running" ? "â€¦" : "âš¡",
                 },
                 {
                   title: reviewStatus === "approved" ? "Client approved" : reviewStatus === "rejected" ? "Changes requested" : "Client review",
@@ -2912,7 +2912,7 @@ const primaryAssetUrl =
                       : "Approval controls are ready when the output is reviewed.",
                   status: reviewStatus === "approved" ? "Approved" : reviewStatus === "rejected" ? "Revision" : "Pending",
                   tone: reviewStatus === "rejected" ? "#ef4444" : "var(--color-brand)",
-                  icon: reviewStatus === "approved" ? "✓" : reviewStatus === "rejected" ? "!" : "○",
+                  icon: reviewStatus === "approved" ? "âœ“" : reviewStatus === "rejected" ? "!" : "â—‹",
                 },
               ].map((item) => (
                 <div
@@ -3051,9 +3051,9 @@ const primaryAssetUrl =
                 }}
               >
                 {[
-                  ["Review latest output", liveDeliverable ? "Ready" : "Waiting", liveDeliverable ? "✓" : "○"],
-                  ["Approve or request changes", reviewStatus === "pending" ? "Next" : reviewStatus === "approved" ? "Done" : "Revision", reviewStatus === "approved" ? "✓" : "→"],
-                  ["Run next optimisation", reviewStatus === "approved" ? "Available" : "After review", "↗"],
+                  ["Review latest output", liveDeliverable ? "Ready" : "Waiting", liveDeliverable ? "âœ“" : "â—‹"],
+                  ["Approve or request changes", reviewStatus === "pending" ? "Next" : reviewStatus === "approved" ? "Done" : "Revision", reviewStatus === "approved" ? "âœ“" : "â†’"],
+                  ["Run next optimisation", reviewStatus === "approved" ? "Available" : "After review", "â†—"],
                 ].map(([title, status, icon]) => (
                   <div
                     key={title}
@@ -3097,7 +3097,7 @@ const primaryAssetUrl =
                   height: "fit-content",
                 }}
               >
-                {reviewStatus === "approved" ? "Approve ✓d" : reviewStatus === "rejected" ? "Revision requested" : "Completed"}
+                {reviewStatus === "approved" ? "Approve âœ“d" : reviewStatus === "rejected" ? "Revision requested" : "Completed"}
               </div>
             </div>
 
@@ -3172,7 +3172,7 @@ const primaryAssetUrl =
                               flex: "0 0 auto",
                             }}
                           >
-                            ✦
+                            âœ¦
                           </div>
 
                           <div>
@@ -3243,7 +3243,7 @@ const primaryAssetUrl =
                               marginBottom: 12,
                             }}
                           >
-                            🖼️
+                            ðŸ–¼ï¸
                           </div>
 
                           <div
@@ -3491,7 +3491,7 @@ const primaryAssetUrl =
 
                   <button
                     onClick={async () => {
-                      const shareText = `${liveDeliverable?.title || "Client deliverable"} — ${liveDeliverable?.summary || "Ready for review."}`;
+                      const shareText = `${liveDeliverable?.title || "Client deliverable"} â€” ${liveDeliverable?.summary || "Ready for review."}`;
                       try {
                         await navigator.clipboard.writeText(shareText);
                         setToastMessage("Deliverable summary copied.");
@@ -3551,7 +3551,7 @@ const primaryAssetUrl =
                  
    }}
                   >
-                    {reviewActionLoading ? "Saving..." : "👍 Approve ✓"}
+                    {reviewActionLoading ? "Saving..." : "ðŸ‘ Approve âœ“"}
                   </button>
 
                   <button
@@ -3572,7 +3572,7 @@ const primaryAssetUrl =
                       transition: "transform 0.16s ease, border-color 0.16s ease",
                     }}
                   >
-                    👎 Request changes
+                    ðŸ‘Ž Request changes
                   </button>
                 </div>
 
@@ -3607,7 +3607,7 @@ const primaryAssetUrl =
           }}
         >
           <div style={{ fontWeight: 800 }}>
-            © {new Date().getFullYear()} E-commerce AI Agent Platform
+            Â© {new Date().getFullYear()} E-commerce AI Agent Platform
           </div>
 
           <nav
@@ -3771,7 +3771,7 @@ const primaryAssetUrl =
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: 34, marginBottom: 10 }}>🖼️</div>
+                    <div style={{ fontSize: 34, marginBottom: 10 }}>ðŸ–¼ï¸</div>
                     <h4 style={{ margin: 0, fontSize: 16, color: "#0f172a" }}>No media asset generated yet</h4>
                     <p style={{ margin: "8px auto 0", maxWidth: 420, color: "#64748b", fontSize: 13, lineHeight: 1.55 }}>
                       Real generated media, uploaded brand files, previews, and deliverable assets will appear here once ready.
@@ -3935,7 +3935,7 @@ const primaryAssetUrl =
                   }}
                 >
                   <div>
-                    <div style={{ fontSize: 36, marginBottom: 10 }}>🖼️</div>
+                    <div style={{ fontSize: 36, marginBottom: 10 }}>ðŸ–¼ï¸</div>
                     <h4 style={{ margin: 0, fontSize: 17, color: "#0f172a" }}>No media asset generated yet</h4>
                     <p style={{ margin: "8px auto 0", maxWidth: 430, color: "#64748b", fontSize: 13, lineHeight: 1.55 }}>
                       Real generated media, uploaded brand files, previews, and deliverable assets will appear here once ready.
@@ -4224,7 +4224,7 @@ const primaryAssetUrl =
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 36, marginBottom: 10 }}>🖼️</div>
+                  <div style={{ fontSize: 36, marginBottom: 10 }}>ðŸ–¼ï¸</div>
                   <h4 style={{ margin: 0, fontSize: 17, color: "#0f172a" }}>No media asset generated yet</h4>
                   <p style={{ margin: "8px auto 0", maxWidth: 430, color: "#64748b", fontSize: 13, lineHeight: 1.55 }}>
                     Real generated media, uploaded brand files, previews, and deliverable assets will appear here once ready.

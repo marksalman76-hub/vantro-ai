@@ -1,5 +1,6 @@
+﻿"use client";
+
 import { applyProductionMediaRouteToPayload } from "@/lib/productionMediaRoutePolicy";
-"use client";
 import DirectMediaProviderPanel from "../../components/DirectMediaProviderPanel";
 
 type CreativeMediaAsset = {
@@ -898,7 +899,7 @@ const [activeNav, setActiveNav] = useState("Overview");
     const createVisibleFallbackPlan = (reason: string) => {
       const actionLines = outcomeText
         .split("\n")
-        .map((line: string) => line.replace(/^[-•\s]+/, "").trim())
+        .map((line: string) => line.replace(/^[-â€¢\s]+/, "").trim())
         .filter((line: string) =>
           line.length > 35 &&
           /create|develop|launch|build|prepare|identify|review|generate|draft|plan|initiate|assign|schedule|assemble|conduct|monitor|evaluate/i.test(line)
@@ -1377,7 +1378,7 @@ const [activeNav, setActiveNav] = useState("Overview");
             <span className="avatar">OW</span>
             <div>
               <strong>Owner Admin</strong>
-              <small>Unrestricted · 27 agents</small>
+              <small>Unrestricted Â· 27 agents</small>
             </div>
           </div>
         </aside>
@@ -1405,7 +1406,7 @@ const [activeNav, setActiveNav] = useState("Overview");
                 Creative Assets
               </a>
             </div>
-            <p>Execution · Billing · Provider governance · Recovery · Launch monitoring</p>
+            <p>Execution Â· Billing Â· Provider governance Â· Recovery Â· Launch monitoring</p>
             <div className="badges">
               <b>Client workspace mirror: Ready</b>
               <b>Owner controls: Ready</b>
@@ -1432,7 +1433,7 @@ const [activeNav, setActiveNav] = useState("Overview");
 
           <section className="orchestrationStrip">
             {[
-              ["Routes", orchestration?.routes?.count ?? 0, "Workflow → provider routing"],
+              ["Routes", orchestration?.routes?.count ?? 0, "Workflow â†’ provider routing"],
               ["Live outputs", orchestration?.liveExecutions?.count ?? 0, "Prepared / executed provider packets"],
               ["Dead letters", orchestration?.deadLetters?.count ?? 0, "Failed workflows needing review"],
               ["Manual review", orchestration?.manualReview?.count ?? 0, "Owner/admin review queue"],
@@ -1559,7 +1560,7 @@ const [activeNav, setActiveNav] = useState("Overview");
                           <div>
                             <strong>{asset.test_label || asset.file_name || asset.asset_type || "Generated media asset"}</strong>
                             <p>Status: {asset.delivery_status || asset.status || "ready"}</p>
-                            <p>Preview: {asset.preview_ready ? "ready" : "not ready"} · Download: {asset.download_ready ? "ready" : "not ready"} · Playable: {asset.playable ? "yes" : "no"}</p>
+                            <p>Preview: {asset.preview_ready ? "ready" : "not ready"} Â· Download: {asset.download_ready ? "ready" : "not ready"} Â· Playable: {asset.playable ? "yes" : "no"}</p>
                             {asset.local_path ? <p className="breakText">File: {asset.local_path}</p> : null}
                             {asset.blocked_reason || asset.not_playable_reason ? (
                               <p className="warningText">{asset.blocked_reason || asset.not_playable_reason}</p>
@@ -1631,7 +1632,7 @@ const [activeNav, setActiveNav] = useState("Overview");
                               <div className="executionMetaRow">
                                 <span>Provider: {item?.provider || "openai"}</span>
                                 <span>Live: {item?.live_external_call_executed ? "Yes" : "No"}</span>
-                                <span>Latency: {item?.latency_ms ? `${item.latency_ms}ms` : "—"}</span>
+                                <span>Latency: {item?.latency_ms ? `${item.latency_ms}ms` : "â€”"}</span>
                               </div>
 
                               <div className="visibleOutcomeActions">
@@ -1663,12 +1664,12 @@ const [activeNav, setActiveNav] = useState("Overview");
                                       <div>
                                         <small>Media processor</small>
                                         <span>
-                                          called: {latestMediaProcessorResult.media_processor_called ? "true" : "false"} · invoked: {latestMediaProcessorResult.processor_invoked ? "true" : "false"}
+                                          called: {latestMediaProcessorResult.media_processor_called ? "true" : "false"} Â· invoked: {latestMediaProcessorResult.processor_invoked ? "true" : "false"}
                                         </span>
                                       </div>
                                       <div>
                                         <small>Authorisation</small>
-                                        <em>{latestMediaProcessorResult.authorised ? "authorised" : "blocked"} · processed {latestMediaProcessorResult.processed_job_count || 0}</em>
+                                        <em>{latestMediaProcessorResult.authorised ? "authorised" : "blocked"} Â· processed {latestMediaProcessorResult.processed_job_count || 0}</em>
                                       </div>
                                       <div>
                                         <small>Canonical job</small>
@@ -1692,7 +1693,7 @@ const [activeNav, setActiveNav] = useState("Overview");
                                         <div>
                                           <small>Final deliverable</small>
                                           <span>
-                                            ready: {latestMediaProcessorResult.final_deliverable_ready ? "true" : "false"} · type: {latestMediaProcessorResult.final_deliverable_type || latestMediaProcessorResult.client_ready_delivery_type || "fallback_asset_package"} · status: {latestMediaProcessorResult.final_deliverable_status || latestMediaProcessorResult.final_combined_asset_status || "ready"}
+                                            ready: {latestMediaProcessorResult.final_deliverable_ready ? "true" : "false"} Â· type: {latestMediaProcessorResult.final_deliverable_type || latestMediaProcessorResult.client_ready_delivery_type || "fallback_asset_package"} Â· status: {latestMediaProcessorResult.final_deliverable_status || latestMediaProcessorResult.final_combined_asset_status || "ready"}
                                           </span>
                                         </div>
                                       ) : null}
@@ -1742,8 +1743,8 @@ const [activeNav, setActiveNav] = useState("Overview");
                                           <small>{agentOwned ? "Risk / status" : "Package status"}</small>
                                           <em>
                                             {agentOwned
-                                              ? `${packet.risk_level || "medium"} · ${packet.execution_status}`
-                                              : "Upgrade required · task hidden"}
+                                              ? `${packet.risk_level || "medium"} Â· ${packet.execution_status}`
+                                              : "Upgrade required Â· task hidden"}
                                           </em>
                                         </div>
 
@@ -1791,7 +1792,7 @@ const [activeNav, setActiveNav] = useState("Overview");
                 <button className="ghost" onClick={() => setSelectedDeploy([])}>Clear</button>
               </div>
 
-              <label>Deploy agents — select client access</label>
+              <label>Deploy agents â€” select client access</label>
               <div className="pills">
                 {ADMIN_AGENT_OPTIONS.map(([agentId, label]) => (
                   <button key={agentId} className={selectedDeploy.includes(agentId) ? "on teal" : ""} onClick={() => toggleDeploy(agentId)}>
@@ -1807,7 +1808,7 @@ const [activeNav, setActiveNav] = useState("Overview");
                 <button className="warn" onClick={suspendClient} disabled={busyAction !== ""}>Suspend system</button>
                 <button className="reactivate" onClick={reactivateClient} disabled={busyAction !== ""}>Reactivate</button>
               </div>
-              <button className="dangerText" onClick={() => setCancelOpen(true)}>Cancel system — requires confirmation</button>
+              <button className="dangerText" onClick={() => setCancelOpen(true)}>Cancel system â€” requires confirmation</button>
 
               {deploymentResult ? (
                 <div className={deploymentResult?.success === false ? "actionStatus error" : "actionStatus ok"}>
@@ -1896,7 +1897,7 @@ const [activeNav, setActiveNav] = useState("Overview");
                 {(orchestration?.routes?.routes || []).slice(-5).reverse().map((route: any, index: number) => (
                   <div className="timelineItem" key={route.routing_id || index}>
                     <b>{route.status || "route"}</b>
-                    <span>{route.agent_id || "agent"} → {route.selected_provider || route.provider_category || "provider"}</span>
+                    <span>{route.agent_id || "agent"} â†’ {route.selected_provider || route.provider_category || "provider"}</span>
                     <p>{route.route_state || route.action_type || "Workflow route decision recorded."}</p>
                   </div>
                 ))}
@@ -1930,7 +1931,7 @@ const [activeNav, setActiveNav] = useState("Overview");
                 {(orchestration?.manualReview?.manual_review_items || []).slice(-4).reverse().map((item: any, index: number) => (
                   <div className="reviewItem" key={item.review_id || index}>
                     <strong>{item.status || "pending_owner_review"}</strong>
-                    <span>{item.agent_id || "agent"} · {item.action_type || "action"}</span>
+                    <span>{item.agent_id || "agent"} Â· {item.action_type || "action"}</span>
                     <p>{item.failure_reason || "Owner/admin review required before recovery."}</p>
                   </div>
                 ))}
@@ -1956,11 +1957,11 @@ const [activeNav, setActiveNav] = useState("Overview");
                 </div>
                 <div>
                   <span>Latest adapter</span>
-                  <b>{actionExecutionHistory?.[0]?.adapter || "—"}</b>
+                  <b>{actionExecutionHistory?.[0]?.adapter || "â€”"}</b>
                 </div>
                 <div>
                   <span>Actual actions</span>
-                  <b>{actionExecutionHistory?.[0]?.performed_actual_action ? "Yes" : "—"}</b>
+                  <b>{actionExecutionHistory?.[0]?.performed_actual_action ? "Yes" : "â€”"}</b>
                 </div>
               </div>
 
@@ -1968,9 +1969,9 @@ const [activeNav, setActiveNav] = useState("Overview");
                 {actionExecutionHistory.length ? actionExecutionHistory.slice(0, 5).map((item: any, index: number) => (
                   <div className="reviewItem" key={item.history_id || index}>
                     <strong>{item.execution_status || "saved_action"}</strong>
-                    <span>{String(item.assigned_agent || "agent").replaceAll("_", " ")} · {item.adapter || "adapter"}</span>
+                    <span>{String(item.assigned_agent || "agent").replaceAll("_", " ")} Â· {item.adapter || "adapter"}</span>
                     <p>
-                      {(item.actions_performed || []).map((action: any) => action.type || action.status).filter(Boolean).join(" · ")
+                      {(item.actions_performed || []).map((action: any) => action.type || action.status).filter(Boolean).join(" Â· ")
                         || item?.deliverable?.summary
                         || "Autonomous action record saved."}
                     </p>
@@ -2010,7 +2011,7 @@ const [activeNav, setActiveNav] = useState("Overview");
                   <div className="clientRow" key={client.account_reference || client.client_id || index}>
                     <strong>{client.company_name || client.account_reference || client.client_id || "Client"}</strong>
                     <span>{client.status || "active"}</span>
-                    <p>{client.contact_email || client.email || "No email"} · Agents: {(client.active_agents || []).length || "—"} · Credits: {client.unlimited_credits ? "Unlimited" : client.credits_remaining || "—"}</p>
+                    <p>{client.contact_email || client.email || "No email"} Â· Agents: {(client.active_agents || []).length || "â€”"} Â· Credits: {client.unlimited_credits ? "Unlimited" : client.credits_remaining || "â€”"}</p>
                   </div>
                 )) : (
                   <div className="clientRow">
