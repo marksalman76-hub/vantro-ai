@@ -1,3 +1,18 @@
+from pathlib import Path
+import re
+import json
+from datetime import datetime
+import shutil
+
+ROOT = Path(__file__).resolve().parent
+COMPONENT = ROOT / "frontend" / "src" / "components" / "ClientCreateMediaProductionCard.tsx"
+VERIFY = ROOT / "verify_isolated_client_media_card.py"
+
+backup_dir = ROOT / "backups" / f"client_media_card_click_bridge_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+backup_dir.mkdir(parents=True, exist_ok=True)
+shutil.copy2(COMPONENT, backup_dir / "ClientCreateMediaProductionCard.tsx")
+
+component = r'''
 "use client";
 
 type ClientCreateMediaProductionCardProps = {
@@ -256,3 +271,33 @@ export default function ClientCreateMediaProductionCard({
     </section>
   );
 }
+'''.lstrip()
+
+COMPONENT.write_text(component, encoding="utf-8", newline="\n")
+
+verify_text = VERIFY.read_text(encoding="utf-8", errors="ignore")
+if "open_button_bridge_present" not in verify_text:
+    verify_text = verify_text.replace(
+        '"component_mounted_in_client_page": "<ClientCreateMediaProductionCard" in client_text,',
+        '"component_mounted_in_client_page": "<ClientCreateMediaProductionCard" in client_text,\n'
+        '    "open_button_bridge_present": "data-client-create-media-open-button" in component_text and "findExistingCreateMediaButton" in component_text,',
+    )
+    verify_text = verify_text.replace(
+        'and proof["use_client_first_line_component"]\n',
+        'and proof["use_client_first_line_component"]\n'
+        '    and proof["open_button_bridge_present"]\n',
+    )
+
+VERIFY.write_text(verify_text, encoding="utf-8", newline="\n")
+
+print(json.dumps({
+    "click_bridge_fixed": True,
+    "component": str(COMPONENT),
+    "verifier": str(VERIFY),
+    "backup": str(backup_dir),
+    "provider_calls": False,
+    "media_generation": False,
+    "billing_mutation": False,
+    "credit_mutation": False,
+    "stripe": False,
+}, indent=2))
