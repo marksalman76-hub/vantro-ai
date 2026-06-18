@@ -5513,7 +5513,7 @@ async def direct_media_provider_security_bridge_middleware(request, call_next):
             )
 
             asset_path = Path(str(asset_path_value)).resolve()
-            allowed_root = Path("/opt/render/project/src/runtime_outputs").resolve()
+            allowed_root = (Path(__file__).resolve().parents[2] / "runtime_outputs").resolve()
 
             try:
                 asset_path.relative_to(allowed_root)
@@ -5618,7 +5618,7 @@ def admin_direct_media_provider_asset(job_id: str):
     )
 
     asset_path = Path(str(asset_path_value)).resolve()
-    allowed_root = Path("/opt/render/project/src/runtime_outputs").resolve()
+    allowed_root = (Path(__file__).resolve().parents[2] / "runtime_outputs").resolve()
 
     try:
         asset_path.relative_to(allowed_root)

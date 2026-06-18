@@ -1022,7 +1022,6 @@ def _safe_runtime_asset_path(value: str) -> Path | None:
 
     allowed_roots = [
         (ROOT / "runtime_outputs").resolve(),
-        Path("/opt/render/project/src/runtime_outputs").resolve(),
     ]
     for allowed_root in allowed_roots:
         try:
