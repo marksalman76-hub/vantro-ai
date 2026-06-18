@@ -88,6 +88,7 @@ REQUIRED_FIELDS = [
     "public_cutover_enabled",
     "render_removal_attempted",
     "aws21_or_later_work_attempted",
+    "next_operator_action",
 ]
 
 
@@ -248,6 +249,8 @@ def selected_names(readiness: Mapping[str, Any], job: Mapping[str, Any] | None =
 
 def provider_failure_reason(job: Mapping[str, Any]) -> str:
     status = clean_text(job.get("status"), 120)
+    if job.get("provider_failure_reason_sanitized"):
+        return clean_text(f"{status}: {job.get('provider_failure_reason_sanitized')}", 500)
     for key in (
         "video_error",
         "audio_error",
@@ -267,6 +270,18 @@ def provider_failure_reason(job: Mapping[str, Any]) -> str:
             500,
         )
     return status
+
+
+def choose_next_operator_action(summary: Mapping[str, Any]) -> str:
+    if summary.get("complete_media_5s_smoke_passed"):
+        return "review_second_capped_smoke_final_asset"
+    error_type = str(summary.get("provider_error_type_sanitized") or "").strip()
+    reason = str(summary.get("provider_failure_reason") or "").lower()
+    if error_type == "insufficient_provider_credits" or "insufficient provider credits" in reason:
+        return "resolve_runway_provider_credits"
+    if summary.get("complete_media_5s_smoke_attempted"):
+        return "investigate_provider_failure_before_retry"
+    return "investigate_smoke_precheck_blocker"
 
 
 def poll_job(job_id: str) -> tuple[dict[str, Any], list[str]]:
@@ -368,6 +383,7 @@ def abort_summary(readiness_proof: Mapping[str, Any], reason: str) -> dict[str, 
         "customer_asset_used": False,
         "customer_likeness_used": False,
     }
+    summary["next_operator_action"] = choose_next_operator_action(summary)
     summary["client_safe_result_view"] = build_client_safe_view(summary)
     summary["admin_provider_diagnostics"] = build_admin_diagnostics(summary)
     return proof_helper.redact_secret_values(summary)
@@ -463,6 +479,8 @@ def run_smoke() -> dict[str, Any]:
         "complete_media_5s_smoke_passed": passed,
         "proof_blocked_reason": "",
         "provider_failure_reason": failure_reason,
+        "provider_error_type_sanitized": clean_text(final_job.get("provider_error_type_sanitized"), 120),
+        "provider_http_status_if_recorded": final_job.get("provider_http_status_if_recorded") or "",
         "provider_router_used": True,
         "provider_pair_hardcoded": False,
         **selected_names(readiness, final_job),
@@ -508,6 +526,7 @@ def run_smoke() -> dict[str, Any]:
         "customer_asset_used": False,
         "customer_likeness_used": False,
     }
+    summary["next_operator_action"] = choose_next_operator_action(summary)
     summary["client_safe_result_view"] = build_client_safe_view(summary)
     summary["admin_provider_diagnostics"] = build_admin_diagnostics(summary)
     return proof_helper.redact_secret_values(summary)
