@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
 import { applyProductionMediaRouteToPayload } from "@/lib/productionMediaRoutePolicy";
 import { extractLiveActionDeliverableText } from "../../lib/liveActionResultExtraction";
 
+import ClientCreateMediaProductionCard from "../../components/ClientCreateMediaProductionCard";
 function renderMediaPackSummary(result: any) {
   const mediaPack = result?.media_pack || result?.deliverable?.media_pack || {};
   const jobs = result?.generation_jobs || mediaPack?.generation_jobs || [];
@@ -666,7 +667,7 @@ export default function ClientPage() {
     background: "#fff",
   };
 
-  
+
   const responsiveWorkspaceGridStyle = {
     display: "grid",
     gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
@@ -1219,6 +1220,14 @@ const primaryAssetUrl =
           'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       }}
     >
+
+      <ClientCreateMediaProductionCard
+        onOpenCreateMedia={() => {
+          const button = document.querySelector('[data-open-create-media], [data-create-media-open], button[aria-label="Create Media"]') as HTMLButtonElement | null;
+          button?.click();
+        }}
+      />
+
         <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
             Agent Status
@@ -1649,7 +1658,7 @@ const primaryAssetUrl =
                   onClick={() => {
                     setActiveAccountPanel("settings");
                     window.location.hash = "settings";
-                    
+
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
@@ -1686,7 +1695,7 @@ const primaryAssetUrl =
                   onClick={() => {
                     setActiveAccountPanel("password-reset");
                     window.location.hash = "password-reset";
-                    
+
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
@@ -1697,7 +1706,7 @@ const primaryAssetUrl =
                   onClick={() => {
                     setActiveAccountPanel("two-factor-authentication");
                     window.location.hash = "two-factor-authentication";
-                    
+
                   }}
                   style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
                 >
@@ -2337,7 +2346,7 @@ const primaryAssetUrl =
         </div>
       </section>
 
-        
+
 
         {/* TARGETED_DARK_MODE_BLOCKS_1_2_POLISH_V1 */}
         <style>{`
@@ -2632,7 +2641,7 @@ const primaryAssetUrl =
                         headers: { "Content-Type": "application/json", "x-tenant-id": tenantId, "x-actor-role": "customer" },
                         credentials: "include",
                         body: JSON.stringify({
-                          
+
                           requested_agent: selectedAgents[0] || "paid_ads_agent",
                           workflow_stage: "client_live_execution",
                           task:
@@ -3201,7 +3210,7 @@ const primaryAssetUrl =
                         <div
                           style={{
                             border: "1px solid rgba(15, 23, 42, 0.08)",
-                            
+
                     boxShadow: "0 18px 55px rgba(15, 23, 42, 0.06)",
                     backdropFilter: "blur(10px)",
                     WebkitBackdropFilter: "blur(10px)",
@@ -3211,7 +3220,7 @@ const primaryAssetUrl =
                             fontWeight: 700,
                             background: darkModeEnabled ? "rgba(12,24,49,.92)" : "#fff",
                             color: darkModeEnabled ? "#cbd5e1" : "var(--color-mid)",
-                            
+
                           }}
                         >
                           {attachedAssets.length ? "Assets detected" : "Pending media"}
@@ -3456,11 +3465,11 @@ const primaryAssetUrl =
                       fontWeight: 760,
                       fontSize: 11,
                       cursor: "pointer",
-                    
-                      
-                      
+
+
+
                       alignItems: "center",
-                    
+
                     }}
                   >
                     Preview in popup
@@ -3548,7 +3557,7 @@ const primaryAssetUrl =
                       padding: "8px 12px",
                       fontWeight: 760,
                       cursor: reviewActionLoading ? "not-allowed" : "pointer",
-                 
+
    }}
                   >
                     {reviewActionLoading ? "Saving..." : "ðŸ‘ Approve âœ“"}
