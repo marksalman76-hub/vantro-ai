@@ -218,6 +218,85 @@ def safe_env_presence_records(names: list[str]) -> list[Dict[str, Any]]:
     return records
 
 
+def _safe_binary_name(value: str) -> str:
+    text = _clean_env_value(value)
+    if not text:
+        return ""
+    try:
+        return Path(text).name or "ffmpeg"
+    except Exception:
+        return "ffmpeg"
+
+
+def _ffmpeg_version_check(binary: str) -> bool:
+    try:
+        completed = subprocess.run(
+            [binary, "-version"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+        return bool(completed.returncode == 0 and "ffmpeg" in (completed.stdout or completed.stderr or "").lower())
+    except Exception:
+        return False
+
+
+def resolve_ffmpeg_binary_for_runtime() -> tuple[str, Dict[str, Any]]:
+    load_local_env_for_provider_readiness()
+    env_value = _clean_env_value(os.getenv("FFMPEG_BINARY", ""))
+    env_placeholder_like = _env_value_placeholder_like(env_value)
+    candidates: list[tuple[str, str]] = []
+    if env_value and not env_placeholder_like:
+        candidates.append(("ffmpeg_binary_env", env_value))
+    system_path = shutil.which("ffmpeg")
+    if system_path:
+        candidates.append(("system_path", system_path))
+
+    checked: list[Dict[str, Any]] = []
+    for source, binary in candidates:
+        version_ok = _ffmpeg_version_check(binary)
+        checked.append({
+            "source": source,
+            "present": True,
+            "value_length_present": bool(binary),
+            "selected_binary_safe_name": _safe_binary_name(binary),
+            "version_check_passed": version_ok,
+            "credential_values_exposed": False,
+        })
+        if version_ok:
+            return binary, {
+                "ffmpeg_available": True,
+                "ffmpeg_detection_source": source,
+                "selected_binary_safe_name": _safe_binary_name(binary),
+                "ffmpeg_version_check_passed": True,
+                "ffmpeg_binary_env": {
+                    "present": bool(env_value),
+                    "value_length_present": bool(env_value),
+                    "placeholder_like_rejected": bool(env_placeholder_like),
+                    "credential_values_exposed": False,
+                },
+                "checked_candidates": checked,
+                "credential_values_exposed": False,
+                "customer_safe": True,
+            }
+
+    return "", {
+        "ffmpeg_available": False,
+        "ffmpeg_detection_source": "",
+        "selected_binary_safe_name": "",
+        "ffmpeg_version_check_passed": False,
+        "ffmpeg_binary_env": {
+            "present": bool(env_value),
+            "value_length_present": bool(env_value),
+            "placeholder_like_rejected": bool(env_placeholder_like),
+            "credential_values_exposed": False,
+        },
+        "checked_candidates": checked,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
 def runway_safe_key_diagnostics() -> Dict[str, Any]:
     load_local_env_for_provider_readiness()
     candidate_names = [
@@ -965,12 +1044,14 @@ def compose_direct_media_video_audio(payload: Dict[str, Any]) -> Dict[str, Any]:
             "reason": "Audio source file is missing from runtime asset storage.",
         })
 
-    ffmpeg = shutil.which("ffmpeg")
+    ffmpeg, ffmpeg_diagnostics = resolve_ffmpeg_binary_for_runtime()
     if not ffmpeg:
         return _write_job({
             **base,
             "status": "blocked_ffmpeg_missing",
             "reason": "ffmpeg is not available in the runtime environment.",
+            "ffmpeg_detection_source": ffmpeg_diagnostics.get("ffmpeg_detection_source"),
+            "ffmpeg_version_check_passed": bool(ffmpeg_diagnostics.get("ffmpeg_version_check_passed")),
             "video_asset_path": str(video_path),
             "audio_asset_path": str(audio_path),
         })
@@ -1063,10 +1144,14 @@ def compose_direct_media_video_audio(payload: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def direct_media_composition_status() -> Dict[str, Any]:
+    _, ffmpeg_diagnostics = resolve_ffmpeg_binary_for_runtime()
     return {
         "success": True,
-        "direct_media_composition_ready": bool(shutil.which("ffmpeg")),
-        "ffmpeg_available": bool(shutil.which("ffmpeg")),
+        "direct_media_composition_ready": bool(ffmpeg_diagnostics.get("ffmpeg_available")),
+        "ffmpeg_available": bool(ffmpeg_diagnostics.get("ffmpeg_available")),
+        "ffmpeg_detection_source": ffmpeg_diagnostics.get("ffmpeg_detection_source"),
+        "selected_binary_safe_name": ffmpeg_diagnostics.get("selected_binary_safe_name"),
+        "ffmpeg_version_check_passed": bool(ffmpeg_diagnostics.get("ffmpeg_version_check_passed")),
         "supported_composition": ["video_plus_audio_to_mp4"],
         "credential_values_exposed": False,
         "customer_safe": True,
@@ -1937,7 +2022,8 @@ def _ucm_preflight_universal_media_job(payload: Dict[str, Any], plan: Dict[str, 
     executable_audio = [item for item in audio_readiness if item.get("executable")]
     non_executable_audio = [item for item in audio_readiness if not item.get("executable")]
 
-    composition_available = bool(shutil.which("ffmpeg"))
+    _, ffmpeg_diagnostics = resolve_ffmpeg_binary_for_runtime()
+    composition_available = bool(ffmpeg_diagnostics.get("ffmpeg_available"))
     estimated_credit_risk = _ucm_estimated_credit_risk(
         estimated_duration,
         len(executable_visual) * segment_count,
@@ -2051,6 +2137,9 @@ def _ucm_preflight_universal_media_job(payload: Dict[str, Any], plan: Dict[str, 
         "non_executable_audio_providers": non_executable_audio,
         "composition_path_available": composition_available,
         "composition_tool": "ffmpeg" if composition_available else "",
+        "composition_detection_source": ffmpeg_diagnostics.get("ffmpeg_detection_source"),
+        "ffmpeg_version_check_passed": bool(ffmpeg_diagnostics.get("ffmpeg_version_check_passed")),
+        "ffmpeg_diagnostics": ffmpeg_diagnostics,
         "selected_visual_provider_order": [item.get("provider") for item in executable_visual],
         "selected_audio_provider_order": [item.get("provider") for item in executable_audio],
         "selected_audio_provider": executable_audio[0].get("provider") if executable_audio else "",
@@ -2314,12 +2403,14 @@ def _ucm_compose_with_sync(video_job: Dict[str, Any], audio_job: Dict[str, Any],
     if not audio_path:
         return _write_job({**base, "status": "blocked_audio_asset_missing"})
 
-    ffmpeg = shutil.which("ffmpeg")
+    ffmpeg, ffmpeg_diagnostics = resolve_ffmpeg_binary_for_runtime()
     if not ffmpeg:
         return _write_job({
             **base,
             "status": "blocked_ffmpeg_missing",
             "reason": "ffmpeg is not available in the runtime environment.",
+            "ffmpeg_detection_source": ffmpeg_diagnostics.get("ffmpeg_detection_source"),
+            "ffmpeg_version_check_passed": bool(ffmpeg_diagnostics.get("ffmpeg_version_check_passed")),
         })
 
     out_dir = DIRECT_JOB_DIR / "universal_complete_media_assets"
@@ -2460,9 +2551,15 @@ def _ucm_compose_segments_with_sync(
     if not audio_path:
         return _write_job({**base, "status": "blocked_audio_asset_missing", "reason": "Audio source file is missing from runtime asset storage."})
 
-    ffmpeg = shutil.which("ffmpeg")
+    ffmpeg, ffmpeg_diagnostics = resolve_ffmpeg_binary_for_runtime()
     if not ffmpeg:
-        return _write_job({**base, "status": "blocked_ffmpeg_missing", "reason": "ffmpeg is not available in the runtime environment."})
+        return _write_job({
+            **base,
+            "status": "blocked_ffmpeg_missing",
+            "reason": "ffmpeg is not available in the runtime environment.",
+            "ffmpeg_detection_source": ffmpeg_diagnostics.get("ffmpeg_detection_source"),
+            "ffmpeg_version_check_passed": bool(ffmpeg_diagnostics.get("ffmpeg_version_check_passed")),
+        })
 
     out_dir = DIRECT_JOB_DIR / "universal_complete_media_assets"
     out_dir.mkdir(parents=True, exist_ok=True)

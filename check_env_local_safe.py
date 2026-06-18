@@ -12,6 +12,7 @@ def main() -> int:
     category = preflight.get("provider_category_readiness") or {}
     categories = category.get("categories") or {}
     matrix = category.get("complete_media_executable_provider_matrix_redacted") or []
+    ffmpeg_diagnostics = category.get("ffmpeg_diagnostics") or {}
 
     output = {
         "full_media_stack_mapping_attempted": True,
@@ -27,6 +28,15 @@ def main() -> int:
         "visual_provider_category_ready": bool(category.get("visual_provider_category_ready")),
         "audio_provider_category_ready": bool(category.get("audio_provider_category_ready")),
         "composition_method_ready": bool(category.get("composition_method_ready")),
+        "composition_detection_source": category.get("composition_detection_source") or "",
+        "ffmpeg_version_check_passed": bool(category.get("ffmpeg_version_check_passed")),
+        "ffmpeg_binary_env": ffmpeg_diagnostics.get("ffmpeg_binary_env") or {
+            "present": False,
+            "value_length_present": False,
+            "placeholder_like_rejected": False,
+            "credential_values_exposed": False,
+        },
+        "selected_ffmpeg_binary_safe_name": ffmpeg_diagnostics.get("selected_binary_safe_name") or "",
         "caption_or_subtitle_path_ready_or_not_required": bool(
             category.get("caption_or_subtitle_path_ready_or_not_required")
         ),

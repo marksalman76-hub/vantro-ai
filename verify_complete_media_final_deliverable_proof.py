@@ -104,6 +104,13 @@ SIDE_EFFECT_KEYS = {
     "customer_asset_used",
     "customer_likeness_used",
 }
+NEXT_OPERATOR_ACTIONS = {
+    "configure_visual_provider_readiness",
+    "configure_audio_provider_readiness",
+    "configure_composition_readiness",
+    "owner_approve_capped_5s_provider_smoke",
+    "investigate_provider_readiness_failure",
+}
 
 
 def read(relative: str) -> str:
@@ -249,6 +256,10 @@ def main() -> int:
         "visual_provider_call_count",
         "audio_provider_call_count",
         "provider_retry_count",
+        "resolve_ffmpeg_binary_for_runtime",
+        "FFMPEG_BINARY",
+        "ffmpeg_detection_source",
+        "ffmpeg_version_check_passed",
     ]:
         require(marker in direct_media_source, f"Verifier expected current complete-media provider fanout marker: {marker}")
 
@@ -269,6 +280,8 @@ def main() -> int:
         "provider_environment_readiness_passed",
         "caption_or_subtitle_path_ready_or_not_required",
         "fallback_safe_artifact_path_ready",
+        "composition_detection_source",
+        "ffmpeg_version_check_passed",
         "discovered_visual_provider_safe_names",
         "discovered_audio_provider_safe_names",
         "discovered_composition_safe_names",
@@ -448,9 +461,21 @@ def main() -> int:
         proof["over_cap_block_decision"]["provider_cost_cap_blocked_without_approval"] is True,
         "Over-cap fixture must be blocked without owner approval.",
     )
+    next_operator_action = proof.get("next_operator_action")
+    require(next_operator_action in NEXT_OPERATOR_ACTIONS, "Next operator action must be one of the locked safe action enums.")
+    if proof["visual_provider_category_ready"] is False:
+        expected_next_action = "configure_visual_provider_readiness"
+    elif proof["audio_provider_category_ready"] is False:
+        expected_next_action = "configure_audio_provider_readiness"
+    elif proof["composition_method_ready"] is False:
+        expected_next_action = "configure_composition_readiness"
+    elif proof["provider_category_readiness_verified"] is True and proof["complete_media_final_deliverable_passed"] is False:
+        expected_next_action = "owner_approve_capped_5s_provider_smoke"
+    else:
+        expected_next_action = "investigate_provider_readiness_failure"
     require(
-        "provider" in proof["next_operator_action"].lower(),
-        "Next operator action must name the provider readiness or approval action needed.",
+        next_operator_action == expected_next_action,
+        f"Next operator action must match readiness state: expected {expected_next_action}, got {next_operator_action}",
     )
 
     client_view = proof["client_safe_result_view"]
@@ -488,6 +513,8 @@ def main() -> int:
         "selected_visual_provider_safe_name": proof.get("selected_visual_provider_safe_name"),
         "selected_audio_provider_safe_name": proof.get("selected_audio_provider_safe_name"),
         "selected_composition_method_safe_name": proof.get("selected_composition_method_safe_name"),
+        "composition_detection_source": proof.get("composition_detection_source"),
+        "ffmpeg_version_check_passed": proof.get("ffmpeg_version_check_passed"),
         "selected_caption_method_safe_name": proof.get("selected_caption_method_safe_name"),
         "selected_fallback_artifact_method_safe_name": proof.get("selected_fallback_artifact_method_safe_name"),
         "full_media_stack_mapping_attempted": proof.get("full_media_stack_mapping_attempted"),
@@ -517,6 +544,7 @@ def main() -> int:
         "provider_retry_count": proof.get("provider_retry_count"),
         "proof_blocked_reason": proof.get("proof_blocked_reason"),
         "provider_selected_redacted_or_named_safe": proof.get("provider_selected_redacted_or_named_safe"),
+        "next_operator_action": proof.get("next_operator_action"),
         "synthetic_job_reference_hash": proof.get("synthetic_job_reference_hash"),
         "synthetic_tenant_reference_hash": proof.get("synthetic_tenant_reference_hash"),
     })

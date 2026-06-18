@@ -14,6 +14,13 @@ from backend.app.runtime.billing_credit_spend_governance import (
 
 
 COMPLETE_MEDIA_FINAL_DELIVERABLE_PROOF_VERSION = "complete_media_final_deliverable_proof_v1"
+COMPLETE_MEDIA_NEXT_OPERATOR_ACTIONS = {
+    "configure_visual_provider_readiness",
+    "configure_audio_provider_readiness",
+    "configure_composition_readiness",
+    "owner_approve_capped_5s_provider_smoke",
+    "investigate_provider_readiness_failure",
+}
 
 
 def utc_now() -> str:
@@ -341,6 +348,25 @@ def build_complete_media_provider_matrix(
     return matrix
 
 
+def choose_complete_media_next_operator_action(
+    category_readiness: Mapping[str, Any],
+    *,
+    complete_media_final_deliverable_passed: bool,
+) -> str:
+    if category_readiness.get("visual_provider_category_ready") is False:
+        return "configure_visual_provider_readiness"
+    if category_readiness.get("audio_provider_category_ready") is False:
+        return "configure_audio_provider_readiness"
+    if category_readiness.get("composition_method_ready") is False:
+        return "configure_composition_readiness"
+    if (
+        category_readiness.get("provider_category_readiness_verified") is True
+        and complete_media_final_deliverable_passed is False
+    ):
+        return "owner_approve_capped_5s_provider_smoke"
+    return "investigate_provider_readiness_failure"
+
+
 def build_provider_category_readiness_snapshot(preflight: Mapping[str, Any]) -> Dict[str, Any]:
     provider_stack = [_safe_provider_record(item) for item in direct_media.full_direct_media_provider_stack()]
 
@@ -373,6 +399,7 @@ def build_provider_category_readiness_snapshot(preflight: Mapping[str, Any]) -> 
 
     composition_available = bool(preflight.get("composition_path_available"))
     selected_composition = "internal_ffmpeg_composition" if composition_available else ""
+    ffmpeg_diagnostics = preflight.get("ffmpeg_diagnostics") or {}
 
     visual_ready = bool(selected_visual and executable_visual)
     audio_ready = bool(selected_audio and executable_audio)
@@ -465,6 +492,9 @@ def build_provider_category_readiness_snapshot(preflight: Mapping[str, Any]) -> 
         "selected_visual_provider_safe_name": selected_visual,
         "selected_audio_provider_safe_name": selected_audio,
         "selected_composition_method_safe_name": selected_composition,
+        "composition_detection_source": clean_text(preflight.get("composition_detection_source"), 80),
+        "ffmpeg_version_check_passed": bool(preflight.get("ffmpeg_version_check_passed")),
+        "ffmpeg_diagnostics": ffmpeg_diagnostics,
         "selected_caption_method_safe_name": "media_script_caption_plan",
         "selected_fallback_artifact_method_safe_name": "provider_output_or_failure_record",
         "discovered_visual_provider_safe_names": _safe_provider_names(visual_candidates),
@@ -527,6 +557,8 @@ def build_preflight_snapshot(payload: Mapping[str, Any]) -> Dict[str, Any]:
         "selected_visual_provider_safe_name": category_readiness.get("selected_visual_provider_safe_name"),
         "selected_audio_provider_safe_name": category_readiness.get("selected_audio_provider_safe_name"),
         "selected_composition_method_safe_name": category_readiness.get("selected_composition_method_safe_name"),
+        "composition_detection_source": category_readiness.get("composition_detection_source"),
+        "ffmpeg_version_check_passed": category_readiness.get("ffmpeg_version_check_passed"),
         "selected_caption_method_safe_name": category_readiness.get("selected_caption_method_safe_name"),
         "selected_fallback_artifact_method_safe_name": category_readiness.get("selected_fallback_artifact_method_safe_name"),
         "full_media_stack_mapping_attempted": category_readiness.get("full_media_stack_mapping_attempted"),
@@ -549,6 +581,7 @@ def build_preflight_snapshot(payload: Mapping[str, Any]) -> Dict[str, Any]:
         "discovered_fallback_safe_names": category_readiness.get("discovered_fallback_safe_names"),
         "complete_media_executable_provider_matrix_redacted": category_readiness.get("complete_media_executable_provider_matrix_redacted"),
         "required_env_names_by_provider": category_readiness.get("required_env_names_by_provider"),
+        "ffmpeg_diagnostics": category_readiness.get("ffmpeg_diagnostics"),
         "provider_category_readiness": category_readiness,
         "customer_safe": True,
         "env_values_exposed": False,
@@ -662,6 +695,11 @@ def build_complete_media_final_deliverable_proof(
 
     provider_call_attempted = False
     provider_call_count = 0
+    complete_media_final_deliverable_passed = False
+    next_operator_action = choose_complete_media_next_operator_action(
+        category_readiness,
+        complete_media_final_deliverable_passed=complete_media_final_deliverable_passed,
+    )
     proof = {
         "boundary": "complete_media_final_deliverable_proof",
         "diagnostic_version": COMPLETE_MEDIA_FINAL_DELIVERABLE_PROOF_VERSION,
@@ -669,7 +707,7 @@ def build_complete_media_final_deliverable_proof(
         "status": "complete_media_final_deliverable_blocked" if blocked_reason else "complete_media_final_deliverable_ready_for_live_attempt",
         "proof_blocked_reason": blocked_reason,
         "complete_media_final_deliverable_attempted": True,
-        "complete_media_final_deliverable_passed": False,
+        "complete_media_final_deliverable_passed": complete_media_final_deliverable_passed,
         "owner_provider_approval_required": True,
         "provider_cost_cap_enforced": bool(
             cost_cap_decision.get("provider_execution_allowed_after_cost_gate") is True
@@ -692,6 +730,8 @@ def build_complete_media_final_deliverable_proof(
         "selected_visual_provider_safe_name": category_readiness.get("selected_visual_provider_safe_name") or "",
         "selected_audio_provider_safe_name": category_readiness.get("selected_audio_provider_safe_name") or "",
         "selected_composition_method_safe_name": category_readiness.get("selected_composition_method_safe_name") or "",
+        "composition_detection_source": category_readiness.get("composition_detection_source") or "",
+        "ffmpeg_version_check_passed": bool(category_readiness.get("ffmpeg_version_check_passed")),
         "selected_caption_method_safe_name": category_readiness.get("selected_caption_method_safe_name") or "",
         "selected_fallback_artifact_method_safe_name": category_readiness.get("selected_fallback_artifact_method_safe_name") or "",
         "provider_category_readiness_attempted": True,
@@ -710,6 +750,7 @@ def build_complete_media_final_deliverable_proof(
         "discovered_fallback_safe_names": list(category_readiness.get("discovered_fallback_safe_names") or []),
         "complete_media_executable_provider_matrix_redacted": list(category_readiness.get("complete_media_executable_provider_matrix_redacted") or []),
         "required_env_names_by_provider": dict(category_readiness.get("required_env_names_by_provider") or {}),
+        "ffmpeg_diagnostics": dict(category_readiness.get("ffmpeg_diagnostics") or {}),
         "provider_category_readiness": category_readiness,
         "provider_selected_redacted_or_named_safe": clean_text(
             category_readiness.get("selected_visual_provider_safe_name")
@@ -755,15 +796,7 @@ def build_complete_media_final_deliverable_proof(
             "customer_safe": True,
             "credential_values_exposed": False,
         },
-        "next_operator_action": (
-            "Load and verify at least one approved visual/video/image provider and one approved "
-            "voice/audio provider through the existing complete-media provider router, then rerun one "
-            "bounded two-provider-call 5s smoke with the same caps."
-            if blocked_reason == "provider_category_readiness_not_verified"
-            else "Keep the existing complete-media provider router and fix the capped proof shape before live execution."
-            if blocked_reason == "blocked_two_provider_attempt_cap_not_enforced"
-            else "Resolve the sanitized blocker, then rerun one capped proof after owner approval."
-        ),
+        "next_operator_action": next_operator_action,
         "synthetic_job_reference_hash": safe_hash(safe_payload.get("job_id")),
         "synthetic_tenant_reference_hash": safe_hash(safe_payload.get("tenant_id")),
         "customer_safe": True,
