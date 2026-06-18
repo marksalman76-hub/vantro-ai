@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 
+type ClientCreateMediaProductionCardProps = {
+  onOpenCreateMedia?: () => void;
+};
+
 const humanModes = [
   "No human/avatar",
   "Generate new avatar/person",
@@ -11,7 +15,9 @@ const humanModes = [
 
 const mediaTypes = ["Video", "Audio", "Image", "Full media package"];
 
-export default function ClientCreateMediaProductionCard() {
+export default function ClientCreateMediaProductionCard({
+  onOpenCreateMedia,
+}: ClientCreateMediaProductionCardProps) {
   const [requestOpen, setRequestOpen] = useState(false);
   const [selectedMediaType, setSelectedMediaType] = useState("Video");
   const [selectedHumanMode, setSelectedHumanMode] = useState("No human/avatar");
@@ -78,7 +84,10 @@ export default function ClientCreateMediaProductionCard() {
         <button
           type="button"
           data-client-create-media-open-button="true"
-          onClick={() => setRequestOpen((value) => !value)}
+          onClick={() => {
+            onOpenCreateMedia?.();
+            setRequestOpen((value) => !value);
+          }}
           style={{
             border: 0,
             borderRadius: 999,
