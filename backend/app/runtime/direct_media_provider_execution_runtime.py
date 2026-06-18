@@ -23,6 +23,20 @@ SUPPORTED_VIDEO_PROVIDERS = {"runway", "kling"}
 SUPPORTED_AUDIO_PROVIDERS = {"elevenlabs"}
 SUPPORTED_PROVIDERS = SUPPORTED_VIDEO_PROVIDERS | SUPPORTED_AUDIO_PROVIDERS
 
+LOCAL_DOTENV_FILE_NAME = ".env.local"
+PLACEHOLDER_ENV_VALUES = {
+    "YOUR_RUNWAY_KEY_HERE",
+    "YOUR_ELEVENLABS_KEY_HERE",
+    "YOUR_KLING_KEY_HERE",
+    "YOUR_KLING_SECRET_HERE",
+    "PASTE_REAL_KEY_HERE",
+    "PLACEHOLDER",
+    "DUMMY",
+    "TEST",
+    "CHANGEME",
+}
+_LOCAL_DOTENV_LOAD_STATE: Dict[str, Any] | None = None
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -88,11 +102,124 @@ def _read_job(job_id: str) -> Dict[str, Any]:
     }
 
 
+def _clean_env_value(value: str) -> str:
+    text = str(value or "").strip()
+    if len(text) >= 2 and text[0] == text[-1] and text[0] in {"'", '"'}:
+        text = text[1:-1].strip()
+    return text
+
+
+def _env_value_placeholder_like(value: str) -> bool:
+    text = _clean_env_value(value)
+    if not text:
+        return False
+    normalized = re.sub(r"[\s\-]+", "_", text.strip().upper())
+    return bool(
+        normalized in PLACEHOLDER_ENV_VALUES
+        or normalized.startswith("YOUR_")
+        or normalized.startswith("PASTE_REAL")
+        or normalized.startswith("TEST_")
+        or normalized.endswith("_TEST")
+        or "PLACEHOLDER" in normalized
+        or "DUMMY" in normalized
+        or "CHANGEME" in normalized
+    )
+
+
+def _parse_local_env_line(line: str) -> tuple[str, str] | None:
+    stripped = str(line or "").strip()
+    if not stripped or stripped.startswith("#") or "=" not in stripped:
+        return None
+    if stripped.startswith("export "):
+        stripped = stripped[len("export "):].strip()
+    key, value = stripped.split("=", 1)
+    key = key.strip()
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key or ""):
+        return None
+    value = _clean_env_value(value)
+    return key, value
+
+
+def load_local_env_for_provider_readiness() -> Dict[str, Any]:
+    """Load repo-local .env.local into process env for safe local readiness checks only."""
+    global _LOCAL_DOTENV_LOAD_STATE
+    if _LOCAL_DOTENV_LOAD_STATE is not None:
+        return dict(_LOCAL_DOTENV_LOAD_STATE)
+
+    env_path = ROOT / LOCAL_DOTENV_FILE_NAME
+    loaded_key_names: list[str] = []
+    skipped_existing_key_names: list[str] = []
+    placeholder_rejected_key_names: list[str] = []
+    invalid_line_count = 0
+
+    if env_path.exists() and env_path.is_file():
+        for line in env_path.read_text(encoding="utf-8", errors="ignore").splitlines():
+            parsed = _parse_local_env_line(line)
+            if not parsed:
+                stripped = str(line or "").strip()
+                if stripped and not stripped.startswith("#"):
+                    invalid_line_count += 1
+                continue
+            key, value = parsed
+            if os.getenv(key, "").strip():
+                skipped_existing_key_names.append(key)
+                continue
+            if _env_value_placeholder_like(value):
+                placeholder_rejected_key_names.append(key)
+                continue
+            os.environ[key] = value
+            loaded_key_names.append(key)
+
+    _LOCAL_DOTENV_LOAD_STATE = {
+        "dotenv_local_checked": True,
+        "dotenv_local_file_name": LOCAL_DOTENV_FILE_NAME,
+        "dotenv_local_exists": bool(env_path.exists()),
+        "dotenv_local_loaded": bool(loaded_key_names),
+        "loaded_key_names": sorted(set(loaded_key_names)),
+        "skipped_existing_key_names": sorted(set(skipped_existing_key_names)),
+        "placeholder_rejected_key_names": sorted(set(placeholder_rejected_key_names)),
+        "invalid_line_count": invalid_line_count,
+        "dotenv_values_exposed": False,
+        "env_values_exposed": False,
+        "customer_safe": True,
+        "credential_values_exposed": False,
+    }
+    return dict(_LOCAL_DOTENV_LOAD_STATE)
+
+
+def _env_value_ready(name: str) -> bool:
+    load_local_env_for_provider_readiness()
+    value = str(os.getenv(name, "") or "").strip()
+    return bool(value and not _env_value_placeholder_like(value))
+
+
 def _env_present(names: list[str]) -> bool:
-    return any(bool(os.getenv(name, "").strip()) for name in names)
+    return any(_env_value_ready(name) for name in names)
+
+
+def _all_env_present(names: list[str]) -> bool:
+    return all(_env_value_ready(name) for name in names)
+
+
+def safe_env_presence_records(names: list[str]) -> list[Dict[str, Any]]:
+    load_local_env_for_provider_readiness()
+    records: list[Dict[str, Any]] = []
+    for name in names:
+        value = str(os.getenv(name, "") or "").strip()
+        placeholder_like = bool(value and _env_value_placeholder_like(value))
+        records.append({
+            "env_name": name,
+            "env_present": bool(value),
+            "value_length_present": bool(value),
+            "readiness_env_present": bool(value and not placeholder_like),
+            "placeholder_like_rejected": placeholder_like,
+            "credential_values_exposed": False,
+        })
+    return records
 
 
 def runway_safe_key_diagnostics() -> Dict[str, Any]:
+    load_local_env_for_provider_readiness()
     candidate_names = [
         "RUNWAYML_API_SECRET",
         "RUNWAY_API_KEY",
@@ -106,13 +233,17 @@ def runway_safe_key_diagnostics() -> Dict[str, Any]:
     keys = []
     for name in candidate_names:
         value = str(os.getenv(name) or "").strip()
-        if value and not used_env_name:
+        placeholder_like = _env_value_placeholder_like(value)
+        if value and not placeholder_like and not used_env_name:
             used_env_name = name
 
         item: Dict[str, Any] = {
             "env_name": name,
             "present": bool(value),
             "length": len(value) if value else 0,
+            "value_length_present": bool(value),
+            "readiness_env_present": bool(value and not placeholder_like),
+            "placeholder_like_rejected": bool(placeholder_like),
         }
         if value:
             item["sha256_prefix"] = hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
@@ -126,6 +257,7 @@ def runway_safe_key_diagnostics() -> Dict[str, Any]:
         "used_env_name": used_env_name,
         "configured": bool(used_env_name),
         "keys": keys,
+        "local_env": load_local_env_for_provider_readiness(),
         "note": "No credential values are exposed. Use env_name, length, and sha256_prefix to compare the backend key with the intended Runway API key.",
         "customer_safe": True,
         "credential_values_exposed": False,
@@ -638,7 +770,13 @@ def _provider_stack_item(provider_config: Dict[str, Any]) -> Dict[str, Any]:
         "name": provider_config.get("name"),
         "category": provider_config.get("category"),
         "supports": list(provider_config.get("supports") or []),
+        "required_env_names": env_names,
         "configured": configured,
+        "env_present_redacted": safe_env_presence_records(env_names),
+        "placeholder_like_rejected": any(
+            bool(item.get("placeholder_like_rejected"))
+            for item in safe_env_presence_records(env_names)
+        ),
         "direct_execution_enabled": bool(provider_config.get("direct_execution_enabled")),
         "disabled_reason": "" if bool(provider_config.get("direct_execution_enabled")) else str(provider_config.get("disabled_reason") or "Adapter pending"),
         "credential_values_exposed": False,
@@ -1076,9 +1214,9 @@ def _ucm_live_adapter_credentials_present(provider: str) -> bool:
     if key == "runway":
         return bool(runway_safe_key_diagnostics().get("used_env_name"))
     if key == "kling":
-        return bool(os.getenv("KLING_API_KEY", "").strip()) and bool(os.getenv("KLING_SECRET_KEY", "").strip())
+        return _all_env_present(["KLING_API_KEY", "KLING_SECRET_KEY"])
     if key == "elevenlabs":
-        return bool(os.getenv("ELEVENLABS_API_KEY", "").strip())
+        return _env_present(["ELEVENLABS_API_KEY"])
     return False
 
 

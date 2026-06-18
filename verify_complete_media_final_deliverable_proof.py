@@ -10,11 +10,16 @@ from typing import Any
 ROOT = Path(__file__).resolve().parent
 
 REQUIRED_TRUE_FIELDS = [
+    "full_media_stack_mapping_attempted",
+    "full_media_stack_mapping_passed",
     "complete_media_final_deliverable_attempted",
     "owner_provider_approval_required",
     "provider_cost_cap_enforced",
+    "provider_environment_readiness_attempted",
     "provider_category_readiness_attempted",
     "provider_router_used",
+    "caption_or_subtitle_path_ready_or_not_required",
+    "fallback_safe_artifact_path_ready",
     "duration_seconds_lte_5",
     "single_agent_mode_enforced",
     "long_form_generation_blocked_or_not_requested",
@@ -31,6 +36,8 @@ REQUIRED_TRUE_FIELDS = [
 REQUIRED_FALSE_FIELDS = [
     "complete_media_final_deliverable_passed",
     "provider_pair_hardcoded",
+    "dotenv_values_exposed",
+    "env_values_exposed",
     "provider_call_attempted",
     "customer_asset_used",
     "customer_likeness_used",
@@ -253,6 +260,20 @@ def main() -> int:
         "selected_visual_provider_safe_name",
         "selected_audio_provider_safe_name",
         "selected_composition_method_safe_name",
+        "complete_media_executable_provider_matrix_redacted",
+        "required_env_names_by_provider",
+        "dotenv_local_loaded",
+        "dotenv_values_exposed",
+        "env_values_exposed",
+        "provider_environment_readiness_attempted",
+        "provider_environment_readiness_passed",
+        "caption_or_subtitle_path_ready_or_not_required",
+        "fallback_safe_artifact_path_ready",
+        "discovered_visual_provider_safe_names",
+        "discovered_audio_provider_safe_names",
+        "discovered_composition_safe_names",
+        "discovered_caption_safe_names",
+        "discovered_fallback_safe_names",
         "provider_category_readiness_attempted",
         "visual_provider_category_ready",
         "audio_provider_category_ready",
@@ -299,7 +320,10 @@ def main() -> int:
     require(proof["provider_retry_count"] == 0, "Safe-default proof must not retry providers.")
     require(proof["provider_router_used"] is True, "Complete-media proof must use the provider router.")
     require(proof["provider_pair_hardcoded"] is False, "Complete-media proof must not hardcode one provider pair.")
+    require(proof["dotenv_values_exposed"] is False, "Local dotenv values must not be exposed.")
+    require(proof["env_values_exposed"] is False, "Environment values must not be exposed.")
     require(proof["provider_category_readiness_attempted"] is True, "Provider category readiness must be attempted.")
+    require(proof["provider_environment_readiness_attempted"] is True, "Provider environment readiness must be attempted.")
     require(proof["duration_seconds_lte_5"] is True, "Complete-media proof must stay at 5 seconds or less.")
     require(proof["single_agent_mode_enforced"] is True, "Complete-media proof must enforce single-agent mode.")
     require(
@@ -353,6 +377,20 @@ def main() -> int:
     require({"runway", "kling", "replicate", "openai"}.issubset(visual_names), "Visual category must discover router visual providers.")
     require("elevenlabs" in audio_names, "Audio category must discover router audio providers.")
     require(
+        {"internal_ffmpeg_composition"}.issubset(set(proof["discovered_composition_safe_names"])),
+        "Composition category must discover internal ffmpeg composition.",
+    )
+    require(
+        {"media_script_caption_plan", "voiceover_script_caption_fallback"}.issubset(set(proof["discovered_caption_safe_names"])),
+        "Caption/subtitle category must discover script and voiceover fallback paths.",
+    )
+    require(
+        {"provider_output_or_failure_record", "synthetic_durable_asset_delivery_safe_default", "supportable_failure_path"}.issubset(
+            set(proof["discovered_fallback_safe_names"])
+        ),
+        "Fallback category must discover supportable safe artifact paths.",
+    )
+    require(
         categories["composition_stitching_internal"].get("selected_method_safe_name") in {"", "internal_ffmpeg_composition"},
         "Composition selection must be an internal safe method name.",
     )
@@ -368,6 +406,35 @@ def main() -> int:
         visual_names.issubset(set(categories["future_registered_provider_stack"].get("provider_safe_names") or [])),
         "Future registered provider stack must include discovered visual providers.",
     )
+    env_by_provider = proof.get("required_env_names_by_provider") or {}
+    require("runway" in env_by_provider and "RUNWAYML_API_SECRET" in env_by_provider["runway"], "Runway env names must be visible as names only.")
+    require("kling" in env_by_provider and {"KLING_API_KEY", "KLING_SECRET_KEY"}.issubset(set(env_by_provider["kling"])), "Kling env names must be visible as names only.")
+    require("elevenlabs" in env_by_provider and "ELEVENLABS_API_KEY" in env_by_provider["elevenlabs"], "ElevenLabs env name must be visible as a name only.")
+    provider_matrix = proof.get("complete_media_executable_provider_matrix_redacted") or []
+    require(provider_matrix, "Complete media executable provider matrix must be present.")
+    matrix_names = {item.get("provider_safe_name") for item in provider_matrix}
+    for expected_name in {
+        "runway",
+        "kling",
+        "heygen",
+        "replicate",
+        "openai",
+        "sync",
+        "elevenlabs",
+        "internal_ffmpeg_composition",
+        "media_script_caption_plan",
+        "voiceover_script_caption_fallback",
+        "provider_output_or_failure_record",
+        "synthetic_durable_asset_delivery_safe_default",
+        "supportable_failure_path",
+    }:
+        require(expected_name in matrix_names, f"Provider matrix missing safe entry: {expected_name}")
+    for item in provider_matrix:
+        require(item.get("credential_values_exposed") is False, f"Provider matrix must not expose credentials: {item.get('provider_safe_name')}")
+        for env_record in list(item.get("env_present_redacted") or []):
+            require("env_name" in env_record, "Env record must expose env variable name only.")
+            require("env_present" in env_record and "value_length_present" in env_record, "Env record must expose redacted presence booleans.")
+            require("credential_values_exposed" in env_record and env_record["credential_values_exposed"] is False, "Env record must not expose credential values.")
     if proof["proof_blocked_reason"] == "provider_category_readiness_not_verified":
         require(
             proof["provider_category_readiness_verified"] is False,
@@ -421,7 +488,23 @@ def main() -> int:
         "selected_visual_provider_safe_name": proof.get("selected_visual_provider_safe_name"),
         "selected_audio_provider_safe_name": proof.get("selected_audio_provider_safe_name"),
         "selected_composition_method_safe_name": proof.get("selected_composition_method_safe_name"),
+        "selected_caption_method_safe_name": proof.get("selected_caption_method_safe_name"),
+        "selected_fallback_artifact_method_safe_name": proof.get("selected_fallback_artifact_method_safe_name"),
+        "full_media_stack_mapping_attempted": proof.get("full_media_stack_mapping_attempted"),
+        "full_media_stack_mapping_passed": proof.get("full_media_stack_mapping_passed"),
+        "dotenv_local_loaded": proof.get("dotenv_local_loaded"),
+        "dotenv_values_exposed": proof.get("dotenv_values_exposed"),
+        "env_values_exposed": proof.get("env_values_exposed"),
+        "provider_environment_readiness_attempted": proof.get("provider_environment_readiness_attempted"),
+        "provider_environment_readiness_passed": proof.get("provider_environment_readiness_passed"),
         "provider_category_readiness_attempted": proof.get("provider_category_readiness_attempted"),
+        "caption_or_subtitle_path_ready_or_not_required": proof.get("caption_or_subtitle_path_ready_or_not_required"),
+        "fallback_safe_artifact_path_ready": proof.get("fallback_safe_artifact_path_ready"),
+        "discovered_visual_provider_safe_names": proof.get("discovered_visual_provider_safe_names"),
+        "discovered_audio_provider_safe_names": proof.get("discovered_audio_provider_safe_names"),
+        "discovered_composition_safe_names": proof.get("discovered_composition_safe_names"),
+        "discovered_caption_safe_names": proof.get("discovered_caption_safe_names"),
+        "discovered_fallback_safe_names": proof.get("discovered_fallback_safe_names"),
         "visual_provider_readiness_verified": proof.get("visual_provider_readiness_verified"),
         "audio_provider_readiness_verified": proof.get("audio_provider_readiness_verified"),
         "visual_provider_category_ready": proof.get("visual_provider_category_ready"),
