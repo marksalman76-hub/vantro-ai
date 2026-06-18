@@ -1,3 +1,10 @@
+
+# Production media route policy import is intentionally optional at import time.
+try:
+    from backend.app.runtime.production_media_route_policy import resolve_production_media_route
+except Exception:  # pragma: no cover - route policy verifier catches regressions
+    resolve_production_media_route = None
+
 from backend.app.runtime.outcome_action_execution_runtime import create_outcome_action_plan, mark_outcome_plan_decision
 
 from backend.app.runtime.delegated_workforce_execution_runtime import (
@@ -5753,3 +5760,39 @@ def admin_runway_key_diagnostics(
 
     return runway_safe_key_diagnostics()
 
+
+
+def _apply_production_media_route_policy_to_payload(payload):
+    """Apply structured media route policy before Complete Media execution.
+
+    This keeps the full provider registry available while preventing default
+    client requests from randomly allocating across every provider.
+    """
+    if not isinstance(payload, dict):
+        return payload
+    if resolve_production_media_route is None:
+        return payload
+    route = resolve_production_media_route(payload)
+    enriched = dict(payload)
+    enriched.update({
+        "production_media_route_policy_applied": True,
+        "media_route_name": route.get("route_name"),
+        "media_route_reason": route.get("selected_route_reason"),
+        "human_mode": route.get("human_mode", enriched.get("human_mode", "no_human")),
+        "video_provider": route.get("visual_provider"),
+        "visual_provider": route.get("visual_provider"),
+        "audio_provider": route.get("audio_provider"),
+        "lip_sync_provider": route.get("lip_sync_provider"),
+        "composition_provider": route.get("composition_provider"),
+        "caption_provider": route.get("caption_provider"),
+        "fallback_provider": route.get("fallback_provider"),
+        "requires_likeness_consent": bool(route.get("requires_likeness_consent")),
+        "explicit_consent_required": bool(route.get("explicit_consent_required")),
+        "privacy_safe_likeness_storage_required": bool(route.get("privacy_safe_likeness_storage_required")),
+        "likeness_governance_required": bool(route.get("likeness_governance_required")),
+        "provider_router_mode": "category_readiness",
+        "provider_pair_hardcoded": False,
+        "uncontrolled_paid_provider_fanout_allowed": False,
+        "provider_retry_count": 0,
+    })
+    return enriched

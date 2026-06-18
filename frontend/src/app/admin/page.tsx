@@ -1,3 +1,4 @@
+import { applyProductionMediaRouteToPayload } from "@/lib/productionMediaRoutePolicy";
 "use client";
 import DirectMediaProviderPanel from "../../components/DirectMediaProviderPanel";
 
@@ -502,7 +503,7 @@ const [activeNav, setActiveNav] = useState("Overview");
         method: "POST",
         cache: "no-store",
         headers: { "Content-Type": "application/json", "x-actor-role": "owner_admin" },
-        body: JSON.stringify({ refund_id: refundId, decision: "approve", approved_by: "owner_admin", note: "Approved from admin refund queue." }),
+        body: JSON.stringify(applyProductionMediaRouteToPayload({ refund_id: refundId, decision: "approve", approved_by: "owner_admin", note: "Approved from admin refund queue." })),
       });
       const data = await response.json().catch(() => ({}));
       showToast(data?.success === false ? `Refund approval blocked: ${data?.error || "review required"}` : "Refund approved for execution.");
@@ -518,7 +519,7 @@ const [activeNav, setActiveNav] = useState("Overview");
         method: "POST",
         cache: "no-store",
         headers: { "Content-Type": "application/json", "x-actor-role": "owner_admin" },
-        body: JSON.stringify({ refund_id: refundId, decision: "reject", approved_by: "owner_admin", note: "Rejected from admin refund queue." }),
+        body: JSON.stringify(applyProductionMediaRouteToPayload({ refund_id: refundId, decision: "reject", approved_by: "owner_admin", note: "Rejected from admin refund queue." })),
       });
       const data = await response.json().catch(() => ({}));
       showToast(data?.success === false ? "Refund rejection failed." : "Refund rejected.");
@@ -534,7 +535,7 @@ const [activeNav, setActiveNav] = useState("Overview");
         method: "POST",
         cache: "no-store",
         headers: { "Content-Type": "application/json", "x-actor-role": "owner_admin" },
-        body: JSON.stringify({ refund_id: refundId, actor: "owner_admin", amount_cents: amountCents || 0 }),
+        body: JSON.stringify(applyProductionMediaRouteToPayload({ refund_id: refundId, actor: "owner_admin", amount_cents: amountCents || 0 })),
       });
       const data = await response.json().catch(() => ({}));
       showToast(data?.success === false ? `Refund execution failed: ${data?.error || "review required"}` : "Refund execution completed.");
@@ -571,7 +572,7 @@ const [activeNav, setActiveNav] = useState("Overview");
         "x-actor-role": "owner",
         "x-tenant-id": "owner",
       },
-      body: JSON.stringify({ path, method, payload, optional }),
+      body: JSON.stringify(applyProductionMediaRouteToPayload({ path, method, payload, optional })),
     });
     return response.json();
   }
@@ -783,7 +784,7 @@ const [activeNav, setActiveNav] = useState("Overview");
           "x-actor-role": "owner",
           "x-tenant-id": "owner",
         },
-        body: JSON.stringify({ path, method: "POST", payload }),
+        body: JSON.stringify(applyProductionMediaRouteToPayload({ path, method: "POST", payload })),
       });
 
       const data = await response.json();

@@ -1,3 +1,4 @@
+import { applyProductionMediaRouteToPayload } from "@/lib/productionMediaRoutePolicy";
 "use client";
 
 import { extractLiveActionDeliverableText } from "../../lib/liveActionResultExtraction";
@@ -1042,7 +1043,7 @@ const primaryAssetUrl =
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ profile: cleanedProfile }),
+        body: JSON.stringify(applyProductionMediaRouteToPayload({ profile: cleanedProfile })),
       });
 
       const result = await response.json().catch(() => ({
@@ -1160,7 +1161,7 @@ const primaryAssetUrl =
     const response = await fetch(`${BACKEND_API_BASE}/client/integrations/test`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-tenant-id": tenantId, "x-actor-role": "customer" },
-      body: JSON.stringify({ integration_key: integration.integration_key }),
+      body: JSON.stringify(applyProductionMediaRouteToPayload({ integration_key: integration.integration_key })),
     });
 
     const data = await response.json();
@@ -1183,7 +1184,7 @@ const primaryAssetUrl =
     const response = await fetch(`${BACKEND_API_BASE}/client/integrations/disconnect`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-tenant-id": tenantId, "x-actor-role": "customer" },
-      body: JSON.stringify({ integration_key: integration.integration_key }),
+      body: JSON.stringify(applyProductionMediaRouteToPayload({ integration_key: integration.integration_key })),
     });
 
     const data = await response.json();
