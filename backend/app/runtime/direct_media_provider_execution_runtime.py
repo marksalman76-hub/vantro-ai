@@ -928,12 +928,20 @@ def _safe_runtime_asset_path(value: str) -> Path | None:
 
     try:
         asset_path = Path(str(value)).resolve()
-        allowed_root = Path("/opt/render/project/src/runtime_outputs").resolve()
-        asset_path.relative_to(allowed_root)
-        if asset_path.exists() and asset_path.is_file():
-            return asset_path
     except Exception:
         return None
+
+    allowed_roots = [
+        (ROOT / "runtime_outputs").resolve(),
+        Path("/opt/render/project/src/runtime_outputs").resolve(),
+    ]
+    for allowed_root in allowed_roots:
+        try:
+            asset_path.relative_to(allowed_root)
+        except Exception:
+            continue
+        if asset_path.exists() and asset_path.is_file():
+            return asset_path
 
     return None
 
