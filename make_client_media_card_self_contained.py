@@ -1,3 +1,17 @@
+from pathlib import Path
+import json
+import shutil
+from datetime import datetime
+
+ROOT = Path(__file__).resolve().parent
+COMPONENT = ROOT / "frontend" / "src" / "components" / "ClientCreateMediaProductionCard.tsx"
+VERIFY = ROOT / "verify_isolated_client_media_card.py"
+
+backup_dir = ROOT / "backups" / f"client_media_card_self_contained_before_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+backup_dir.mkdir(parents=True, exist_ok=True)
+shutil.copy2(COMPONENT, backup_dir / "ClientCreateMediaProductionCard.tsx")
+
+COMPONENT.write_text(r'''
 "use client";
 
 import { useState } from "react";
@@ -294,3 +308,36 @@ export default function ClientCreateMediaProductionCard() {
     </section>
   );
 }
+'''.lstrip(), encoding="utf-8", newline="\n")
+
+verify = VERIFY.read_text(encoding="utf-8", errors="ignore")
+if "request_panel_present" not in verify:
+    verify = verify.replace(
+        '"open_button_bridge_present": "data-client-create-media-open-button" in component_text and "findExistingCreateMediaButton" in component_text,',
+        '"open_button_bridge_present": "data-client-create-media-open-button" in component_text,\n'
+        '    "request_panel_present": "data-client-create-media-request-panel" in component_text and "Submit media request soon" in component_text,',
+    )
+    verify = verify.replace(
+        'and proof["open_button_bridge_present"]\n',
+        'and proof["open_button_bridge_present"]\n'
+        '    and proof["request_panel_present"]\n',
+    )
+else:
+    verify = verify.replace(
+        '"open_button_bridge_present": "data-client-create-media-open-button" in component_text and "findExistingCreateMediaButton" in component_text,',
+        '"open_button_bridge_present": "data-client-create-media-open-button" in component_text,',
+    )
+
+VERIFY.write_text(verify, encoding="utf-8", newline="\n")
+
+print(json.dumps({
+    "self_contained_card": True,
+    "component": str(COMPONENT),
+    "verifier": str(VERIFY),
+    "backup": str(backup_dir),
+    "provider_calls": False,
+    "media_generation": False,
+    "billing_mutation": False,
+    "credit_mutation": False,
+    "stripe": False
+}, indent=2))

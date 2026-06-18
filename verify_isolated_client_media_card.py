@@ -24,7 +24,8 @@ proof = {
     "component_exists": component.exists(),
     "component_imported_by_client_page": "ClientCreateMediaProductionCard" in client_text,
     "component_mounted_in_client_page": "<ClientCreateMediaProductionCard" in client_text,
-    "open_button_bridge_present": "data-client-create-media-open-button" in component_text and "findExistingCreateMediaButton" in component_text,
+    "open_button_bridge_present": "data-client-create-media-open-button" in component_text,
+    "request_panel_present": "data-client-create-media-request-panel" in component_text and "Submit media request soon" in component_text,
     "use_client_first_line_client_page": client_text.splitlines()[0].strip() == '"use client";',
     "use_client_first_line_component": component_text.splitlines()[0].strip() == '"use client";' if component_text else False,
     "required_component_phrases_present": {phrase: phrase in component_text for phrase in required_component_phrases},
@@ -49,6 +50,7 @@ proof["isolated_client_media_card_passed"] = (
     and proof["use_client_first_line_client_page"]
     and proof["use_client_first_line_component"]
     and proof["open_button_bridge_present"]
+    and proof["request_panel_present"]
     and all(proof["required_component_phrases_present"].values())
     and proof["provider_names_hidden_from_component"]
 )
