@@ -479,6 +479,11 @@ def _normalise_provider_result(
         "provider_job_id": provider_result.get("task_id") or provider_result.get("job_id") or provider_result.get("provider_job_id") or "",
         "external_action_performed": bool(provider_result.get("external_action_performed")),
         "live_provider_call_triggered": bool(provider_result.get("live_provider_call_triggered")),
+        **(
+            {}
+            if success and playable
+            else _ucm_provider_failure_diagnostics(provider_result, provider=provider, stage=f"{media_type}_provider_execution")
+        ),
         "credential_values_exposed": False,
         "customer_safe": True,
         "completed_at": _now(),
@@ -2692,10 +2697,14 @@ def _ucm_compose_segments_with_sync(
 
 
 def _ucm_provider_failure_summary(result: Dict[str, Any]) -> str:
+    provider_result = result.get("provider_result") if isinstance(result.get("provider_result"), dict) else {}
     raw = str(
         result.get("error")
         or result.get("reason")
         or result.get("message")
+        or provider_result.get("error")
+        or provider_result.get("reason")
+        or provider_result.get("message")
         or result.get("provider_status")
         or result.get("status")
         or "provider_attempt_failed"
@@ -2703,7 +2712,76 @@ def _ucm_provider_failure_summary(result: Dict[str, Any]) -> str:
     clean = re.sub(r"(?i)(api[_ -]?key|secret|token|bearer)\s*[:=]\s*['\"]?[^,'\"\s}]+", r"\1: [redacted]", raw)
     clean = re.sub(r"sk-[A-Za-z0-9_\-]{12,}", "[redacted]", clean)
     clean = re.sub(r"rw[a-zA-Z0-9_\-]{12,}", "[redacted]", clean)
+    clean = re.sub(r"https?://[^\s'\"\]}]+", "[redacted_url]", clean)
     return clean[:420]
+
+
+def _ucm_provider_failure_diagnostics(
+    result: Dict[str, Any],
+    *,
+    provider: str = "",
+    stage: str = "",
+) -> Dict[str, Any]:
+    provider_result = result.get("provider_result") if isinstance(result.get("provider_result"), dict) else {}
+    reason = _ucm_provider_failure_summary(result)
+    combined = " ".join(
+        str(value or "")
+        for value in [
+            result.get("error"),
+            result.get("reason"),
+            result.get("message"),
+            provider_result.get("error"),
+            provider_result.get("reason"),
+            provider_result.get("message"),
+            result.get("provider_status"),
+            result.get("status"),
+        ]
+        if value
+    )
+    status_match = re.search(r"(?i)(?:error code|status|http_status|http status)\D{0,12}(\d{3})", combined)
+    http_status = int(status_match.group(1)) if status_match else provider_result.get("http_status") or result.get("http_status") or ""
+    combined_lower = combined.lower()
+    if "not have enough credits" in combined_lower or "enough credits" in combined_lower:
+        error_type = "insufficient_provider_credits"
+        reason = f"{provider or result.get('provider') or 'provider'} returned HTTP {http_status or 400}: insufficient provider credits"
+        if not http_status:
+            http_status = 400
+    elif "unauthorized" in combined_lower or "authentication" in combined_lower or "api key" in combined_lower:
+        error_type = "provider_auth_rejected"
+    elif "timeout" in combined_lower or "timed out" in combined_lower:
+        error_type = "provider_timeout"
+    elif "model" in combined_lower and ("unsupported" in combined_lower or "not found" in combined_lower):
+        error_type = "provider_model_or_endpoint_rejected"
+    elif reason and reason != "provider_attempt_failed":
+        error_type = "provider_execution_error"
+    else:
+        error_type = "provider_failure_reason_missing"
+
+    provider_safe_name = str(provider or result.get("provider") or provider_result.get("provider") or "").strip().lower()
+    endpoint_safe_name = ""
+    media_type = str(result.get("media_type") or result.get("asset_type") or "").strip().lower()
+    if provider_safe_name == "runway":
+        endpoint_safe_name = "runway_text_to_video_create"
+    elif provider_safe_name == "elevenlabs":
+        endpoint_safe_name = "elevenlabs_tts"
+    elif provider_safe_name == "kling":
+        endpoint_safe_name = "kling_text_to_video"
+    elif provider_safe_name == "universal_complete_media_composer" or stage == "composition_stitching":
+        endpoint_safe_name = "internal_ffmpeg_composition"
+
+    return {
+        "provider_failure_reason_sanitized": reason,
+        "provider_error_type_sanitized": error_type,
+        "provider_http_status_if_recorded": http_status,
+        "provider_failure_stage": stage,
+        "provider_safe_name": provider_safe_name,
+        "provider_endpoint_safe_name_if_recorded": endpoint_safe_name,
+        "provider_media_type": media_type,
+        "provider_request_values_exposed": False,
+        "credential_values_exposed": False,
+        "internal_config_exposed": False,
+        "customer_data_exposed": False,
+    }
 
 
 def _ucm_video_provider_order(requested_provider: str) -> list[str]:
@@ -2716,6 +2794,7 @@ def _ucm_audio_provider_order(requested_provider: str) -> list[str]:
 
 def _ucm_attempt_record(provider: str, result: Dict[str, Any], attempt_number: int) -> Dict[str, Any]:
     readiness = provider_readiness(provider)
+    failure_diagnostics = _ucm_provider_failure_diagnostics(result, provider=provider, stage="visual")
     return {
         "attempt": attempt_number,
         "stage": "visual",
@@ -2728,12 +2807,14 @@ def _ucm_attempt_record(provider: str, result: Dict[str, Any], attempt_number: i
         "configured": bool(readiness.get("configured")),
         "direct_execution_enabled": bool(readiness.get("direct_execution_enabled", provider in SUPPORTED_VIDEO_PROVIDERS)),
         "safe_error_summary": _ucm_provider_failure_summary(result) if not (result.get("success") and result.get("playable")) else "",
+        **({} if result.get("success") and result.get("playable") else failure_diagnostics),
         "customer_safe": True,
         "credential_values_exposed": False,
     }
 
 
 def _ucm_segment_child_record(parent_job_id: str, segment: Dict[str, Any], provider: str, result: Dict[str, Any]) -> Dict[str, Any]:
+    failure_diagnostics = _ucm_provider_failure_diagnostics(result, provider=provider, stage="visual_segment")
     return {
         "parent_job_id": parent_job_id,
         "segment_index": segment.get("segment_index"),
@@ -2752,8 +2833,34 @@ def _ucm_segment_child_record(parent_job_id: str, segment: Dict[str, Any], provi
         "external_action_performed": bool(result.get("external_action_performed")),
         "live_provider_call_triggered": bool(result.get("live_provider_call_triggered")),
         "safe_error_summary": _ucm_provider_failure_summary(result) if not (result.get("success") and result.get("playable")) else "",
+        **({} if result.get("success") and result.get("playable") else failure_diagnostics),
         "customer_safe": True,
         "credential_values_exposed": False,
+    }
+
+
+def _ucm_parent_failure_diagnostics(
+    failure_record: Dict[str, Any] | None,
+    *,
+    selected_visual_provider: str = "",
+    selected_audio_provider: str = "",
+    selected_composition_method: str = "internal_ffmpeg_composition",
+) -> Dict[str, Any]:
+    record = dict(failure_record or {})
+    return {
+        "provider_failure_reason_sanitized": record.get("provider_failure_reason_sanitized") or record.get("safe_error_summary") or "",
+        "provider_error_type_sanitized": record.get("provider_error_type_sanitized") or "",
+        "provider_http_status_if_recorded": record.get("provider_http_status_if_recorded") or "",
+        "provider_failure_stage": record.get("provider_failure_stage") or record.get("stage") or "",
+        "provider_safe_name": record.get("provider_safe_name") or record.get("provider") or "",
+        "provider_endpoint_safe_name_if_recorded": record.get("provider_endpoint_safe_name_if_recorded") or "",
+        "selected_visual_provider_safe_name": selected_visual_provider or record.get("provider") or record.get("provider_safe_name") or "",
+        "selected_audio_provider_safe_name": selected_audio_provider or "",
+        "selected_composition_method_safe_name": selected_composition_method,
+        "provider_request_values_exposed": False,
+        "credential_values_exposed": False,
+        "internal_config_exposed": False,
+        "customer_data_exposed": False,
     }
 
 
@@ -3296,6 +3403,7 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     "Video generation could not complete all requested duration segments with the configured providers. "
                     "Support can review the linked provider attempts and safe diagnostics."
                 )
+                latest_visual_failure = failed_provider_attempts[-1] if failed_provider_attempts else {}
                 _write_job({
                     **base_job,
                     "success": False,
@@ -3305,7 +3413,11 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     "selected_video_job_id": "",
                     "selected_video_provider": "",
                     "video_status": "visual_segments_incomplete",
-                    "video_error": failed_provider_attempts[-1].get("safe_error_summary") if failed_provider_attempts else "No configured video provider was available.",
+                    "video_error": latest_visual_failure.get("safe_error_summary") if latest_visual_failure else "No configured video provider was available.",
+                    **_ucm_parent_failure_diagnostics(
+                        latest_visual_failure,
+                        selected_audio_provider=selected_audio_provider,
+                    ),
                     "child_jobs": _ucm_visual_child_jobs(visual_attempts),
                     "failed_provider_attempts": failed_provider_attempts,
                     "provider_attempt_count": len(visual_attempts),
@@ -3383,6 +3495,11 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
             })
 
             if not audio_result.get("success") or audio_result.get("status") != "completed" or not audio_result.get("playable"):
+                audio_failure_diagnostics = _ucm_provider_failure_diagnostics(
+                    audio_result,
+                    provider=selected_audio_provider,
+                    stage="audio_generation",
+                )
                 _write_job({
                     **base_job,
                     "success": False,
@@ -3395,6 +3512,11 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     "audio_job_id": audio_result.get("job_id"),
                     "audio_status": audio_result.get("status"),
                     "audio_error": audio_result.get("error") or audio_result.get("reason") or audio_result.get("message"),
+                    **_ucm_parent_failure_diagnostics(
+                        audio_failure_diagnostics,
+                        selected_visual_provider=generated_segments[0].get("provider") if generated_segments else controls["video_provider"],
+                        selected_audio_provider=selected_audio_provider,
+                    ),
                     "child_jobs": {
                         **_ucm_visual_child_jobs(visual_attempts, generated_segments[0] if generated_segments else None),
                         "audio": {
@@ -3460,6 +3582,11 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
             )
 
             if not composition_result.get("success") or not composition_result.get("playable"):
+                composition_failure_diagnostics = _ucm_provider_failure_diagnostics(
+                    composition_result,
+                    provider="universal_complete_media_composer",
+                    stage="composition_stitching",
+                )
                 _write_job({
                     **base_job,
                     "success": False,
@@ -3473,6 +3600,11 @@ def start_universal_complete_media_workflow(payload: Dict[str, Any]) -> Dict[str
                     "selected_video_provider": generated_segments[0].get("provider") if generated_segments else controls["video_provider"],
                     "composition_status": composition_result.get("status"),
                     "composition_error": composition_result.get("error") or composition_result.get("reason") or composition_result.get("message"),
+                    **_ucm_parent_failure_diagnostics(
+                        composition_failure_diagnostics,
+                        selected_visual_provider=generated_segments[0].get("provider") if generated_segments else controls["video_provider"],
+                        selected_audio_provider=selected_audio_provider,
+                    ),
                     "requested_duration_seconds": requested_duration,
                     "provider_safe_segment_seconds": provider_safe_segment_seconds,
                     "segment_count": segment_count,
