@@ -162,7 +162,11 @@ def build_summary() -> dict[str, Any]:
     replay_id = replay_job_id(parent_job, visual_segment, audio_job) if parent_job and visual_segment and audio_job else ""
     existing_replay = load_json(replay_job_path(replay_id)) if replay_id else {}
 
-    composition_result = existing_replay
+    composition_result = (
+        direct_media.refresh_composition_final_asset_metadata(existing_replay)
+        if existing_replay
+        else {}
+    )
     if not existing_replay and parent_job and visual_segment and audio_job and visual_path and audio_path and ffmpeg:
         replay_segment = {
             **dict(visual_segment),

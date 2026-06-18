@@ -241,6 +241,19 @@ def _ffmpeg_version_check(binary: str) -> bool:
         return False
 
 
+def _ffprobe_duration_check(binary: str) -> bool:
+    try:
+        completed = subprocess.run(
+            [binary, "-version"],
+            capture_output=True,
+            text=True,
+            timeout=8,
+        )
+        return bool(completed.returncode == 0 and "ffprobe" in (completed.stdout or completed.stderr or "").lower())
+    except Exception:
+        return False
+
+
 def resolve_ffmpeg_binary_for_runtime() -> tuple[str, Dict[str, Any]]:
     load_local_env_for_provider_readiness()
     env_value = _clean_env_value(os.getenv("FFMPEG_BINARY", ""))
@@ -291,6 +304,82 @@ def resolve_ffmpeg_binary_for_runtime() -> tuple[str, Dict[str, Any]]:
             "placeholder_like_rejected": bool(env_placeholder_like),
             "credential_values_exposed": False,
         },
+        "checked_candidates": checked,
+        "credential_values_exposed": False,
+        "customer_safe": True,
+    }
+
+
+def resolve_ffprobe_binary_for_runtime() -> tuple[str, Dict[str, Any]]:
+    load_local_env_for_provider_readiness()
+    env_value = _clean_env_value(os.getenv("FFPROBE_BINARY", ""))
+    env_placeholder_like = _env_value_placeholder_like(env_value)
+    candidates: list[tuple[str, str]] = []
+    if env_value and not env_placeholder_like:
+        candidates.append(("ffprobe_binary_env", env_value))
+
+    ffmpeg_binary, ffmpeg_diagnostics = resolve_ffmpeg_binary_for_runtime()
+    if ffmpeg_binary:
+        try:
+            ffmpeg_path = Path(ffmpeg_binary)
+            sibling_names = ["ffprobe.exe", "ffprobe"] if os.name == "nt" else ["ffprobe", "ffprobe.exe"]
+            for sibling_name in sibling_names:
+                sibling = ffmpeg_path.with_name(sibling_name)
+                if sibling.exists():
+                    candidates.append(("ffmpeg_binary_sibling", str(sibling)))
+                    break
+        except Exception:
+            pass
+
+    system_path = shutil.which("ffprobe")
+    if system_path:
+        candidates.append(("system_path", system_path))
+
+    checked: list[Dict[str, Any]] = []
+    seen: set[str] = set()
+    for source, binary in candidates:
+        if binary in seen:
+            continue
+        seen.add(binary)
+        version_ok = _ffprobe_duration_check(binary)
+        checked.append({
+            "source": source,
+            "present": True,
+            "value_length_present": bool(binary),
+            "selected_binary_safe_name": _safe_binary_name(binary),
+            "version_check_passed": version_ok,
+            "credential_values_exposed": False,
+        })
+        if version_ok:
+            return binary, {
+                "ffprobe_available": True,
+                "ffprobe_detection_source": source,
+                "selected_binary_safe_name": _safe_binary_name(binary),
+                "ffprobe_version_check_passed": True,
+                "ffprobe_binary_env": {
+                    "present": bool(env_value),
+                    "value_length_present": bool(env_value),
+                    "placeholder_like_rejected": bool(env_placeholder_like),
+                    "credential_values_exposed": False,
+                },
+                "ffmpeg_detection_source": ffmpeg_diagnostics.get("ffmpeg_detection_source"),
+                "checked_candidates": checked,
+                "credential_values_exposed": False,
+                "customer_safe": True,
+            }
+
+    return "", {
+        "ffprobe_available": False,
+        "ffprobe_detection_source": "",
+        "selected_binary_safe_name": "",
+        "ffprobe_version_check_passed": False,
+        "ffprobe_binary_env": {
+            "present": bool(env_value),
+            "value_length_present": bool(env_value),
+            "placeholder_like_rejected": bool(env_placeholder_like),
+            "credential_values_exposed": False,
+        },
+        "ffmpeg_detection_source": ffmpeg_diagnostics.get("ffmpeg_detection_source"),
         "checked_candidates": checked,
         "credential_values_exposed": False,
         "customer_safe": True,
@@ -2364,7 +2453,7 @@ def _ucm_provider_safe_visual_prompt(prompt: str, max_chars: int = 950) -> str:
 
 def _ucm_get_duration_seconds(path_value: str) -> float | None:
     try:
-        ffprobe = shutil.which("ffprobe")
+        ffprobe, _ffprobe_diagnostics = resolve_ffprobe_binary_for_runtime()
         if not ffprobe:
             return None
         path = str(path_value or "").strip()
@@ -2390,6 +2479,66 @@ def _ucm_get_duration_seconds(path_value: str) -> float | None:
         return float((completed.stdout or "").strip())
     except Exception:
         return None
+
+
+def refresh_composition_final_asset_metadata(job: Dict[str, Any]) -> Dict[str, Any]:
+    safe_job = dict(job or {})
+    asset_path = safe_job.get("asset_path") or safe_job.get("download_url") or safe_job.get("output_path")
+    path = _safe_runtime_asset_path(str(asset_path or ""))
+    if not path:
+        return {
+            **safe_job,
+            "final_asset_metadata_refresh_attempted": True,
+            "final_asset_metadata_refresh_passed": False,
+            "final_asset_metadata_refresh_reason": "final_asset_missing_from_runtime_outputs",
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
+
+    final_duration = _ucm_get_duration_seconds(str(path))
+    if final_duration is None or final_duration <= 0:
+        return {
+            **safe_job,
+            "final_asset_metadata_refresh_attempted": True,
+            "final_asset_metadata_refresh_passed": False,
+            "final_asset_metadata_refresh_reason": "final_asset_duration_probe_failed",
+            "final_duration_seconds": float(final_duration or 0.0),
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
+
+    requested_duration = float(
+        safe_job.get("requested_duration_seconds")
+        or safe_job.get("estimated_duration_seconds")
+        or final_duration
+        or 0.0
+    )
+    fulfillment = _ucm_duration_fulfillment(requested_duration, final_duration)
+    status = "completed" if fulfillment.get("duration_fulfilled") else "composition_duration_shortfall"
+    refreshed = {
+        **safe_job,
+        **fulfillment,
+        "success": True,
+        "status": status,
+        "provider_status": "universal_complete_media_ready" if status == "completed" else "composition_duration_shortfall",
+        "provider_result_status": "universal_complete_media_ready" if status == "completed" else "composition_duration_shortfall",
+        "playable": True,
+        "preview_ready": True,
+        "download_ready": True,
+        "asset_path": str(path),
+        "download_url": str(path),
+        "video_size_bytes": path.stat().st_size,
+        "final_asset_metadata_refresh_attempted": True,
+        "final_asset_metadata_refresh_passed": bool(status == "completed"),
+        "final_asset_metadata_refresh_reason": "",
+        "customer_safe": True,
+        "credential_values_exposed": False,
+        "internal_config_exposed": False,
+        "updated_at": _now(),
+    }
+    if refreshed.get("job_id"):
+        return _write_job(refreshed)
+    return refreshed
 
 
 def _ucm_compose_with_sync(video_job: Dict[str, Any], audio_job: Dict[str, Any], composition_job_id: str) -> Dict[str, Any]:
