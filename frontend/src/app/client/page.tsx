@@ -2051,16 +2051,16 @@ const primaryAssetUrl =
 
  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, minmax(0, 1fr))", gap: 12, position: "relative", zIndex: 20, pointerEvents: "auto" }}>
  {[
- ["business_name", "†", "Business name", "Type business name here", "input", "normal"],
- ["business_niche", "¦", "Business niche", "Describe your business niche, product category, and market position", "textarea", "normal"],
- ["products_services", "‡", "Products & services", "Main products, bundles, offers", "textarea", "normal"],
- ["target_audience", "â™™", "Target audience", "Customer type, location, needs", "textarea", "normal"],
- ["competitors", "â™•", "Competitors", "Competitor names, websites, market examples", "textarea", "normal"],
- ["offers", "âŒ‘", "Offers", "Current promotions, bundles, guarantees", "textarea", "normal"],
- ["brand_voice", "", "Brand voice", "Premium, playful, clinical, bold, friendly", "textarea", "normal"],
- ["positioning", "Ž", "Positioning", "Why customers should choose you", "textarea", "normal"],
- ["goals", "âš‘", "Goals", "Sales, launches, retention, growth", "textarea", "normal"],
- ["notes", "Œ", "Key differentiators", "What makes your business unique? Benefits, values, or competitive advantages.", "textarea", "normal"],
+ ["business_name", "", "Business name", "Type business name here", "input", "normal"],
+ ["business_niche", "", "Business niche", "Describe your business niche, product category, and market position", "textarea", "normal"],
+ ["products_services", "", "Products & services", "Main products, bundles, offers", "textarea", "normal"],
+ ["target_audience", "", "Target audience", "Customer type, location, needs", "textarea", "normal"],
+ ["competitors", "", "Competitors", "Competitor names, websites, market examples", "textarea", "normal"],
+ ["offers", "", "Offers", "Current promotions, bundles, guarantees", "textarea", "normal"],
+ ["brand_voice", "", "Brand voice", "Premium, playful, clinical, bold, friendly", "textarea", "normal"],
+ ["positioning", "", "Positioning", "Why customers should choose you", "textarea", "normal"],
+ ["goals", "", "Goals", "Sales, launches, retention, growth", "textarea", "normal"],
+ ["notes", "", "Key differentiators", "What makes your business unique? Benefits, values, or competitive advantages.", "textarea", "normal"],
  ].map(([key, icon, label, placeholder, fieldType, size]) => (
  <div
  key={String(key)}
@@ -2157,8 +2157,8 @@ const primaryAssetUrl =
 
  <div style={{ marginTop: 14, borderRadius: 16, border: darkModeEnabled ? "1px solid rgba(129,140,248,.22)" : "1px solid rgba(79,70,229,.10)", background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", padding: 10, boxShadow: darkModeEnabled ? "0 14px 34px rgba(0,0,0,.28)" : "0 10px 28px rgba(15,23,42,.04)", position: "relative", zIndex: 25 }}>
  <div style={{ display: "grid", gridTemplateColumns: "180px 180px 180px 1fr", gap: 10, alignItems: "center" }}>
- <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "8px 10px", height: 34, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "#fff", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>£ Save business profile</button>
- <button type="button" onClick={loadBusinessProfile} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>» Reset to last save</button>
+ <button type="button" onClick={saveBusinessProfile} style={{ border: 0, borderRadius: 12, padding: "8px 10px", height: 34, background: "linear-gradient(135deg,#4f46e5,#4338ca)", color: "#fff", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>Save business profile</button>
+ <button type="button" onClick={loadBusinessProfile} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>Reset to last save</button>
  <button type="button" onClick={() => setToastMessage("Preview will show how agents use this profile in the next workspace pass.")} style={{ border: darkModeEnabled ? "1px solid rgba(129,140,248,.34)" : "1px solid rgba(79,70,229,.18)", borderRadius: 12, padding: "8px 10px", height: 34, background: darkModeEnabled ? "rgba(15,23,42,.92)" : "#fff", color: darkModeEnabled ? "#a5b4fc" : "#4f46e5", fontSize: 12.4, fontWeight: 900, cursor: "pointer" }}>‰ Preview profile</button>
  <div style={{ borderLeft: "1px solid rgba(79,70,229,.12)", paddingLeft: 14, minHeight: 44, display: "flex", flexDirection: "column", justifyContent: "center" }}>
  <div style={{ fontWeight: 900, color: darkModeEnabled ? "#f8fafc" : "#0f172a", fontSize: 12.5, marginBottom: 2 }}>One workspace. One business.</div>
@@ -2444,7 +2444,7 @@ const primaryAssetUrl =
  const agentIcon =
  agentName.toLowerCase().includes("research") ? "âŒ•" :
  agentName.toLowerCase().includes("copy") ? "Ž" :
- agentName.toLowerCase().includes("ugc") ? "£" :
+ agentName.toLowerCase().includes("ugc") ? "" :
  agentName.toLowerCase().includes("image") ? "§" :
  agentName.toLowerCase().includes("crm") ? "â™Ÿ" :
  agentName.toLowerCase().includes("email") ? "‰" :
@@ -2921,7 +2921,7 @@ const primaryAssetUrl =
  : "Approval controls are ready when the output is reviewed.",
  status: reviewStatus === "approved" ? "Approved" : reviewStatus === "rejected" ? "Revision" : "Pending",
  tone: reviewStatus === "rejected" ? "#ef4444" : "var(--color-brand)",
- icon: reviewStatus === "approved" ? "“" : reviewStatus === "rejected" ? "!" : "‹",
+ icon: reviewStatus === "approved" ? "“" : reviewStatus === "rejected" ? "!" : "",
  },
  ].map((item) => (
  <div
@@ -3060,7 +3060,7 @@ const primaryAssetUrl =
  }}
  >
  {[
- ["Review latest output", liveDeliverable ? "Ready" : "Waiting", liveDeliverable ? "“" : "‹"],
+ ["Review latest output", liveDeliverable ? "Ready" : "Waiting", liveDeliverable ? "“" : ""],
  ["Approve or request changes", reviewStatus === "pending" ? "Next" : reviewStatus === "approved" ? "Done" : "Revision", reviewStatus === "approved" ? "“" : "’"],
  ["Run next optimisation", reviewStatus === "approved" ? "Available" : "After review", "—"],
  ].map(([title, status, icon]) => (
