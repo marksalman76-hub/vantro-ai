@@ -89,6 +89,38 @@ class ValidatedPayload(BaseModel):
 
 # ============================================
 
+
+
+# ============================================
+# GLOBAL ERROR HANDLER
+# ============================================
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    """Catch unhandled exceptions safely"""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"Error: {str(exc)}", exc_info=True)
+
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": "Internal server error",
+            "detail": "An unexpected error occurred. Please contact support."
+        }
+    )
+
+# ============================================
+
+
+
+def safe_log_error(error: Exception, endpoint: str, tenant_id: str = "unknown"):
+    """Log errors safely without exposing details"""
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.error(f"Error in {endpoint}", exc_info=True)
+    return {"error": "Request failed", "detail": "An error occurred"}
+
+
 # Step 173 durable Postgres account runtime
 from backend.app.core.postgres_account_runtime import (
     activate_account as pg_activate_account,
@@ -126,7 +158,7 @@ behaviour optimisation, and execution stack routing.
 """
 
 from backend.app.runtime.global_execution_evidence_layer import build_execution_evidence_packet
-from fastapi import Request, FastAPI, Header, Request
+from fastapi import HTTPException, Request, FastAPI, Header, Request
 from backend.app.runtime.creative_asset_persistence_bridge import get_persisted_creative_assets, persist_creative_agent_output
 from backend.app.runtime.asset_storage_signed_delivery_runtime import build_customer_safe_delivery_response
 from backend.app.runtime.shared_creative_media_generation_runtime import CREATIVE_MEDIA_AGENTS
