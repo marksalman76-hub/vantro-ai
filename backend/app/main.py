@@ -285,7 +285,7 @@ from backend.app.core.governed_learning_optimisation_runtime import governed_lea
 from backend.app.core.saas_provisioning_runtime import provisioning_readiness, provision_tenant, validate_one_time_link, retrieve_tenant_bootstrap, update_tenant_lifecycle, cleanup_expired_activation_links
 from backend.app.core.marketplace_entitlement_runtime import build_marketplace_entitlement_summary
 from backend.app.core.global_agent_registry import global_agent_registry_summary
-from backend.app.core.marketplace_activation_runtime import activate_marketplace_agent, deactivate_marketplace_agent, build_client_marketplace_workspace, build_package_upgrade_preview
+from backend.app.core.marketplace_activation_runtime import activate_channel_manager_agent, deactivate_channel_manager_agent, build_client_marketplace_workspace, build_package_upgrade_preview
 from backend.app.core.marketplace_state_runtime import upsert_marketplace_state, get_marketplace_state, persist_activation_action, validate_package_downgrade, marketplace_audit_history
 from backend.app.core.marketplace_commercial_bridge import package_pricing_catalogue, build_purchase_flow_payload, create_entitlement_change_request, apply_entitlement_change_after_billing, marketplace_commercial_summary
 from backend.app.core.billing_automation_runtime import create_checkout_session_payload, handle_checkout_completed, handle_invoice_payment_succeeded_runtime, handle_invoice_payment_failed_runtime, cancel_subscription_runtime, reactivate_subscription_runtime, billing_automation_summary
@@ -344,9 +344,9 @@ DEMO_TENANTS: Dict[str, List[str]] = {
         "head_agent",
         "ugc_creative_agent",
         "analytics_optimisation_agent",
-        "product_research_agent",
+        "",
         "ad_creative_agent",
-        "product_image_agent",
+        "",
         "influencer_collaboration_agent",
     ]
 }
@@ -414,15 +414,15 @@ APPROVED_GOVERNED_EXECUTION_AGENTS = {
     "receptionist_agent",
     "customer_support_agent",
     "ecommerce_agent",
-    "product_research_agent",
+    "",
     "competitor_intelligence_agent",
     "brand_strategy_agent",
-    "store_builder_agent",
+    "website_app_builder_agent",
     "website_landing_page_apps_agent",
     "product_development_agent",
-    "product_copywriting_agent",
+    "content_copy_agent",
     "ugc_creative_agent",
-    "product_image_agent",
+    "",
     "paid_ads_agent",
     "analytics_optimisation_agent",
     "influencer_collaboration_agent",
@@ -3075,12 +3075,12 @@ def admin_global_agent_registry():
 
 @app.post("/admin/marketplace/activate-agent")
 def admin_marketplace_activate_agent(payload: ValidatedPayload):
-    return activate_marketplace_agent(payload)
+    return activate_channel_manager_agent(payload)
 
 
 @app.post("/admin/marketplace/deactivate-agent")
 def admin_marketplace_deactivate_agent(payload: ValidatedPayload):
-    return deactivate_marketplace_agent(payload)
+    return deactivate_channel_manager_agent(payload)
 
 
 @app.post("/client/marketplace/workspace")
