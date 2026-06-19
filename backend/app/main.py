@@ -262,7 +262,7 @@ app.include_router(admin_deployment_control_router)
 
 
 DEMO_TENANTS: Dict[str, List[str]] = {
-    "client_demo_001": [
+    os.getenv("DEMO_TENANT_ID", "demo_001"): [
         "head_agent",
         "ugc_creative_agent",
         "analytics_optimisation_agent",
@@ -485,13 +485,13 @@ def health() -> Dict[str, object]:
 
 @app.get("/client/execution-events")
 def client_execution_events(
-    tenant_id: str = "client_demo_001",
+    tenant_id: str = os.getenv("DEMO_TENANT_ID", "demo_001"),
     project_id: str = "",
     limit: int = 25,
 ) -> Dict[str, object]:
     try:
         safe_limit = max(1, min(int(limit or 25), 100))
-        safe_tenant_id = str(tenant_id or "client_demo_001")
+        safe_tenant_id = str(tenant_id or os.getenv("DEMO_TENANT_ID", "demo_001"))
         safe_project_id = str(project_id or "")
 
         durable_result = list_execution_events(
@@ -523,7 +523,7 @@ def client_execution_events(
             "success": False,
             "error": "execution_event_ledger_unavailable",
             "message": str(error),
-            "tenant_id": str(tenant_id or "client_demo_001"),
+            "tenant_id": str(tenant_id or os.getenv("DEMO_TENANT_ID", "demo_001")),
             "project_id": str(project_id or "") or None,
             "count": 0,
             "events": [],
@@ -546,10 +546,10 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
 
     owner_managed_client_credit_bypass = (
         tenant_id_clean in {
-            "client_demo_001",
-            "owner_managed_demo",
-            "owner_managed_demo_client",
-            "manual_deployment_client",
+            os.getenv("DEMO_TENANT_ID", "demo_001"),
+            os.getenv("OWNER_TENANT_ID", "owner_001"),
+            os.getenv("OWNER_MANAGED_TENANT_ID", "owner_managed_001"),
+            os.getenv("MANUAL_TENANT_ID", "manual_001"),
             "internal_demo_client",
         }
         or tenant_id_clean.startswith("owner_managed_")
@@ -575,7 +575,7 @@ def run_agent(request: RunAgentRequest) -> Dict[str, object]:
     owner_admin_credit_bypass = owner_admin_bypasses_client_billing(actor_role)
 
     owner_managed_client_credit_bypass = (
-        tenant_id_clean in {"client_demo_001", "owner_managed_demo", "owner_managed_demo_client", "manual_deployment_client"}
+        tenant_id_clean in {os.getenv("DEMO_TENANT_ID", "demo_001"), os.getenv("OWNER_TENANT_ID", "owner_001"), os.getenv("OWNER_MANAGED_TENANT_ID", "owner_managed_001"), os.getenv("MANUAL_TENANT_ID", "manual_001")}
 
     )
 
@@ -2045,7 +2045,7 @@ def _client_session_token(request: Request, explicit_token: str = "") -> str:
     )
 
 
-def _client_tenant_id(request: Request, payload: dict | None = None, fallback: str = "client_demo_001") -> str:
+def _client_tenant_id(request: Request, payload: dict | None = None, fallback: str = os.getenv("DEMO_TENANT_ID", "demo_001")) -> str:
     payload = payload or {}
     return str(
         payload.get("tenant_id")
@@ -3632,7 +3632,7 @@ def admin_execution_evidence(
 
 @app.get("/client/execution-evidence")
 def client_execution_evidence(
-    tenant_id: str = "client_demo_001",
+    tenant_id: str = os.getenv("DEMO_TENANT_ID", "demo_001"),
     limit: int = 25,
 ):
     return build_execution_evidence_packet(
@@ -3644,12 +3644,12 @@ def client_execution_evidence(
 
 @app.get("/client-latest-deliverable")
 def client_latest_deliverable(
-    tenant_id: str = "client_demo_001",
+    tenant_id: str = os.getenv("DEMO_TENANT_ID", "demo_001"),
     project_id: str = "",
     x_tenant_id: str | None = Header(default=None),
     x_tenant_key: str | None = Header(default=None),
 ):
-    safe_tenant_id = str(x_tenant_id or x_tenant_key or tenant_id or "client_demo_001")
+    safe_tenant_id = str(x_tenant_id or x_tenant_key or tenant_id or os.getenv("DEMO_TENANT_ID", "demo_001"))
     result = get_latest_deliverable(
         tenant_id=safe_tenant_id,
         project_id=project_id or "",
@@ -3687,7 +3687,7 @@ def beta_billing_checkout(payload: dict, x_actor_role: str | None = Header(defau
     tenant_id = (
         payload.get("tenant_id")
         or payload.get("tenantId")
-        or "client_demo_001"
+        or os.getenv("DEMO_TENANT_ID", "demo_001")
     )
 
     plan = str(
