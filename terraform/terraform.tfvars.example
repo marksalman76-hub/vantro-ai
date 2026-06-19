@@ -1,0 +1,37 @@
+# Default values - Uncomment and modify as needed
+# See variables.tf for all available options
+
+app_name    = "vantro"
+environment = "production"
+region      = "ap-southeast-2"
+
+# VPC Configuration
+vpc_cidr             = "10.0.0.0/16"
+private_subnet_cidrs = ["10.0.1.0/24", "10.0.2.0/24"]
+public_subnet_cidrs  = ["10.0.10.0/24", "10.0.11.0/24"]
+
+# RDS Configuration
+rds_allocated_storage      = 20
+rds_instance_class         = "db.t3.small"
+rds_engine_version         = "15.3"
+rds_backup_retention_days  = 7
+enable_multi_az            = true
+
+# ECS Configuration
+ecs_task_count   = 2
+ecs_task_cpu     = 512
+ecs_task_memory  = 1024
+ecs_min_capacity = 2
+ecs_max_capacity = 4
+container_port   = 8000
+
+# SQS Configuration
+sqs_visibility_timeout = 300
+sqs_message_retention  = 1209600
+
+# Tags
+tags = {
+  Owner       = "Engineering"
+  CostCenter  = "Platform"
+  Team        = "DevOps"
+}
