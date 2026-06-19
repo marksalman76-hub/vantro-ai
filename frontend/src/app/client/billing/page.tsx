@@ -1,5 +1,15 @@
 "use client";
 
+const OWNER_FREE_CLIENT_WORKSPACE_IDS = new Set([
+  "client_demo_001",
+  "owner_free_client",
+  "owner_test_workspace",
+]);
+
+function isOwnerFreeClientWorkspace(value: unknown): boolean {
+  return OWNER_FREE_CLIENT_WORKSPACE_IDS.has(String(value || "").trim());
+}
+
 import React, { useEffect, useState } from "react";
 
 export default function ClientBillingPage() {
@@ -38,7 +48,7 @@ export default function ClientBillingPage() {
         return;
       }
 
-      setMessage("Owner test workspace. Unlimited testing credits are active. No billing required for this workspace.");
+      setMessage("Owner free workspace exception active. Unlimited testing credits are enabled for this workspace only.");
     } catch {
       setMessage("Payment update could not be opened. Please try again.");
     } finally {
@@ -86,7 +96,7 @@ export default function ClientBillingPage() {
         </div>
 
         <h1 style={{ margin: 0, fontSize: 34, letterSpacing: -1.1 }}>
-          Owner test workspace billing
+          Billing and workspace credits
         </h1>
 
         <p
@@ -98,7 +108,7 @@ export default function ClientBillingPage() {
             maxWidth: 650,
           }}
         >
-          This workspace is running in owner test mode with unlimited testing credits. No billing is required for this workspace.
+          Upgrade plans, buy credits, and manage billing are handled through the secure billing connection. This owner-deployed free workspace is the only billing-exempt client workspace.
         </p>
 
         <div
@@ -112,7 +122,7 @@ export default function ClientBillingPage() {
         >
           <div style={{ fontWeight: 900, marginBottom: 6 }}>Billing status</div>
           <div style={{ color: darkModeEnabled ? "#94a3b8" : "#64748b", fontSize: 13, lineHeight: 1.45 }}>
-            Billing actions are disabled for this owner test workspace.
+            Billing actions are disabled only for the owner-deployed free workspace. Other client workspaces must use Stripe billing.
           </div>
 
           <button
@@ -131,7 +141,7 @@ export default function ClientBillingPage() {
               boxShadow: "0 14px 34px rgba(79,70,229,.28)",
             }}
           >
-            {loading ? "Checking billing status..." : "Billing disabled for owner test"}
+            {loading ? "Checking billing status..." : "Billing unavailable for owner free workspace"}
           </button>
 
           <button

@@ -1737,7 +1737,7 @@ const primaryAssetUrl =
  }}
  style={{ width: "100%", border: "none", borderTop: "1px solid #edf1f6", background: "transparent", padding: "12px 8px", textAlign: "left", fontWeight: 800, cursor: "pointer", color: "#ef4444" }}
  >
- šª Logout
+ Logout
  </button>
  </div>
  </details>
