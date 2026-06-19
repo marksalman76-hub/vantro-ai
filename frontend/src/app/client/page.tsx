@@ -4,6 +4,7 @@ import { applyProductionMediaRouteToPayload } from "@/lib/productionMediaRoutePo
 import { extractLiveActionDeliverableText } from "../../lib/liveActionResultExtraction";
 
 import ClientCreateMediaProductionCard from "../../components/ClientCreateMediaProductionCard";
+import ClientPlanCreditStatusCard from "../../components/ClientPlanCreditStatusCard";
 function renderMediaPackSummary(result: any) {
  const mediaPack = result?.media_pack || result?.deliverable?.media_pack || {};
  const jobs = result?.generation_jobs || mediaPack?.generation_jobs || [];
@@ -1227,6 +1228,8 @@ const primaryAssetUrl =
  button?.click();
  }}
  />
+
+      <ClientPlanCreditStatusCard />
 
  <div className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm">
  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
