@@ -2566,19 +2566,19 @@ async def client_integrations_catalogue():
     return integration_catalogue()
 
 @app.get("/client/integrations")
-async def client_integrations(x_tenant_id: str = Header(default="client_demo_001")):
+async def client_integrations(x_tenant_id: str = Header(...)):
     return list_client_integrations(x_tenant_id)
 
 @app.post("/client/integrations/connect")
-async def client_integrations_connect(payload: dict, x_tenant_id: str = Header(default="client_demo_001")):
+async def client_integrations_connect(payload: dict, x_tenant_id: str = Header(...)):
     return save_client_integration(x_tenant_id, payload)
 
 @app.post("/client/integrations/test")
-async def client_integrations_test(payload: dict, x_tenant_id: str = Header(default="client_demo_001")):
+async def client_integrations_test(payload: dict, x_tenant_id: str = Header(...)):
     return test_client_integration(x_tenant_id, str(payload.get("integration_key") or ""))
 
 @app.post("/client/integrations/disconnect")
-async def client_integrations_disconnect(payload: dict, x_tenant_id: str = Header(default="client_demo_001")):
+async def client_integrations_disconnect(payload: dict, x_tenant_id: str = Header(...)):
     return disconnect_client_integration(x_tenant_id, str(payload.get("integration_key") or ""))
 
 @app.get("/admin/integrations/audit")
@@ -2587,7 +2587,7 @@ async def admin_integrations_audit(limit: int = 50):
 
 
 @app.post("/client/integrations/email/send-proof")
-async def client_email_send_proof(payload: dict, x_tenant_id: str = Header(default="client_demo_001")):
+async def client_email_send_proof(payload: dict, x_tenant_id: str = Header(...)):
     recipient = str(payload.get("recipient") or "").strip()
     if recipient.lower() != "leodavid2020@yahoo.com":
         return {
@@ -2640,7 +2640,7 @@ async def client_email_send_proof(payload: dict, x_tenant_id: str = Header(defau
 
 
 @app.post("/client/integrations/email/send-live-proof")
-async def client_email_send_live_proof(payload: dict, x_tenant_id: str = Header(default="client_demo_001")):
+async def client_email_send_live_proof(payload: dict, x_tenant_id: str = Header(...)):
     recipient = str(payload.get("recipient") or "").strip()
     sender_email = str(payload.get("sender_email") or "").strip()
     sender_name = str(payload.get("sender_name") or "Ecommerce AI Agent Platform").strip()
@@ -2778,7 +2778,7 @@ async def admin_live_adapter_registry():
 
 
 @app.post("/client/integrations/action")
-async def client_integration_action(payload: dict, x_tenant_id: str = Header(default="client_demo_001"), x_actor_role: str = Header(default="customer")):
+async def client_integration_action(payload: dict, x_tenant_id: str = Header(...), x_actor_role: str = Header(default="customer")):
     return execute_integration_action(
         tenant_id=x_tenant_id,
         integration_key=str(payload.get("integration_key") or ""),
