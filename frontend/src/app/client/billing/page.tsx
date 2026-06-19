@@ -1,5 +1,7 @@
 "use client";
 
+import React, { useEffect, useMemo, useState } from "react";
+
 const OWNER_FREE_CLIENT_WORKSPACE_IDS = new Set([
   "client_demo_001",
   "owner_free_client",
@@ -10,32 +12,72 @@ function isOwnerFreeClientWorkspace(value: unknown): boolean {
   return OWNER_FREE_CLIENT_WORKSPACE_IDS.has(String(value || "").trim());
 }
 
-import React, { useEffect, useState } from "react";
+function normaliseBillingIntent(value: string | null): string {
+  const intent = String(value || "manage_billing").trim().toLowerCase();
+  if (intent === "upgrade") return "upgrade";
+  if (intent === "buy_credits" || intent === "credits" || intent === "buy-more-credits") return "buy_credits";
+  if (intent === "payment_update" || intent === "update_payment") return "payment_update";
+  return "manage_billing";
+}
 
 export default function ClientBillingPage() {
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [workspaceId, setWorkspaceId] = useState("");
+
+  const ownerFreeWorkspace = useMemo(() => isOwnerFreeClientWorkspace(workspaceId), [workspaceId]);
 
   useEffect(() => {
     try {
       const savedTheme = window.localStorage.getItem("client_workspace_dark_mode");
       setDarkModeEnabled(savedTheme === "dark");
+
+      const savedWorkspace =
+        window.localStorage.getItem("client_workspace_id") ||
+        window.localStorage.getItem("tenant_id") ||
+        window.localStorage.getItem("client_tenant_id") ||
+        "";
+      if (savedWorkspace) setWorkspaceId(savedWorkspace);
     } catch {}
+
+    fetch("/api/client-me", { cache: "no-store", credentials: "include" })
+      .then((response) => response.json())
+      .then((data) => {
+        const nextWorkspaceId =
+          data?.tenant_id ||
+          data?.tenantId ||
+          data?.workspace_id ||
+          data?.workspaceId ||
+          data?.client_id ||
+          data?.clientId ||
+          "";
+        if (nextWorkspaceId) setWorkspaceId(String(nextWorkspaceId));
+      })
+      .catch(() => {});
   }, []);
 
-  async function openPaymentUpdate() {
+  async function openSecureBilling() {
     setLoading(true);
     setMessage("");
 
+    if (ownerFreeWorkspace) {
+      setMessage("Owner free workspace exception active. Unlimited testing credits are enabled for this workspace only.");
+      setLoading(false);
+      return;
+    }
+
     try {
+      const intent = normaliseBillingIntent(new URLSearchParams(window.location.search).get("intent"));
+
       const response = await fetch("/api/billing-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
-          mode: "payment_update",
-          checkout_type: "payment_update",
+          mode: intent,
+          checkout_type: intent,
+          intent,
           return_url: `${window.location.origin}/client`,
         }),
       });
@@ -48,9 +90,9 @@ export default function ClientBillingPage() {
         return;
       }
 
-      setMessage("Owner free workspace exception active. Unlimited testing credits are enabled for this workspace only.");
+      setMessage("Secure Stripe billing could not be opened. Please try again or contact support.");
     } catch {
-      setMessage("Payment update could not be opened. Please try again.");
+      setMessage("Secure Stripe billing could not be opened. Please try again or contact support.");
     } finally {
       setLoading(false);
     }
@@ -108,7 +150,9 @@ export default function ClientBillingPage() {
             maxWidth: 650,
           }}
         >
-          Upgrade plans, buy credits, and manage billing are handled through the secure billing connection. This owner-deployed free workspace is the only billing-exempt client workspace.
+          {ownerFreeWorkspace
+            ? "This owner-deployed free workspace is billing-exempt and uses unlimited testing credits."
+            : "Upgrade plans, buy credits, and manage billing are handled through the secure Stripe billing connection."}
         </p>
 
         <div
@@ -122,12 +166,14 @@ export default function ClientBillingPage() {
         >
           <div style={{ fontWeight: 900, marginBottom: 6 }}>Billing status</div>
           <div style={{ color: darkModeEnabled ? "#94a3b8" : "#64748b", fontSize: 13, lineHeight: 1.45 }}>
-            Billing actions are disabled only for the owner-deployed free workspace. Other client workspaces must use Stripe billing.
+            {ownerFreeWorkspace
+              ? "Billing actions are disabled for this owner-deployed free workspace only."
+              : "Stripe billing is required for this client workspace."}
           </div>
 
           <button
             type="button"
-            onClick={openPaymentUpdate}
+            onClick={openSecureBilling}
             disabled={loading}
             style={{
               marginTop: 16,
@@ -141,7 +187,11 @@ export default function ClientBillingPage() {
               boxShadow: "0 14px 34px rgba(79,70,229,.28)",
             }}
           >
-            {loading ? "Checking billing status..." : "Billing unavailable for owner free workspace"}
+            {loading
+              ? "Opening secure billing..."
+              : ownerFreeWorkspace
+                ? "Billing unavailable for owner free workspace"
+                : "Open secure billing"}
           </button>
 
           <button
