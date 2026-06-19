@@ -5874,3 +5874,61 @@ def _apply_production_media_route_policy_to_payload(payload):
         "provider_retry_count": 0,
     })
     return enriched
+
+# ============================================
+# STRIPE WEBHOOK ENDPOINT
+# ============================================
+@app.post("/webhooks/stripe")
+async def webhook_stripe(request: Request):
+    """
+    Stripe webhook endpoint for billing events.
+    
+    Receives and processes Stripe webhook events:
+    - payment_intent.succeeded
+    - invoice.payment_succeeded
+    - invoice.payment_failed
+    - customer.subscription.updated
+    - customer.subscription.deleted
+    - charge.refunded
+    """
+    from backend.app.core.stripe_webhook_handler import process_stripe_webhook
+    
+    try:
+        # Get raw body and signature header
+        body = await request.body()
+        signature = request.headers.get("stripe-signature", "")
+        
+        # Process webhook (verify signature, parse event, route handler)
+        result = process_stripe_webhook(body, signature)
+        
+        # If signature verification failed
+        if not result.get("success") and result.get("status") == "signature_verification_failed":
+            return {
+                "success": False,
+                "status": "signature_verification_failed",
+                "customer_safe": True,
+                "credential_values_exposed": False,
+            }
+        
+        # Log webhook processing
+        handler_result = result.get("handler_result", {})
+        event_type = result.get("event_type")
+        
+        return {
+            "success": True,
+            "status": "webhook_received_and_processed",
+            "event_type": event_type,
+            "event_id": result.get("event_id"),
+            "action": handler_result.get("action"),
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
+    
+    except Exception as exc:
+        return {
+            "success": False,
+            "status": "webhook_endpoint_exception",
+            "error": str(exc)[:200],
+            "customer_safe": True,
+            "credential_values_exposed": False,
+        }
