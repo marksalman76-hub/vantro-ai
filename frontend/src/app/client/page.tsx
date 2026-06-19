@@ -1662,7 +1662,7 @@ const primaryAssetUrl =
  }}
  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
  >
- âš™ï¸ Settings
+ š™ï¸ Settings
  </button>
 
  <button
@@ -2442,11 +2442,11 @@ const primaryAssetUrl =
  const active = selectedAgents.includes(agent);
  const agentName = getAgentDisplayName(agent);
  const agentIcon =
- agentName.toLowerCase().includes("research") ? "âŒ•" :
+ agentName.toLowerCase().includes("research") ? "Œ•" :
  agentName.toLowerCase().includes("copy") ? "Ž" :
  agentName.toLowerCase().includes("ugc") ? "" :
  agentName.toLowerCase().includes("image") ? "§" :
- agentName.toLowerCase().includes("crm") ? "â™Ÿ" :
+ agentName.toLowerCase().includes("crm") ? "™Ÿ" :
  agentName.toLowerCase().includes("email") ? "‰" :
  agentName.toLowerCase().includes("analytics") ? "—" :
  agentName.toLowerCase().includes("influencer") ? "…" :
@@ -2698,7 +2698,7 @@ const primaryAssetUrl =
  </div>
 
  <div style={{ marginTop: 12, color: "var(--color-muted)", fontSize: 12 }}>
- â“˜ Runs use your saved business profile.
+ “˜ Runs use your saved business profile.
  </div>
  </div>
 
@@ -2910,7 +2910,7 @@ const primaryAssetUrl =
  : "Governed execution is prepared for the selected agents.",
  status: executionState === "completed" ? "Complete" : executionState === "running" ? "Running" : "Prepared",
  tone: executionState === "running" ? "#f59e0b" : "#06b6d4",
- icon: executionState === "running" ? "¦" : "âš¡",
+ icon: executionState === "running" ? "¦" : "š¡",
  },
  {
  title: reviewStatus === "approved" ? "Client approved" : reviewStatus === "rejected" ? "Changes requested" : "Client review",
