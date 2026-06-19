@@ -1681,7 +1681,7 @@ const primaryAssetUrl =
  }}
  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
  >
- ‘¤ Profile
+ Profile
  </button>
 
  <button
@@ -1691,7 +1691,7 @@ const primaryAssetUrl =
  }}
  style={{ width: "100%", border: "none", background: "transparent", padding: "11px 8px", textAlign: "left", fontWeight: 700, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
  >
- ’³ Update payment
+ Update payment
  </button>
 
  <button
@@ -1724,7 +1724,7 @@ const primaryAssetUrl =
  }}
  style={{ width: "100%", border: "none", borderTop: darkModeEnabled ? "1px solid rgba(129,140,248,.24)" : "1px solid #edf1f6", background: "transparent", padding: "12px 8px", textAlign: "left", fontWeight: 800, cursor: "pointer", color: darkModeEnabled ? "#e2e8f0" : "var(--color-dark)" }}
  >
- {darkModeEnabled ? "€ï¸ Switch to light mode" : "Œ™ Toggle dark / light mode"}
+ {darkModeEnabled ? "€ï¸ Switch to light mode" : "Toggle dark / light mode"}
  </button>
 
  <button
