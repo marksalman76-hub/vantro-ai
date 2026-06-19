@@ -76,6 +76,19 @@ from backend.app.runtime.canonical_entitlement_activation_runtime import (
 )
 
 
+
+
+# ============================================
+# PYDANTIC MODEL FOR PAYLOAD VALIDATION
+# ============================================
+class ValidatedPayload(BaseModel):
+    """Generic validated payload - rejects malformed requests"""
+
+    class Config:
+        extra = "allow"
+
+# ============================================
+
 # Step 173 durable Postgres account runtime
 from backend.app.core.postgres_account_runtime import (
     activate_account as pg_activate_account,
@@ -1230,12 +1243,12 @@ async def admin_execution_queue(tenant_id: str = "", status: str = "", limit: in
 
 
 @app.post("/admin/execution-queue/enqueue")
-async def admin_execution_queue_enqueue(payload: dict):
+async def admin_execution_queue_enqueue(payload: ValidatedPayload):
     return enqueue_execution(payload)
 
 
 @app.post("/admin/execution-queue/mark-failed")
-async def admin_execution_queue_mark_failed(payload: dict):
+async def admin_execution_queue_mark_failed(payload: ValidatedPayload):
     return mark_execution_failed(
         str(payload.get("job_id") or payload.get("queue_id") or ""),
         str(payload.get("error") or "manual_failure_test"),
@@ -1309,7 +1322,7 @@ def admin_dead_letter_list(tenant_id: str = "", status: str = "", limit: int = 5
 
 
 @app.post("/admin/manual-review/decision")
-def admin_manual_review_decision(payload: dict):
+def admin_manual_review_decision(payload: ValidatedPayload):
     payload = dict(payload or {})
     return record_durable_manual_review_decision(
         review_id=str(payload.get("review_id") or ""),
@@ -1322,7 +1335,7 @@ def admin_manual_review_decision(payload: dict):
 
 
 @app.post("/admin/dead-letter/resolve")
-def admin_dead_letter_resolve(payload: dict):
+def admin_dead_letter_resolve(payload: ValidatedPayload):
     payload = dict(payload or {})
     return resolve_dead_letter_record(
         str(payload.get("dead_letter_id") or ""),
@@ -1331,7 +1344,7 @@ def admin_dead_letter_resolve(payload: dict):
 
 
 @app.post("/provider-execution-admin-visibility/actions/retry")
-def provider_execution_admin_visibility_retry(payload: dict):
+def provider_execution_admin_visibility_retry(payload: ValidatedPayload):
     job_id = str((payload or {}).get("job_id") or "")
     reason = str((payload or {}).get("reason") or "admin_requested_provider_retry")
     result = schedule_provider_job_retry(job_id, reason=reason, delay_seconds=0)
@@ -1346,7 +1359,7 @@ def provider_execution_admin_visibility_retry(payload: dict):
 
 
 @app.post("/provider-execution-admin-visibility/actions/requeue")
-def provider_execution_admin_visibility_requeue(payload: dict):
+def provider_execution_admin_visibility_requeue(payload: ValidatedPayload):
     job_id = str((payload or {}).get("job_id") or "")
     result = update_provider_job_status(job_id, "queued", error=None, next_retry_at=None)
     return {
@@ -1360,7 +1373,7 @@ def provider_execution_admin_visibility_requeue(payload: dict):
 
 
 @app.post("/provider-execution-admin-visibility/actions/cancel")
-def provider_execution_admin_visibility_cancel(payload: dict):
+def provider_execution_admin_visibility_cancel(payload: ValidatedPayload):
     job_id = str((payload or {}).get("job_id") or "")
     reason = str((payload or {}).get("reason") or "admin_requested_provider_cancel")
     result = update_provider_job_status(job_id, "cancelled", error=reason)
@@ -1403,7 +1416,7 @@ def provider_queue_retry_failover_status(tenant_id: str = "", provider: str = ""
 
 
 @app.post("/provider-queue-retry-failover")
-def provider_queue_retry_failover_enqueue(payload: dict):
+def provider_queue_retry_failover_enqueue(payload: ValidatedPayload):
     payload = dict(payload or {})
     tenant_id = str(payload.get("tenant_id") or payload.get("tenant_key") or "tenant_unknown")
     provider = str(payload.get("provider") or payload.get("primary_provider") or payload.get("provider_key") or "unknown")
@@ -1548,7 +1561,7 @@ def admin_get_live_llm_control():
 
 
 @app.post("/admin/live-llm-control")
-def admin_set_live_llm_control(payload: dict):
+def admin_set_live_llm_control(payload: ValidatedPayload):
     if owner_live_llm_control is None:
         return {
             "success": False,
@@ -1979,7 +1992,7 @@ def admin_operational_dashboard():
 
 # Durable Postgres account routes
 @app.post("/admin/client-activation-invite")
-async def durable_create_client_activation_invite(payload: dict):
+async def durable_create_client_activation_invite(payload: ValidatedPayload):
     return pg_create_activation_invite(payload)
 
 
@@ -2008,7 +2021,7 @@ async def durable_get_invite_status(token: str):
 
 
 @app.post("/client/activate-account")
-async def durable_activate_client_account(payload: dict):
+async def durable_activate_client_account(payload: ValidatedPayload):
     token = str(payload.get("token") or "")
     password = str(payload.get("password") or "")
     confirm_password = str(payload.get("confirm_password") or "")
@@ -2023,7 +2036,7 @@ async def durable_activate_client_account(payload: dict):
 
 
 @app.post("/client/login")
-async def durable_login_client_account(payload: dict):
+async def durable_login_client_account(payload: ValidatedPayload):
     email = str(payload.get("email") or "").strip().lower()
     password = str(payload.get("password") or "")
     return pg_login(email, password)
@@ -2080,7 +2093,7 @@ def _normalise_review_action(value: Any) -> str:
     return "approved"
 
 
-def _normalise_execution_state_payload(tenant_id: str, payload: dict) -> Dict[str, Any]:
+def _normalise_execution_state_payload(tenant_id: str, payload: ValidatedPayload) -> Dict[str, Any]:
     has_real_output = bool(payload.get("has_real_output"))
     display_status = str(
         payload.get("client_safe_status")
@@ -2141,7 +2154,7 @@ async def canonical_client_business_profile(request: Request, session_token: str
 
 
 @app.post("/client-business-profile")
-async def canonical_save_client_business_profile(request: Request, payload: dict, session_token: str = ""):
+async def canonical_save_client_business_profile(request: Request, payload: ValidatedPayload, session_token: str = ""):
     token = _client_session_token(request, session_token or str(payload.get("session_token") or ""))
     if not token:
         return _client_safe_error("client_session_token_required", "client_profile_auth_required")
@@ -2166,7 +2179,7 @@ async def canonical_save_client_business_profile(request: Request, payload: dict
 
 
 @app.post("/client-review-action")
-async def canonical_client_review_action(request: Request, payload: dict):
+async def canonical_client_review_action(request: Request, payload: ValidatedPayload):
     tenant_id = _client_tenant_id(request, payload)
     action = _normalise_review_action(
         payload.get("mapped_review_action")
@@ -2296,7 +2309,7 @@ async def canonical_client_review_history(request: Request, tenant_id: str = "",
 
 
 @app.post("/client-execution-state")
-async def canonical_client_execution_state(request: Request, payload: dict):
+async def canonical_client_execution_state(request: Request, payload: ValidatedPayload):
     tenant_id = _client_tenant_id(request, payload)
     state = _normalise_execution_state_payload(tenant_id, payload)
     evidence = record_execution_evidence(
@@ -2368,7 +2381,7 @@ async def durable_client_account_security_events(limit: int = 25):
 
 
 @app.post("/admin/client-credits/assign")
-async def durable_assign_client_credits(payload: dict):
+async def durable_assign_client_credits(payload: ValidatedPayload):
     return pg_assign_client_credits(payload)
 
 
@@ -2383,7 +2396,7 @@ async def durable_lookup_client_account(identifier: str):
 
 
 @app.post("/admin/client-credit-gate/test")
-async def durable_client_credit_gate_test(payload: dict):
+async def durable_client_credit_gate_test(payload: ValidatedPayload):
     return pg_client_credit_gate(payload)
 
 
@@ -2393,7 +2406,7 @@ async def admin_billing_readiness():
 
 
 @app.post("/admin/billing/subscription/upsert")
-async def admin_billing_subscription_upsert(payload: dict):
+async def admin_billing_subscription_upsert(payload: ValidatedPayload):
     return upsert_subscription(payload)
 
 
@@ -2403,17 +2416,17 @@ async def admin_billing_subscription(identifier: str):
 
 
 @app.post("/admin/billing/event")
-async def admin_billing_event(payload: dict):
+async def admin_billing_event(payload: ValidatedPayload):
     return record_billing_event(payload)
 
 
 @app.post("/admin/billing/invoice-payment-succeeded")
-async def admin_billing_invoice_payment_succeeded(payload: dict):
+async def admin_billing_invoice_payment_succeeded(payload: ValidatedPayload):
     return handle_invoice_payment_succeeded(payload)
 
 
 @app.post("/admin/billing/invoice-payment-failed")
-async def admin_billing_invoice_payment_failed(payload: dict):
+async def admin_billing_invoice_payment_failed(payload: ValidatedPayload):
     return handle_invoice_payment_failed(payload)
 
 
@@ -2570,15 +2583,15 @@ async def client_integrations(x_tenant_id: str = Header(...)):
     return list_client_integrations(x_tenant_id)
 
 @app.post("/client/integrations/connect")
-async def client_integrations_connect(payload: dict, x_tenant_id: str = Header(...)):
+async def client_integrations_connect(payload: ValidatedPayload, x_tenant_id: str = Header(...)):
     return save_client_integration(x_tenant_id, payload)
 
 @app.post("/client/integrations/test")
-async def client_integrations_test(payload: dict, x_tenant_id: str = Header(...)):
+async def client_integrations_test(payload: ValidatedPayload, x_tenant_id: str = Header(...)):
     return test_client_integration(x_tenant_id, str(payload.get("integration_key") or ""))
 
 @app.post("/client/integrations/disconnect")
-async def client_integrations_disconnect(payload: dict, x_tenant_id: str = Header(...)):
+async def client_integrations_disconnect(payload: ValidatedPayload, x_tenant_id: str = Header(...)):
     return disconnect_client_integration(x_tenant_id, str(payload.get("integration_key") or ""))
 
 @app.get("/admin/integrations/audit")
@@ -2587,7 +2600,7 @@ async def admin_integrations_audit(limit: int = 50):
 
 
 @app.post("/client/integrations/email/send-proof")
-async def client_email_send_proof(payload: dict, x_tenant_id: str = Header(...)):
+async def client_email_send_proof(payload: ValidatedPayload, x_tenant_id: str = Header(...)):
     recipient = str(payload.get("recipient") or "").strip()
     if recipient.lower() != "leodavid2020@yahoo.com":
         return {
@@ -2640,7 +2653,7 @@ async def client_email_send_proof(payload: dict, x_tenant_id: str = Header(...))
 
 
 @app.post("/client/integrations/email/send-live-proof")
-async def client_email_send_live_proof(payload: dict, x_tenant_id: str = Header(...)):
+async def client_email_send_live_proof(payload: ValidatedPayload, x_tenant_id: str = Header(...)):
     recipient = str(payload.get("recipient") or "").strip()
     sender_email = str(payload.get("sender_email") or "").strip()
     sender_name = str(payload.get("sender_name") or "Ecommerce AI Agent Platform").strip()
@@ -2778,7 +2791,7 @@ async def admin_live_adapter_registry():
 
 
 @app.post("/client/integrations/action")
-async def client_integration_action(payload: dict, x_tenant_id: str = Header(...), x_actor_role: str = Header(default="customer")):
+async def client_integration_action(payload: ValidatedPayload, x_tenant_id: str = Header(...), x_actor_role: str = Header(default="customer")):
     return execute_integration_action(
         tenant_id=x_tenant_id,
         integration_key=str(payload.get("integration_key") or ""),
@@ -2896,7 +2909,7 @@ async def admin_orchestration_readiness():
 
 
 @app.post("/admin/orchestration/create-plan")
-async def admin_orchestration_create_plan(payload: dict):
+async def admin_orchestration_create_plan(payload: ValidatedPayload):
     return create_orchestration_plan(payload)
 
 
@@ -2906,7 +2919,7 @@ async def admin_orchestration_execution_readiness():
 
 
 @app.post("/admin/orchestration/enqueue-plan")
-async def admin_orchestration_enqueue_plan(payload: dict):
+async def admin_orchestration_enqueue_plan(payload: ValidatedPayload):
     return enqueue_orchestration_plan(payload)
 
 
@@ -2916,12 +2929,12 @@ async def admin_orchestration_state_readiness():
 
 
 @app.post("/admin/orchestration/record-state")
-async def admin_orchestration_record_state(payload: dict):
+async def admin_orchestration_record_state(payload: ValidatedPayload):
     return record_orchestration_state(payload)
 
 
 @app.post("/admin/orchestration/record-result")
-async def admin_orchestration_record_result(payload: dict):
+async def admin_orchestration_record_result(payload: ValidatedPayload):
     return record_orchestration_result(payload)
 
 
@@ -2941,7 +2954,7 @@ async def admin_learning_governed_readiness():
 
 
 @app.post("/admin/learning/score-outcome")
-async def admin_learning_score_outcome(payload: dict):
+async def admin_learning_score_outcome(payload: ValidatedPayload):
     return score_learning_outcome(payload)
 
 
@@ -2961,32 +2974,32 @@ async def admin_saas_provisioning_readiness():
 
 
 @app.post("/admin/saas-provisioning/provision-tenant")
-async def admin_saas_provisioning_provision_tenant(payload: dict):
+async def admin_saas_provisioning_provision_tenant(payload: ValidatedPayload):
     return provision_tenant(payload)
 
 
 @app.post("/admin/saas-provisioning/validate-one-time-link")
-async def admin_saas_provisioning_validate_one_time_link(payload: dict):
+async def admin_saas_provisioning_validate_one_time_link(payload: ValidatedPayload):
     return validate_one_time_link(payload)
 
 
 @app.post("/admin/saas-provisioning/tenant-bootstrap")
-def admin_saas_provisioning_tenant_bootstrap(payload: dict):
+def admin_saas_provisioning_tenant_bootstrap(payload: ValidatedPayload):
     return retrieve_tenant_bootstrap(payload)
 
 
 @app.post("/admin/saas-provisioning/tenant-lifecycle")
-def admin_saas_provisioning_tenant_lifecycle(payload: dict):
+def admin_saas_provisioning_tenant_lifecycle(payload: ValidatedPayload):
     return update_tenant_lifecycle(payload)
 
 
 @app.post("/admin/saas-provisioning/cleanup-expired-links")
-def admin_saas_provisioning_cleanup_expired_links(payload: dict):
+def admin_saas_provisioning_cleanup_expired_links(payload: ValidatedPayload):
     return cleanup_expired_activation_links(payload)
 
 
 @app.post("/admin/marketplace/entitlement-summary")
-def admin_marketplace_entitlement_summary(payload: dict):
+def admin_marketplace_entitlement_summary(payload: ValidatedPayload):
     return build_marketplace_entitlement_summary(payload)
 
 
@@ -2996,47 +3009,47 @@ def admin_global_agent_registry():
 
 
 @app.post("/admin/marketplace/activate-agent")
-def admin_marketplace_activate_agent(payload: dict):
+def admin_marketplace_activate_agent(payload: ValidatedPayload):
     return activate_marketplace_agent(payload)
 
 
 @app.post("/admin/marketplace/deactivate-agent")
-def admin_marketplace_deactivate_agent(payload: dict):
+def admin_marketplace_deactivate_agent(payload: ValidatedPayload):
     return deactivate_marketplace_agent(payload)
 
 
 @app.post("/client/marketplace/workspace")
-def client_marketplace_workspace(payload: dict):
+def client_marketplace_workspace(payload: ValidatedPayload):
     return build_client_marketplace_workspace(payload)
 
 
 @app.post("/client/marketplace/upgrade-preview")
-def client_marketplace_upgrade_preview(payload: dict):
+def client_marketplace_upgrade_preview(payload: ValidatedPayload):
     return build_package_upgrade_preview(payload)
 
 
 @app.post("/admin/marketplace/state/upsert")
-def admin_marketplace_state_upsert(payload: dict):
+def admin_marketplace_state_upsert(payload: ValidatedPayload):
     return upsert_marketplace_state(payload)
 
 
 @app.post("/admin/marketplace/state/get")
-def admin_marketplace_state_get(payload: dict):
+def admin_marketplace_state_get(payload: ValidatedPayload):
     return get_marketplace_state(payload)
 
 
 @app.post("/admin/marketplace/state/action")
-def admin_marketplace_state_action(payload: dict):
+def admin_marketplace_state_action(payload: ValidatedPayload):
     return persist_activation_action(payload)
 
 
 @app.post("/admin/marketplace/downgrade-check")
-def admin_marketplace_downgrade_check(payload: dict):
+def admin_marketplace_downgrade_check(payload: ValidatedPayload):
     return validate_package_downgrade(payload)
 
 
 @app.post("/admin/marketplace/audit-history")
-def admin_marketplace_audit_history(payload: dict):
+def admin_marketplace_audit_history(payload: ValidatedPayload):
     return marketplace_audit_history(payload)
 
 
@@ -3046,57 +3059,57 @@ def client_marketplace_pricing():
 
 
 @app.post("/client/marketplace/purchase-flow")
-def client_marketplace_purchase_flow(payload: dict):
+def client_marketplace_purchase_flow(payload: ValidatedPayload):
     return build_purchase_flow_payload(payload)
 
 
 @app.post("/admin/marketplace/entitlement-change/request")
-def admin_marketplace_entitlement_change_request(payload: dict):
+def admin_marketplace_entitlement_change_request(payload: ValidatedPayload):
     return create_entitlement_change_request(payload)
 
 
 @app.post("/admin/marketplace/entitlement-change/apply-after-billing")
-def admin_marketplace_entitlement_change_apply_after_billing(payload: dict):
+def admin_marketplace_entitlement_change_apply_after_billing(payload: ValidatedPayload):
     return apply_entitlement_change_after_billing(payload)
 
 
 @app.post("/admin/marketplace/commercial-summary")
-def admin_marketplace_commercial_summary(payload: dict):
+def admin_marketplace_commercial_summary(payload: ValidatedPayload):
     return marketplace_commercial_summary(payload)
 
 
 @app.post("/billing/checkout-session-payload")
-def billing_checkout_session_payload(payload: dict):
+def billing_checkout_session_payload(payload: ValidatedPayload):
     return create_checkout_session_payload(payload)
 
 
 @app.post("/billing/checkout-completed")
-def billing_checkout_completed(payload: dict):
+def billing_checkout_completed(payload: ValidatedPayload):
     return handle_checkout_completed(payload)
 
 
 @app.post("/billing/invoice-payment-succeeded")
-def billing_invoice_payment_succeeded(payload: dict):
+def billing_invoice_payment_succeeded(payload: ValidatedPayload):
     return handle_invoice_payment_succeeded_runtime(payload)
 
 
 @app.post("/billing/invoice-payment-failed")
-def billing_invoice_payment_failed(payload: dict):
+def billing_invoice_payment_failed(payload: ValidatedPayload):
     return handle_invoice_payment_failed_runtime(payload)
 
 
 @app.post("/billing/cancel-subscription")
-def billing_cancel_subscription(payload: dict):
+def billing_cancel_subscription(payload: ValidatedPayload):
     return cancel_subscription_runtime(payload)
 
 
 @app.post("/billing/reactivate-subscription")
-def billing_reactivate_subscription(payload: dict):
+def billing_reactivate_subscription(payload: ValidatedPayload):
     return reactivate_subscription_runtime(payload)
 
 
 @app.post("/billing/automation-summary")
-def billing_summary(payload: dict):
+def billing_summary(payload: ValidatedPayload):
     return billing_automation_summary(payload)
 
 
@@ -3106,32 +3119,32 @@ def billing_stripe_production_readiness():
 
 
 @app.post("/billing/verify-webhook-signature")
-def billing_verify_webhook_signature(payload: dict):
+def billing_verify_webhook_signature(payload: ValidatedPayload):
     return verify_stripe_webhook_signature(payload)
 
 
 @app.post("/billing/stripe-webhook-route")
-def billing_stripe_webhook_route(payload: dict):
+def billing_stripe_webhook_route(payload: ValidatedPayload):
     return route_stripe_webhook_event(payload)
 
 
 @app.post("/billing/failed-payment-recovery")
-def billing_failed_payment_recovery(payload: dict):
+def billing_failed_payment_recovery(payload: ValidatedPayload):
     return schedule_failed_payment_recovery(payload)
 
 
 @app.post("/billing/trial-to-paid")
-def billing_trial_to_paid(payload: dict):
+def billing_trial_to_paid(payload: ValidatedPayload):
     return transition_trial_to_paid(payload)
 
 
 @app.post("/client/billing/portal-payload")
-def client_billing_portal_payload(payload: dict):
+def client_billing_portal_payload(payload: ValidatedPayload):
     return build_customer_billing_portal_payload(payload)
 
 
 @app.post("/admin/billing/dashboard")
-def admin_billing_dashboard_endpoint(payload: dict):
+def admin_billing_dashboard_endpoint(payload: ValidatedPayload):
     return admin_billing_dashboard(payload)
 
 
@@ -3141,17 +3154,17 @@ def billing_live_stripe_readiness():
 
 
 @app.post("/billing/live-checkout-session")
-def billing_live_checkout_session(payload: dict):
+def billing_live_checkout_session(payload: ValidatedPayload):
     return create_live_checkout_session(payload)
 
 
 @app.post("/billing/live-portal-session")
-def billing_live_portal_session(payload: dict):
+def billing_live_portal_session(payload: ValidatedPayload):
     return create_live_billing_portal_session(payload)
 
 
 @app.post("/webhooks/stripe/live")
-def webhooks_stripe_live(payload: dict):
+def webhooks_stripe_live(payload: ValidatedPayload):
     return ingest_live_stripe_webhook(payload)
 
 
@@ -3237,7 +3250,7 @@ async def admin_provider_action_readiness():
 
 
 @app.post("/admin/provider-action-readiness/evaluate")
-async def admin_provider_action_readiness_evaluate(payload: dict):
+async def admin_provider_action_readiness_evaluate(payload: ValidatedPayload):
     """
     Admin/operator evaluator for a proposed provider/action payload.
 
@@ -3310,7 +3323,7 @@ async def admin_provider_activation_visibility():
 
 
 @app.post("/admin/provider-activation-visibility/evaluate")
-async def admin_provider_activation_visibility_evaluate(payload: dict):
+async def admin_provider_activation_visibility_evaluate(payload: ValidatedPayload):
     """
     Admin-safe provider activation evaluator.
 
@@ -3402,7 +3415,7 @@ async def admin_autonomous_workforce_orchestration_status():
 
 
 @app.post("/admin/autonomous-workforce-orchestration/plan")
-async def admin_autonomous_workforce_orchestration_plan(payload: dict):
+async def admin_autonomous_workforce_orchestration_plan(payload: ValidatedPayload):
     """
     Create a governed delegated subtask plan without executing it.
     """
@@ -3429,7 +3442,7 @@ async def admin_autonomous_workforce_orchestration_plan(payload: dict):
 
 
 @app.post("/admin/autonomous-workforce-orchestration/recovery")
-async def admin_autonomous_workforce_orchestration_recovery(payload: dict):
+async def admin_autonomous_workforce_orchestration_recovery(payload: ValidatedPayload):
     """
     Create a governed recovery/replay packet without executing it.
     """
@@ -3441,7 +3454,7 @@ async def admin_autonomous_workforce_orchestration_recovery(payload: dict):
 
 
 @app.post("/admin/outcome-action-plan")
-async def admin_outcome_action_plan(payload: dict):
+async def admin_outcome_action_plan(payload: ValidatedPayload):
     return create_outcome_action_plan(
         outcome_text=str(payload.get("outcome_text") or ""),
         source_agent=str(payload.get("source_agent") or "unknown_agent"),
@@ -3452,7 +3465,7 @@ async def admin_outcome_action_plan(payload: dict):
 
 
 @app.post("/admin/outcome-action-decision")
-async def admin_outcome_action_decision(payload: dict):
+async def admin_outcome_action_decision(payload: ValidatedPayload):
     return mark_outcome_plan_decision(
         plan=dict(payload.get("plan") or {}),
         decision=str(payload.get("decision") or "amendment_requested"),
@@ -3463,7 +3476,7 @@ async def admin_outcome_action_decision(payload: dict):
 
 @app.post("/delegated-workforce-execution")
 async def delegated_workforce_execution(
-    payload: dict,
+    payload: ValidatedPayload,
     x_admin_token: str | None = Header(default=None),
     x_actor_role: str | None = Header(default=None),
     authorization: str | None = Header(default=None),
@@ -3681,7 +3694,7 @@ def client_latest_deliverable(
 
 
 @app.post("/billing-checkout")
-def beta_billing_checkout(payload: dict, x_actor_role: str | None = Header(default=None)):
+def beta_billing_checkout(payload: ValidatedPayload, x_actor_role: str | None = Header(default=None)):
     import os
 
     tenant_id = (
@@ -3890,7 +3903,7 @@ def admin_qa_regression_intelligence_status():
 
 
 @app.post("/admin/qa-regression-intelligence/evaluate")
-def admin_qa_regression_intelligence_evaluate(payload: dict):
+def admin_qa_regression_intelligence_evaluate(payload: ValidatedPayload):
     checks = payload.get("checks") if isinstance(payload, dict) else []
     environment = str(payload.get("environment") or "production") if isinstance(payload, dict) else "production"
     source = str(payload.get("source") or "qa_testing_agent") if isinstance(payload, dict) else "qa_testing_agent"
@@ -3924,7 +3937,7 @@ def signup_agent_selection_options(plan: str):
 
 
 @app.post("/signup-agent-selection/validate")
-def signup_agent_selection_validate(payload: dict):
+def signup_agent_selection_validate(payload: ValidatedPayload):
     from backend.app.runtime.signup_agent_selection_bridge import validate_signup_agent_selection
 
     return validate_signup_agent_selection(
@@ -3934,7 +3947,7 @@ def signup_agent_selection_validate(payload: dict):
 
 
 @app.post("/signup-agent-selection/activation-packet")
-def signup_agent_selection_activation_packet(payload: dict):
+def signup_agent_selection_activation_packet(payload: ValidatedPayload):
     from backend.app.runtime.signup_agent_selection_bridge import build_signup_activation_packet
 
     return {
@@ -3950,7 +3963,7 @@ def signup_agent_selection_activation_packet(payload: dict):
 
 
 @app.post("/signup-locked-activation/draft")
-def signup_locked_activation_draft(payload: dict):
+def signup_locked_activation_draft(payload: ValidatedPayload):
     from backend.app.runtime.signup_locked_activation_bridge import create_signup_locked_selection_draft
 
     return create_signup_locked_selection_draft(
@@ -3962,7 +3975,7 @@ def signup_locked_activation_draft(payload: dict):
 
 
 @app.post("/signup-locked-activation/activate")
-def signup_locked_activation_activate(payload: dict):
+def signup_locked_activation_activate(payload: ValidatedPayload):
     from backend.app.runtime.signup_locked_activation_bridge import activate_signup_locked_selection
 
     return activate_signup_locked_selection(
@@ -3973,7 +3986,7 @@ def signup_locked_activation_activate(payload: dict):
 
 
 @app.post("/signup-locked-activation/status")
-def signup_locked_activation_status(payload: dict):
+def signup_locked_activation_status(payload: ValidatedPayload):
     from backend.app.runtime.signup_locked_activation_bridge import get_signup_locked_selection_status
 
     return get_signup_locked_selection_status(
@@ -3983,7 +3996,7 @@ def signup_locked_activation_status(payload: dict):
 
 
 @app.post("/signup-locked-activation/change-request")
-def signup_locked_activation_change_request(payload: dict):
+def signup_locked_activation_change_request(payload: ValidatedPayload):
     from backend.app.runtime.signup_locked_activation_bridge import request_signup_agent_change_after_activation
 
     return request_signup_agent_change_after_activation(
@@ -4968,7 +4981,7 @@ async def admin_list_creative_product_assets(tenant_id: str = "owner_admin", ass
 
 
 @app.post("/admin/creative/product-assets/upload")
-async def admin_upload_creative_product_asset(payload: dict):
+async def admin_upload_creative_product_asset(payload: ValidatedPayload):
     from backend.app.runtime.creative_product_asset_library import upload_creative_product_asset
     return upload_creative_product_asset(
         tenant_id=payload.get("tenant_id") or "owner_admin",
@@ -4982,7 +4995,7 @@ async def admin_upload_creative_product_asset(payload: dict):
 
 
 @app.post("/admin/creative/product-assets/delete")
-async def admin_delete_creative_product_asset(payload: dict):
+async def admin_delete_creative_product_asset(payload: ValidatedPayload):
     from backend.app.runtime.creative_product_asset_library import delete_creative_product_asset
     return delete_creative_product_asset(
         asset_id=payload.get("asset_id") or "",
@@ -5002,7 +5015,7 @@ async def client_list_creative_product_assets(tenant_id: str = "owner_admin", as
 
 
 @app.post("/client/creative/product-assets/upload")
-async def client_upload_creative_product_asset(payload: dict):
+async def client_upload_creative_product_asset(payload: ValidatedPayload):
     from backend.app.runtime.creative_product_asset_library import upload_creative_product_asset
     return upload_creative_product_asset(
         tenant_id=payload.get("tenant_id") or "owner_admin",
