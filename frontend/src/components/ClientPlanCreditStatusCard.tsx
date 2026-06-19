@@ -80,13 +80,13 @@ export default function ClientPlanCreditStatusCard() {
       const planName = readString(
         nestedBilling,
         ["plan_name", "planName", "plan", "package_name", "packageName", "tier", "subscription_plan"],
-        "Plan not shown",
+        "Owner test workspace",
       );
 
       const planStatus = readString(
         nestedBilling,
         ["status", "subscription_status", "subscriptionStatus", "plan_status", "planStatus"],
-        billing.ok ? "Active" : "Unavailable",
+        billing.ok ? "Active" : "No billing required",
       );
 
       const creditsAvailable = readNumber(
@@ -107,7 +107,7 @@ export default function ClientPlanCreditStatusCard() {
       const creditStatus = readString(
         nestedCredits,
         ["status", "credit_status", "creditStatus", "enforcement_status", "enforcementStatus"],
-        credits.ok ? "Available" : "Unavailable",
+        credits.ok ? "Available" : "No billing required",
       );
 
       setState({
@@ -118,7 +118,7 @@ export default function ClientPlanCreditStatusCard() {
         creditsLimit,
         creditStatus,
         loading: false,
-        error: billing.ok || credits.ok ? null : "Billing and credit status could not be loaded.",
+        error: billing.ok || credits.ok ? null : "No billing required for this workspace.",
       });
     }
 
@@ -136,7 +136,7 @@ export default function ClientPlanCreditStatusCard() {
     if (state.creditsLimit !== null && state.creditsUsed !== null) {
       return `${Math.max(state.creditsLimit - state.creditsUsed, 0)}`;
     }
-    return "Not shown";
+    return "Unlimited testing credits";
   }, [state.creditsAvailable, state.creditsLimit, state.creditsUsed]);
 
   const usageSummary = useMemo(() => {
@@ -149,7 +149,7 @@ export default function ClientPlanCreditStatusCard() {
     if (state.creditsLimit !== null) {
       return `${state.creditsLimit} included`;
     }
-    return "Usage not shown";
+    return "Unlimited testing usage";
   }, [state.creditsLimit, state.creditsUsed]);
 
   const goToBilling = (intent: "upgrade" | "credits" | "manage") => {
@@ -272,7 +272,7 @@ export default function ClientPlanCreditStatusCard() {
           <p style={{ margin: "0 0 6px", color: "#94a3b8", fontSize: 12, fontWeight: 850 }}>Credit status</p>
           <strong style={{ color: "#ffffff", fontSize: 20 }}>{state.loading ? "Checking" : state.creditStatus}</strong>
           <p style={{ margin: "6px 0 0", color: "#9fb1d1", fontSize: 12 }}>
-            Credits are checked before governed executions.
+            Unlimited testing credits are enabled for this owner workspace.
           </p>
         </div>
       </div>
