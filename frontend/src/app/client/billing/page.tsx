@@ -38,7 +38,7 @@ export default function ClientBillingPage() {
         return;
       }
 
-      setMessage("Secure payment update is not connected yet. Please contact support or try again shortly.");
+      setMessage("Owner test workspace. Unlimited testing credits are active. No billing required for this workspace.");
     } catch {
       setMessage("Payment update could not be opened. Please try again.");
     } finally {
@@ -86,7 +86,7 @@ export default function ClientBillingPage() {
         </div>
 
         <h1 style={{ margin: 0, fontSize: 34, letterSpacing: -1.1 }}>
-          Update payment method
+          Owner test workspace billing
         </h1>
 
         <p
@@ -98,7 +98,7 @@ export default function ClientBillingPage() {
             maxWidth: 650,
           }}
         >
-          Securely update the card or payment details used for your active subscription. Your selected workspace colour mode is preserved.
+          This workspace is running in owner test mode with unlimited testing credits. No billing is required for this workspace.
         </p>
 
         <div
@@ -110,9 +110,9 @@ export default function ClientBillingPage() {
             border: darkModeEnabled ? "1px solid rgba(99,102,241,.24)" : "1px solid #e5eaf2",
           }}
         >
-          <div style={{ fontWeight: 900, marginBottom: 6 }}>Payment details</div>
+          <div style={{ fontWeight: 900, marginBottom: 6 }}>Billing status</div>
           <div style={{ color: darkModeEnabled ? "#94a3b8" : "#64748b", fontSize: 13, lineHeight: 1.45 }}>
-            You will be redirected to a secure billing session to update your card details.
+            Billing actions are disabled for this owner test workspace.
           </div>
 
           <button
@@ -131,7 +131,7 @@ export default function ClientBillingPage() {
               boxShadow: "0 14px 34px rgba(79,70,229,.28)",
             }}
           >
-            {loading ? "Opening secure payment update..." : "Update credit card"}
+            {loading ? "Checking billing status..." : "Billing disabled for owner test"}
           </button>
 
           <button
