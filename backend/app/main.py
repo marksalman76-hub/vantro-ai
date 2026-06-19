@@ -78,6 +78,8 @@ from backend.app.runtime.canonical_entitlement_activation_runtime import (
 
 
 
+from pydantic import BaseModel
+
 # ============================================
 # PYDANTIC MODEL FOR PAYLOAD VALIDATION
 # ============================================
@@ -91,10 +93,6 @@ class ValidatedPayload(BaseModel):
 
 
 
-# ============================================
-# GLOBAL ERROR HANDLER
-# ============================================
-@app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     """Catch unhandled exceptions safely"""
     import logging
@@ -108,8 +106,6 @@ async def global_exception_handler(request, exc):
             "detail": "An unexpected error occurred. Please contact support."
         }
     )
-
-# ============================================
 
 
 
@@ -130,7 +126,6 @@ from slowapi.util import get_remote_address
 # RATE LIMITING - DDoS & COST PROTECTION
 # ============================================
 limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
 
 RATE_LIMITS = {
     "global": "10/minute",
@@ -153,9 +148,6 @@ async def cost_protection_middleware(request, call_next):
 
     response = await call_next(request)
     return response
-
-app.middleware("http")(cost_protection_middleware)
-
 
 # Step 173 durable Postgres account runtime
 from backend.app.core.postgres_account_runtime import (
@@ -316,6 +308,11 @@ app = FastAPI(
     title="Ecommerce AI Agent Platform",
     version="1.1.0",
 )
+
+# Register security additions that depend on app being defined
+app.exception_handler(Exception)(global_exception_handler)
+app.state.limiter = limiter
+app.middleware("http")(cost_protection_middleware)
 
 # Production rate-shaping middleware is observe-mode by default.
 app.add_middleware(RateShapingMiddleware)
