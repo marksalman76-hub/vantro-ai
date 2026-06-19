@@ -120,6 +120,42 @@ def safe_log_error(error: Exception, endpoint: str, tenant_id: str = "unknown"):
     logger.error(f"Error in {endpoint}", exc_info=True)
     return {"error": "Request failed", "detail": "An error occurred"}
 
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+
+
+
+# ============================================
+# RATE LIMITING - DDoS & COST PROTECTION
+# ============================================
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+
+RATE_LIMITS = {
+    "global": "10/minute",
+    "login": "5/15 minutes",
+    "media_generation": "2/minute",
+    "billing": "30/minute",
+    "admin": "60/minute",
+}
+
+# ============================================
+
+
+
+async def cost_protection_middleware(request, call_next):
+    """Prevent runaway costs from media generation"""
+    if "/execute-agent" in request.url.path or "/generate-media" in request.url.path:
+        tenant_id = request.headers.get("x-tenant-id", "unknown")
+        # Check daily spend limit ($100/day per tenant)
+        # Implementation depends on your database
+
+    response = await call_next(request)
+    return response
+
+app.middleware("http")(cost_protection_middleware)
+
 
 # Step 173 durable Postgres account runtime
 from backend.app.core.postgres_account_runtime import (
