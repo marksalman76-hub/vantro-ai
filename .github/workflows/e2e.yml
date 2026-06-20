@@ -52,7 +52,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Install Playwright browsers
-        run: sudo npx playwright install --with-deps
+        run: npx playwright install chromium
 
       - name: Start backend
         run: |
