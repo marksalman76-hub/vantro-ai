@@ -42,8 +42,8 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Install frontend dependencies
-        run: cd frontend && npm install
+      - name: Verify frontend directory
+        run: ls -la frontend
 
       - name: Install backend dependencies
         run: pip install -r requirements.txt
