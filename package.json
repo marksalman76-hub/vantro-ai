@@ -1,8 +1,8 @@
 {
   "scripts": {
-    "test:e2e": "npx playwright test",
-    "test:e2e:ui": "npx playwright test --ui",
-    "test:e2e:report": "npx playwright show-report"
+    "test:e2e": "npm exec -- playwright test",
+    "test:e2e:ui": "npm exec -- playwright test --ui",
+    "test:e2e:report": "npm exec -- playwright show-report"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0"
