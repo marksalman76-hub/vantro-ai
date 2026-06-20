@@ -60,7 +60,7 @@ jobs:
       - name: Start backend
         run: |
           python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 &
-          sleep 5
+          sleep 15
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ecommerce_test
           STRIPE_SECRET_KEY_TEST: ${{ secrets.STRIPE_SECRET_KEY_TEST }}
@@ -72,13 +72,13 @@ jobs:
         run: |
           cd frontend
           npm run dev &
-          sleep 10
+          sleep 20
         env:
           NEXT_PUBLIC_API_URL: http://localhost:8000
 
       - name: Wait for services
         run: |
-          npx wait-on http://localhost:3000 http://localhost:8000 --timeout 30000
+          npx wait-on http://localhost:3000 http://localhost:8000 --timeout 60000
 
       - name: Run E2E tests
         run: npm run test:e2e
