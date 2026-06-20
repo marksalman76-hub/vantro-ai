@@ -1,0 +1,19 @@
+{
+  "serviceName": "trance-formation-service",
+  "cluster": "trance-formation-prod",
+  "taskDefinition": "trance-formation-backend:1",
+  "desiredCount": 1,
+  "launchType": "FARGATE",
+  "networkConfiguration": {
+    "awsvpcConfiguration": {
+      "subnets": [
+        "subnet-02dc2609641f8d038",
+        "subnet-0e380f8e80fda61c5"
+      ],
+      "securityGroups": [
+        "sg-086100db79656053a"
+      ],
+      "assignPublicIp": "ENABLED"
+    }
+  }
+}
