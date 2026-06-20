@@ -1,3 +1,4 @@
+$content = @'
 name: E2E Tests - Stripe Billing
 
 on:
@@ -77,8 +78,7 @@ jobs:
           NEXT_PUBLIC_API_URL: http://localhost:8000
 
       - name: Wait for services
-        run: |
-          npx wait-on http://localhost:3000 http://localhost:8000 --timeout 60000
+        run: sleep 30
 
       - name: Run E2E tests
         run: npm run test:e2e
@@ -111,5 +111,8 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '? E2E tests passed! View the [Playwright report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.'
+              body: '✅ E2E tests passed! View the [Playwright report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.'
             })
+'@
+
+Set-Content -Path "C:\Users\User\Desktop\ecommerce-ai-agent-platform\.github\workflows\e2e.yml" -Value $content
