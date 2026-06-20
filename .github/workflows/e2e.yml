@@ -55,9 +55,7 @@ jobs:
         run: npm install
 
       - name: Install Playwright browsers
-        run: |
-          npm install -D @playwright/test
-          npm exec -- playwright install chromium
+        run: npm install -D @playwright/test
 
       - name: Start backend
         run: |
