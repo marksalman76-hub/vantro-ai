@@ -1,4 +1,3 @@
-$content = @'
 name: E2E Tests - Stripe Billing
 
 on:
@@ -113,6 +112,3 @@ jobs:
               repo: context.repo.repo,
               body: '✅ E2E tests passed! View the [Playwright report](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details.'
             })
-'@
-
-Set-Content -Path "C:\Users\User\Desktop\ecommerce-ai-agent-platform\.github\workflows\e2e.yml" -Value $content
