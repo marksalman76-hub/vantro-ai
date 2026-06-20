@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "site_id": "primenest-c0cf0c61",
+  "preview_url": "/generated-sites/primenest-c0cf0c61",
+  "generated_files": [
+    "frontend/src/app/generated-sites/primenest-c0cf0c61/page.tsx"
+  ],
+  "framework": "Next.js React",
+  "visual_system": [
+    "glassmorphism",
+    "3d_motion",
+    "animated_layout",
+    "premium_ui",
+    "luxury-property-showcase"
+  ],
+  "created_at": "2026-06-01T05:03:32.248275+00:00"
+}

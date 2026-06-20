@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "site_id": "primenest-c03923e2",
+  "preview_url": "/generated-sites/primenest-c03923e2",
+  "generated_files": [
+    "frontend/src/app/generated-sites/primenest-c03923e2/page.tsx"
+  ],
+  "framework": "Next.js React",
+  "status": "react_project_created",
+  "publish_status": "not_published",
+  "publish_blocker": "Publishing requires owner approval and deploy/CMS integration.",
+  "brand": "PrimeNest",
+  "industry": "real estate",
+  "layout_blueprint": "luxury-property-showcase",
+  "visual_system": [
+    "distinct_jsx_generator",
+    "luxury-property-showcase",
+    "glassmorphism",
+    "motion",
+    "premium_ui"
+  ],
+  "created_at": "2026-06-01T06:23:52.019558+00:00"
+}

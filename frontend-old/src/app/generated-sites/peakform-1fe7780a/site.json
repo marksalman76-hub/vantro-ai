@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "site_id": "peakform-1fe7780a",
+  "preview_url": "/generated-sites/peakform-1fe7780a",
+  "generated_files": [
+    "frontend/src/app/generated-sites/peakform-1fe7780a/page.tsx"
+  ],
+  "framework": "Next.js React",
+  "status": "react_project_created",
+  "publish_status": "not_published",
+  "publish_blocker": "Publishing requires owner approval and deploy/CMS integration.",
+  "brand": "PeakForm",
+  "industry": "fitness",
+  "layout_blueprint": "performance-studio-landing",
+  "visual_system": [
+    "distinct_jsx_generator",
+    "performance-studio-landing",
+    "glassmorphism",
+    "motion",
+    "premium_ui"
+  ],
+  "created_at": "2026-06-01T06:23:52.018555+00:00"
+}

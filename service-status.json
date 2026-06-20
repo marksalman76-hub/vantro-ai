@@ -1,0 +1,329 @@
+{
+    "services": [
+        {
+            "serviceArn": "arn:aws:ecs:ap-southeast-2:685570573617:service/trance-formation-prod/trance-formation-service",
+            "serviceName": "trance-formation-service",
+            "clusterArn": "arn:aws:ecs:ap-southeast-2:685570573617:cluster/trance-formation-prod",
+            "loadBalancers": [
+                {
+                    "targetGroupArn": "arn:aws:elasticloadbalancing:ap-southeast-2:685570573617:targetgroup/trance-formation-tg/77c12aa0cea77f5c",
+                    "containerName": "trance-formation-backend",
+                    "containerPort": 8000
+                }
+            ],
+            "serviceRegistries": [],
+            "status": "ACTIVE",
+            "desiredCount": 1,
+            "runningCount": 0,
+            "pendingCount": 0,
+            "launchType": "FARGATE",
+            "platformVersion": "LATEST",
+            "platformFamily": "Linux",
+            "taskDefinition": "arn:aws:ecs:ap-southeast-2:685570573617:task-definition/trance-formation-backend:1",
+            "deploymentConfiguration": {
+                "deploymentCircuitBreaker": {
+                    "enable": false,
+                    "rollback": false
+                },
+                "maximumPercent": 200,
+                "minimumHealthyPercent": 100,
+                "strategy": "ROLLING",
+                "bakeTimeInMinutes": 0
+            },
+            "deployments": [
+                {
+                    "id": "ecs-svc/2944107852398884656",
+                    "status": "PRIMARY",
+                    "taskDefinition": "arn:aws:ecs:ap-southeast-2:685570573617:task-definition/trance-formation-backend:1",
+                    "desiredCount": 1,
+                    "pendingCount": 0,
+                    "runningCount": 0,
+                    "failedTasks": 12,
+                    "createdAt": "2026-06-20T23:35:18.420000+10:00",
+                    "updatedAt": "2026-06-20T23:40:12.035000+10:00",
+                    "launchType": "FARGATE",
+                    "platformVersion": "1.4.0",
+                    "platformFamily": "Linux",
+                    "networkConfiguration": {
+                        "awsvpcConfiguration": {
+                            "subnets": [
+                                "subnet-02dc2609641f8d038",
+                                "subnet-0e380f8e80fda61c5"
+                            ],
+                            "securityGroups": [
+                                "sg-086100db79656053a"
+                            ],
+                            "assignPublicIp": "ENABLED"
+                        }
+                    },
+                    "rolloutState": "IN_PROGRESS",
+                    "rolloutStateReason": "ECS deployment ecs-svc/2944107852398884656 in progress."
+                }
+            ],
+            "roleArn": "arn:aws:iam::685570573617:role/aws-service-role/ecs.amazonaws.com/AWSServiceRoleForECS",
+            "events": [
+                {
+                    "id": "ebf492b7-a690-449f-b11a-342b7291b739",
+                    "createdAt": "2026-06-21T00:10:46.821000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): invalid character 'p' looking for beginning of value."
+                },
+                {
+                    "id": "61518b93-51af-4a49-bcdb-1989aa1e39d8",
+                    "createdAt": "2026-06-21T00:10:17.907000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 5661ad055faa4096a5d6627bd5d68d21)."
+                },
+                {
+                    "id": "960a08f5-89cc-48b9-b687-0ce6b5fc53ce",
+                    "createdAt": "2026-06-21T00:05:04.099000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): invalid character 'p' looking for beginning of value."
+                },
+                {
+                    "id": "2de96b0f-fdea-44bb-903a-e5005605ba72",
+                    "createdAt": "2026-06-21T00:04:36.433000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task b77c59e1252740d297c575b1ca3a12ce)."
+                },
+                {
+                    "id": "6b482539-8cf5-4d64-b5d2-de442c3dc56c",
+                    "createdAt": "2026-06-20T23:59:30.132000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: 411b1e78-889e-47f5-be74-52cc0ea77d79, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/9a031cd153a940c0817c4a8e0324dfeb is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "7590c9b1-2838-437d-8511-fb8016708726",
+                    "createdAt": "2026-06-20T23:59:01.597000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 9a031cd153a940c0817c4a8e0324dfeb)."
+                },
+                {
+                    "id": "195e6ea6-455f-44f0-b1be-1cae926ce44f",
+                    "createdAt": "2026-06-20T23:53:57.851000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: 16b76415-1ec1-4bc0-94d5-7387dcd35d3c, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/b3c4e4807ebb4414a3d57190d723a257 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "1caff4d4-f0a1-497d-96f2-c7581d13402e",
+                    "createdAt": "2026-06-20T23:53:29.842000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task b3c4e4807ebb4414a3d57190d723a257)."
+                },
+                {
+                    "id": "afb04b1d-06ee-4786-ac75-05c926e23d16",
+                    "createdAt": "2026-06-20T23:48:18.873000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: d5044cd6-22d6-4c01-8f3d-50bd15afcb26, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/8e7d6f830a3142439729df714e85f77f is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "dd1178ce-ce5f-4096-992a-a1e24135b401",
+                    "createdAt": "2026-06-20T23:47:50.548000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 8e7d6f830a3142439729df714e85f77f)."
+                },
+                {
+                    "id": "545d3e49-4eec-4935-a70e-61511815d9b0",
+                    "createdAt": "2026-06-20T23:42:47.097000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: 060f22df-94d9-426a-8c33-2fc0d6dd45a4, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/7c9ab7c7d5264d409d295197ef0362eb is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "e1fd9fb2-a48e-4604-9ed1-d7df63118dc4",
+                    "createdAt": "2026-06-20T23:42:18.389000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 7c9ab7c7d5264d409d295197ef0362eb)."
+                },
+                {
+                    "id": "a3531e47-ea39-4bd9-a201-b1419c5afd08",
+                    "createdAt": "2026-06-20T23:41:47.526000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: ab150625-f595-4500-a820-51d85d6ef781, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/1bedf389028e4b08a256f36244cb0852 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "f6d3e567-c586-4173-81fe-6ff206a03fff",
+                    "createdAt": "2026-06-20T23:41:18.228000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 1bedf389028e4b08a256f36244cb0852)."
+                },
+                {
+                    "id": "aff2ea7d-07c5-4bf0-89d4-e66f739e096b",
+                    "createdAt": "2026-06-20T23:40:47.667000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: edd9c3bc-3692-4dc5-8931-4e7abea65605, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/17d509e2838640aba00ee568f5b87ef4 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "9939337d-ba8c-45be-a2e3-4e0ceb35be20",
+                    "createdAt": "2026-06-20T23:40:26.882000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 17d509e2838640aba00ee568f5b87ef4)."
+                },
+                {
+                    "id": "0b7104d7-824c-432a-80e4-4a634ec8ef2e",
+                    "createdAt": "2026-06-20T23:40:08.248000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: 6fff5380-c364-4c6e-8d5d-2c0f4f25c23e, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/1249bff04f9141349e954f8cc0f61415 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "e99d422e-372d-4728-803c-599130e5e26b",
+                    "createdAt": "2026-06-20T23:39:40.393000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task b307c6e3a6d047d4a178cdc75e824453)."
+                },
+                {
+                    "id": "45b9fe73-6ee6-4e96-add9-768980b3e5c2",
+                    "createdAt": "2026-06-20T23:39:39.966000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 1249bff04f9141349e954f8cc0f61415)."
+                },
+                {
+                    "id": "53747fd0-15da-4257-a36c-c89210906fbe",
+                    "createdAt": "2026-06-20T23:39:09.780000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: 304830d7-ef68-45a0-ae30-e5700ebe0d39, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/c9fa27d8edd24d9d8d6c7b073a318723 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "db9bc4ab-b546-4b6b-8566-044545899216",
+                    "createdAt": "2026-06-20T23:38:42.268000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 4ce21450358b4da4bd22ee8c82a89657)."
+                },
+                {
+                    "id": "6f858709-b1b8-4e92-8930-9ef2eac0be7c",
+                    "createdAt": "2026-06-20T23:38:41.675000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task c9fa27d8edd24d9d8d6c7b073a318723)."
+                },
+                {
+                    "id": "9bc24424-7e09-4e91-9bbd-d7684d891972",
+                    "createdAt": "2026-06-20T23:38:11.606000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: af2d3946-f925-4657-acdb-e9c810d59cce, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/314204fe991249fd832d51f1f2c54416 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "a547c9f4-38bc-4001-88ea-b879930c73ba",
+                    "createdAt": "2026-06-20T23:38:01.277000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: e3a3ab0c-d01c-4694-a54e-8dec1b9213d4, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/150e7d601934469d903f10b0297d0338 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "1d992cb2-7f67-474c-a476-a6c9cd0f6f61",
+                    "createdAt": "2026-06-20T23:37:42.671000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 314204fe991249fd832d51f1f2c54416)."
+                },
+                {
+                    "id": "b16d6361-bc80-405a-9618-c2a6cfa5fac0",
+                    "createdAt": "2026-06-20T23:37:32.827000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 150e7d601934469d903f10b0297d0338)."
+                },
+                {
+                    "id": "9ae9f340-aec7-4a4f-a60e-ff12eb39c11e",
+                    "createdAt": "2026-06-20T23:37:01.811000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: afb9c10e-f73c-4fde-808d-1b1032582dd1, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/a4ac667fb4c64901a940bf3270249dc8 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "384cece5-f619-4b6b-b317-4a676b11f0d8",
+                    "createdAt": "2026-06-20T23:36:51.883000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: 050ef588-9b08-434f-a9fd-54cf3fe04cdb, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/709b7ef063b84354a197b969b9eb81d1 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "1b019cbe-eed9-491d-b592-3b646cdeefb8",
+                    "createdAt": "2026-06-20T23:36:33.290000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task a4ac667fb4c64901a940bf3270249dc8)."
+                },
+                {
+                    "id": "4b53c825-b308-44dc-989a-b00066d7e928",
+                    "createdAt": "2026-06-20T23:36:24.577000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 709b7ef063b84354a197b969b9eb81d1)."
+                },
+                {
+                    "id": "7dfa9015-2b4f-4301-8651-269b71c999ee",
+                    "createdAt": "2026-06-20T23:35:52.617000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: 65661a51-8ecb-48ad-a5ca-55ca1ae28bf2, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/d8defb43051f40499abda4e16088d091 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "9bb89149-526f-4a7f-b874-d707f3dcfb7a",
+                    "createdAt": "2026-06-20T23:35:32.021000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 2b1afa31987f4841868d9f049e8cb11d)."
+                },
+                {
+                    "id": "f2e494e4-5b9b-4903-bd48-4fb3a2f367f6",
+                    "createdAt": "2026-06-20T23:35:22.888000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task d8defb43051f40499abda4e16088d091)."
+                },
+                {
+                    "id": "f4be1eda-d7cc-4c07-a263-7ccf841c0390",
+                    "createdAt": "2026-06-20T23:34:55.054000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: f4acdadd-e748-47b4-93e1-01b40a8c6bab, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/8ce59ef655c041f38e26fd234687c5c8 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "8584f855-3236-4cff-b6a4-2e8efe3a09fc",
+                    "createdAt": "2026-06-20T23:34:25.870000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 8ce59ef655c041f38e26fd234687c5c8)."
+                },
+                {
+                    "id": "acc75a5a-20c7-45bd-8323-632d256e9679",
+                    "createdAt": "2026-06-20T23:33:55.673000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: 40f18208-11b1-48a6-bea4-06e23509ac30, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/5f7956dcf1474c99be49a0baed161b10 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "3bdc9bfd-2818-4353-bfee-b0110a86837c",
+                    "createdAt": "2026-06-20T23:33:26.663000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 5f7956dcf1474c99be49a0baed161b10)."
+                },
+                {
+                    "id": "c4b9ba68-7506-4e54-9bd5-a5e3a71083e1",
+                    "createdAt": "2026-06-20T23:33:08.930000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: 8b9debb6-9cc5-4679-b17b-8a255a5cbe14, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/7e88ad1e99a74fbbac9ed1228b414e85 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "1e6fc9f6-6241-4490-8e69-ffc8ebec77d9",
+                    "createdAt": "2026-06-20T23:32:42.060000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 7e88ad1e99a74fbbac9ed1228b414e85)."
+                },
+                {
+                    "id": "d6f1d4cf-05e6-4009-aec7-21fb88a1f83e",
+                    "createdAt": "2026-06-20T23:32:11.473000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: 31448ee2-99ea-4826-b258-948b65b50a4d, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/425547b27e48403c8537f976108f26a7 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "fc7a861e-e5b5-4ee8-a513-02b0eb9ccc58",
+                    "createdAt": "2026-06-20T23:31:44.202000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 425547b27e48403c8537f976108f26a7)."
+                },
+                {
+                    "id": "8a70a210-cc7d-4d57-ab88-fc88045e998b",
+                    "createdAt": "2026-06-20T23:31:14.093000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: 022b678c-3238-4b9e-9074-52592e432974, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/4ca4c1859ce744a1a9394bf11846ceeb is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "2b3360f1-7a20-4eff-9ab3-4b1669ce83be",
+                    "createdAt": "2026-06-20T23:30:46.239000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 4ca4c1859ce744a1a9394bf11846ceeb)."
+                },
+                {
+                    "id": "978de539-c6b0-4bbc-ab01-da1150b9b9b8",
+                    "createdAt": "2026-06-20T23:30:14.812000+10:00",
+                    "message": "(service trance-formation-service) was unable to place a task. Reason: ResourceInitializationError: unable to pull secrets or registry auth: execution resource retrieval failed: unable to retrieve secret from asm: service call has been retried 1 time(s): failed to fetch secret arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url from secrets manager: operation error Secrets Manager: GetSecretValue, https response error StatusCode: 400, RequestID: bc6e3eca-32bc-4b9d-806a-9a915c9dd388, api error AccessDeniedException: User: arn:aws:sts::685570573617:assumed-role/ecsTaskExecutionRole/305e90189be34c6d890db16a406b5ee1 is not authorized to perform: secretsmanager:GetSecretValue on resource: arn:aws:secretsmanager:ap-southeast-2:685570573617:secret:trance-formation/database-url because no identity-based policy allows the secretsmanager:GetSecretValue action."
+                },
+                {
+                    "id": "e7f65992-4068-42be-a624-095bb6c0863c",
+                    "createdAt": "2026-06-20T23:29:45.441000+10:00",
+                    "message": "(service trance-formation-service) has started 1 tasks: (task 305e90189be34c6d890db16a406b5ee1)."
+                }
+            ],
+            "createdAt": "2026-06-20T23:29:33.571000+10:00",
+            "currentServiceDeployment": "arn:aws:ecs:ap-southeast-2:685570573617:service-deployment/trance-formation-prod/trance-formation-service/YmKQIrZGQAzVOxLoqfNUW",
+            "currentServiceRevisions": [
+                {
+                    "arn": "arn:aws:ecs:ap-southeast-2:685570573617:service-revision/trance-formation-prod/trance-formation-service/2944107852398884656",
+                    "requestedTaskCount": 1,
+                    "runningTaskCount": 0,
+                    "pendingTaskCount": 0
+                }
+            ],
+            "placementConstraints": [],
+            "placementStrategy": [],
+            "networkConfiguration": {
+                "awsvpcConfiguration": {
+                    "subnets": [
+                        "subnet-02dc2609641f8d038",
+                        "subnet-0e380f8e80fda61c5"
+                    ],
+                    "securityGroups": [
+                        "sg-086100db79656053a"
+                    ],
+                    "assignPublicIp": "ENABLED"
+                }
+            },
+            "healthCheckGracePeriodSeconds": 0,
+            "schedulingStrategy": "REPLICA",
+            "deploymentController": {
+                "type": "ECS"
+            },
+            "createdBy": "arn:aws:iam::685570573617:user/MarkSalman",
+            "enableECSManagedTags": false,
+            "propagateTags": "NONE",
+            "enableExecuteCommand": false,
+            "availabilityZoneRebalancing": "ENABLED",
+            "resourceManagementType": "CUSTOMER"
+        }
+    ],
+    "failures": []
+}

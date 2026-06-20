@@ -1,3 +1,4 @@
+
 {
   "family": "trance-formation-backend",
   "networkMode": "awsvpc",
@@ -16,29 +17,28 @@
           "protocol": "tcp"
         }
       ],
-     "environment": [
-  {
-    "name": "DATABASE_URL",
-    "value": "postgresql://postgres:Jessica2007!@localhost:5432/multi_industrial_dev"
-  },
-  {
-    "name": "STRIPE_SECRET_KEY",
-    "value": "sk_test_placeholder"
-  },
-  {
-    "name": "STRIPE_WEBHOOK_SECRET",
-    "value": "whsec_placeholder"
-  },
-  {
-    "name": "ENVIRONMENT",
-    "value": "production"
-  },
-  {
-    "name": "LOG_LEVEL",
-    "value": "info"
-  }
-],
-      
+      "environment": [
+        {
+          "name": "DATABASE_URL",
+          "value": "postgresql://postgres:Jessica2007!@trance-formation-ai-platform-db.c9esig88kzhv.ap-southeast-2.rds.amazonaws.com:5432/multi_industrial_dev"
+        },
+        {
+          "name": "STRIPE_SECRET_KEY",
+          "value": "sk_test_placeholder"
+        },
+        {
+          "name": "STRIPE_WEBHOOK_SECRET",
+          "value": "whsec_placeholder"
+        },
+        {
+          "name": "ENVIRONMENT",
+          "value": "production"
+        },
+        {
+          "name": "LOG_LEVEL",
+          "value": "info"
+        }
+      ],
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {

@@ -1,0 +1,23 @@
+{
+  "success": true,
+  "site_id": "peakform-a3b4282f",
+  "preview_url": "/generated-sites/peakform-a3b4282f",
+  "generated_files": [
+    "frontend/src/app/generated-sites/peakform-a3b4282f/page.tsx"
+  ],
+  "framework": "Next.js React",
+  "visual_system": [
+    "glassmorphism",
+    "3d_motion",
+    "animated_layout",
+    "premium_ui",
+    "performance-studio-landing",
+    "performance_dark",
+    "split-performance-scoreboard",
+    "energetic"
+  ],
+  "layout_blueprint": "performance-studio-landing",
+  "blueprint_theme": "performance_dark",
+  "hero_shape": "split-performance-scoreboard",
+  "created_at": "2026-06-01T05:08:51.575212+00:00"
+}
