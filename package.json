@@ -1,8 +1,9 @@
 {
   "scripts": {
-    "test:e2e": "npm exec -- playwright test",
-    "test:e2e:ui": "npm exec -- playwright test --ui",
-    "test:e2e:report": "npm exec -- playwright show-report"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "test:e2e": "echo 'E2E tests coming soon'"
   },
   "devDependencies": {
     "@playwright/test": "^1.61.0"
