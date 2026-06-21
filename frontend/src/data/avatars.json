@@ -1,0 +1,10 @@
+{
+  "avatars": [
+    {"id": "avatar_1", "name": "Emma", "gender": "female", "ethnicity": "caucasian", "age": 28},
+    {"id": "avatar_2", "name": "James", "gender": "male", "ethnicity": "caucasian", "age": 35},
+    {"id": "avatar_3", "name": "Sophia", "gender": "female", "ethnicity": "asian", "age": 26},
+    {"id": "avatar_4", "name": "Marcus", "gender": "male", "ethnicity": "african", "age": 32},
+    {"id": "avatar_5", "name": "Lucia", "gender": "female", "ethnicity": "hispanic", "age": 29},
+    {"id": "avatar_6", "name": "Raj", "gender": "male", "ethnicity": "asian", "age": 31}
+  ]
+}

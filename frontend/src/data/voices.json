@@ -1,0 +1,10 @@
+{
+  "voices": [
+    {"id": "voice_1", "name": "Sarah (US)", "language": "en-US", "gender": "female", "tone": "professional"},
+    {"id": "voice_2", "name": "Michael (US)", "language": "en-US", "gender": "male", "tone": "professional"},
+    {"id": "voice_3", "name": "Emma (UK)", "language": "en-GB", "gender": "female", "tone": "friendly"},
+    {"id": "voice_4", "name": "James (UK)", "language": "en-GB", "gender": "male", "tone": "friendly"},
+    {"id": "voice_5", "name": "Pierre (FR)", "language": "fr-FR", "gender": "male", "tone": "professional"},
+    {"id": "voice_6", "name": "Marie (FR)", "language": "fr-FR", "gender": "female", "tone": "friendly"}
+  ]
+}
