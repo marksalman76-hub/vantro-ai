@@ -1,7 +1,7 @@
 ﻿import React, { useState } from "react";
-import avatars from "@/data/avatars.json";
-import voices from "@/data/voices.json";
-import languages from "@/data/languages.json";
+import avatars from "../data/avatars.json";
+import voices from "../data/voices.json";
+import languages from "../data/languages.json";
 
 interface MediaConfig {
   avatarId: string;
