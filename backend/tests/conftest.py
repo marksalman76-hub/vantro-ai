@@ -1,28 +1,35 @@
 import pytest
 from fastapi.testclient import TestClient
-from backend.app.main import app
+from app.main import app
 
-
-@pytest.fixture(scope="session")
+@pytest.fixture
 def client():
-    with TestClient(app, raise_server_exceptions=False) as c:
-        yield c
-
+    return TestClient(app)
 
 @pytest.fixture
-def valid_headers():
-    """Standard client tenant headers."""
+def test_user_data():
     return {
-        "x-tenant-id": "test_tenant_001",
-        "content-type": "application/json",
+        "email": "test@example.com",
+        "password": "Test123!",
+        "name": "Test User",
     }
-
 
 @pytest.fixture
-def owner_headers():
-    """Owner/admin tenant headers."""
-    return {
-        "x-tenant-id": "owner_managed_test",
-        "x-actor-role": "owner",
-        "content-type": "application/json",
-    }
+def test_user(client, test_user_data):
+    client.post("/api/auth/register", json=test_user_data)
+    return test_user_data
+
+@pytest.fixture
+def authenticated_client(client, test_user_data):
+    client.post("/api/auth/register", json=test_user_data)
+    response = client.post(
+        "/api/auth/login",
+        json={
+            "email": test_user_data["email"],
+            "password": test_user_data["password"],
+        }
+    )
+    if response.status_code == 200:
+        token = response.json()["access_token"]
+        client.headers["Authorization"] = f"Bearer {token}"
+    return client
