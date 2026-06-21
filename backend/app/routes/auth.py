@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -42,12 +43,12 @@ async def register(request: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == request.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
-    user = User(email=request.email, password_hash=hash_password(request.password), name=request.name)
+    new_id = str(uuid.uuid4())
+    user = User(id=new_id, email=request.email, password_hash=hash_password(request.password), name=request.name)
     db.add(user)
     db.commit()
-    db.refresh(user)
-    token = create_access_token(user.id, expires_delta=timedelta(hours=24))
-    return {"access_token": token, "user_id": user.id}
+    token = create_access_token(new_id, expires_delta=timedelta(hours=24))
+    return {"access_token": token, "user_id": new_id}
 
 @router.post("/login", response_model=AuthResponse)
 async def login(request: LoginRequest, db: Session = Depends(get_db)):
