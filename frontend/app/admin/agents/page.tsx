@@ -243,7 +243,8 @@ export default function AdminAgentsPage() {
     setToken(t);
     fetch('/api/admin/agents', { headers: { Authorization: `Bearer ${t}` } })
       .then(async (r) => {
-        setData(await r.json());
+        const d = await r.json();
+        if (d && Array.isArray(d.agents)) setData(d);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -254,7 +255,11 @@ export default function AdminAgentsPage() {
       <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
-  if (!data) return null;
+  if (!data) return (
+    <div className="flex items-center justify-center h-screen">
+      <p className="text-gray-500 text-sm">Failed to load agents. Check backend connectivity.</p>
+    </div>
+  );
 
   const filtered = data.agents.filter((a) => {
     if (catFilter !== 'All' && a.category !== catFilter) return false;
