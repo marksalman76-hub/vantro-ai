@@ -39,7 +39,7 @@ const STATUS_STYLE: Record<string, string> = {
 export default function ClientDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const userId = params.id as string;
+  const userId = (params?.id as string) ?? '';
 
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [loading, setLoading] = useState(true);
