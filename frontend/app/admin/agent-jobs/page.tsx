@@ -38,7 +38,6 @@ export default function AdminAgentJobsPage() {
     if (!token) { router.push('/admin-login'); return; }
     fetch('/api/admin/agents/jobs', { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
-        if (r.status === 403) { router.push('/admin-login'); return; }
         const d = await r.json();
         setJobs(d.jobs || []);
       })

@@ -65,7 +65,6 @@ export default function AdminCommandCenter() {
       fetch('/api/admin/jobs', { headers: { Authorization: `Bearer ${token}` } }),
     ])
       .then(async ([sr, jr]) => {
-        if (sr.status === 403) { router.push('/admin-login'); return; }
         const [s, j] = await Promise.all([sr.json(), jr.json()]);
         setStats(s);
         setJobs((j.jobs || []).slice(0, 10));

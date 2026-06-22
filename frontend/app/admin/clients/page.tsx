@@ -47,7 +47,6 @@ export default function AdminClientsPage() {
 
     fetch('/api/admin/clients', { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
-        if (r.status === 403) { router.push('/admin-login'); return; }
         const d = await r.json();
         setClients(d.clients || []);
       })

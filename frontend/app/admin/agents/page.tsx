@@ -243,7 +243,6 @@ export default function AdminAgentsPage() {
     setToken(t);
     fetch('/api/admin/agents', { headers: { Authorization: `Bearer ${t}` } })
       .then(async (r) => {
-        if (r.status === 403) { router.push('/admin-login'); return; }
         setData(await r.json());
       })
       .catch(() => {})

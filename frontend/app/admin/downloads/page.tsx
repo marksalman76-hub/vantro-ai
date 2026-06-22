@@ -26,7 +26,6 @@ export default function AdminDownloadsPage() {
     if (!token) { router.push('/admin-login'); return; }
     fetch('/api/admin/packages/downloads', { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
-        if (r.status === 403) { router.push('/admin-login'); return; }
         const d = await r.json();
         setDownloads(d.downloads || []);
       })

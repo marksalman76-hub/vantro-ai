@@ -22,7 +22,6 @@ export default function AdminProvidersPage() {
     if (!token) { router.push('/admin-login'); return; }
     fetch('/api/admin/providers', { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
-        if (r.status === 403) { router.push('/admin-login'); return; }
         const d = await r.json();
         setProviders(d.providers || []);
       })
