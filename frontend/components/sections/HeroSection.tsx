@@ -36,11 +36,11 @@ export default function HeroSection() {
       id="hero"
       className="relative min-h-screen flex flex-col justify-center overflow-hidden bg-gradient-hero bg-dark pt-20"
     >
-      {/* Background blobs */}
+      {/* Background blobs — will-change:transform keeps them on their own GPU layer */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-violet-600/10 blur-[100px] animate-blob" />
-        <div className="absolute -bottom-40 -left-20 w-[400px] h-[400px] rounded-full bg-blue-600/10 blur-[100px] animate-blob" style={{ animationDelay: '3s' }} />
-        <div className="absolute top-1/3 left-1/2 w-[300px] h-[300px] rounded-full bg-cyan-600/8 blur-[80px] animate-blob" style={{ animationDelay: '5s' }} />
+        <div className="absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-violet-600/10 blur-[100px] animate-blob [will-change:transform]" />
+        <div className="absolute -bottom-40 -left-20 w-[400px] h-[400px] rounded-full bg-blue-600/10 blur-[100px] animate-blob [will-change:transform]" style={{ animationDelay: '3s' }} />
+        <div className="absolute top-1/3 left-1/2 w-[300px] h-[300px] rounded-full bg-cyan-600/8 blur-[80px] animate-blob [will-change:transform]" style={{ animationDelay: '5s' }} />
       </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
@@ -115,11 +115,14 @@ export default function HeroSection() {
             {/* Spotlight sweep */}
             <Spotlight className="-top-40 left-0 md:left-40 md:-top-20" fill="#a78bfa" />
 
-            <SplineScene
-              scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
-              className="w-full h-full"
-              onLoad={() => setSceneLoaded(true)}
-            />
+            {/* pointer-events-none stops the WebGL canvas swallowing scroll/touch events */}
+            <div className="pointer-events-none w-full h-full">
+              <SplineScene
+                scene="https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode"
+                className="w-full h-full"
+                onLoad={() => setSceneLoaded(true)}
+              />
+            </div>
 
             {/* Loading overlay — fades out once scene is ready */}
             <AnimatePresence>
@@ -137,26 +140,18 @@ export default function HeroSection() {
               )}
             </AnimatePresence>
 
-            {/* Floating agent label cards */}
-            <motion.div
-              animate={{ y: [0, -6, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              className="absolute top-6 right-4 glass rounded-xl p-3 shadow-lg text-xs"
-            >
+            {/* Floating agent label cards — CSS animation, not JS-driven */}
+            <div className="absolute top-6 right-4 glass rounded-xl p-3 shadow-lg text-xs animate-float [will-change:transform]">
               <p className="text-white/50 mb-0.5">Agent Online</p>
               <p className="text-white font-semibold">Atlas · Sales</p>
               <p className="text-green-400 text-[10px] mt-0.5">● Processing 23 leads</p>
-            </motion.div>
+            </div>
 
-            <motion.div
-              animate={{ y: [0, 6, 0] }}
-              transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-              className="absolute bottom-10 left-4 glass rounded-xl p-3 shadow-lg text-xs"
-            >
+            <div className="absolute bottom-10 left-4 glass rounded-xl p-3 shadow-lg text-xs animate-float [will-change:transform]" style={{ animationDelay: '1s', animationDuration: '3.5s' }}>
               <p className="text-white/50 mb-0.5">Just completed</p>
               <p className="text-white font-semibold">Hermes · Support</p>
               <p className="text-cyan-400 text-[10px] mt-0.5">↗ 47 tickets resolved</p>
-            </motion.div>
+            </div>
           </motion.div>
         </div>
 
@@ -186,13 +181,9 @@ export default function HeroSection() {
         aria-hidden="true"
       >
         <span className="text-[10px] uppercase tracking-widest text-white/25 font-medium">Scroll</span>
-        <motion.div
-          animate={{ y: [0, 6, 0] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-          className="w-5 h-8 border border-white/15 rounded-full flex items-start justify-center pt-1.5"
-        >
-          <div className="w-1 h-1.5 bg-white/35 rounded-full" />
-        </motion.div>
+        <div className="w-5 h-8 border border-white/15 rounded-full flex items-start justify-center pt-1.5">
+          <div className="w-1 h-1.5 bg-white/35 rounded-full animate-float [will-change:transform]" style={{ animationDuration: '1.8s' }} />
+        </div>
       </motion.div>
     </section>
   )

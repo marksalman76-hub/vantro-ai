@@ -198,6 +198,12 @@
   }
 }
 
+/* Skip paint/layout for off-screen sections — browser renders them only as they enter the viewport */
+main > section:not(:first-child) {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 600px;
+}
+
 /* Infinite scroll strips */
 .scroll-strip { overflow: hidden; }
 .scroll-track-left  { display: flex; width: max-content; animation: scroll-left  30s linear infinite; }
