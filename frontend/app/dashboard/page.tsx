@@ -1,8 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+
+function TopupCheck({ onSuccess }: { onSuccess: () => void }) {
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    if (searchParams?.get('topup') === 'success') onSuccess();
+  }, [searchParams, onSuccess]);
+  return null;
+}
 
 const PLAN_LABELS: Record<string, { name: string; color: string; amount: string }> = {
   active:   { name: 'Active',   color: 'text-green-400 bg-green-400/10 border-green-400/20',  amount: '' },
@@ -26,7 +34,6 @@ interface Job {
 
 export default function DashboardPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -63,10 +70,6 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, [router]);
 
-  useEffect(() => {
-    if (searchParams?.get('topup') === 'success') setTopupSuccess(true);
-  }, [searchParams]);
-
   if (loading) return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center">
       <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
@@ -102,6 +105,9 @@ export default function DashboardPage() {
       </nav>
 
       <div className="max-w-6xl mx-auto px-6 py-10">
+        <Suspense fallback={null}>
+          <TopupCheck onSuccess={() => setTopupSuccess(true)} />
+        </Suspense>
         {/* Top-up success banner */}
         {topupSuccess && (
           <div className="mb-6 flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-xl px-5 py-3">
