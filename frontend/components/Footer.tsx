@@ -5,11 +5,11 @@ type NavItem = { label: string; href: string }
 
 const LINKS: Record<string, NavItem[]> = {
   Product: [
-    { label: 'Features',     href: '/#agents'        },
-    { label: 'Agents',       href: '/#agents'        },
-    { label: 'Integrations', href: '/#integrations'  },
-    { label: 'Pricing',      href: '/#pricing'       },
-    { label: 'Changelog',    href: '#'               },
+    { label: 'Features',     href: '/#features'  },
+    { label: 'How it works', href: '/#how'       },
+    { label: 'Integrations', href: '/#integrations' },
+    { label: 'Pricing',      href: '/pricing'    },
+    { label: 'Changelog',    href: '#'           },
   ],
   Company: [
     { label: 'About',    href: '#' },

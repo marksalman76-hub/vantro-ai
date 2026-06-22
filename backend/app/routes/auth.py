@@ -1,6 +1,6 @@
 import uuid
 import secrets
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from datetime import datetime, timedelta
@@ -9,6 +9,7 @@ from app.models import User
 from app.database import SessionLocal
 from app.services import email_service
 from sqlalchemy.orm import Session
+from app.limiter import limiter
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 security = HTTPBearer(auto_error=False)
@@ -43,28 +44,30 @@ class UserResponse(BaseModel):
     stripe_customer_id: str | None = None
 
 @router.post("/register", response_model=AuthResponse, status_code=201)
-async def register(request: RegisterRequest, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == request.email).first()
+@limiter.limit("5/minute")
+async def register(request: Request, body: RegisterRequest, db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.email == body.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     new_id = str(uuid.uuid4())
     user = User(
         id=new_id,
-        email=request.email,
-        password_hash=hash_password(request.password),
-        name=request.name,
+        email=body.email,
+        password_hash=hash_password(body.password),
+        name=body.name,
         created_at=datetime.utcnow(),
     )
     db.add(user)
     db.commit()
     token = create_access_token(new_id, expires_delta=timedelta(hours=24))
-    email_service.send_welcome(request.email, request.name or request.email.split("@")[0])
+    email_service.send_welcome(body.email, body.name or body.email.split("@")[0])
     return {"access_token": token, "user_id": new_id}
 
 @router.post("/login", response_model=AuthResponse)
-async def login(request: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == request.email).first()
-    if not user or not verify_password(request.password, user.password_hash):
+@limiter.limit("10/minute")
+async def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == body.email).first()
+    if not user or not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token(user.id, expires_delta=timedelta(hours=24))
     return {"access_token": token, "user_id": user.id}
@@ -82,15 +85,16 @@ class ResetPasswordRequest(BaseModel):
 
 
 @router.post("/forgot-password")
-async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == request.email).first()
+@limiter.limit("5/minute")
+async def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == body.email).first()
     # Always return 200 to avoid email enumeration
     if user:
-        token = secrets.token_urlsafe(32)
-        user.reset_token = token
+        tok = secrets.token_urlsafe(32)
+        user.reset_token = tok
         user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
         db.commit()
-        email_service.send_password_reset(user.email, token)
+        email_service.send_password_reset(user.email, tok)
     return {"message": "If that email exists you will receive a reset link shortly."}
 
 
