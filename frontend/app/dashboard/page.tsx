@@ -64,7 +64,7 @@ export default function DashboardPage() {
   }, [router]);
 
   useEffect(() => {
-    if (searchParams.get('topup') === 'success') setTopupSuccess(true);
+    if (searchParams?.get('topup') === 'success') setTopupSuccess(true);
   }, [searchParams]);
 
   if (loading) return (
