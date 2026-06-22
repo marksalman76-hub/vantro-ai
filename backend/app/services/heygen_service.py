@@ -1,6 +1,7 @@
 import os
 import logging
 import httpx
+import requests
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -134,3 +135,53 @@ async def get_video_status(video_id: str) -> dict:
     except Exception as e:
         logger.error("HeyGen status check error for %s: %s", video_id, e)
         return {"status": "processing", "video_url": None, "error": str(e)}
+
+
+class HeyGenService:
+    """Synchronous class-based wrapper used by the worker and tests."""
+
+    BASE_URL = "https://api.heygen.com"
+
+    def __init__(self, api_key: str = ""):
+        self._api_key = api_key or HEYGEN_API_KEY
+        self._headers = {"X-Api-Key": self._api_key, "Content-Type": "application/json"}
+
+    def submit_video(
+        self,
+        avatar_id: str,
+        voice_id: str,
+        script: str,
+        language: str = "en",
+        tone: str = "professional",
+    ) -> Optional[str]:
+        payload = {
+            "video_inputs": [
+                {
+                    "character": {"type": "avatar", "avatar_id": avatar_id},
+                    "voice": {"type": "text", "input_text": script, "voice_id": voice_id},
+                    "background": {"type": "color", "value": "#ffffff"},
+                }
+            ],
+            "dimension": {"width": 1280, "height": 720},
+            "test": False,
+        }
+        resp = requests.post(
+            f"{self.BASE_URL}/v2/video/generate",
+            json=payload,
+            headers=self._headers,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("data", {}).get("video_id")
+        logger.error("HeyGenService submit error %s: %s", resp.status_code, resp.text[:200])
+        return None
+
+    def check_status(self, video_id: str) -> tuple:
+        resp = requests.get(
+            f"{self.BASE_URL}/v1/video_status.get",
+            params={"video_id": video_id},
+            headers=self._headers,
+        )
+        if resp.status_code == 200:
+            data = resp.json().get("data", {})
+            return data.get("status", "pending"), data.get("video_url")
+        return "unknown", None

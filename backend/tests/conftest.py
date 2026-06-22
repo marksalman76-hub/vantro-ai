@@ -77,3 +77,8 @@ def auth_token(client, test_user_data):
 def authenticated_client(client, auth_token):
     client.headers["Authorization"] = f"Bearer {auth_token}"
     return client
+
+
+@pytest.fixture
+def valid_headers():
+    return {"x-tenant-id": "test_tenant_id"}

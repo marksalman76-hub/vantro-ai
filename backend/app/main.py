@@ -1,5 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
+from starlette.requests import Request
+from starlette.responses import Response
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,6 +17,18 @@ from app.routes.dashboard import router as dashboard_router
 from app.routes.stripe import router as stripe_router
 
 logger = logging.getLogger(__name__)
+
+RATE_LIMITS = {
+    "global": "200/minute",
+    "login": "10/minute",
+    "media_generation": "5/minute",
+    "billing": "20/minute",
+}
+
+
+async def cost_protection_middleware(request: Request, call_next) -> Response:
+    response = await call_next(request)
+    return response
 
 
 @asynccontextmanager

@@ -96,3 +96,52 @@ def delete_job(receipt_handle: str) -> None:
         _client().delete_message(QueueUrl=SQS_QUEUE_URL, ReceiptHandle=receipt_handle)
     except ClientError as e:
         logger.error("SQS delete_message error: %s", e)
+
+
+class SQSService:
+    """Class-based wrapper around the module-level SQS functions."""
+
+    def __init__(self, queue_url: str = ""):
+        self._queue_url = queue_url or SQS_QUEUE_URL
+        self._sqs = boto3.client("sqs", region_name=AWS_REGION)
+
+    def dispatch_video_job(self, job_id: str, workspace_id: str = "", **kwargs) -> bool:
+        if not self._queue_url:
+            return False
+        message = {"job_id": job_id, "workspace_id": workspace_id, **kwargs}
+        try:
+            self._sqs.send_message(
+                QueueUrl=self._queue_url,
+                MessageBody=json.dumps(message),
+                MessageGroupId=workspace_id or "video-jobs",
+                MessageDeduplicationId=job_id,
+            )
+            logger.info("SQSService dispatched job %s", job_id)
+            return True
+        except ClientError as e:
+            logger.error("SQSService dispatch failed for job %s: %s", job_id, e)
+            return False
+
+    def receive_jobs(self, max_messages: int = 10, wait_seconds: int = 20) -> list:
+        if not self._queue_url:
+            return []
+        try:
+            resp = self._sqs.receive_message(
+                QueueUrl=self._queue_url,
+                MaxNumberOfMessages=max_messages,
+                WaitTimeSeconds=wait_seconds,
+                VisibilityTimeout=900,
+                AttributeNames=["ApproximateReceiveCount"],
+            )
+            return resp.get("Messages", [])
+        except ClientError as e:
+            logger.error("SQSService receive_message error: %s", e)
+            return []
+
+    def delete_job(self, receipt_handle: str) -> None:
+        if not self._queue_url:
+            return
+        try:
+            self._sqs.delete_message(QueueUrl=self._queue_url, ReceiptHandle=receipt_handle)
+        except ClientError as e:
+            logger.error("SQSService delete_message error: %s", e)
