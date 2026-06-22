@@ -3,7 +3,6 @@ import { Poppins, Playfair_Display } from 'next/font/google'
 import './globals.css'
 import GTMScript       from '@/components/GTMScript'
 import CookieConsent   from '@/components/CookieConsent'
-import ExitIntentPopup from '@/components/ExitIntentPopup'
 import StickyCtaBar    from '@/components/StickyCtaBar'
 
 const poppins = Poppins({
@@ -68,7 +67,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <GTMScript />
         {children}
         <CookieConsent />
-        <ExitIntentPopup />
         <StickyCtaBar />
       </body>
     </html>
