@@ -1,0 +1,54 @@
+{
+  "family": "vantro-api",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "arn:aws:iam::685570573617:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::685570573617:role/vantro-ecs-task-role",
+  "containerDefinitions": [
+    {
+      "name": "api",
+      "image": "685570573617.dkr.ecr.us-east-1.amazonaws.com/trance-formation/api:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "hostPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "secrets": [
+        { "name": "DATABASE_URL",            "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:DATABASE_URL" },
+        { "name": "SECRET_KEY",              "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:SECRET_KEY" },
+        { "name": "STRIPE_SECRET_KEY",       "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:STRIPE_SECRET_KEY" },
+        { "name": "STRIPE_WEBHOOK_SECRET",   "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:STRIPE_WEBHOOK_SECRET" },
+        { "name": "STRIPE_PUBLISHABLE_KEY",  "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:STRIPE_PUBLISHABLE_KEY" },
+        { "name": "HEYGEN_API_KEY",          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:HEYGEN_API_KEY" },
+        { "name": "REDIS_URL",               "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:REDIS_URL" },
+        { "name": "SQS_JOBS_QUEUE_URL",      "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:SQS_JOBS_QUEUE_URL" }
+      ],
+      "environment": [
+        { "name": "FRONTEND_URL",   "value": "https://www.vantro.ai" },
+        { "name": "FROM_EMAIL",     "value": "noreply@vantro.ai" },
+        { "name": "AWS_REGION",     "value": "us-east-1" },
+        { "name": "ADMIN_EMAIL",    "value": "mark.salman76@gmail.com" }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"],
+        "interval": 30,
+        "timeout": 10,
+        "retries": 3,
+        "startPeriod": 45
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/vantro/api",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

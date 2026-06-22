@@ -10,7 +10,7 @@ from app.auth import verify_token
 from app.database import SessionLocal
 from app.models import User, Organization
 from app.models.workspace import Workspace, CreditsAccount, MediaJob
-from app.services import heygen_service
+from app.services import sqs_service, cache_service
 
 router = APIRouter(prefix="/api", tags=["dashboard"])
 security = HTTPBearer(auto_error=False)
@@ -42,8 +42,12 @@ async def get_credits(
     db: Session = Depends(get_db),
 ):
     user = _get_user(credentials, db)
+    cache_key = cache_service.credits_key(user.id)
 
-    # Aggregate credits across all workspaces the user owns (via org ownership)
+    cached = cache_service.get(cache_key)
+    if cached:
+        return cached
+
     result = (
         db.query(
             func.coalesce(func.sum(CreditsAccount.total_credits), 0).label("total"),
@@ -65,13 +69,15 @@ async def get_credits(
         tier = "starter"
     else:
         tier = "free"
-    return {
+    payload = {
         "user_id": user.id,
         "total_credits": total,
         "used_credits": used,
         "remaining_credits": total - used,
         "tier": tier,
     }
+    cache_service.set(cache_key, payload, ttl=60)
+    return payload
 
 
 @router.get("/media-jobs")
@@ -80,6 +86,11 @@ async def get_media_jobs(
     db: Session = Depends(get_db),
 ):
     user = _get_user(credentials, db)
+    cache_key = cache_service.media_jobs_key(user.id)
+
+    cached = cache_service.get(cache_key)
+    if cached:
+        return cached
 
     jobs = (
         db.query(MediaJob)
@@ -96,7 +107,7 @@ async def get_media_jobs(
         key = job.status if job.status in status_counts else "pending"
         status_counts[key] += 1
 
-    return {
+    payload = {
         "user_id": user.id,
         "total_jobs": len(jobs),
         "completed": status_counts["completed"],
@@ -115,6 +126,8 @@ async def get_media_jobs(
             for j in jobs
         ],
     }
+    cache_service.set(cache_key, payload, ttl=30)
+    return payload
 
 
 class CreateJobRequest(BaseModel):
@@ -141,8 +154,9 @@ async def create_media_job(
     if not workspace:
         raise HTTPException(status_code=400, detail="No workspace found. Complete onboarding first.")
 
+    job_id = str(uuid.uuid4())
     job = MediaJob(
-        id=str(uuid.uuid4()),
+        id=job_id,
         workspace_id=workspace.id,
         avatar_id=request.avatar_id,
         voice_id=request.voice_id,
@@ -155,21 +169,23 @@ async def create_media_job(
     db.add(job)
     db.commit()
 
-    # Submit to HeyGen immediately; falls back silently if not configured
-    external_id = await heygen_service.submit_video(
+    # Invalidate the cached jobs list so the dashboard shows the new job immediately
+    cache_service.delete(cache_service.media_jobs_key(user.id))
+
+    # Dispatch to SQS — worker service handles HeyGen submit + polling asynchronously.
+    # Falls back gracefully if SQS is not configured (job stays "pending").
+    sqs_service.dispatch_video_job(
+        job_id=job_id,
         avatar_id=request.avatar_id,
         voice_id=request.voice_id,
         script=request.script,
         language=request.language,
+        tone=request.tone,
     )
-    if external_id:
-        job.external_job_id = external_id
-        job.status = "processing"
-        db.commit()
 
     return {
         "id": job.id,
-        "status": job.status,
+        "status": "pending",
         "message": "Video generation queued. This typically takes 2–5 minutes.",
         "created_at": job.created_at.isoformat(),
     }

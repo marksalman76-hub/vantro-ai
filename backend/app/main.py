@@ -1,11 +1,8 @@
-import asyncio
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
@@ -15,61 +12,17 @@ from app.routes.auth import router as auth_router
 from app.routes.contact import router as contact_router
 from app.routes.dashboard import router as dashboard_router
 from app.routes.stripe import router as stripe_router
-from app.services import heygen_service
 
 logger = logging.getLogger(__name__)
 
 
-async def _poll_heygen_jobs() -> None:
-    """Background loop: check HeyGen status for all 'processing' jobs every 60 s."""
-    from app.database import SessionLocal
-    from app.models.workspace import MediaJob
-
-    await asyncio.sleep(10)  # brief delay at startup
-    while True:
-        try:
-            db = SessionLocal()
-            try:
-                jobs = (
-                    db.query(MediaJob)
-                    .filter(
-                        MediaJob.status == "processing",
-                        MediaJob.external_job_id.isnot(None),
-                    )
-                    .all()
-                )
-                for job in jobs:
-                    result = await heygen_service.get_video_status(job.external_job_id)
-                    if result["status"] == "completed":
-                        job.status = "completed"
-                        job.video_url = result["video_url"]
-                        job.completed_at = datetime.utcnow()
-                        logger.info("Job %s completed — video_url=%s", job.id, job.video_url)
-                    elif result["status"] == "failed":
-                        job.status = "failed"
-                        job.error_message = result.get("error", "HeyGen processing failed")
-                        logger.warning("Job %s failed: %s", job.id, job.error_message)
-                if jobs:
-                    db.commit()
-            finally:
-                db.close()
-        except Exception as exc:
-            logger.error("HeyGen poll error: %s", exc)
-
-        await asyncio.sleep(60)
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if heygen_service.is_configured():
-        task = asyncio.create_task(_poll_heygen_jobs())
-        logger.info("HeyGen polling worker started")
-    else:
-        task = None
-        logger.info("HEYGEN_API_KEY not set — polling worker disabled")
+    # Web tier has no background tasks — job processing is handled
+    # exclusively by the vantro-worker ECS service via SQS.
+    logger.info("Vantro API starting up")
     yield
-    if task:
-        task.cancel()
+    logger.info("Vantro API shutting down")
 
 
 app = FastAPI(
