@@ -10,11 +10,12 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool  # keeps single connection so in-memory DB persists
 from fastapi.testclient import TestClient
 
-# Import Base then all models so they register with the same metadata object
+# Import Base then ALL models in FK dependency order before create_all is called
 from app.database import Base
 import app.models.user  # noqa: F401
 import app.models.organization  # noqa: F401
-from app.models import User, Organization
+import app.models.workspace  # noqa: F401  — must come after organization (FK dep)
+from app.models import User, Organization, Workspace, CreditsAccount, MediaJob
 from app.main import app
 from app.routes.auth import get_db
 
