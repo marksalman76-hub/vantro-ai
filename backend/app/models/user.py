@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Boolean
+from sqlalchemy import Column, String, Boolean, DateTime
 from app.database import Base
 
 class User(Base):
@@ -9,3 +9,6 @@ class User(Base):
     password_hash = Column(String, nullable=False)
     name = Column(String, nullable=True)
     is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, nullable=True)
+    stripe_customer_id = Column(String, nullable=True)
+    subscription_status = Column(String, nullable=True)

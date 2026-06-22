@@ -1,4 +1,5 @@
 import os
+import logging
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -9,8 +10,18 @@ from app.database import SessionLocal
 from app.models import User
 from app.services.stripe_service import StripeService
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/api/stripe", tags=["stripe"])
 security = HTTPBearer(auto_error=False)
+
+PLANS = {
+    "starter":  "price_1TYETlRzylDxVczCrgdrs3bd",
+    "growth":   "price_1TYEUWRzylDxVczCLB18Hn4v",
+    "business": "price_1TYEVoRzylDxVczC6feMM4AE",
+}
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://www.vantro.ai")
 
 
 def get_db():
@@ -33,6 +44,10 @@ def _get_user(credentials: HTTPAuthorizationCredentials, db: Session) -> User:
     return user
 
 
+class CreateCheckoutRequest(BaseModel):
+    plan: str  # "starter" | "growth" | "business"
+
+
 class CreatePaymentRequest(BaseModel):
     amount_cents: int
     description: str = ""
@@ -40,6 +55,42 @@ class CreatePaymentRequest(BaseModel):
 
 class CreateSubscriptionRequest(BaseModel):
     price_id: str
+
+
+@router.post("/create-checkout-session")
+async def create_checkout_session(
+    request: CreateCheckoutRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    user = _get_user(credentials, db)
+    price_id = PLANS.get(request.plan)
+    if not price_id:
+        raise HTTPException(status_code=400, detail=f"Unknown plan: {request.plan}")
+    try:
+        customer_id = StripeService.create_customer(user.email, user.name or user.email)
+        session = StripeService.create_checkout_session(
+            customer_id=customer_id,
+            price_id=price_id,
+            success_url=f"{FRONTEND_URL}/checkout/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{FRONTEND_URL}/pricing",
+            client_reference_id=user.id,
+        )
+        return {"checkout_url": session["url"], "session_id": session["id"]}
+    except Exception as e:
+        logger.error("Checkout session error: %s", e)
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.get("/plans")
+async def get_plans():
+    return {
+        "plans": [
+            {"id": "starter",  "name": "Starter",  "price_id": PLANS["starter"],  "amount": 9900,  "currency": "usd"},
+            {"id": "growth",   "name": "Growth",   "price_id": PLANS["growth"],   "amount": 27900, "currency": "usd"},
+            {"id": "business", "name": "Business", "price_id": PLANS["business"], "amount": 39900, "currency": "usd"},
+        ]
+    }
 
 
 @router.post("/create-payment-intent")
@@ -50,9 +101,10 @@ async def create_payment_intent(
 ):
     user = _get_user(credentials, db)
     try:
+        customer_id = StripeService.create_customer(user.email, user.name or user.email)
         result = StripeService.create_payment_intent(
             request.amount_cents,
-            f"cus_{user.id}",
+            customer_id,
             request.description,
         )
         return result
@@ -68,7 +120,6 @@ async def create_subscription(
 ):
     user = _get_user(credentials, db)
     try:
-        # Ensure Stripe customer exists for this user
         customer_id = StripeService.create_customer(user.email, user.name or user.email)
         result = StripeService.create_subscription(customer_id, request.price_id)
         return result
@@ -78,7 +129,6 @@ async def create_subscription(
 
 @router.get("/config")
 async def get_stripe_config():
-    """Return publishable key for frontend Stripe.js initialization."""
     pub_key = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
     if not pub_key:
         raise HTTPException(status_code=503, detail="Stripe not configured")
@@ -86,7 +136,7 @@ async def get_stripe_config():
 
 
 @router.post("/webhook")
-async def stripe_webhook(request: Request):
+async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
     webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
@@ -98,11 +148,34 @@ async def stripe_webhook(request: Request):
     if not event:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
-    if event["type"] == "payment_intent.succeeded":
-        pass  # TODO: credit user account
-    elif event["type"] == "customer.subscription.updated":
-        pass  # TODO: update subscription tier
-    elif event["type"] == "customer.subscription.deleted":
-        pass  # TODO: downgrade user
+    event_type = event["type"]
+    logger.info("Stripe event: %s", event_type)
+
+    if event_type == "checkout.session.completed":
+        session = event["data"]["object"]
+        user_id = session.get("client_reference_id")
+        if user_id:
+            user = db.query(User).filter(User.id == user_id).first()
+            if user:
+                user.subscription_status = session.get("status", "active")
+                user.stripe_customer_id = session.get("customer")
+                db.commit()
+                logger.info("Activated subscription for user %s", user_id)
+
+    elif event_type == "customer.subscription.updated":
+        sub = event["data"]["object"]
+        customer_id = sub.get("customer")
+        user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
+        if user:
+            user.subscription_status = sub.get("status")
+            db.commit()
+
+    elif event_type == "customer.subscription.deleted":
+        sub = event["data"]["object"]
+        customer_id = sub.get("customer")
+        user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
+        if user:
+            user.subscription_status = "canceled"
+            db.commit()
 
     return {"status": "received"}

@@ -68,6 +68,26 @@ class StripeService:
         }
 
     @staticmethod
+    def create_checkout_session(
+        customer_id: str,
+        price_id: str,
+        success_url: str,
+        cancel_url: str,
+        client_reference_id: str,
+    ) -> dict:
+        session = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=["card"],
+            line_items=[{"price": price_id, "quantity": 1}],
+            mode="subscription",
+            success_url=success_url,
+            cancel_url=cancel_url,
+            client_reference_id=client_reference_id,
+            allow_promotion_codes=True,
+        )
+        return {"url": session.url, "id": session.id}
+
+    @staticmethod
     def verify_webhook(payload: bytes, sig_header: str, webhook_secret: str) -> Optional[dict]:
         """Verify and parse Stripe webhook"""
         try:
