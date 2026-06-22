@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
     const [user, credits, mediaJobs] = await Promise.all([
       userRes.json(),
-      creditsRes.ok ? creditsRes.json() : { total_credits: 0, used_credits: 0, remaining_credits: 0 },
+      creditsRes.ok ? creditsRes.json() : { total_credits: 0, used_credits: 0, remaining_credits: 0, tier: 'free' },
       jobsRes.ok ? jobsRes.json() : { total_jobs: 0, jobs: [] },
     ]);
 
