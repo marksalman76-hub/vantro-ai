@@ -7,7 +7,7 @@ import { Suspense } from 'react';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
-  const sessionId = searchParams.get('session_id');
+  const sessionId = searchParams?.get('session_id');
   const [status, setStatus] = useState<'loading' | 'done'>('loading');
 
   useEffect(() => {
