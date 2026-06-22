@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const PLAN_LABELS: Record<string, { name: string; color: string; amount: string }> = {
   active:   { name: 'Active',   color: 'text-green-400 bg-green-400/10 border-green-400/20',  amount: '' },
@@ -26,9 +26,31 @@ interface Job {
 
 export default function DashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [topupSuccess, setTopupSuccess] = useState(false);
+
+  const openBillingPortal = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setPortalLoading(true);
+    try {
+      const res = await fetch('/api/stripe/customer-portal', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (json.url) window.location.href = json.url;
+      else setError(json.error || 'Could not open billing portal');
+    } catch {
+      setError('Could not open billing portal');
+    } finally {
+      setPortalLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -40,6 +62,10 @@ export default function DashboardPage() {
       .catch(() => { setError('Session expired'); localStorage.removeItem('token'); router.push('/login'); })
       .finally(() => setLoading(false));
   }, [router]);
+
+  useEffect(() => {
+    if (searchParams.get('topup') === 'success') setTopupSuccess(true);
+  }, [searchParams]);
 
   if (loading) return (
     <div className="min-h-screen bg-gray-950 flex items-center justify-center">
@@ -76,6 +102,14 @@ export default function DashboardPage() {
       </nav>
 
       <div className="max-w-6xl mx-auto px-6 py-10">
+        {/* Top-up success banner */}
+        {topupSuccess && (
+          <div className="mb-6 flex items-center justify-between bg-green-500/10 border border-green-500/30 rounded-xl px-5 py-3">
+            <p className="text-green-400 text-sm font-medium">Credits added to your account.</p>
+            <button onClick={() => setTopupSuccess(false)} className="text-green-400/60 hover:text-green-400 text-lg leading-none">×</button>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div>
@@ -105,11 +139,22 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
-            {(!subStatus || subStatus === 'canceled') && (
-              <Link href="/pricing" className="text-purple-400 hover:text-purple-300 text-sm font-medium">
-                View plans →
-              </Link>
-            )}
+            <div className="flex items-center gap-3">
+              {(!subStatus || subStatus === 'canceled') && (
+                <Link href="/pricing" className="text-purple-400 hover:text-purple-300 text-sm font-medium">
+                  View plans →
+                </Link>
+              )}
+              {subStatus === 'active' && (
+                <button
+                  onClick={openBillingPortal}
+                  disabled={portalLoading}
+                  className="text-sm text-gray-400 hover:text-white border border-gray-700 hover:border-gray-500 px-4 py-1.5 rounded-lg transition-all disabled:opacity-50"
+                >
+                  {portalLoading ? 'Opening…' : 'Manage billing'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

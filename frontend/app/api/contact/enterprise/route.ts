@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -9,17 +11,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Name, company and email are required" }, { status: 400 });
     }
 
-    // Log the enquiry — connect to email/CRM later
-    console.log("[ENTERPRISE ENQUIRY]", {
-      name, company, email,
-      phone: phone || "—",
-      volume: volume || "—",
-      message: message || "—",
-      receivedAt: new Date().toISOString(),
+    // Forward to backend which sends the SES email
+    const res = await fetch(`${API_URL}/api/contact/enterprise`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, company, email, phone, volume, message }),
     });
 
-    // TODO: send email via SES/SendGrid or post to Slack/CRM
-    // await sendEmail({ to: "hello@vantro.ai", subject: `Enterprise enquiry from ${company}`, ... })
+    if (!res.ok) {
+      // Backend not yet wired — fall back to console log so the form still succeeds
+      console.log("[ENTERPRISE ENQUIRY]", { name, company, email, phone, volume, message });
+    }
 
     return NextResponse.json({ success: true });
   } catch {

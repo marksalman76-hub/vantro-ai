@@ -55,8 +55,16 @@ def _get_user(credentials: HTTPAuthorizationCredentials, db: Session) -> User:
     return user
 
 
+# Top-up packs: credits → unit price in cents
+TOPUP_PACKS: dict[int, int] = {10: 1500, 25: 3500, 50: 6500}
+
+
 class CreateCheckoutRequest(BaseModel):
     plan: str  # "starter" | "growth" | "business"
+
+
+class CreateTopupRequest(BaseModel):
+    credits: int  # 10 | 25 | 50
 
 
 class CreatePaymentRequest(BaseModel):
@@ -139,6 +147,51 @@ async def create_subscription(
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.post("/create-topup-checkout")
+async def create_topup_checkout(
+    request: CreateTopupRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    user = _get_user(credentials, db)
+    price_cents = TOPUP_PACKS.get(request.credits)
+    if not price_cents:
+        raise HTTPException(status_code=400, detail=f"Invalid top-up pack: {request.credits} credits")
+    try:
+        customer_id = StripeService.create_customer(user.email, user.name or user.email)
+        session = StripeService.create_topup_checkout_session(
+            customer_id=customer_id,
+            credits=request.credits,
+            price_cents=price_cents,
+            success_url=f"{FRONTEND_URL}/dashboard?topup=success&session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{FRONTEND_URL}/pricing",
+            client_reference_id=user.id,
+        )
+        return {"checkout_url": session["url"], "session_id": session["id"]}
+    except Exception as e:
+        logger.error("Top-up checkout error: %s", e)
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/customer-portal")
+async def create_customer_portal(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    user = _get_user(credentials, db)
+    if not user.stripe_customer_id:
+        raise HTTPException(status_code=400, detail="No billing account found. Subscribe to a plan first.")
+    try:
+        result = StripeService.create_customer_portal_session(
+            customer_id=user.stripe_customer_id,
+            return_url=f"{FRONTEND_URL}/dashboard",
+        )
+        return result
+    except Exception as e:
+        logger.error("Customer portal error: %s", e)
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 @router.get("/config")
 async def get_stripe_config():
     pub_key = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
@@ -182,6 +235,35 @@ def _assign_credits(user: User, plan: str, db: Session) -> None:
     logger.info("Assigned %d credits (plan=%s) to user %s", credits_to_assign, plan, user.id)
 
 
+def _add_topup_credits(user: User, credits: int, db: Session) -> None:
+    """Add purchased top-up credits on top of existing balance (does not reset used_credits)."""
+    from datetime import datetime
+    import uuid
+
+    org = db.query(Organization).filter(Organization.owner_id == user.id).first()
+    if not org:
+        logger.warning("No org found for user %s — skipping topup", user.id)
+        return
+    workspace = db.query(Workspace).filter(Workspace.organization_id == org.id).first()
+    if not workspace:
+        logger.warning("No workspace found for user %s — skipping topup", user.id)
+        return
+    acct = db.query(CreditsAccount).filter(CreditsAccount.workspace_id == workspace.id).first()
+    if acct:
+        acct.total_credits += credits
+    else:
+        acct = CreditsAccount(
+            id=str(uuid.uuid4()),
+            workspace_id=workspace.id,
+            total_credits=credits,
+            used_credits=0,
+            created_at=datetime.utcnow(),
+        )
+        db.add(acct)
+    logger.info("Added %d top-up credits for user %s (new total=%s)", credits, user.id,
+                acct.total_credits if acct else credits)
+
+
 @router.post("/webhook")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()
@@ -201,15 +283,25 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     if event_type == "checkout.session.completed":
         session = event["data"]["object"]
         user_id = session.get("client_reference_id")
-        plan = (session.get("metadata") or {}).get("plan", "")
+        metadata = session.get("metadata") or {}
         if user_id:
             user = db.query(User).filter(User.id == user_id).first()
             if user:
-                user.subscription_status = "active"
-                user.stripe_customer_id = session.get("customer")
-                _assign_credits(user, plan, db)
-                db.commit()
-                logger.info("Activated subscription (plan=%s) for user %s", plan, user_id)
+                if metadata.get("type") == "topup":
+                    # One-time credit top-up purchase
+                    extra_credits = int(metadata.get("credits", 0))
+                    if extra_credits > 0:
+                        _add_topup_credits(user, extra_credits, db)
+                        db.commit()
+                        logger.info("Top-up %d credits for user %s", extra_credits, user_id)
+                else:
+                    # New subscription
+                    plan = metadata.get("plan", "")
+                    user.subscription_status = "active"
+                    user.stripe_customer_id = session.get("customer")
+                    _assign_credits(user, plan, db)
+                    db.commit()
+                    logger.info("Activated subscription (plan=%s) for user %s", plan, user_id)
 
     elif event_type == "invoice.payment_succeeded":
         # Monthly renewal — refresh credit allocation

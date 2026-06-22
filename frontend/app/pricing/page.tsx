@@ -275,8 +275,30 @@ function EnquiryModal({ onClose }: { onClose: () => void }) {
 
 // ─── Top-up packs section ─────────────────────────────────────────────────────
 
-function TopUpSection({ planId }: { planId: string }) {
+function TopUpSection() {
   const [open, setOpen] = useState(false);
+  const [loadingPack, setLoadingPack] = useState<number | null>(null);
+
+  const handleTopUp = async (credits: number) => {
+    const token = localStorage.getItem('token');
+    if (!token) { window.location.href = '/login?redirect=/pricing'; return; }
+    setLoadingPack(credits);
+    try {
+      const res = await fetch('/api/stripe/create-topup-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ credits }),
+      });
+      const data = await res.json();
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      }
+    } catch {
+      // silently fall back
+    } finally {
+      setLoadingPack(null);
+    }
+  };
 
   return (
     <div className="mt-4 border-t border-gray-700/60 pt-4">
@@ -312,14 +334,11 @@ function TopUpSection({ planId }: { planId: string }) {
               <div className="flex items-center gap-2.5">
                 <span className="text-sm font-bold text-white">${pack.price}</span>
                 <button
-                  onClick={() => {
-                    const token = localStorage.getItem('token');
-                    if (!token) { window.location.href = `/login?redirect=/pricing`; return; }
-                    window.location.href = `/dashboard?topup=${pack.credits}`;
-                  }}
-                  className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg font-medium transition-all"
+                  onClick={() => handleTopUp(pack.credits)}
+                  disabled={loadingPack === pack.credits}
+                  className="text-xs bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg font-medium transition-all"
                 >
-                  Add
+                  {loadingPack === pack.credits ? '…' : 'Add'}
                 </button>
               </div>
             </div>
@@ -453,7 +472,7 @@ export default function PricingPage() {
               </button>
 
               {/* Top-up section */}
-              <TopUpSection planId={plan.id} />
+              <TopUpSection />
             </div>
           ))}
 

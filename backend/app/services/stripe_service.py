@@ -90,6 +90,46 @@ class StripeService:
         return {"url": session.url, "id": session.id}
 
     @staticmethod
+    def create_topup_checkout_session(
+        customer_id: str,
+        credits: int,
+        price_cents: int,
+        success_url: str,
+        cancel_url: str,
+        client_reference_id: str,
+    ) -> dict:
+        session = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=["card"],
+            line_items=[{
+                "price_data": {
+                    "currency": "usd",
+                    "unit_amount": price_cents,
+                    "product_data": {
+                        "name": f"Vantro Credit Top-up — {credits} credits",
+                        "description": f"One-time purchase of {credits} video generation credits",
+                    },
+                },
+                "quantity": 1,
+            }],
+            mode="payment",
+            success_url=success_url,
+            cancel_url=cancel_url,
+            client_reference_id=client_reference_id,
+            metadata={"type": "topup", "credits": str(credits)},
+        )
+        return {"url": session.url, "id": session.id}
+
+    @staticmethod
+    def create_customer_portal_session(customer_id: str, return_url: str) -> dict:
+        """Create a Stripe Billing Portal session for self-service billing management."""
+        session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=return_url,
+        )
+        return {"url": session.url}
+
+    @staticmethod
     def verify_webhook(payload: bytes, sig_header: str, webhook_secret: str) -> Optional[dict]:
         """Verify and parse Stripe webhook"""
         try:

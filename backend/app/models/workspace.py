@@ -43,6 +43,7 @@ class MediaJob(Base):
     eye_movement = Column(String, nullable=True)
     blinking = Column(String, nullable=True)
     head_movement = Column(String, nullable=True)
+    external_job_id = Column(String, nullable=True)
     status = Column(String, default="pending")
     video_url = Column(String, nullable=True)
     error_message = Column(Text, nullable=True)

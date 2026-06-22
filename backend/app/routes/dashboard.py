@@ -10,6 +10,7 @@ from app.auth import verify_token
 from app.database import SessionLocal
 from app.models import User, Organization
 from app.models.workspace import Workspace, CreditsAccount, MediaJob
+from app.services import heygen_service
 
 router = APIRouter(prefix="/api", tags=["dashboard"])
 security = HTTPBearer(auto_error=False)
@@ -154,9 +155,21 @@ async def create_media_job(
     db.add(job)
     db.commit()
 
+    # Submit to HeyGen immediately; falls back silently if not configured
+    external_id = await heygen_service.submit_video(
+        avatar_id=request.avatar_id,
+        voice_id=request.voice_id,
+        script=request.script,
+        language=request.language,
+    )
+    if external_id:
+        job.external_job_id = external_id
+        job.status = "processing"
+        db.commit()
+
     return {
         "id": job.id,
-        "status": "pending",
+        "status": job.status,
         "message": "Video generation queued. This typically takes 2–5 minutes.",
         "created_at": job.created_at.isoformat(),
     }
