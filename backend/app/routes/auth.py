@@ -37,6 +37,8 @@ class UserResponse(BaseModel):
     email: str
     name: str | None
     is_active: bool
+    subscription_status: str | None = None
+    stripe_customer_id: str | None = None
 
 @router.post("/register", response_model=AuthResponse, status_code=201)
 async def register(request: RegisterRequest, db: Session = Depends(get_db)):

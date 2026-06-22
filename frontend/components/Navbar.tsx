@@ -11,7 +11,7 @@ const NAV_LINKS = [
   { label: 'Agents',        href: '#agents'         },
   { label: 'Industries',    href: '#industry-adaptability' },
   { label: 'Integrations',  href: '#integrations'   },
-  { label: 'Pricing',       href: '#pricing'        },
+  { label: 'Pricing',       href: '/pricing'        },
 ]
 
 export default function Navbar() {
@@ -64,8 +64,8 @@ export default function Navbar() {
 
           {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-3">
-            <Button variant="ghost" size="sm">Log in</Button>
-            <Button variant="primary" size="sm" arrow>Get Started Free</Button>
+            <Button variant="ghost" size="sm" href="/login">Log in</Button>
+            <Button variant="primary" size="sm" href="/signup" arrow>Get Started Free</Button>
           </div>
 
           {/* Mobile toggle */}
@@ -101,8 +101,8 @@ export default function Navbar() {
                 </Link>
               ))}
               <div className="pt-3 flex flex-col gap-2">
-                <Button variant="secondary" size="sm" className="w-full">Log in</Button>
-                <Button variant="primary"   size="sm" className="w-full" arrow>Get Started Free</Button>
+                <Button variant="secondary" size="sm" href="/login"  className="w-full">Log in</Button>
+                <Button variant="primary"   size="sm" href="/signup" className="w-full" arrow>Get Started Free</Button>
               </div>
             </div>
           </motion.div>

@@ -1,5 +1,8 @@
+import uuid
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -53,12 +56,15 @@ async def get_credits(
 
     total = int(result.total)
     used = int(result.used)
+    tier = "free"
+    if user.subscription_status in ("active", "trialing"):
+        tier = "starter"
     return {
         "user_id": user.id,
         "total_credits": total,
         "used_credits": used,
         "remaining_credits": total - used,
-        "tier": "starter",
+        "tier": tier,
     }
 
 
@@ -102,6 +108,52 @@ async def get_media_jobs(
             }
             for j in jobs
         ],
+    }
+
+
+class CreateJobRequest(BaseModel):
+    avatar_id: str
+    voice_id: str
+    script: str
+    language: str = "en"
+    tone: str = "professional"
+
+
+@router.post("/media-jobs", status_code=201)
+async def create_media_job(
+    request: CreateJobRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    user = _get_user(credentials, db)
+
+    org = db.query(Organization).filter(Organization.owner_id == user.id).first()
+    if not org:
+        raise HTTPException(status_code=400, detail="No organization found. Complete onboarding first.")
+
+    workspace = db.query(Workspace).filter(Workspace.organization_id == org.id).first()
+    if not workspace:
+        raise HTTPException(status_code=400, detail="No workspace found. Complete onboarding first.")
+
+    job = MediaJob(
+        id=str(uuid.uuid4()),
+        workspace_id=workspace.id,
+        avatar_id=request.avatar_id,
+        voice_id=request.voice_id,
+        script=request.script,
+        language=request.language,
+        tone=request.tone,
+        status="pending",
+        created_at=datetime.utcnow(),
+    )
+    db.add(job)
+    db.commit()
+
+    return {
+        "id": job.id,
+        "status": "pending",
+        "message": "Video generation queued. This typically takes 2–5 minutes.",
+        "created_at": job.created_at.isoformat(),
     }
 
 

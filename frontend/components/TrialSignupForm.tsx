@@ -73,9 +73,20 @@ export default function TrialSignupForm() {
     if (!validateStep2()) return
     setLoading(true)
     try {
-      // Replace with real API call
-      await new Promise<void>((resolve) => setTimeout(resolve, 1400))
-      setSuccess(true)
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const res = await fetch(`${API_URL}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, password: form.password, name: form.company }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setErrors({ password: data.detail || 'Registration failed. Please try again.' })
+        return
+      }
+      localStorage.setItem('token', data.access_token)
+      localStorage.setItem('user_name', form.company)
+      window.location.href = '/onboarding'
     } catch {
       setErrors({ password: 'Something went wrong. Please try again.' })
     } finally {
