@@ -44,10 +44,10 @@ export default function AdminJobsPage() {
 
   function load() {
     const token = getToken();
-    if (!token) { router.push('/admin/login'); return; }
+    if (!token) { router.push('/admin-login'); return; }
     fetch('/api/admin/jobs', { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
-        if (r.status === 403) { router.push('/dashboard'); return; }
+        if (r.status === 403) { router.push('/admin-login'); return; }
         const d = await r.json();
         setJobs(d.jobs || []);
       })

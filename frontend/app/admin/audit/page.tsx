@@ -52,14 +52,14 @@ export default function AdminAuditPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
-    if (!token) { router.push('/admin/login'); return; }
+    if (!token) { router.push('/admin-login'); return; }
 
     Promise.all([
       fetch('/api/admin/jobs', { headers: { Authorization: `Bearer ${token}` } }),
       fetch('/api/admin/clients', { headers: { Authorization: `Bearer ${token}` } }),
     ])
       .then(async ([jr, cr]) => {
-        if (jr.status === 403) { router.push('/dashboard'); return; }
+        if (jr.status === 403) { router.push('/admin-login'); return; }
         const [jd, cd] = await Promise.all([jr.json(), cr.json()]);
         const jobs: Job[] = jd.jobs || [];
         const clients: Client[] = cd.clients || [];

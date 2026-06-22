@@ -58,14 +58,14 @@ export default function AdminCommandCenter() {
 
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
-    if (!token) { router.push('/admin/login'); return; }
+    if (!token) { router.push('/admin-login'); return; }
 
     Promise.all([
       fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } }),
       fetch('/api/admin/jobs', { headers: { Authorization: `Bearer ${token}` } }),
     ])
       .then(async ([sr, jr]) => {
-        if (sr.status === 403) { router.push('/dashboard'); return; }
+        if (sr.status === 403) { router.push('/admin-login'); return; }
         const [s, j] = await Promise.all([sr.json(), jr.json()]);
         setStats(s);
         setJobs((j.jobs || []).slice(0, 10));

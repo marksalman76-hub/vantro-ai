@@ -43,11 +43,11 @@ export default function AdminClientsPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
-    if (!token) { router.push('/admin/login'); return; }
+    if (!token) { router.push('/admin-login'); return; }
 
     fetch('/api/admin/clients', { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
-        if (r.status === 403) { router.push('/dashboard'); return; }
+        if (r.status === 403) { router.push('/admin-login'); return; }
         const d = await r.json();
         setClients(d.clients || []);
       })
