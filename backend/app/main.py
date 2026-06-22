@@ -71,7 +71,6 @@ app.add_middleware(
         "http://localhost:3000",
         "https://vantro.ai",
         "https://www.vantro.ai",
-        "https://ecommerce-ai-agent-platform-1.onrender.com",
     ],
     allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
