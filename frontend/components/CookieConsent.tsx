@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Cookie, X } from 'lucide-react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 interface Prefs {
   essential:   true
@@ -33,15 +34,18 @@ function savePrefs(p: Omit<Prefs, 'essential' | 'timestamp'>) {
 }
 
 export default function CookieConsent() {
+  const pathname = usePathname()
   const [visible,     setVisible]     = useState(false)
   const [customizing, setCustomizing] = useState(false)
   const [analytics,   setAnalytics]   = useState(true)
   const [marketing,   setMarketing]   = useState(false)
   const [prefsCookie, setPrefsCookie] = useState(true)
 
+  const isAdmin = pathname?.startsWith('/admin') ?? false
+
   useEffect(() => {
-    if (!loadPrefs()) setVisible(true)
-  }, [])
+    if (!isAdmin && !loadPrefs()) setVisible(true)
+  }, [isAdmin])
 
   const accept = () => {
     savePrefs({ analytics: true, marketing: true, preferences: true })
