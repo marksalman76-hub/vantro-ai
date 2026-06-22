@@ -40,11 +40,11 @@ export default function AdminJobsPage() {
   const [actionLoading, setActionLoading] = useState<string>('');
   const [message, setMessage] = useState('');
 
-  const getToken = () => localStorage.getItem('token') || '';
+  const getToken = () => localStorage.getItem('admin_token') || '';
 
   function load() {
     const token = getToken();
-    if (!token) { router.push('/login'); return; }
+    if (!token) { router.push('/admin/login'); return; }
     fetch('/api/admin/jobs', { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
         if (r.status === 403) { router.push('/dashboard'); return; }

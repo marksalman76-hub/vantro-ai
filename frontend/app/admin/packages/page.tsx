@@ -36,7 +36,7 @@ export default function AdminPackagesPage() {
   const [flash, setFlash] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('admin_token');
     if (!token) router.push('/admin-login');
   }, [router]);
 

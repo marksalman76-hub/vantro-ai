@@ -84,8 +84,8 @@ export default function AdminAgentsPage() {
   const [tierFilter, setTierFilter] = useState<string>('all');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) { router.push('/login'); return; }
+    const token = localStorage.getItem('admin_token');
+    if (!token) { router.push('/admin/login'); return; }
     fetch('/api/admin/agents', { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
         if (r.status === 403) { router.push('/dashboard'); return; }

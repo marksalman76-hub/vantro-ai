@@ -34,8 +34,8 @@ export default function AdminAgentJobsPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const load = () => {
-    const token = localStorage.getItem('token');
-    if (!token) { router.push('/login'); return; }
+    const token = localStorage.getItem('admin_token');
+    if (!token) { router.push('/admin/login'); return; }
     fetch('/api/admin/agents/jobs', { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
         if (r.status === 403) { router.push('/dashboard'); return; }
@@ -49,7 +49,7 @@ export default function AdminAgentJobsPage() {
   useEffect(load, [router]);
 
   const approve = async (jobId: string) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('admin_token');
     if (!token) return;
     setActionLoading(jobId + '_approve');
     await fetch(`/api/admin/agents/jobs/${jobId}/approve`, {
@@ -61,7 +61,7 @@ export default function AdminAgentJobsPage() {
   };
 
   const reject = async (jobId: string) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('admin_token');
     if (!token) return;
     setActionLoading(jobId + '_reject');
     await fetch(`/api/admin/agents/jobs/${jobId}/reject`, {

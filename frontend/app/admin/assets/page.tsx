@@ -44,7 +44,7 @@ export default function AdminAssetsPage() {
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  useEffect(() => { const t = localStorage.getItem('token'); if (!t) router.push('/admin-login'); }, [router]);
+  useEffect(() => { const t = localStorage.getItem('admin_token'); if (!t) router.push('/admin-login'); }, [router]);
 
   const types = ['all', ...Array.from(new Set(MOCK.map(a => a.type)))];
   const visible = assets.filter(a =>

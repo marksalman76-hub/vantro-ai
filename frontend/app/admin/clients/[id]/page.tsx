@@ -48,11 +48,11 @@ export default function ClientDetailPage() {
   const [actionLoading, setActionLoading] = useState('');
   const [message, setMessage] = useState('');
 
-  const getToken = () => localStorage.getItem('token') || '';
+  const getToken = () => localStorage.getItem('admin_token') || '';
 
   const load = useCallback(() => {
     const token = getToken();
-    if (!token) { router.push('/login'); return; }
+    if (!token) { router.push('/admin/login'); return; }
     fetch(`/api/admin/clients/${userId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
         if (r.status === 403) { router.push('/dashboard'); return; }

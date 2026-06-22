@@ -41,7 +41,7 @@ export default function AdminSupportPage() {
   const [filter, setFilter] = useState<string>('open');
   const [selected, setSelected] = useState<Ticket | null>(null);
 
-  useEffect(() => { const t = localStorage.getItem('token'); if (!t) router.push('/admin-login'); }, [router]);
+  useEffect(() => { const t = localStorage.getItem('admin_token'); if (!t) router.push('/admin-login'); }, [router]);
 
   const resolve = (id: string) => setTickets(prev => prev.map(t => t.id === id ? { ...t, status: 'resolved' } : t));
 

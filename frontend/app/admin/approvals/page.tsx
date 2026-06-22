@@ -40,7 +40,7 @@ export default function AdminApprovalsPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
   const [acting, setActing] = useState<string | null>(null);
 
-  useEffect(() => { const t = localStorage.getItem('token'); if (!t) router.push('/admin-login'); }, [router]);
+  useEffect(() => { const t = localStorage.getItem('admin_token'); if (!t) router.push('/admin-login'); }, [router]);
 
   const act = async (id: string, action: 'approved' | 'rejected') => {
     setActing(id);

@@ -42,8 +42,8 @@ export default function AdminClientsPage() {
   const [filter, setFilter] = useState<'all' | 'paid' | 'trial' | 'free' | 'suspended'>('all');
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) { router.push('/login'); return; }
+    const token = localStorage.getItem('admin_token');
+    if (!token) { router.push('/admin/login'); return; }
 
     fetch('/api/admin/clients', { headers: { Authorization: `Bearer ${token}` } })
       .then(async (r) => {
