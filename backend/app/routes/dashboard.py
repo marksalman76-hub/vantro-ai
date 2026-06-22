@@ -56,9 +56,14 @@ async def get_credits(
 
     total = int(result.total)
     used = int(result.used)
-    tier = "free"
-    if user.subscription_status in ("active", "trialing"):
+    if total >= 300:
+        tier = "business"
+    elif total >= 200:
+        tier = "growth"
+    elif total >= 60:
         tier = "starter"
+    else:
+        tier = "free"
     return {
         "user_id": user.id,
         "total_credits": total,

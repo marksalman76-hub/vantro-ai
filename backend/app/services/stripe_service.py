@@ -74,6 +74,7 @@ class StripeService:
         success_url: str,
         cancel_url: str,
         client_reference_id: str,
+        plan: str = "",
     ) -> dict:
         session = stripe.checkout.Session.create(
             customer=customer_id,
@@ -84,6 +85,7 @@ class StripeService:
             cancel_url=cancel_url,
             client_reference_id=client_reference_id,
             allow_promotion_codes=True,
+            metadata={"plan": plan},
         )
         return {"url": session.url, "id": session.id}
 
