@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, Zap, Calendar } from 'lucide-react'
 
@@ -8,9 +9,13 @@ const SESSION_KEY = 'vantro_exit_shown'
 const MIN_TIME_MS = 20_000
 
 export default function ExitIntentPopup() {
+  const pathname = usePathname()
   const [visible, setVisible] = useState(false)
 
+  const isPortalPage = pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard')
+
   useEffect(() => {
+    if (isPortalPage) return
     if (typeof window === 'undefined') return
     if (sessionStorage.getItem(SESSION_KEY)) return
 
