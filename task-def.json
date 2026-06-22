@@ -1,11 +1,11 @@
 {
-  "family": "vantro-api",
+  "family": "trance-formation-api",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
-  "cpu": "1024",
-  "memory": "2048",
+  "cpu": "256",
+  "memory": "512",
   "executionRoleArn": "arn:aws:iam::685570573617:role/ecsTaskExecutionRole",
-  "taskRoleArn": "arn:aws:iam::685570573617:role/vantro-ecs-task-role",
+  "taskRoleArn": "arn:aws:iam::685570573617:role/ecsTaskRole",
   "containerDefinitions": [
     {
       "name": "api",
@@ -19,16 +19,38 @@
         }
       ],
       "secrets": [
-        { "name": "DATABASE_URL",            "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:DATABASE_URL" },
-        { "name": "SECRET_KEY",              "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:SECRET_KEY" },
-        { "name": "STRIPE_SECRET_KEY",       "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:STRIPE_SECRET_KEY" },
-        { "name": "STRIPE_WEBHOOK_SECRET",   "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:STRIPE_WEBHOOK_SECRET" },
-        { "name": "STRIPE_PUBLISHABLE_KEY",  "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:STRIPE_PUBLISHABLE_KEY" },
-        { "name": "HEYGEN_API_KEY",          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:HEYGEN_API_KEY" },
-        { "name": "REDIS_URL",               "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:REDIS_URL" },
-        { "name": "SQS_JOBS_QUEUE_URL",      "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:SQS_JOBS_QUEUE_URL" }
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/database-url-hVRSA3"
+        },
+        {
+          "name": "SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/jwt-secret-key-V3I8EA"
+        },
+        {
+          "name": "STRIPE_SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/stripe-secret-key-dtMsFT"
+        },
+        {
+          "name": "STRIPE_WEBHOOK_SECRET",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/stripe-webhook-secret-vIY8hj"
+        },
+        {
+          "name": "STRIPE_PUBLISHABLE_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/stripe-publishable-key-N6oOkz"
+        },
+        {
+          "name": "REDIS_URL",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/redis-url-BzFk4o"
+        },
+        {
+          "name": "SQS_JOBS_QUEUE_URL",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/sqs-jobs-queue-url-Bxxbtu"
+        }
       ],
       "environment": [
+        { "name": "ENVIRONMENT",    "value": "production" },
+        { "name": "PORT",           "value": "8000" },
         { "name": "FRONTEND_URL",   "value": "https://www.vantro.ai" },
         { "name": "FROM_EMAIL",     "value": "noreply@vantro.ai" },
         { "name": "AWS_REGION",     "value": "us-east-1" },
@@ -44,7 +66,7 @@
       "logConfiguration": {
         "logDriver": "awslogs",
         "options": {
-          "awslogs-group": "/ecs/vantro/api",
+          "awslogs-group": "/ecs/trance-formation/api",
           "awslogs-region": "us-east-1",
           "awslogs-stream-prefix": "ecs"
         }

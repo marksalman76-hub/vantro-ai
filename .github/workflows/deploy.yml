@@ -76,10 +76,10 @@ jobs:
         run: |
           TASK_ARN=$(aws ecs run-task \
             --cluster "$ECS_CLUSTER" \
-            --task-definition vantro-api \
-            --overrides '{"containerOverrides":[{"name":"api","command":["alembic","upgrade","head"]}]}' \
+            --task-definition trance-formation-api \
+            --overrides '{"containerOverrides":[{"name":"api","command":["python","-m","alembic","upgrade","head"]}]}' \
             --launch-type FARGATE \
-            --network-configuration "awsvpcConfiguration={subnets=[${{ secrets.ECS_PRIVATE_SUBNETS }}],securityGroups=[${{ secrets.ECS_SECURITY_GROUP }}],assignPublicIp=DISABLED}" \
+            --network-configuration "awsvpcConfiguration={subnets=[subnet-0270ce09e0a0eb95c,subnet-0ec7af84b894e581c],securityGroups=[sg-0c783bf5d3eb894cc],assignPublicIp=ENABLED}" \
             --region "$AWS_REGION" \
             --query 'tasks[0].taskArn' \
             --output text)
