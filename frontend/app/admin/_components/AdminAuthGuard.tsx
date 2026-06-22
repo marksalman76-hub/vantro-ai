@@ -1,22 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 
 export default function AdminAuthGuard({ children, sidebar }: { children: React.ReactNode; sidebar: React.ReactNode }) {
   const router = useRouter();
-  const pathname = usePathname();
-  const [status, setStatus] = useState<'loading' | 'authed' | 'login'>('loading');
+  const [status, setStatus] = useState<'loading' | 'authed'>('loading');
 
   useEffect(() => {
-    if (pathname === '/admin/login') { setStatus('login'); return; }
     const token = localStorage.getItem('admin_token');
     if (!token) {
-      router.replace('/admin/login');
+      router.replace('/admin-login');
     } else {
       setStatus('authed');
     }
-  }, [pathname, router]);
+  }, [router]);
 
   if (status === 'login') return <>{children}</>;
 

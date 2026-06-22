@@ -13,7 +13,7 @@ export default function AdminLoginPage() {
 
   useEffect(() => {
     // Already logged in? Go straight to admin
-    const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+    const token = localStorage.getItem('admin_token');
     if (token) router.replace('/admin');
     emailRef.current?.focus();
   }, [router]);
@@ -48,7 +48,6 @@ export default function AdminLoginPage() {
       }
 
       // Store token and go
-      localStorage.setItem('token', json.access_token);
       localStorage.setItem('admin_token', json.access_token);
       router.push('/admin');
     } catch {

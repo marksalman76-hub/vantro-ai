@@ -26,7 +26,7 @@ export default function AdminSidebar() {
 
   function signOut() {
     localStorage.removeItem('admin_token');
-    router.push('/admin/login');
+    router.push('/admin-login');
   }
 
   return (
