@@ -129,7 +129,30 @@ export default function AdminCommandCenter() {
         </>
       )}
 
+      {/* Admin actions */}
+      <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Actions</p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
+        {[
+          { href: '/admin/agents',    icon: '◆', label: 'Run an Agent',  desc: 'Execute a single AI agent on your task' },
+          { href: '/admin/agent-jobs', icon: '◉', label: 'Build a Team', desc: 'Coordinate multiple agents on one goal' },
+          { href: '/admin/assets',    icon: '▶', label: 'Create Media',  desc: 'Video, image, audio, social content' },
+        ].map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="bg-gray-900 border border-gray-800 hover:border-violet-500/40 rounded-xl p-5 transition-all group flex items-start gap-4"
+          >
+            <span className="text-2xl text-violet-400 group-hover:text-violet-300 transition-colors leading-none mt-0.5">{item.icon}</span>
+            <div>
+              <p className="font-semibold text-sm text-white group-hover:text-violet-300 transition-colors">{item.label}</p>
+              <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+
       {/* Quick nav */}
+      <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Management</p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
         {[
           { href: '/admin/clients',   label: 'Manage Clients',    desc: 'Credits, plans, controls' },
