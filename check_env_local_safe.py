@@ -26,7 +26,8 @@ def main() -> int:
         "provider_environment_readiness_attempted": True,
         "provider_environment_readiness_passed": bool(category.get("provider_category_readiness_verified")),
         "visual_provider_category_ready": bool(category.get("visual_provider_category_ready")),
-        "audio_provider_category_ready": bool(category.get("audio_provider_category_ready")),
+        "audio_provider_category_r
+eady": bool(category.get("audio_provider_category_ready")),
         "composition_method_ready": bool(category.get("composition_method_ready")),
         "composition_detection_source": category.get("composition_detection_source") or "",
         "ffmpeg_version_check_passed": bool(category.get("ffmpeg_version_check_passed")),

@@ -12,61 +12,21 @@ from app.auth import verify_token
 from app.database import SessionLocal
 from app.models import User, Organization
 from app.models.workspace import Workspace, CreditsAccount, MediaJob
+from app.models.agent_system import AgentJob, PackageDownload
+from app.agents.agent_registry import (
+    AGENT_CATALOGUE,
+    INTERNAL_AGENTS,
+    PACKAGE_AGENTS,
+    TIER_ORDER,
+    PURCHASABLE_AGENT_IDS,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 security = HTTPBearer(auto_error=False)
 
-_ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "")
-
 PLAN_CREDITS = {"starter": 60, "growth": 200, "business": 300}
-
-CLIENT_AGENTS = [
-    {"id": "head_agent",          "name": "Head Agent / CEO",               "category": "Leadership"},
-    {"id": "strategist",          "name": "Strategist Agent",               "category": "Strategy"},
-    {"id": "growth_partnerships", "name": "Business Growth & Partnerships", "category": "Growth"},
-    {"id": "lead_generator",      "name": "Lead Generator Agent",           "category": "Sales"},
-    {"id": "marketing",           "name": "Marketing Specialist Agent",     "category": "Marketing"},
-    {"id": "social_media",        "name": "Social Media Content Agent",     "category": "Content"},
-    {"id": "seo",                 "name": "SEO Agent",                      "category": "Marketing"},
-    {"id": "email_reply",         "name": "Email Reply Agent",              "category": "Communication"},
-    {"id": "crm",                 "name": "CRM Agent",                      "category": "Sales"},
-    {"id": "sales_closer",        "name": "Sales Closer Agent",             "category": "Sales"},
-    {"id": "receptionist",        "name": "Receptionist Agent",             "category": "Operations"},
-    {"id": "website_app",         "name": "Website/App Agent",              "category": "Product"},
-    {"id": "product_dev",         "name": "Product Development Agent",      "category": "Product"},
-    {"id": "ecommerce",           "name": "Ecommerce Agent",                "category": "Commerce"},
-    {"id": "demo_trial",          "name": "Demo/Trial Agent",               "category": "Sales"},
-    {"id": "influencer_outreach", "name": "Influencer Outreach Agent",      "category": "Marketing"},
-    {"id": "ugc_media",           "name": "UGC Media Agent",                "category": "Content"},
-    {"id": "analytics",           "name": "Analytics Agent",                "category": "Intelligence"},
-    {"id": "ads_optimisation",    "name": "Ads Optimisation Agent",         "category": "Marketing"},
-    {"id": "customer_success",    "name": "Customer Success Agent",         "category": "Support"},
-    {"id": "operations",          "name": "Operations Agent",               "category": "Operations"},
-    {"id": "finance_admin",       "name": "Finance/Admin Agent",            "category": "Finance"},
-    {"id": "research",            "name": "Research Agent",                 "category": "Intelligence"},
-    {"id": "content_strategy",    "name": "Content Strategy Agent",         "category": "Content"},
-    {"id": "retention_loyalty",   "name": "Retention/Loyalty Agent",        "category": "Marketing"},
-    {"id": "review_reputation",   "name": "Review/Reputation Agent",        "category": "Support"},
-    {"id": "workflow_automation", "name": "Workflow Automation Agent",      "category": "Operations"},
-]
-
-CATEGORY_DESCRIPTIONS = {
-    "Leadership":     "Strategic orchestration and executive decision-making across all business functions.",
-    "Strategy":       "Business strategy, competitive analysis, and long-term growth planning.",
-    "Growth":         "Partnership development, business development, and revenue growth strategy.",
-    "Sales":          "Lead generation, pipeline management, deal closing, and CRM operations.",
-    "Marketing":      "Campaigns, SEO, ads optimisation, influencer, and retention marketing.",
-    "Content":        "Social content, UGC, content strategy, and editorial planning.",
-    "Communication":  "Automated email responses, follow-ups, and inbox management.",
-    "Operations":     "Process automation, workflow optimisation, and operational efficiency.",
-    "Product":        "Website content, product ideation, roadmap, and feature specification.",
-    "Commerce":       "Product listings, store optimisation, and ecommerce strategy.",
-    "Intelligence":   "Market research, competitive intelligence, data analysis, and KPI reporting.",
-    "Finance":        "Financial reporting, admin automation, and bookkeeping assistance.",
-    "Support":        "Customer success, retention, review management, and reputation monitoring.",
-}
 
 
 def get_db():
@@ -91,7 +51,8 @@ def _get_user(credentials: HTTPAuthorizationCredentials, db: Session) -> User:
 
 def _require_admin(credentials: HTTPAuthorizationCredentials, db: Session) -> User:
     user = _get_user(credentials, db)
-    if not _ADMIN_EMAIL or user.email.lower() != _ADMIN_EMAIL.lower():
+    admin_email = os.getenv("ADMIN_EMAIL", "")
+    if not admin_email or user.email.lower() != admin_email.lower():
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
@@ -477,12 +438,142 @@ async def get_agents(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
+    """Return the full 27-agent catalogue with all metadata for admin use."""
     _require_admin(credentials, db)
-    agents_with_desc = [
-        {**a, "description": CATEGORY_DESCRIPTIONS.get(a["category"], "")}
-        for a in CLIENT_AGENTS
+
+    client_agents = [
+        {
+            "id": aid,
+            "name": meta["name"],
+            "category": meta["category"],
+            "role": meta["role"],
+            "architecture": meta["architecture"],
+            "hitl_level": meta["hitl_default"],
+            "min_package": meta["min_package"],
+            "credit_estimate": meta["credit_estimate"],
+            "capabilities": meta.get("capabilities", []),
+            "visibility": "client",
+        }
+        for aid, meta in AGENT_CATALOGUE.items()
     ]
-    return {"total": len(agents_with_desc), "agents": agents_with_desc}
+
+    internal = [
+        {
+            "id": aid,
+            "name": meta["name"],
+            "category": meta["category"],
+            "role": meta["role"],
+            "maps_to": meta.get("maps_to"),
+            "visibility": "internal",
+        }
+        for aid, meta in INTERNAL_AGENTS.items()
+    ]
+
+    # Per-tier agent counts
+    tier_counts = {tier: len(ids) for tier, ids in PACKAGE_AGENTS.items()}
+
+    return {
+        "total": len(client_agents),
+        "internal_total": len(internal),
+        "tier_counts": tier_counts,
+        "agents": client_agents,
+        "internal_layers": internal,
+    }
+
+
+@router.get("/agents/jobs")
+async def admin_list_agent_jobs(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Admin view of all agent jobs across all workspaces."""
+    _require_admin(credentials, db)
+    jobs = db.query(AgentJob).order_by(AgentJob.created_at.desc()).limit(500).all()
+
+    result = []
+    for j in jobs:
+        ws = db.query(Workspace).filter(Workspace.id == j.workspace_id).first()
+        org = db.query(Organization).filter(Organization.id == ws.organization_id).first() if ws else None
+        user = db.query(User).filter(User.id == org.owner_id).first() if org else None
+        result.append({
+            "id": j.id,
+            "agent_id": j.agent_id,
+            "agent_name": j.agent_name,
+            "status": j.status,
+            "hitl_level": j.hitl_level,
+            "credits_used": j.credits_used,
+            "error_message": j.error_message,
+            "created_at": j.created_at.isoformat() if j.created_at else None,
+            "completed_at": j.completed_at.isoformat() if j.completed_at else None,
+            "client_email": user.email if user else "unknown",
+            "workspace": ws.name if ws else None,
+        })
+    return {"total": len(result), "jobs": result}
+
+
+@router.post("/agents/jobs/{job_id}/approve")
+async def admin_approve_agent_job(
+    job_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Admin approves a HITL-3 pending_approval agent job."""
+    _require_admin(credentials, db)
+    job = db.query(AgentJob).filter(AgentJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Agent job not found")
+    if job.status != "pending_approval":
+        raise HTTPException(status_code=400, detail=f"Job is in status '{job.status}', not pending_approval")
+    job.status = "approved"
+    job.updated_at = datetime.utcnow()
+    db.commit()
+    return {"success": True, "job_id": job_id, "new_status": "approved"}
+
+
+@router.post("/agents/jobs/{job_id}/reject")
+async def admin_reject_agent_job(
+    job_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Admin rejects a HITL-3 pending_approval agent job."""
+    _require_admin(credentials, db)
+    job = db.query(AgentJob).filter(AgentJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Agent job not found")
+    job.status = "rejected"
+    job.updated_at = datetime.utcnow()
+    db.commit()
+    return {"success": True, "job_id": job_id, "new_status": "rejected"}
+
+
+@router.get("/packages/downloads")
+async def admin_list_downloads(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Admin view of all OTC package downloads."""
+    _require_admin(credentials, db)
+    downloads = db.query(PackageDownload).order_by(PackageDownload.created_at.desc()).limit(500).all()
+
+    result = []
+    for d in downloads:
+        ws = db.query(Workspace).filter(Workspace.id == d.workspace_id).first()
+        org = db.query(Organization).filter(Organization.id == ws.organization_id).first() if ws else None
+        user = db.query(User).filter(User.id == org.owner_id).first() if org else None
+        result.append({
+            "id": d.id,
+            "package_name": d.package_name,
+            "otc_code": d.otc_code,
+            "is_used": d.is_used,
+            "used_at": d.used_at.isoformat() if d.used_at else None,
+            "expires_at": d.expires_at.isoformat() if d.expires_at else None,
+            "ip_address": d.ip_address,
+            "created_at": d.created_at.isoformat() if d.created_at else None,
+            "client_email": user.email if user else "unknown",
+            "workspace": ws.name if ws else None,
+        })
+    return {"total": len(result), "downloads": result}
 
 
 # ─── Provider Health ──────────────────────────────────────────────────────────

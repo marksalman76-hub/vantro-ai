@@ -134,20 +134,30 @@ export default function AdaptabilityShowcase() {
   const visible = active === 'all' ? CASES : CASES.filter((c) => c.industry === active)
 
   return (
-    <section id="adaptability" className="section-padding bg-dark">
+    <section
+      id="adaptability"
+      className="section-padding relative overflow-hidden"
+      style={{ background: 'linear-gradient(180deg, #070D1F 0%, #080D1E 100%)' }}
+    >
+      <div className="absolute inset-0 mesh-grid opacity-35 pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[500px] h-[400px] bg-cyan-500/06 blur-[120px] rounded-full pointer-events-none" />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 22 }}
           className="text-center mb-12"
         >
-          <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold glass border border-cyan-500/20 text-cyan-300 mb-4">
+          <span className="section-badge-cyan mb-5">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
             Industry Adaptability
           </span>
-          <h2 className="section-heading mb-4">Works Wherever You Work</h2>
-          <p className="section-sub">
+          <h2 className="section-heading mt-4 mb-4">
+            Works Wherever <span className="gradient-text">You Work</span>
+          </h2>
+          <p className="section-sub mt-2">
             No re-training, no new configuration. Vantro agents recognise your industry and adapt automatically.
           </p>
         </motion.div>
@@ -155,17 +165,20 @@ export default function AdaptabilityShowcase() {
         {/* Filters */}
         <div className="flex flex-wrap justify-center gap-2 mb-10">
           {FILTERS.map((f) => (
-            <button
+            <motion.button
               key={f.id}
               onClick={() => setActive(f.id)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+              className={`px-4 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
                 active === f.id
-                  ? 'bg-violet-600 text-white shadow-[0_4px_14px_rgba(124,58,237,0.4)]'
-                  : 'glass border border-white/10 text-white/55 hover:text-white hover:border-white/25'
+                  ? 'bg-violet-600 text-white shadow-[0_4px_20px_rgba(124,58,237,0.45)]'
+                  : 'glass-strong border border-white/10 text-white/50 hover:text-white hover:border-white/20'
               }`}
             >
               {f.label}
-            </button>
+            </motion.button>
           ))}
         </div>
 
@@ -179,9 +192,10 @@ export default function AdaptabilityShowcase() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.35 }}
-                className="glass rounded-2xl p-6 flex flex-col"
-                style={{ borderColor: `${c.color}30`, boxShadow: `0 4px 30px ${c.glow}` }}
+                transition={{ type: 'spring', stiffness: 200, damping: 22 }}
+                whileHover={{ y: -4, scale: 1.01 }}
+                className="glass-ultra rounded-2xl p-6 flex flex-col"
+                style={{ border: `1px solid ${c.color}22`, boxShadow: `0 8px 40px ${c.glow}` }}
               >
                 {/* Headline + agents */}
                 <div className="flex items-start justify-between mb-4">
@@ -223,3 +237,4 @@ export default function AdaptabilityShowcase() {
     </section>
   )
 }
+

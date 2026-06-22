@@ -402,3 +402,4 @@ if missing:
 print("POPUP_MEDIA_JOB_STATUS_TRACKER_INSTALLED")
 print(f"Backup folder: {BACKUP_DIR}")
 print(f"Updated: {TARGET}")
+

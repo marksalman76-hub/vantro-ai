@@ -12,6 +12,11 @@ from app.models import *
 config = context.config
 fileConfig(config.config_file_name)
 
+# Override sqlalchemy.url from DATABASE_URL env var if set
+_db_url = os.getenv("DATABASE_URL")
+if _db_url:
+    config.set_main_option("sqlalchemy.url", _db_url)
+
 target_metadata = Base.metadata
 
 def run_migrations_offline():

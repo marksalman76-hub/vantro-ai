@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, Boolean, DateTime
+from sqlalchemy import Column, String, Boolean, DateTime, ForeignKey
 from app.database import Base
 
 class User(Base):
@@ -14,3 +14,5 @@ class User(Base):
     subscription_status = Column(String, nullable=True)
     reset_token = Column(String, nullable=True)
     reset_token_expires = Column(DateTime, nullable=True)
+    # Populated in DB from the real schema; nullable to avoid FK issues on creation
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=True)

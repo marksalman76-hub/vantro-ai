@@ -7,16 +7,17 @@ import Button from '@/components/Button'
 
 const PLANS = [
   {
-    name:       'Starter',
-    icon:       Zap,
-    desc:       'Perfect for trying out Vantro',
-    monthly:    99,
-    annual:     79,
-    agents:     '2–3 agents',
-    cta:        'Start Free Trial',
-    href:       '#agents',
-    highlight:  false,
-    badge:      null as string | null,
+    name:      'Starter',
+    icon:      Zap,
+    desc:      'Perfect for trying out Vantro',
+    monthly:   99,
+    annual:    79,
+    agents:    '2–3 agents',
+    cta:       'Start Free Trial',
+    href:      '#agents',
+    highlight: false,
+    badge:     null as string | null,
+    color:     '#3B82F6',
     features: [
       { text: '2–3 AI Agents',           included: true  },
       { text: '5 integrations',           included: true  },
@@ -29,16 +30,17 @@ const PLANS = [
     ],
   },
   {
-    name:       'Professional',
-    icon:       Users,
-    desc:       'For growing teams and agencies',
-    monthly:    299,
-    annual:     239,
-    agents:     '5–7 agents',
-    cta:        'Start Free Trial',
-    href:       '#agents',
-    highlight:  true,
-    badge:      'Most Popular',
+    name:      'Professional',
+    icon:      Users,
+    desc:      'For growing teams and agencies',
+    monthly:   299,
+    annual:    239,
+    agents:    '5–7 agents',
+    cta:       'Start Free Trial',
+    href:      '#agents',
+    highlight: true,
+    badge:     'Most Popular',
+    color:     '#7C3AED',
     features: [
       { text: '5–7 AI Agents',            included: true  },
       { text: '500+ integrations',        included: true  },
@@ -51,16 +53,17 @@ const PLANS = [
     ],
   },
   {
-    name:       'Enterprise',
-    icon:       Building2,
-    desc:       'For large organisations',
-    monthly:    null as number | null,
-    annual:     null as number | null,
-    agents:     'Unlimited agents',
-    cta:        'Contact Sales',
-    href:       '#roi-calculator',
-    highlight:  false,
-    badge:      null as string | null,
+    name:      'Enterprise',
+    icon:      Building2,
+    desc:      'For large organisations',
+    monthly:   null as number | null,
+    annual:    null as number | null,
+    agents:    'Unlimited agents',
+    cta:       'Contact Sales',
+    href:      '#roi-calculator',
+    highlight: false,
+    badge:     null as string | null,
+    color:     '#06B6D4',
     features: [
       { text: 'Unlimited AI Agents',       included: true },
       { text: 'All integrations + custom', included: true },
@@ -89,24 +92,24 @@ const FAQS = [
   },
   {
     q: 'What if I need more agents than any plan offers?',
-    a: 'Our Enterprise plan is fully custom. Talk to our solutions team and we\'ll build a configuration that matches your exact workflow and scale.',
+    a: "Our Enterprise plan is fully custom. Talk to our solutions team and we'll build a configuration that matches your exact workflow and scale.",
   },
 ]
 
 function FAQItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false)
   return (
-    <div className="glass rounded-xl border border-white/[0.07] overflow-hidden">
+    <div className="glass-strong rounded-xl border border-white/[0.07] overflow-hidden">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left"
+        className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left group"
         aria-expanded={open}
       >
-        <span className="text-sm font-semibold text-white/85">{q}</span>
+        <span className="text-sm font-semibold text-white/80 group-hover:text-white transition-colors">{q}</span>
         <motion.span
           animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: 0.2 }}
-          className="flex-shrink-0 text-white/40"
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          className="flex-shrink-0 text-white/35 group-hover:text-white/60 transition-colors"
         >
           <ChevronDown className="w-4 h-4" />
         </motion.span>
@@ -118,10 +121,10 @@ function FAQItem({ q, a }: { q: string; a: string }) {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22 }}
+            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
             className="overflow-hidden"
           >
-            <p className="px-5 pb-4 text-sm text-white/50 leading-relaxed">{a}</p>
+            <p className="px-5 pb-5 text-sm text-white/45 leading-relaxed">{a}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -133,117 +136,116 @@ export default function Pricing() {
   const [annual, setAnnual] = useState(false)
 
   return (
-    <section id="pricing" className="section-padding relative overflow-hidden">
-      {/* Background blobs */}
-      <div className="absolute -top-40 left-1/4 w-[500px] h-[500px] bg-violet-600/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute -bottom-40 right-1/4 w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[120px] pointer-events-none" />
+    <section
+      id="pricing"
+      className="section-padding relative overflow-hidden"
+      style={{ background: 'linear-gradient(180deg, #070D1F 0%, #0A1230 100%)' }}
+    >
+      <div className="absolute inset-0 mesh-grid opacity-40 pointer-events-none" />
+      <div className="absolute -top-40 left-1/4 w-[600px] h-[500px] bg-violet-600/08 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute -bottom-40 right-1/4 w-[500px] h-[400px] bg-blue-600/08 rounded-full blur-[120px] pointer-events-none" />
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Heading */}
         <motion.div
-          initial={{ opacity: 0, y: 24 }}
+          initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 22 }}
           className="text-center mb-12"
         >
-          <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold glass border border-violet-500/20 text-violet-300 mb-4">
+          <span className="section-badge-violet mb-5">
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
             Transparent Pricing
           </span>
-          <h2 className="section-heading mb-4">
+          <h2 className="section-heading mt-4 mb-4">
             Simple Plans,{' '}
             <span className="gradient-text">Serious Results</span>
           </h2>
-          <p className="section-sub mb-8">
+          <p className="section-sub mb-8 mt-2">
             Start free. No credit card required. Deploy your first agent in 10 minutes.
           </p>
 
-          {/* Monthly / Annual toggle */}
-          <div className="inline-flex items-center gap-3 p-1.5 glass rounded-full border border-white/10">
-            <button
-              onClick={() => setAnnual(false)}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
-                !annual
-                  ? 'bg-violet-600 text-white shadow-[0_2px_12px_rgba(124,58,237,0.4)]'
-                  : 'text-white/50 hover:text-white/80'
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setAnnual(true)}
-              className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 ${
-                annual
-                  ? 'bg-violet-600 text-white shadow-[0_2px_12px_rgba(124,58,237,0.4)]'
-                  : 'text-white/50 hover:text-white/80'
-              }`}
-            >
-              Annual
-              <AnimatePresence>
-                {annual && (
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="ml-2 text-xs text-cyan-300"
-                  >
-                    Save 20%
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </button>
+          {/* Toggle */}
+          <div className="inline-flex items-center gap-1.5 p-1.5 glass-strong rounded-full border border-white/10">
+            {['Monthly', 'Annual'].map((label) => {
+              const isAnnual = label === 'Annual'
+              const active = annual === isAnnual
+              return (
+                <button
+                  key={label}
+                  onClick={() => setAnnual(isAnnual)}
+                  className={`px-5 py-2 rounded-full text-sm font-bold transition-all duration-250 flex items-center gap-2 ${
+                    active
+                      ? 'bg-violet-600 text-white shadow-[0_2px_16px_rgba(124,58,237,0.45)]'
+                      : 'text-white/45 hover:text-white/70'
+                  }`}
+                >
+                  {label}
+                  {isAnnual && annual && (
+                    <span className="text-xs text-cyan-300 font-bold">-20%</span>
+                  )}
+                </button>
+              )
+            })}
           </div>
         </motion.div>
 
         {/* Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-16">
           {PLANS.map((plan, i) => {
             const Icon = plan.icon
             return (
               <motion.div
                 key={plan.name}
-                initial={{ opacity: 0, y: 28 }}
+                initial={{ opacity: 0, y: 32 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 22, delay: i * 0.1 }}
+                whileHover={{ y: -6, scale: 1.01 }}
                 className="relative"
               >
-                {/* Glow for highlighted */}
+                {/* Iridescent glow for highlighted plan */}
                 {plan.highlight && (
-                  <div className="absolute -inset-px rounded-2xl bg-gradient-to-b from-violet-500/40 via-blue-500/20 to-transparent pointer-events-none" />
+                  <>
+                    <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-b from-violet-500/50 via-blue-500/30 to-cyan-500/20 pointer-events-none" />
+                    <div className="absolute -inset-[2px] rounded-2xl blur-sm bg-gradient-to-b from-violet-500/20 to-transparent pointer-events-none" />
+                  </>
                 )}
 
                 <div
-                  className={`relative flex flex-col h-full glass rounded-2xl p-7 ${
+                  className={`relative flex flex-col h-full rounded-2xl p-7 ${
                     plan.highlight
-                      ? 'border border-violet-500/40 shadow-[0_8px_50px_rgba(124,58,237,0.2)]'
-                      : 'border border-white/[0.08]'
+                      ? 'glass-ultra shadow-[0_16px_60px_rgba(124,58,237,0.25)]'
+                      : 'glass border border-white/[0.08]'
                   }`}
                 >
                   {/* Badge */}
                   {plan.badge && (
                     <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                      <span className="px-3.5 py-1 rounded-full text-xs font-bold text-white bg-gradient-to-r from-violet-600 to-blue-600 shadow-[0_2px_16px_rgba(124,58,237,0.5)]">
+                      <span className="px-4 py-1 rounded-full text-xs font-black text-white bg-gradient-to-r from-violet-600 to-blue-500 shadow-[0_2px_20px_rgba(124,58,237,0.6)] tracking-wide">
                         {plan.badge}
                       </span>
                     </div>
                   )}
 
-                  {/* Plan header */}
+                  {/* Header */}
                   <div className="flex items-center gap-3 mb-5">
                     <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center"
+                      className="w-11 h-11 rounded-xl flex items-center justify-center"
                       style={{
                         background: plan.highlight
                           ? 'linear-gradient(135deg, #7C3AED, #3B82F6)'
-                          : 'rgba(255,255,255,0.07)',
+                          : `${plan.color}18`,
+                        border: `1px solid ${plan.color}35`,
+                        boxShadow: `0 0 20px ${plan.color}15`,
                       }}
                     >
                       <Icon className="w-5 h-5 text-white" />
                     </div>
                     <div>
                       <h3 className="text-base font-bold text-white">{plan.name}</h3>
-                      <p className="text-xs text-white/45">{plan.desc}</p>
+                      <p className="text-xs text-white/40 font-medium">{plan.desc}</p>
                     </div>
                   </div>
 
@@ -255,18 +257,18 @@ export default function Pricing() {
                           <AnimatePresence mode="wait">
                             <motion.span
                               key={annual ? 'a' : 'm'}
-                              initial={{ opacity: 0, y: -8 }}
+                              initial={{ opacity: 0, y: -10 }}
                               animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, y: 8 }}
-                              transition={{ duration: 0.18 }}
-                              className="text-4xl font-bold text-white"
+                              exit={{ opacity: 0, y: 10 }}
+                              transition={{ duration: 0.2 }}
+                              className="text-4xl font-black text-white"
                             >
                               ${annual ? plan.annual : plan.monthly}
                             </motion.span>
                           </AnimatePresence>
-                          <span className="text-white/45 text-sm pb-1.5">/month</span>
+                          <span className="text-white/35 text-sm pb-1.5">/month</span>
                         </div>
-                        <p className="text-xs text-white/35 mt-1">
+                        <p className="text-xs text-white/30 mt-1">
                           {annual
                             ? `Billed $${(plan.annual! * 12).toLocaleString()} / year`
                             : 'Billed monthly'}
@@ -274,8 +276,8 @@ export default function Pricing() {
                       </>
                     ) : (
                       <>
-                        <p className="text-2xl font-bold text-cyan-400">Custom</p>
-                        <p className="text-xs text-white/35 mt-1">Tailored to your scale</p>
+                        <p className="text-2xl font-black gradient-text-cyan">Custom</p>
+                        <p className="text-xs text-white/30 mt-1">Tailored to your scale</p>
                       </>
                     )}
                   </div>
@@ -285,14 +287,17 @@ export default function Pricing() {
                     href={plan.href}
                     variant={plan.highlight ? 'primary' : 'secondary'}
                     size="md"
-                    className="w-full mb-6"
+                    className="w-full mb-5"
                   >
                     {plan.cta}
                   </Button>
 
-                  {/* Agents badge */}
-                  <div className="flex items-center justify-center px-3 py-2 rounded-lg bg-white/[0.04] border border-white/[0.06] mb-6">
-                    <span className="text-xs text-white/60 font-medium">{plan.agents}</span>
+                  {/* Agent badge */}
+                  <div
+                    className="flex items-center justify-center px-3 py-2 rounded-lg mb-5"
+                    style={{ background: `${plan.color}12`, border: `1px solid ${plan.color}20` }}
+                  >
+                    <span className="text-xs font-semibold" style={{ color: plan.color }}>{plan.agents}</span>
                   </div>
 
                   {/* Features */}
@@ -302,13 +307,9 @@ export default function Pricing() {
                         {f.included ? (
                           <Check className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                         ) : (
-                          <X className="w-4 h-4 text-white/20 flex-shrink-0" />
+                          <X className="w-4 h-4 text-white/18 flex-shrink-0" />
                         )}
-                        <span
-                          className={`text-sm ${
-                            f.included ? 'text-white/70' : 'text-white/30'
-                          }`}
-                        >
+                        <span className={`text-sm ${f.included ? 'text-white/65' : 'text-white/25'}`}>
                           {f.text}
                         </span>
                       </li>
@@ -325,8 +326,8 @@ export default function Pricing() {
           initial={{ opacity: 0, y: 16 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="flex flex-wrap items-center justify-center gap-6 mb-20 text-xs text-white/40"
+          transition={{ type: 'spring', stiffness: 200, damping: 22 }}
+          className="flex flex-wrap items-center justify-center gap-6 mb-16 text-xs text-white/35 font-medium"
         >
           {['14-day free trial', 'No credit card required', 'Cancel any time', '99.9% uptime SLA', 'SOC 2 certified'].map((item) => (
             <span key={item} className="flex items-center gap-1.5">
@@ -341,10 +342,10 @@ export default function Pricing() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          transition={{ duration: 0.55 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 22 }}
           className="max-w-2xl mx-auto"
         >
-          <h3 className="text-xl font-bold text-white text-center mb-6">
+          <h3 className="text-xl font-bold text-white text-center mb-7">
             Frequently Asked Questions
           </h3>
           <div className="space-y-3">

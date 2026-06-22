@@ -1,5 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
+load_dotenv()  # load backend/.env before any other imports read os.getenv()
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -11,6 +13,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.limiter import limiter
 from app.routes.admin import router as admin_router
+from app.routes.agents import router as agents_router
 from app.routes.auth import router as auth_router
 from app.routes.contact import router as contact_router
 from app.routes.dashboard import router as dashboard_router
@@ -33,10 +36,21 @@ async def cost_protection_middleware(request: Request, call_next) -> Response:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Web tier has no background tasks — job processing is handled
-    # exclusively by the vantro-worker ECS service via SQS.
     logger.info("Vantro API starting up")
+
+    # Start the agent worker background loop
+    import asyncio
+    from app.agents.agent_worker import run_agent_worker
+    worker_task = asyncio.create_task(run_agent_worker())
+
     yield
+
+    # Graceful shutdown
+    worker_task.cancel()
+    try:
+        await worker_task
+    except asyncio.CancelledError:
+        pass
     logger.info("Vantro API shutting down")
 
 
@@ -60,6 +74,7 @@ app.add_middleware(
 )
 
 app.include_router(admin_router)
+app.include_router(agents_router)
 app.include_router(auth_router)
 app.include_router(contact_router)
 app.include_router(dashboard_router)

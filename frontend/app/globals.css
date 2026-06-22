@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Ambient grid mesh ─────────────────────────────────────────────── */
+.mesh-grid {
+  background-image:
+    linear-gradient(rgba(124,58,237,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124,58,237,0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.mesh-grid-fine {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
 /* ── Hero Futuristic animations ───────────────────────────────────── */
 .fade-in {
   animation: fadeInWord 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -142,51 +156,92 @@
 }
 
 @layer components {
+  /* ── Base glass layers ─────────────────────────────────────────── */
   .glass {
     background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px) saturate(1.3);
+    -webkit-backdrop-filter: blur(12px) saturate(1.3);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
   .glass-strong {
-    background: rgba(255, 255, 255, 0.07);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
     border: 1px solid rgba(255, 255, 255, 0.12);
   }
+  .glass-ultra {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(28px) saturate(1.8);
+    -webkit-backdrop-filter: blur(28px) saturate(1.8);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+  }
+  /* Iridescent glass — shimmer border using gradient */
+  .glass-iridescent {
+    background: rgba(10, 14, 40, 0.55);
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    box-shadow:
+      0 0 0 1px rgba(124,58,237,0.25),
+      0 8px 40px rgba(124,58,237,0.12),
+      inset 0 1px 0 rgba(255,255,255,0.10);
+  }
+  .glass-violet {
+    background: rgba(124,58,237,0.07);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid rgba(124,58,237,0.20);
+    box-shadow: 0 4px 24px rgba(124,58,237,0.10);
+  }
   .glass-hover {
-    transition: background 0.25s, border-color 0.25s;
+    transition: background 0.25s, border-color 0.25s, box-shadow 0.25s;
   }
   .glass-hover:hover {
     background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
   }
+
+  /* ── Text gradients ────────────────────────────────────────────── */
   .gradient-text {
-    background: linear-gradient(135deg, #C084FC 0%, #7C3AED 25%, #3B82F6 60%, #06B6D4 100%);
+    background: linear-gradient(135deg, #E0AAFF 0%, #C084FC 20%, #7C3AED 45%, #3B82F6 70%, #06B6D4 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
   .gradient-text-purple {
-    background: linear-gradient(135deg, #C084FC 0%, #7C3AED 100%);
+    background: linear-gradient(135deg, #E0AAFF 0%, #C084FC 40%, #7C3AED 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+  .gradient-text-cyan {
+    background: linear-gradient(135deg, #67E8F9 0%, #06B6D4 50%, #3B82F6 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Buttons ───────────────────────────────────────────────────── */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm text-white
-      bg-gradient-to-r from-violet-600 to-blue-600
-      hover:from-violet-500 hover:to-blue-500
-      shadow-[0_4px_20px_rgba(124,58,237,0.35)]
-      hover:shadow-[0_4px_30px_rgba(124,58,237,0.55)]
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white
+      bg-gradient-to-r from-violet-600 via-violet-500 to-blue-600
+      hover:from-violet-500 hover:via-violet-400 hover:to-blue-500
+      shadow-[0_4px_24px_rgba(124,58,237,0.40)]
+      hover:shadow-[0_6px_36px_rgba(124,58,237,0.60)]
       transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-violet-500/50;
   }
   .btn-secondary {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm text-white
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm text-white
       bg-white/[0.06] border border-white/20
-      hover:bg-white/[0.10] hover:border-white/35
-      transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20;
+      hover:bg-white/[0.10] hover:border-violet-400/40
+      transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/20
+      backdrop-blur-sm;
   }
+
+  /* ── Layout ────────────────────────────────────────────────────── */
   .section-padding {
     @apply py-20 lg:py-28;
   }
@@ -196,12 +251,89 @@
   .section-sub {
     @apply text-base sm:text-lg text-white/60 max-w-2xl mx-auto;
   }
+
+  /* ── 3D card perspective helpers ───────────────────────────────── */
+  .perspective-card {
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  .depth-layer {
+    transform: translateZ(20px);
+  }
+
+  /* ── Glow accents ──────────────────────────────────────────────── */
+  .glow-violet { box-shadow: 0 0 30px rgba(124,58,237,0.35), 0 0 60px rgba(124,58,237,0.15); }
+  .glow-blue   { box-shadow: 0 0 30px rgba(59,130,246,0.35),  0 0 60px rgba(59,130,246,0.15);  }
+  .glow-cyan   { box-shadow: 0 0 30px rgba(6,182,212,0.35),   0 0 60px rgba(6,182,212,0.15);   }
+
+  /* ── Section label badge ───────────────────────────────────────── */
+  .section-badge {
+    @apply inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold
+      border tracking-wide;
+  }
+  .section-badge-violet {
+    @apply section-badge glass border-violet-500/25 text-violet-300;
+  }
+  .section-badge-cyan {
+    @apply section-badge glass border-cyan-500/25 text-cyan-300;
+  }
+  .section-badge-blue {
+    @apply section-badge glass border-blue-500/25 text-blue-300;
+  }
+  .section-badge-pink {
+    @apply section-badge glass border-pink-500/25 text-pink-300;
+  }
 }
 
-/* Skip paint/layout for off-screen sections — browser renders them only as they enter the viewport */
-main > section:not(:first-child) {
-  content-visibility: auto;
-  contain-intrinsic-size: 0 600px;
+/* ── Aurora shimmer ────────────────────────────────────────────────── */
+@keyframes aurora {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.aurora {
+  background: linear-gradient(270deg, #7C3AED, #3B82F6, #06B6D4, #7C3AED);
+  background-size: 400% 400%;
+  animation: aurora 8s ease infinite;
+}
+
+/* ── Shimmer effect ────────────────────────────────────────────────── */
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position:  200% center; }
+}
+.shimmer-text {
+  background: linear-gradient(90deg, #C084FC 0%, #fff 40%, #C084FC 80%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 3s linear infinite;
+}
+
+/* ── Card top-edge highlight ─────────────────────────────────────── */
+.card-top-glow::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; right: 10%; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+  pointer-events: none;
+}
+
+/* ── Scroll performance ───────────────────────────────────────────── */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Sections: no content-visibility (Next.js dynamic() handles lazy loading) */
+
+/* GPU-composited ambient blobs — transform-only animation */
+.animate-blob {
+  will-change: transform;
+  isolation: isolate;
 }
 
 /* Infinite scroll strips */
