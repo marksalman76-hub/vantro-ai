@@ -671,3 +671,96 @@ async def get_infrastructure(
             {"name": "IAM Roles",            "status": "configured", "detail": "ecsTaskExecutionRole + ecsTaskRole"},
         ],
     }
+
+
+# ─── Admin Run Agent (no package/credit restrictions) ─────────────────────────
+
+class AdminRunRequest(BaseModel):
+    prompt: str
+    context: dict = {}
+
+
+@router.post("/agents/{agent_id}/run")
+async def admin_run_agent(
+    agent_id: str,
+    body: AdminRunRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Admin can run any agent without package, credit, or workspace restrictions."""
+    import uuid as _uuid
+    import json as _json
+
+    admin = _require_admin(credentials, db)
+
+    from app.agents.agent_registry import normalize_agent_id
+    norm_id = normalize_agent_id(agent_id)
+    if norm_id not in AGENT_CATALOGUE:
+        raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found")
+
+    meta = AGENT_CATALOGUE[norm_id]
+    hitl = meta["hitl_default"]
+
+    # Get or create admin workspace
+    ws = db.query(Workspace).filter(Workspace.owner_id == admin.id).first()
+    if not ws:
+        ws = Workspace(
+            id=str(_uuid.uuid4()),
+            owner_id=admin.id,
+            name="Admin Workspace",
+            plan="enterprise",
+            created_at=datetime.utcnow(),
+        )
+        db.add(ws)
+        db.commit()
+        db.refresh(ws)
+
+    now = datetime.utcnow()
+    job = AgentJob(
+        id=str(_uuid.uuid4()),
+        workspace_id=ws.id,
+        agent_id=norm_id,
+        agent_name=meta["name"],
+        status="pending",
+        hitl_level=hitl,
+        input_data=_json.dumps({"prompt": body.prompt[:10_000], "context": body.context}),
+        credits_used=0,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(job)
+    db.commit()
+    db.refresh(job)
+
+    return {
+        "job_id": job.id,
+        "agent_id": norm_id,
+        "agent_name": meta["name"],
+        "status": job.status,
+        "hitl_level": hitl,
+        "message": "Job queued. Admin run bypasses package and credit restrictions.",
+    }
+
+
+@router.get("/agents/jobs/{job_id}")
+async def admin_get_agent_job(
+    job_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    _require_admin(credentials, db)
+    job = db.query(AgentJob).filter(AgentJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return {
+        "id": job.id,
+        "agent_id": job.agent_id,
+        "agent_name": job.agent_name,
+        "status": job.status,
+        "hitl_level": job.hitl_level,
+        "output": job.output,
+        "error_message": job.error_message,
+        "credits_used": job.credits_used,
+        "created_at": job.created_at.isoformat() if job.created_at else None,
+        "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+    }

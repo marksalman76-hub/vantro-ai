@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-
-// ── Types ──────────────────────────────────────────────────────────────────────
 
 interface AgentMeta {
   id: string;
@@ -15,7 +13,6 @@ interface AgentMeta {
   min_package: string;
   credit_estimate: number;
   capabilities: string[];
-  visibility: 'client' | 'internal';
 }
 
 interface InternalLayer {
@@ -24,7 +21,6 @@ interface InternalLayer {
   category: string;
   role: string;
   maps_to: string | null;
-  visibility: 'internal';
 }
 
 interface AgentsResponse {
@@ -35,7 +31,13 @@ interface AgentsResponse {
   internal_layers: InternalLayer[];
 }
 
-// ── Color maps ─────────────────────────────────────────────────────────────────
+interface JobResult {
+  job_id: string;
+  agent_name: string;
+  status: string;
+  output: string | null;
+  error_message: string | null;
+}
 
 const CATEGORY_COLOR: Record<string, string> = {
   Executive:  'bg-amber-500/10  text-amber-400  border-amber-500/20',
@@ -47,7 +49,6 @@ const CATEGORY_COLOR: Record<string, string> = {
   Digital:    'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
   Support:    'bg-teal-500/10   text-teal-400   border-teal-500/20',
   Operations: 'bg-gray-500/10   text-gray-300   border-gray-500/20',
-  System:     'bg-zinc-500/10   text-zinc-400   border-zinc-500/20',
 };
 
 const HITL_COLOR: Record<string, string> = {
@@ -57,40 +58,193 @@ const HITL_COLOR: Record<string, string> = {
   'HITL-3': 'bg-red-500/10    text-red-400    border-red-500/20',
 };
 
-const TIER_COLOR: Record<string, string> = {
-  starter:   'bg-green-500/10  text-green-400  border-green-500/20',
-  growth:    'bg-blue-500/10   text-blue-400   border-blue-500/20',
-  business:  'bg-violet-500/10 text-violet-400 border-violet-500/20',
-  enterprise:'bg-amber-500/10  text-amber-400  border-amber-500/20',
-};
-
-const HITL_DESC: Record<string, string> = {
-  'HITL-0': 'Autonomous — internal drafts, no approval needed',
-  'HITL-1': 'Review — output reviewed before finalised',
-  'HITL-2': 'Approval — must approve before external action',
-  'HITL-3': 'Owner gate — admin must approve spend / high-risk action',
-};
-
 const CATEGORIES = ['All', 'Executive', 'Strategy', 'Research', 'Sales', 'Marketing', 'Media', 'Digital', 'Support', 'Operations'];
 
-// ── Component ──────────────────────────────────────────────────────────────────
+function OutputRenderer({ text }: { text: string }) {
+  return (
+    <div className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed font-mono bg-gray-950 rounded-xl p-4 max-h-96 overflow-y-auto border border-gray-800">
+      {text}
+    </div>
+  );
+}
+
+function RunModal({ agent, token, onClose }: { agent: AgentMeta; token: string; onClose: () => void }) {
+  const [prompt, setPrompt] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [job, setJob] = useState<JobResult | null>(null);
+  const [polling, setPolling] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const pollJob = useCallback(async (jobId: string) => {
+    setPolling(true);
+    const interval = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/admin/agents/jobs/${jobId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await r.json();
+        setJob(d);
+        if (['completed', 'failed', 'cancelled'].includes(d.status)) {
+          clearInterval(interval);
+          setPolling(false);
+        }
+      } catch {
+        clearInterval(interval);
+        setPolling(false);
+      }
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [token]);
+
+  const submit = async () => {
+    if (!prompt.trim()) return;
+    setSubmitting(true);
+    try {
+      const r = await fetch(`/api/admin/agents/${agent.id}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ prompt: prompt.trim() }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setJob({ job_id: '', agent_name: agent.name, status: 'failed', output: null, error_message: d.detail || 'Failed to start job' });
+        return;
+      }
+      setJob({ job_id: d.job_id, agent_name: agent.name, status: d.status, output: null, error_message: null });
+      pollJob(d.job_id);
+    } catch {
+      setJob({ job_id: '', agent_name: agent.name, status: 'failed', output: null, error_message: 'Network error' });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const copy = () => {
+    if (job?.output) { navigator.clipboard.writeText(job.output); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-start justify-between p-6 border-b border-gray-800">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-lg font-bold text-white">{agent.name}</h2>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${HITL_COLOR[agent.hitl_level]}`}>{agent.hitl_level}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-bold">Admin run</span>
+            </div>
+            <p className="text-gray-500 text-xs leading-relaxed max-w-lg">{agent.role}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-600 hover:text-white transition-colors ml-4 shrink-0 text-xl leading-none">✕</button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {!job ? (
+            <>
+              <div>
+                <label className="block text-xs font-medium text-gray-400 mb-2">Task / Prompt</label>
+                <textarea
+                  value={prompt}
+                  onChange={e => setPrompt(e.target.value)}
+                  rows={6}
+                  placeholder={`Describe what you want ${agent.name} to do…`}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-violet-500"
+                />
+                <p className="text-gray-700 text-xs mt-1.5">Admin run — no package or credit restrictions apply.</p>
+              </div>
+              <button
+                onClick={submit}
+                disabled={submitting || !prompt.trim()}
+                className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+              >
+                {submitting ? (
+                  <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Starting…</>
+                ) : (
+                  `Run ${agent.name}`
+                )}
+              </button>
+            </>
+          ) : (
+            <div className="space-y-4">
+              {/* Status */}
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${
+                  job.status === 'completed' ? 'bg-green-400' :
+                  job.status === 'failed' ? 'bg-red-400' :
+                  job.status === 'running' ? 'bg-yellow-400 animate-pulse' :
+                  'bg-blue-400 animate-pulse'
+                }`} />
+                <span className="text-sm font-medium text-white capitalize">{job.status}</span>
+                {polling && <span className="text-xs text-gray-500">Polling…</span>}
+              </div>
+
+              {/* Output */}
+              {job.output && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-gray-400">Output</p>
+                    <button onClick={copy} className="text-xs text-violet-400 hover:text-violet-300 transition-colors">
+                      {copied ? 'Copied' : 'Copy'}
+                    </button>
+                  </div>
+                  <OutputRenderer text={job.output} />
+                </div>
+              )}
+
+              {/* Error */}
+              {job.error_message && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                  <p className="text-red-400 text-xs">{job.error_message}</p>
+                </div>
+              )}
+
+              {/* Pending / running message */}
+              {!job.output && !job.error_message && (
+                <div className="bg-gray-800 rounded-xl px-4 py-6 text-center">
+                  <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-gray-400 text-sm">Agent is working…</p>
+                  <p className="text-gray-600 text-xs mt-1">Job ID: {job.job_id}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => { setJob(null); setPrompt(''); }}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 text-sm transition-colors"
+                >
+                  Run again
+                </button>
+                <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-gray-800 text-white text-sm hover:bg-gray-700 transition-colors">
+                  Close
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function AdminAgentsPage() {
   const router = useRouter();
   const [data, setData] = useState<AgentsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [catFilter, setCatFilter] = useState('All');
+  const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [tierFilter, setTierFilter] = useState<string>('all');
+  const [runAgent, setRunAgent] = useState<AgentMeta | null>(null);
+  const [token, setToken] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_token');
-    if (!token) { router.push('/admin-login'); return; }
-    fetch('/api/admin/agents', { headers: { Authorization: `Bearer ${token}` } })
+    const t = localStorage.getItem('admin_token');
+    if (!t) { router.push('/admin-login'); return; }
+    setToken(t);
+    fetch('/api/admin/agents', { headers: { Authorization: `Bearer ${t}` } })
       .then(async (r) => {
         if (r.status === 403) { router.push('/admin-login'); return; }
-        const d = await r.json();
-        setData(d);
+        setData(await r.json());
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -101,168 +255,109 @@ export default function AdminAgentsPage() {
       <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
-
   if (!data) return null;
 
   const filtered = data.agents.filter((a) => {
     if (catFilter !== 'All' && a.category !== catFilter) return false;
-    if (tierFilter !== 'all' && a.min_package !== tierFilter) return false;
+    if (search && !a.name.toLowerCase().includes(search.toLowerCase()) && !a.role.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
   return (
     <div className="p-8 max-w-7xl">
-      {/* Header */}
+      {runAgent && <RunModal agent={runAgent} token={token} onClose={() => setRunAgent(null)} />}
+
       <div className="mb-7">
         <div className="flex items-center gap-3 mb-1">
-          <h1 className="text-2xl font-bold">Agent Catalogue</h1>
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">
-            Admin view
-          </span>
+          <h1 className="text-2xl font-bold">Run an Agent</h1>
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">Admin — no restrictions</span>
         </div>
-        <p className="text-gray-500 text-sm">
-          {data.total} client-facing agents · {data.internal_total} internal system layers
-        </p>
+        <p className="text-gray-500 text-sm">{data.total} agents available · click any agent to run a task</p>
+      </div>
 
-        {/* Tier distribution */}
-        <div className="flex flex-wrap gap-3 mt-4">
-          {Object.entries(data.tier_counts).map(([tier, count]) => (
-            <div key={tier} className={`px-3 py-1.5 rounded-lg border text-xs font-medium capitalize ${TIER_COLOR[tier] || ''}`}>
-              {tier}: {count} agents
-            </div>
+      {/* Search + filters */}
+      <div className="flex flex-wrap gap-3 mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search agents…"
+          className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 w-60"
+        />
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.map(c => (
+            <button key={c} onClick={() => setCatFilter(c)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                catFilter === c ? 'bg-violet-600 text-white' : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
+              }`}>
+              {c}
+            </button>
           ))}
         </div>
       </div>
 
-      {/* HITL legend */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-7">
-        {Object.entries(HITL_DESC).map(([k, desc]) => (
-          <div key={k} className={`rounded-lg border px-3 py-2 ${HITL_COLOR[k]}`}>
-            <p className="text-[11px] font-bold">{k}</p>
-            <p className="text-[10px] opacity-75 mt-0.5 leading-tight">{desc}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-2">
-        {CATEGORIES.map((c) => (
-          <button
-            key={c}
-            onClick={() => setCatFilter(c)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              catFilter === c
-                ? 'bg-violet-600 text-white'
-                : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
-            }`}
-          >
-            {c}
-          </button>
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-2 mb-6">
-        {(['all', 'starter', 'growth', 'business', 'enterprise'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTierFilter(t)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${
-              tierFilter === t
-                ? 'bg-gray-700 text-white'
-                : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
-            }`}
-          >
-            {t === 'all' ? 'All tiers' : `${t}+`}
-          </button>
-        ))}
-      </div>
-
-      {/* Client-facing agents */}
-      <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">
-        Client-Facing ({filtered.length})
-      </p>
+      {/* Agent grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-10">
         {filtered.map((a) => {
           const isExpanded = expandedId === a.id;
           return (
-            <div
-              key={a.id}
-              onClick={() => setExpandedId(isExpanded ? null : a.id)}
-              className="bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-xl p-4 cursor-pointer transition-colors"
-            >
+            <div key={a.id} className="bg-gray-900 border border-gray-800 hover:border-violet-500/40 rounded-xl p-4 transition-colors">
               {/* Top row */}
-              <div className="flex items-start justify-between gap-3 mb-2">
+              <div
+                className="flex items-start justify-between gap-3 mb-2 cursor-pointer"
+                onClick={() => setExpandedId(isExpanded ? null : a.id)}
+              >
                 <p className="font-semibold text-sm text-white leading-tight">{a.name}</p>
-                <div className="flex flex-col items-end gap-1 shrink-0">
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${CATEGORY_COLOR[a.category] || 'bg-gray-800 text-gray-400 border-gray-700'}`}>
-                    {a.category}
-                  </span>
-                </div>
-              </div>
-
-              {/* Badges row */}
-              <div className="flex flex-wrap gap-1.5 mb-2.5">
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${HITL_COLOR[a.hitl_level] || ''}`}>
-                  {a.hitl_level}
-                </span>
-                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border capitalize ${TIER_COLOR[a.min_package] || ''}`}>
-                  {a.min_package}+
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">
-                  ~{a.credit_estimate} cr
+                <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${CATEGORY_COLOR[a.category] || 'bg-gray-800 text-gray-400 border-gray-700'}`}>
+                  {a.category}
                 </span>
               </div>
 
-              <p className="text-gray-500 text-xs leading-relaxed line-clamp-2">{a.role}</p>
+              {/* Badges */}
+              <div className="flex flex-wrap gap-1.5 mb-2.5 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : a.id)}>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${HITL_COLOR[a.hitl_level]}`}>{a.hitl_level}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">~{a.credit_estimate} cr</span>
+              </div>
 
-              {/* Expanded */}
+              <p className="text-gray-500 text-xs leading-relaxed line-clamp-2 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : a.id)}>
+                {a.role}
+              </p>
+
+              {/* Expanded detail */}
               {isExpanded && (
                 <div className="mt-3 pt-3 border-t border-gray-800">
                   {a.capabilities.length > 0 && (
-                    <div className="mb-3">
-                      <p className="text-[10px] text-gray-600 uppercase tracking-wider font-semibold mb-2">Capabilities</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {a.capabilities.map((c) => (
-                          <span key={c} className="text-[10px] px-2 py-0.5 rounded-md bg-gray-800 text-gray-300 border border-gray-700">
-                            {c}
-                          </span>
-                        ))}
-                      </div>
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {a.capabilities.map(c => (
+                        <span key={c} className="text-[10px] px-2 py-0.5 rounded-md bg-gray-800 text-gray-300 border border-gray-700">{c}</span>
+                      ))}
                     </div>
                   )}
-                  <div className="text-[10px] text-gray-600">
-                    <span className="font-semibold">Architecture:</span>{' '}
-                    <span className="text-gray-500 font-mono">{a.architecture}</span>
-                  </div>
-                  <div className="text-[10px] text-gray-600 mt-1">
-                    <span className="font-semibold">Agent ID:</span>{' '}
-                    <span className="text-gray-500 font-mono">{a.id}</span>
-                  </div>
                 </div>
               )}
+
+              {/* Run button — always visible */}
+              <button
+                onClick={() => setRunAgent(a)}
+                className="mt-3 w-full py-2 rounded-lg bg-violet-600/20 hover:bg-violet-600 border border-violet-500/30 hover:border-violet-500 text-violet-300 hover:text-white text-xs font-semibold transition-all"
+              >
+                ▶ Run Task
+              </button>
             </div>
           );
         })}
       </div>
 
-      {/* Internal system layers */}
+      {/* Internal layers */}
       <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">
-        Internal System Layers — NOT client-visible ({data.internal_layers.length})
+        Internal System Layers — not client-visible ({data.internal_layers.length})
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
         {data.internal_layers.map((a) => (
           <div key={a.id} className="bg-gray-900/40 border border-gray-800/50 rounded-xl p-4">
-            <div className="flex items-start justify-between gap-3 mb-2">
-              <p className="font-medium text-sm text-gray-400 leading-tight">{a.name}</p>
-              <span className="shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">
-                Internal
-              </span>
-            </div>
-            <p className="text-gray-600 text-xs leading-relaxed mb-2">{a.role}</p>
-            {a.maps_to && (
-              <p className="text-[10px] text-gray-700">
-                Maps to: <span className="text-gray-600 font-mono">{a.maps_to}</span>
-              </p>
-            )}
+            <p className="font-medium text-sm text-gray-400 mb-1">{a.name}</p>
+            <p className="text-gray-600 text-xs leading-relaxed">{a.role}</p>
+            {a.maps_to && <p className="text-[10px] text-gray-700 mt-1.5">Maps to: <span className="font-mono">{a.maps_to}</span></p>}
           </div>
         ))}
       </div>
