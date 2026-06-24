@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Poppins, Playfair_Display, Inter, Outfit } from 'next/font/google'
+import { Poppins, Playfair_Display, Inter, Outfit, Instrument_Serif, Barlow } from 'next/font/google'
 import './globals.css'
 import GTMScript       from '@/components/GTMScript'
 import CookieConsent   from '@/components/CookieConsent'
@@ -29,6 +29,20 @@ const outfit = Outfit({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
   variable: '--font-outfit',
+  display: 'swap',
+})
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ['latin'],
+  style: ['normal', 'italic'],
+  variable: '--font-instrument-serif',
+  display: 'swap',
+})
+
+const barlow = Barlow({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  variable: '--font-barlow',
   display: 'swap',
 })
 
@@ -76,7 +90,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${poppins.variable} ${playfair.variable} ${inter.variable} ${outfit.variable}`}>
+    <html lang="en" className={`${poppins.variable} ${playfair.variable} ${inter.variable} ${outfit.variable} ${instrumentSerif.variable} ${barlow.variable}`}>
       <body className="font-sans bg-dark text-white antialiased">
         <GTMScript />
         {children}

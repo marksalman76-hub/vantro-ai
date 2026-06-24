@@ -1,20 +1,21 @@
 'use client'
 
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
-import { ArrowRight, Github, Twitter, Linkedin, Zap } from 'lucide-react'
-import dynamic from 'next/dynamic'
-const FloatingShape = dynamic(() => import('@/components/ui/FloatingShape'), { ssr: false })
+import { ArrowUpRight, Github, Twitter, Linkedin } from 'lucide-react'
+import Hls from 'hls.js'
+
+const HLS_SRC = 'https://stream.mux.com/8wrHPCX2dC3msyYU9ObwqNdm00u3ViXvOSHUMRYSEe5Q.m3u8'
 
 const FOOTER_LINKS = [
   {
     heading: 'Product',
     links: [
-      { label: 'How It Works',  href: '#how-it-works'  },
-      { label: 'Agent Roster',  href: '#agents'        },
-      { label: 'Integrations',  href: '#integrations'  },
-      { label: 'Pricing',       href: '/pricing'       },
-      { label: 'Changelog',     href: '#'              },
+      { label: 'How It Works',  href: '#how-it-works' },
+      { label: 'Agent Roster',  href: '#agents'       },
+      { label: 'Integrations',  href: '#integrations' },
+      { label: 'Pricing',       href: '/pricing'      },
+      { label: 'Changelog',     href: '#'             },
     ],
   },
   {
@@ -30,11 +31,11 @@ const FOOTER_LINKS = [
   {
     heading: 'Company',
     links: [
-      { label: 'About',      href: '#' },
-      { label: 'Blog',       href: '#' },
-      { label: 'Careers',    href: '#' },
-      { label: 'Contact',    href: '#' },
-      { label: 'Press Kit',  href: '#' },
+      { label: 'About',     href: '#' },
+      { label: 'Blog',      href: '#' },
+      { label: 'Careers',   href: '#' },
+      { label: 'Contact',   href: '#' },
+      { label: 'Press Kit', href: '#' },
     ],
   },
   {
@@ -49,139 +50,94 @@ const FOOTER_LINKS = [
 ]
 
 const SOCIAL = [
-  { icon: Github,   href: '#', label: 'GitHub'   },
-  { icon: Twitter,  href: '#', label: 'Twitter'  },
-  { icon: Linkedin, href: '#', label: 'LinkedIn' },
+  { Icon: Github,   href: '#', label: 'GitHub'   },
+  { Icon: Twitter,  href: '#', label: 'Twitter'  },
+  { Icon: Linkedin, href: '#', label: 'LinkedIn' },
 ]
 
 export default function CTAFooter() {
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+
+    if (Hls.isSupported()) {
+      const hls = new Hls()
+      hls.loadSource(HLS_SRC)
+      hls.attachMedia(video)
+      return () => hls.destroy()
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = HLS_SRC
+    }
+  }, [])
+
   return (
     <>
-      {/* ─── CTA Section ──────────────────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden py-24 lg:py-32"
-        style={{ background: 'linear-gradient(180deg, #080D1E 0%, #06091A 100%)' }}
-      >
-        {/* Ambient blobs */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] rounded-full blur-[160px] pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse, rgba(124,58,237,0.18) 0%, transparent 70%)' }} />
-        <div className="absolute bottom-0 left-1/4 w-[400px] h-[200px] rounded-full blur-[120px] opacity-10 pointer-events-none"
-          style={{ background: '#3B82F6' }} />
-        <div className="absolute bottom-0 right-1/4 w-[400px] h-[200px] rounded-full blur-[120px] opacity-10 pointer-events-none"
-          style={{ background: '#EC4899' }} />
+      {/* ── Cinematic CTA ─────────────────────────────────────────────── */}
+      <section className="relative py-32 px-6 md:px-16 lg:px-24 text-center overflow-hidden bg-black">
+        {/* HLS video background */}
+        <video
+          ref={videoRef}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover z-0"
+        />
 
-        <div className="absolute inset-0 mesh-grid-fine opacity-20 pointer-events-none" />
+        {/* Top fade */}
+        <div
+          className="absolute top-0 left-0 right-0 z-[1] pointer-events-none"
+          style={{ height: '200px', background: 'linear-gradient(to bottom, black, transparent)' }}
+        />
+        {/* Bottom fade */}
+        <div
+          className="absolute bottom-0 left-0 right-0 z-[1] pointer-events-none"
+          style={{ height: '200px', background: 'linear-gradient(to top, black, transparent)' }}
+        />
 
-        {/* Decorative 3D shapes */}
-        <div className="absolute top-12 left-[5%] opacity-40">
-          <FloatingShape type="torus" color="#7C3AED" size={100} speed={0.6} />
-        </div>
-        <div className="absolute top-16 right-[6%] opacity-30">
-          <FloatingShape type="icosahedron" color="#3B82F6" size={80} speed={0.9} />
-        </div>
-        <div className="absolute bottom-20 left-[12%] opacity-25">
-          <FloatingShape type="octahedron" color="#06B6D4" size={70} speed={0.7} />
-        </div>
+        {/* Content */}
+        <div className="relative z-10">
+          <h2 className="font-heading italic text-white tracking-tight leading-[0.85] max-w-3xl mx-auto mb-4"
+            style={{ fontSize: 'clamp(3rem, 7vw, 5rem)' }}>
+            Your AI workforce starts today.
+          </h2>
+          <p className="text-white/60 font-body font-light text-sm md:text-base max-w-xl mx-auto mb-8">
+            Join 500+ teams running autonomous agents with Vantro. Connect your tools, configure in plain English, and go live the same day.
+          </p>
 
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 28 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ type: 'spring', stiffness: 180, damping: 22 }}
-          >
-            {/* Badge */}
-            <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wide mb-8"
-              style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.28)', color: '#C084FC' }}>
-              <Zap className="w-3 h-3" />
-              Start in minutes. No MLOps team required.
-            </span>
+          <div className="flex items-center justify-center gap-6 flex-wrap">
+            <Link href="/signup">
+              <button className="liquid-glass-strong rounded-full px-6 py-3 text-sm font-medium text-white flex items-center gap-2 hover:bg-white/10 transition-all font-body">
+                Start Free 14-Day Trial
+                <ArrowUpRight className="h-5 w-5" />
+              </button>
+            </Link>
+            <Link href="/pricing">
+              <button className="bg-white text-black rounded-full px-6 py-3 text-sm font-medium flex items-center gap-2 hover:bg-white/90 transition-colors font-body">
+                View Pricing
+                <ArrowUpRight className="h-4 w-4" />
+              </button>
+            </Link>
+          </div>
 
-            <h2 className="section-heading mb-6">
-              Ready to deploy your{' '}
-              <span className="gradient-text">AI workforce?</span>
-            </h2>
-
-            <p className="text-lg text-white/55 max-w-xl mx-auto mb-10 leading-relaxed">
-              Join 500+ teams already running AI agents with Vantro.
-              Connect your tools, configure in plain English, and go live today.
-            </p>
-
-            {/* CTAs */}
-            <div className="flex flex-wrap gap-3 justify-center mb-10">
-              <Link href="/signup">
-                <motion.span
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-base font-bold text-white cursor-pointer"
-                  style={{
-                    background: 'linear-gradient(135deg, #7C3AED, #3B82F6)',
-                    boxShadow: '0 8px 40px rgba(124,58,237,0.45)',
-                  }}
-                >
-                  Start Free 14-Day Trial
-                  <ArrowRight className="w-4 h-4" />
-                </motion.span>
-              </Link>
-              <Link href="/pricing">
-                <motion.span
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-base font-bold text-white/75 cursor-pointer"
-                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)' }}
-                >
-                  View Pricing
-                </motion.span>
-              </Link>
-            </div>
-
-            <p className="text-sm text-white/30">
-              No credit card required · Cancel anytime · SOC 2 Type II certified
-            </p>
-          </motion.div>
-
-          {/* Social proof logos strip */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.25 }}
-            className="mt-16 pt-10"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
-          >
-            <p className="text-xs text-white/20 uppercase tracking-[0.2em] font-semibold mb-6">
-              Trusted by teams at
-            </p>
-            <div className="flex flex-wrap justify-center gap-x-10 gap-y-3">
-              {[
-                { name: 'Salesforce', color: '#00A1E0' },
-                { name: 'HubSpot',    color: '#FF7A59' },
-                { name: 'Slack',      color: '#E01E5A' },
-                { name: 'Shopify',    color: '#96BF48' },
-                { name: 'Stripe',     color: '#7B73F7' },
-                { name: 'Notion',     color: 'rgba(255,255,255,0.4)' },
-              ].map(({ name, color }) => (
-                <span key={name} className="text-sm font-bold tracking-tight transition-opacity opacity-25 hover:opacity-60" style={{ color }}>
-                  {name}
-                </span>
-              ))}
-            </div>
-          </motion.div>
+          <p className="mt-6 text-xs text-white/30 font-body">
+            No credit card required · Cancel anytime · SOC 2 Type II certified
+          </p>
         </div>
       </section>
 
-      {/* ─── Footer ───────────────────────────────────────────────────── */}
-      <footer
-        className="relative"
-        style={{ background: '#06091A', borderTop: '1px solid rgba(255,255,255,0.05)' }}
-      >
+      {/* ── Footer ────────────────────────────────────────────────────── */}
+      <footer className="relative bg-black border-t border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
           <div className="grid grid-cols-2 md:grid-cols-6 gap-8 lg:gap-12">
 
             {/* Brand col */}
             <div className="col-span-2">
-              <Link href="/" className="inline-flex items-center gap-2 mb-4 group">
-                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #7C3AED, #3B82F6)', boxShadow: '0 0 20px rgba(124,58,237,0.35)' }}>
+              <Link href="/" className="inline-flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                  style={{ background: 'linear-gradient(135deg, #7C3AED, #3B82F6)', boxShadow: '0 0 20px rgba(124,58,237,0.35)' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="white" aria-hidden="true">
                     <path d="M12 2L14.09 8.26L20.28 9.27L16.14 13.3L17.18 19.5L12 16.77L6.82 19.5L7.86 13.3L3.72 9.27L9.91 8.26L12 2Z" />
                   </svg>
@@ -190,24 +146,16 @@ export default function CTAFooter() {
                   Vantro<span className="text-violet-400">.ai</span>
                 </span>
               </Link>
-              <p className="text-sm text-white/40 leading-relaxed mb-6 max-w-xs">
-                Autonomous AI agents that handle the repetitive work so your team can focus
-                on what matters most.
+              <p className="text-sm text-white/40 leading-relaxed mb-6 max-w-xs font-body">
+                Autonomous AI agents that handle the repetitive work so your team can focus on what matters.
               </p>
-              {/* Socials */}
               <div className="flex items-center gap-2">
-                {SOCIAL.map(({ icon: Icon, href, label }) => (
-                  <motion.a
-                    key={label}
-                    href={href}
-                    aria-label={label}
-                    whileHover={{ scale: 1.1, y: -2 }}
-                    whileTap={{ scale: 0.95 }}
+                {SOCIAL.map(({ Icon, href, label }) => (
+                  <a key={label} href={href} aria-label={label}
                     className="w-8 h-8 rounded-lg flex items-center justify-center text-white/35 hover:text-white transition-colors"
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
-                  >
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
                     <Icon className="w-3.5 h-3.5" />
-                  </motion.a>
+                  </a>
                 ))}
               </div>
             </div>
@@ -215,14 +163,11 @@ export default function CTAFooter() {
             {/* Link columns */}
             {FOOTER_LINKS.map((col) => (
               <div key={col.heading}>
-                <p className="text-xs font-bold text-white/30 uppercase tracking-[0.15em] mb-4">{col.heading}</p>
+                <p className="text-xs font-bold text-white/30 uppercase tracking-[0.15em] mb-4 font-body">{col.heading}</p>
                 <ul className="space-y-2.5">
                   {col.links.map(({ label, href }) => (
                     <li key={label}>
-                      <Link
-                        href={href}
-                        className="text-sm text-white/45 hover:text-white transition-colors duration-200"
-                      >
+                      <Link href={href} className="text-sm text-white/45 hover:text-white transition-colors duration-200 font-body">
                         {label}
                       </Link>
                     </li>
@@ -233,18 +178,26 @@ export default function CTAFooter() {
           </div>
 
           {/* Bottom bar */}
-          <div
-            className="mt-14 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4"
-            style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
-          >
-            <p className="text-xs text-white/25">
-              © 2026 Vantro Inc. All rights reserved.
+          <div className="mt-14 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 border-t border-white/10">
+            <p className="text-white/40 font-body font-light text-xs">
+              &copy; 2026 Vantro Inc. All rights reserved.
             </p>
-            <Link href="/status" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:opacity-80 transition-opacity"
-              style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)' }}>
-              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-[11px] text-green-400 font-medium">System status</span>
-            </Link>
+            <div className="flex items-center gap-6">
+              {['Privacy', 'Terms', 'Contact'].map((link) => (
+                <Link
+                  key={link}
+                  href={link === 'Privacy' ? '/privacy' : link === 'Terms' ? '/terms' : '#'}
+                  className="text-white/40 hover:text-white/70 font-body font-light text-xs transition-colors"
+                >
+                  {link}
+                </Link>
+              ))}
+              <Link href="/status" className="flex items-center gap-1.5 px-3 py-1.5 rounded-full hover:opacity-80 transition-opacity"
+                style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)' }}>
+                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                <span className="text-[11px] text-green-400 font-medium font-body">System status</span>
+              </Link>
+            </div>
           </div>
         </div>
       </footer>
