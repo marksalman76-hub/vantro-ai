@@ -1,5 +1,3 @@
-'use client';
-
 import { Twitter, Linkedin, Github } from 'lucide-react';
 import { useToast } from '../context/ToastContext';
 
@@ -18,18 +16,8 @@ const COLUMNS = [
     heading: 'Company',
     links: [
       { label: 'About', href: null },
-      { label: 'Careers', href: null },
       { label: 'Blog', href: null },
       { label: 'Contact', href: null },
-    ],
-  },
-  {
-    heading: 'Resources',
-    links: [
-      { label: 'Docs', href: null },
-      { label: 'API', href: null },
-      { label: 'Status', href: null },
-      { label: 'Security', href: null },
     ],
   },
   {
@@ -37,7 +25,6 @@ const COLUMNS = [
     links: [
       { label: 'Privacy', href: null },
       { label: 'Terms', href: null },
-      { label: 'DPA', href: null },
     ],
   },
 ];
