@@ -48,59 +48,105 @@ interface AgentCardInnerProps {
 }
 
 function AgentCardInner({ agent, isCenter }: AgentCardInnerProps) {
+  const prefersReduced = useReducedMotion()
+
   return (
-    <div
-      style={{
-        width: '100%',
-        borderRadius: '1.25rem',
-        overflow: 'hidden',
-        background: isCenter
-          ? 'linear-gradient(145deg, rgba(255,255,255,0.085) 0%, rgba(255,255,255,0.028) 100%)'
-          : 'linear-gradient(145deg, rgba(255,255,255,0.048) 0%, rgba(255,255,255,0.016) 100%)',
-        border: isCenter
-          ? '1px solid rgba(255,255,255,0.22)'
-          : '1px solid rgba(255,255,255,0.09)',
-        boxShadow: isCenter
-          ? 'inset 0 2px 0 rgba(255,255,255,0.30), inset 0 -1px 0 rgba(255,255,255,0.05), 0 0 0 1px rgba(255,255,255,0.09), 0 32px 80px rgba(0,0,0,0.72)'
-          : 'inset 0 1px 0 rgba(255,255,255,0.10), 0 8px 32px rgba(0,0,0,0.50)',
-        position: 'relative',
-        transition: 'box-shadow 0.4s ease, border-color 0.4s ease',
-      }}
-    >
-      {isCenter && (
-        <div
+    <div style={{ position: 'relative', width: '100%' }}>
+      {/* Rotating gradient border — sits outside overflow:hidden */}
+      {isCenter && !prefersReduced && (
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
           style={{
             position: 'absolute',
-            inset: 0,
-            background: 'radial-gradient(ellipse 110% 55% at 50% 108%, rgba(255,255,255,0.13) 0%, transparent 60%)',
-            mixBlendMode: 'screen',
+            inset: -1.5,
+            borderRadius: '1.4rem',
+            background: 'conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255,255,255,0.85) 40deg, rgba(255,255,255,0.0) 80deg)',
+            WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+            WebkitMaskComposite: 'xor',
+            mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+            maskComposite: 'exclude',
+            padding: '1.5px',
             pointerEvents: 'none',
-            zIndex: 3,
-            borderRadius: 'inherit',
+            zIndex: 7,
           }}
         />
       )}
-      {isCenter && (
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '50%',
-            height: '100%',
-            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.07), transparent)',
-            zIndex: 4,
-            pointerEvents: 'none',
-            animation: 'metal-sheen 2.2s ease-out 0.3s forwards',
-          }}
-        />
-      )}
-      <img
-        src={agent.image}
-        alt={`${agent.name} - ${agent.role}`}
-        style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }}
-        loading="lazy"
-      />
+
+      <div
+        style={{
+          width: '100%',
+          borderRadius: '1.25rem',
+          overflow: 'hidden',
+          background: isCenter
+            ? 'linear-gradient(145deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.04) 100%)'
+            : 'linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.025) 100%)',
+          border: isCenter
+            ? '1.5px solid rgba(255,255,255,0.50)'
+            : '1px solid rgba(255,255,255,0.25)',
+          boxShadow: isCenter
+            ? 'inset 0 2.5px 0 rgba(255,255,255,0.65), inset 0 -1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(255,255,255,0.12), 0 0 60px rgba(255,255,255,0.08), 0 32px 80px rgba(0,0,0,0.65)'
+            : 'inset 0 2px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.45)',
+          position: 'relative',
+          transition: 'box-shadow 0.4s ease, border-color 0.4s ease',
+        }}
+      >
+        {isCenter && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'radial-gradient(ellipse 110% 55% at 50% 108%, rgba(255,255,255,0.18) 0%, transparent 60%)',
+              mixBlendMode: 'screen',
+              pointerEvents: 'none',
+              zIndex: 3,
+              borderRadius: 'inherit',
+            }}
+          />
+        )}
+        {isCenter && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0, left: 0,
+              width: '50%', height: '100%',
+              background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent)',
+              zIndex: 4,
+              pointerEvents: 'none',
+              animation: 'metal-sheen 2.2s ease-out 0.3s forwards',
+            }}
+          />
+        )}
+
+        {/* Agent face — animated when center */}
+        {isCenter && !prefersReduced ? (
+          <motion.img
+            src={agent.image}
+            alt={`${agent.name} - ${agent.role}`}
+            animate={{
+              scale: [1, 1.028, 1.012, 1.035, 1.008, 1],
+              y: [0, -5, -2, -6, -1, 0],
+              x: [0, 2, -1.5, 2.5, -0.8, 0],
+              filter: [
+                'brightness(1.0) saturate(1.0) contrast(1.0)',
+                'brightness(1.22) saturate(1.30) contrast(1.06)',
+                'brightness(1.08) saturate(1.10) contrast(1.02)',
+                'brightness(1.18) saturate(1.25) contrast(1.05)',
+                'brightness(1.04) saturate(1.06) contrast(1.01)',
+                'brightness(1.0) saturate(1.0) contrast(1.0)',
+              ],
+            }}
+            transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', repeatDelay: 0.5 }}
+            style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }}
+          />
+        ) : (
+          <img
+            src={agent.image}
+            alt={`${agent.name} - ${agent.role}`}
+            style={{ width: '100%', aspectRatio: '3/4', objectFit: 'cover', display: 'block' }}
+            loading="lazy"
+          />
+        )}
       <div style={{ padding: '0.9rem 1rem 1.1rem' }}>
         <p
           style={{
@@ -140,6 +186,7 @@ function AgentCardInner({ agent, isCenter }: AgentCardInnerProps) {
             {agent.blurb}
           </p>
         )}
+      </div>
       </div>
     </div>
   );
