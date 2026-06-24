@@ -1,6 +1,6 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useRef } from 'react';
 
 const STATS = [
@@ -82,6 +82,7 @@ function StatCard({ number, label, description, index }: StatCardProps) {
 }
 
 export function WhyVantro() {
+  const prefersReduced = useReducedMotion()
   return (
     <section className="py-32" style={{ backgroundColor: 'oklch(0.19 0 0)' }}>
       <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
@@ -98,15 +99,32 @@ export function WhyVantro() {
             className="absolute inset-0 blur-3xl rounded-full"
             style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)' }}
           />
-          <img
+          <motion.img
             src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663790183318/saLNUqZiiYVuufKN.png"
             alt="Vantro orb"
             className="relative w-full max-w-md"
+            animate={
+              prefersReduced
+                ? {}
+                : {
+                    y: [0, -22, -5, -30, -8, 0],
+                    x: [0, -16, 11, -9, 5, 0],
+                    scale: [1, 1.06, 0.96, 1.08, 0.98, 1],
+                    filter: [
+                      'brightness(1) drop-shadow(0 0 25px rgba(255,255,255,0.12))',
+                      'brightness(1.35) drop-shadow(0 0 70px rgba(255,255,255,0.40))',
+                      'brightness(0.90) drop-shadow(0 0 10px rgba(255,255,255,0.04))',
+                      'brightness(1.25) drop-shadow(0 0 60px rgba(255,255,255,0.28))',
+                      'brightness(1.04) drop-shadow(0 0 35px rgba(255,255,255,0.16))',
+                      'brightness(1) drop-shadow(0 0 25px rgba(255,255,255,0.12))',
+                    ],
+                  }
+            }
+            transition={prefersReduced ? {} : { duration: 12, repeat: Infinity, ease: 'easeInOut' }}
             style={{
               mixBlendMode: 'screen',
               WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 75%)',
               maskImage: 'radial-gradient(circle, black 40%, transparent 75%)',
-              animation: 'float 8s ease-in-out infinite',
             }}
           />
         </motion.div>

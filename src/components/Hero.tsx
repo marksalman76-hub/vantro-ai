@@ -309,10 +309,20 @@ export function Hero() {
               prefersReduced
                 ? {}
                 : {
-                    y: [0, -18, 0],
-                    transition: { duration: 5, repeat: Infinity, ease: 'easeInOut' },
+                    y: [0, -28, -8, -36, -12, 0],
+                    x: [0, 18, -12, 10, -5, 0],
+                    scale: [1, 1.07, 0.96, 1.09, 0.98, 1],
+                    filter: [
+                      'brightness(1) drop-shadow(0 0 30px rgba(255,255,255,0.15))',
+                      'brightness(1.40) drop-shadow(0 0 80px rgba(255,255,255,0.45))',
+                      'brightness(0.88) drop-shadow(0 0 12px rgba(255,255,255,0.05))',
+                      'brightness(1.30) drop-shadow(0 0 65px rgba(255,255,255,0.32))',
+                      'brightness(1.05) drop-shadow(0 0 40px rgba(255,255,255,0.18))',
+                      'brightness(1) drop-shadow(0 0 30px rgba(255,255,255,0.15))',
+                    ],
                   }
             }
+            transition={prefersReduced ? {} : { duration: 10, repeat: Infinity, ease: 'easeInOut' }}
             style={{
               width: '100%',
               maxWidth: '520px',
