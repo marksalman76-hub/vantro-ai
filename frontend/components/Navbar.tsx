@@ -1,157 +1,226 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Menu, X, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import Button from './Button'
 
 const NAV_LINKS = [
-  { label: 'Why Vantro',   href: '#why-vantro'           },
-  { label: 'Agents',       href: '#agents'               },
-  { label: 'Industries',   href: '#industry-adaptability' },
-  { label: 'Integrations', href: '#integrations'         },
-  { label: 'Pricing',      href: '/pricing'              },
+  { label: 'agents',       href: '#agents',       section: 'agents'       },
+  { label: 'how it works', href: '#how-it-works',  section: 'how-it-works' },
+  { label: 'integrations', href: '#integrations',  section: 'integrations' },
+  { label: 'pricing',      href: '/pricing',       section: null            },
 ]
 
-export default function Navbar() {
-  const [scrolled,   setScrolled]   = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
+function VantroMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className="text-white">
+      <path d="M12 2L14.09 8.26L20.28 9.27L16.14 13.3L17.18 19.5L12 16.77L6.82 19.5L7.86 13.3L3.72 9.27L9.91 8.26L12 2Z" />
+    </svg>
+  )
+}
 
+export default function Navbar() {
+  const [scrolled,    setScrolled]    = useState(false)
+  const [mobileOpen,  setMobileOpen]  = useState(false)
+  const [activeSection, setActiveSection] = useState<string | null>(null)
+  const observerRef = useRef<IntersectionObserver | null>(null)
+
+  // Scroll detection
   useEffect(() => {
-    const threshold = 80
-    const onScroll = () => setScrolled(window.scrollY > threshold)
+    const onScroll = () => setScrolled(window.scrollY > 60)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const headerCls = [
-    'fixed top-0 inset-x-0 z-50 transition-all duration-500',
-    mobileOpen
-      ? 'bg-[#070D1F] border-b border-white/08'
-      : scrolled
-      ? 'border-b border-white/[0.06] shadow-[0_4px_40px_rgba(0,0,0,0.5)]'
-      : 'border-b border-transparent',
-  ].join(' ')
+  // Active section via IntersectionObserver
+  useEffect(() => {
+    const sections = NAV_LINKS.map(l => l.section).filter(Boolean) as string[]
+    const els = sections.map(id => document.getElementById(id)).filter(Boolean) as HTMLElement[]
+    if (!els.length) return
 
-  const navBg = scrolled || mobileOpen
-    ? 'rgba(7,13,31,0.88)'
-    : 'transparent'
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter(e => e.isIntersecting)
+        if (visible.length) setActiveSection(visible[0].target.id)
+      },
+      { rootMargin: '-30% 0px -60% 0px', threshold: 0 }
+    )
+    els.forEach(el => observerRef.current!.observe(el))
+    return () => observerRef.current?.disconnect()
+  }, [])
+
+  const pillBg    = 'rgba(7, 13, 31, 0.82)'
+  const pillBgSc  = 'rgba(7, 13, 31, 0.95)'
+  const borderSc  = 'rgba(124, 58, 237, 0.22)'
+  const borderDef = 'rgba(255, 255, 255, 0.07)'
 
   return (
-    <header
-      className={headerCls}
-      style={{
-        backdropFilter: scrolled ? 'blur(20px) saturate(1.5)' : 'none',
-        WebkitBackdropFilter: scrolled ? 'blur(20px) saturate(1.5)' : 'none',
-        background: navBg,
-      }}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16 lg:h-[68px]">
+    <>
+      {/* Floating pill wrapper */}
+      <div className="fixed top-4 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
+        <motion.header
+          initial={false}
+          animate={{
+            background:   scrolled ? pillBgSc : pillBg,
+            borderColor:  scrolled ? borderSc  : borderDef,
+            boxShadow:    scrolled
+              ? '0 0 0 1px rgba(124,58,237,0.12), 0 8px 48px rgba(0,0,0,0.5), 0 0 80px rgba(124,58,237,0.06)'
+              : '0 0 0 1px rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.3)',
+            paddingTop:    scrolled ? '8px'  : '10px',
+            paddingBottom: scrolled ? '8px'  : '10px',
+          }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="pointer-events-auto w-full max-w-4xl rounded-2xl border"
+          style={{
+            backdropFilter:       'blur(24px) saturate(1.6)',
+            WebkitBackdropFilter: 'blur(24px) saturate(1.6)',
+          }}
+        >
+          <div className="flex items-center justify-between px-5">
 
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-            <motion.div
-              whileHover={{ scale: 1.08, rotate: 5 }}
-              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-black text-sm"
-              style={{
-                background: 'linear-gradient(135deg, #7C3AED, #3B82F6)',
-                boxShadow: '0 0 20px rgba(124,58,237,0.45), 0 0 40px rgba(124,58,237,0.15)',
-              }}
-            >
-              V
-            </motion.div>
-            <span className="text-xl font-bold text-white tracking-tight">
-              Vantro<span className="text-violet-400">.ai</span>
-            </span>
-          </Link>
-
-          {/* Desktop nav */}
-          <nav className="hidden lg:flex items-center gap-0.5">
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="relative px-4 py-2 text-sm text-white/55 hover:text-white rounded-lg transition-all duration-200 group"
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-2 group shrink-0">
+              <motion.div
+                whileHover={{ rotate: 15, scale: 1.1 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 15 }}
               >
-                <span className="relative z-10">{link.label}</span>
-                <span className="absolute inset-0 rounded-lg bg-white/0 group-hover:bg-white/[0.05] transition-all duration-200" />
-              </Link>
-            ))}
-          </nav>
+                <VantroMark />
+              </motion.div>
+              <span className="font-semibold text-[15px] tracking-tight text-white">
+                Vantro
+              </span>
+            </Link>
 
-          {/* Desktop CTAs */}
-          <div className="hidden lg:flex items-center gap-3">
-            <Button variant="ghost" size="sm" href="/login">Log in</Button>
-            <Button variant="primary" size="sm" href="/signup" arrow>Get Started Free</Button>
-          </div>
-
-          {/* Mobile toggle */}
-          <motion.button
-            onClick={() => setMobileOpen((v) => !v)}
-            aria-label="Toggle menu"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="lg:hidden p-2.5 rounded-xl text-white/60 hover:text-white glass hover:bg-white/[0.06] transition-colors"
-          >
-            <AnimatePresence mode="wait">
-              {mobileOpen ? (
-                <motion.div key="x" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
-                  <X className="w-5 h-5" />
-                </motion.div>
-              ) : (
-                <motion.div key="menu" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
-                  <Menu className="w-5 h-5" />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.button>
-        </div>
-      </div>
-
-      {/* Mobile menu */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="lg:hidden border-t border-white/08 overflow-hidden"
-          >
-            <div className="px-4 py-5 flex flex-col gap-1">
-              {NAV_LINKS.map((link, i) => (
-                <motion.div
-                  key={link.href}
-                  initial={{ opacity: 0, x: -16 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                >
+            {/* Desktop nav links */}
+            <nav className="hidden md:flex items-center gap-1" aria-label="Primary navigation">
+              {NAV_LINKS.map((link) => {
+                const isActive = link.section && activeSection === link.section
+                return (
                   <Link
+                    key={link.href}
                     href={link.href}
-                    onClick={() => setMobileOpen(false)}
-                    className="block px-4 py-3 text-sm text-white/65 hover:text-white rounded-xl hover:bg-white/[0.05] transition-all font-medium"
+                    className="relative px-3.5 py-1.5 text-[13px] lowercase tracking-wide transition-colors duration-200 group"
+                    style={{ color: isActive ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.42)' }}
+                    onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.85)' }}
+                    onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.color = 'rgba(255,255,255,0.42)' }}
                   >
                     {link.label}
+                    {/* Active dot */}
+                    {isActive && (
+                      <motion.span
+                        layoutId="nav-active-dot"
+                        className="absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-violet-400"
+                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      />
+                    )}
+                    {/* Hover bg */}
+                    <span className="absolute inset-0 rounded-lg bg-white/0 group-hover:bg-white/[0.05] transition-colors duration-200 -z-10" />
                   </Link>
-                </motion.div>
-              ))}
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.25 }}
-                className="pt-4 flex flex-col gap-2.5 border-t border-white/08 mt-2"
+                )
+              })}
+            </nav>
+
+            {/* Right CTAs */}
+            <div className="hidden md:flex items-center gap-2 shrink-0">
+              <Link
+                href="/login"
+                className="px-3.5 py-1.5 text-[13px] text-white/40 hover:text-white/80 transition-colors duration-200 rounded-lg hover:bg-white/[0.05]"
               >
-                <Button variant="secondary" size="sm" href="/login" className="w-full justify-center">Log in</Button>
-                <Button variant="primary" size="sm" href="/signup" className="w-full justify-center" arrow>Get Started Free</Button>
-              </motion.div>
+                log in
+              </Link>
+
+              {/* CTA pill with shimmer */}
+              <Link
+                href="/signup"
+                className="relative overflow-hidden inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[12px] font-semibold bg-white text-[#080d1e] hover:bg-white/92 transition-colors duration-200 group"
+              >
+                {/* Shimmer sweep */}
+                <motion.span
+                  className="absolute inset-0 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                  initial={{ x: '-120%' }}
+                  animate={{ x: '220%' }}
+                  transition={{ duration: 2.4, ease: 'easeInOut', repeat: Infinity, repeatDelay: 3.5 }}
+                />
+                get started
+                <span className="relative" aria-hidden="true">→</span>
+              </Link>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </header>
+
+            {/* Mobile hamburger */}
+            <button
+              onClick={() => setMobileOpen(v => !v)}
+              aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileOpen}
+              className="md:hidden flex flex-col justify-center gap-[5px] p-2 -mr-1"
+            >
+              {([
+                mobileOpen ? { rotate: 45,  y: 7 }      : { rotate: 0, y: 0 },
+                mobileOpen ? { opacity: 0,  scaleX: 0 } : { opacity: 1, scaleX: 1 },
+                mobileOpen ? { rotate: -45, y: -7 }     : { rotate: 0, y: 0 },
+              ] as const).map((anim, i) => (
+                <motion.span
+                  key={i}
+                  animate={anim}
+                  transition={{ duration: 0.2 }}
+                  className="block w-5 h-px origin-center bg-white"
+                />
+              ))}
+            </button>
+          </div>
+
+          {/* Mobile drawer — lives inside pill */}
+          <AnimatePresence>
+            {mobileOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+                className="overflow-hidden md:hidden"
+              >
+                <div className="border-t border-white/[0.07] mt-2 mx-2 pt-4 pb-5 px-3 flex flex-col gap-1">
+                  {NAV_LINKS.map((link, i) => (
+                    <motion.div
+                      key={link.href}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.05 }}
+                    >
+                      <Link
+                        href={link.href}
+                        onClick={() => setMobileOpen(false)}
+                        className="block px-3 py-2 text-[15px] lowercase text-white/55 hover:text-white rounded-xl hover:bg-white/[0.05] transition-all"
+                      >
+                        {link.label}
+                      </Link>
+                    </motion.div>
+                  ))}
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="pt-3 mt-2 border-t border-white/[0.07] flex flex-col gap-2.5"
+                  >
+                    <Link href="/login" className="px-3 text-[14px] text-white/45 hover:text-white">
+                      log in
+                    </Link>
+                    <Link
+                      href="/signup"
+                      className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[14px] font-semibold w-fit bg-white text-[#080d1e]"
+                    >
+                      get started →
+                    </Link>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.header>
+      </div>
+
+      {/* Spacer so page content clears the pill height */}
+      <div className="h-20" aria-hidden="true" />
+    </>
   )
 }
