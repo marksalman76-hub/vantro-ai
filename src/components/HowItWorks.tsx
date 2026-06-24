@@ -229,7 +229,7 @@ export function HowItWorks() {
       style={{
         paddingTop: '8rem',
         paddingBottom: '8rem',
-        background: 'oklch(0.13 0 0)',
+        background: 'oklch(0.19 0 0)',
       }}
     >
       <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '0 1.5rem' }}>

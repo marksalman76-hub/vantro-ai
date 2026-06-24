@@ -75,7 +75,7 @@
 }
 
 html {
-  background-color: oklch(0.16 0 0);
+  background-color: oklch(0.20 0 0);
   color: oklch(0.97 0 0);
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;

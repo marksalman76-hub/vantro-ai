@@ -41,7 +41,7 @@ export function Hero() {
         paddingBottom: '6rem',
         position: 'relative',
         overflow: 'hidden',
-        background: 'oklch(0.13 0 0)',
+        background: 'oklch(0.19 0 0)',
       }}
     >
       {/* Scanline texture */}
@@ -55,7 +55,7 @@ export function Hero() {
         style={{
           position: 'absolute', top: '10%', left: '-10%',
           width: '55vw', height: '55vw', borderRadius: '50%',
-          background: 'radial-gradient(circle, oklch(0.97 0 0 / 0.05) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, oklch(0.97 0 0 / 0.12) 0%, transparent 70%)',
           animation: 'drift1 22s ease-in-out infinite',
           pointerEvents: 'none',
         }}
@@ -64,7 +64,7 @@ export function Hero() {
         style={{
           position: 'absolute', top: '40%', right: '-15%',
           width: '45vw', height: '45vw', borderRadius: '50%',
-          background: 'radial-gradient(circle, oklch(0.97 0 0 / 0.04) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, oklch(0.97 0 0 / 0.10) 0%, transparent 70%)',
           animation: 'drift2 28s ease-in-out infinite',
           animationDelay: '-9s',
           pointerEvents: 'none',
@@ -74,7 +74,7 @@ export function Hero() {
         style={{
           position: 'absolute', bottom: '-5%', left: '30%',
           width: '40vw', height: '40vw', borderRadius: '50%',
-          background: 'radial-gradient(circle, oklch(0.97 0 0 / 0.03) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, oklch(0.97 0 0 / 0.08) 0%, transparent 70%)',
           animation: 'drift1 34s ease-in-out infinite',
           animationDelay: '-17s',
           pointerEvents: 'none',
