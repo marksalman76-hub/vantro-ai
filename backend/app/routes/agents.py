@@ -3,24 +3,34 @@ Client-facing Agents API
 - GET  /api/agents            — list agents available to this workspace (package-gated)
 - GET  /api/agents/all        — list all 27 agents (locked/unlocked metadata) for display
 - POST /api/agents/{id}/run   — submit an agent job (HITL-3 budget gates enforced externally)
+- POST /api/agents/{id}/stream — stream LLM output as SSE (HITL-3 blocked, fire-and-forget)
 - GET  /api/agents/jobs       — list this workspace's agent job history
 - POST /api/packages/download — generate an OTC code for a package download (one-time)
 - POST /api/packages/redeem   — redeem an OTC code (one-time use, marks as used)
 """
+import json
+import os
 import uuid
 from datetime import datetime, timedelta
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Query
+from fastapi.responses import StreamingResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.auth import verify_token
 from app.database import SessionLocal
+from app.limiter import limiter
 from app.models import User, Organization
+from app.services import cache_service
 from app.models.workspace import Workspace, CreditsAccount
 from app.models.agent_system import AgentJob, PackageDownload
+from app.services.email_service import send_approval_needed
 from app.agents.agent_registry import (
     AGENT_CATALOGUE,
+    AGENT_GOVERNANCE,
+    AGENTS_MAY_NOT_SPEND,
+    AGENTS_MAY_NOT_SCALE_PAID,
     INTERNAL_AGENTS,
     PACKAGE_AGENTS,
     TIER_ORDER,
@@ -130,24 +140,44 @@ async def list_available_agents(
 ):
     """Return only the agents unlocked for this workspace's tier."""
     user = _get_user(credentials, db)
-    tier, _, _ = _workspace_tier(user, db)
-    available_ids = agents_for_package(tier)
+    tier, ws, _ = _workspace_tier(user, db)
+    workspace_id = ws.id if ws else user.id
 
-    return {
+    cache_key = f"agents:catalogue:{workspace_id}"
+    cached = cache_service.get(cache_key)
+    if cached is not None:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(
+            content=cached,
+            headers={"Cache-Control": "max-age=300, private"},
+        )
+
+    available_ids = agents_for_package(tier)
+    payload = {
         "tier": tier,
         "total": len(available_ids),
         "agents": [_serialize_agent(aid, True) for aid in available_ids],
     }
+    cache_service.set(cache_key, payload, ttl=300)
+
+    from fastapi.responses import JSONResponse
+    return JSONResponse(
+        content=payload,
+        headers={"Cache-Control": "max-age=300, private"},
+    )
 
 
 class AgentRunRequest(BaseModel):
     prompt: str
     context: dict = {}
+    output_language: str = ""   # e.g. "Spanish", "French" — blank = English
 
 
 @router.post("/api/agents/{agent_id}/run")
+@limiter.limit("20/minute")
 async def run_agent(
     agent_id: str,
+    request: Request,
     body: AgentRunRequest,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
@@ -174,6 +204,9 @@ async def run_agent(
     if not ws:
         raise HTTPException(status_code=400, detail="No workspace found for this account")
 
+    # Re-acquire with row-level lock to prevent concurrent overdraw (TOCTOU guard)
+    cred = db.query(CreditsAccount).filter(CreditsAccount.workspace_id == ws.id).with_for_update().first()
+
     meta = AGENT_CATALOGUE[norm_id]
     credit_cost = meta["credit_estimate"]
     hitl = meta["hitl_default"]
@@ -185,10 +218,43 @@ async def run_agent(
             detail=f"Insufficient credits. Need {credit_cost}, have {remaining}.",
         )
 
-    # HITL-3 jobs go into pending_approval — must not auto-execute spend
-    status = "pending_approval" if hitl == "HITL-3" else "pending"
+    # ── Financial governance: submission-time gate ───────────────────────────
+    # Platform policy (AGENTS_MAY_NOT_SPEND = True):
+    # Agents may SUGGEST financial actions but never execute them.
+    # The output scanner in agent_executor + agent_worker is the primary guard.
+    #
+    # At submission time we add one additional check: if the user's prompt
+    # explicitly asks the agent to execute/authorise/commit a financial action
+    # (e.g. "buy these ads", "spend $500 on Facebook"), we hold the job for
+    # admin review before it even reaches the executor — defence-in-depth.
+    from app.agents.agent_executor import scan_for_financial_actions
+    prompt_violations = scan_for_financial_actions(body.prompt)
+    if prompt_violations:
+        import logging as _logging
+        _logging.getLogger(__name__).warning(
+            "Financial execution language in prompt — held for review: agent=%s user=%s violations=%s",
+            norm_id, user.email, prompt_violations,
+        )
+
+    # HITL-3 OR prompt contains explicit financial execution intent → pending_approval
+    if hitl == "HITL-3" or prompt_violations:
+        status = "pending_approval"
+    else:
+        status = "pending"
+    # ────────────────────────────────────────────────────────────────────────
+
+    # Pre-commit credits at submission (not at completion) to prevent concurrent
+    # submissions from racing past the guard.  The worker credits_used field on
+    # the job still records what was actually consumed; the CreditsAccount is the
+    # authoritative live balance.  If a job fails the worker restores the credits.
+    if cred and status != "pending_approval":
+        cred.used_credits = cred.used_credits + credit_cost
+        cred.updated_at = datetime.utcnow()
 
     import json as _json
+    _ctx = dict(body.context)
+    if body.output_language:
+        _ctx["output_language"] = body.output_language
     now = datetime.utcnow()
     job = AgentJob(
         id=str(uuid.uuid4()),
@@ -197,14 +263,24 @@ async def run_agent(
         agent_name=meta["name"],
         status=status,
         hitl_level=hitl,
-        input_data=_json.dumps({"prompt": body.prompt[:10_000], "context": body.context}),
-        credits_used=0,  # deducted on completion by worker
+        input_data=_json.dumps({"prompt": body.prompt[:10_000], "context": _ctx}),
+        credits_used=credit_cost,
+        output_language=body.output_language or None,
         created_at=now,
         updated_at=now,
     )
     db.add(job)
     db.commit()
     db.refresh(job)
+
+    # Notify admin for HITL-3 jobs
+    if status == "pending_approval":
+        admin_email = os.getenv("ADMIN_EMAIL", "")
+        if admin_email:
+            try:
+                send_approval_needed(admin_email, job.id, norm_id, user.email)
+            except Exception:
+                pass  # non-fatal
 
     return {
         "job_id": job.id,
@@ -237,59 +313,452 @@ async def get_agent_job(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Strip provider metadata comment from output before returning to client
     output = job.output_data or ""
-    if output.startswith("<!-- provider:"):
-        output = output.split(" -->\n", 1)[-1]
+
+    steps_parsed = None
+    try:
+        if job.steps:
+            steps_parsed = json.loads(job.steps)
+    except Exception:
+        pass
 
     return {
         "job_id": job.id,
         "agent_id": job.agent_id,
         "agent_name": job.agent_name,
         "status": job.status,
-        "hitl_level": job.hitl_level,
         "credits_used": job.credits_used,
-        "output": output if job.status == "completed" else None,
-        "error_message": job.error_message,
+        "output": output if job.status in ("completed", "pending_financial_review") else None,
+        "financial_review_held": job.status == "pending_financial_review",
         "created_at": job.created_at.isoformat() if job.created_at else None,
         "completed_at": job.completed_at.isoformat() if job.completed_at else None,
+        "steps": steps_parsed,
+        "rating": job.rating,
+        "rating_comment": job.rating_comment,
+        "output_language": job.output_language,
+        "revision_of": job.revision_of,
     }
 
 
 @router.get("/api/agents/jobs")
 async def list_agent_jobs(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
     user = _get_user(credentials, db)
     _, ws, _ = _workspace_tier(user, db)
     if not ws:
-        return {"total": 0, "jobs": []}
+        return {"total": 0, "skip": skip, "limit": limit, "jobs": []}
 
-    jobs = (
-        db.query(AgentJob)
-        .filter(AgentJob.workspace_id == ws.id)
-        .order_by(AgentJob.created_at.desc())
-        .limit(100)
-        .all()
-    )
+    base_q = db.query(AgentJob).filter(AgentJob.workspace_id == ws.id)
+    total = base_q.count()
+    jobs = base_q.order_by(AgentJob.created_at.desc()).offset(skip).limit(limit).all()
     return {
-        "total": len(jobs),
+        "total": total,
+        "skip": skip,
+        "limit": limit,
         "jobs": [
             {
                 "id": j.id,
                 "agent_id": j.agent_id,
                 "agent_name": j.agent_name,
                 "status": j.status,
-                "hitl_level": j.hitl_level,
                 "credits_used": j.credits_used,
-                "error_message": j.error_message,
                 "created_at": j.created_at.isoformat() if j.created_at else None,
                 "completed_at": j.completed_at.isoformat() if j.completed_at else None,
+                "rating": j.rating,
+                "output_language": j.output_language,
+                "revision_of": j.revision_of,
+                "output_preview": (j.output_data or "")[:300] if j.status == "completed" else None,
             }
             for j in jobs
         ],
     }
+
+
+@router.post("/api/agents/jobs/{job_id}/cancel")
+async def cancel_agent_job(
+    job_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Cancel a pending or pending_approval job and refund pre-committed credits."""
+    user = _get_user(credentials, db)
+    _, ws, _ = _workspace_tier(user, db)
+    if not ws:
+        raise HTTPException(status_code=404, detail="No workspace found")
+
+    job = db.query(AgentJob).filter(AgentJob.id == job_id, AgentJob.workspace_id == ws.id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    if job.status not in ("pending", "pending_approval"):
+        raise HTTPException(status_code=400, detail=f"Cannot cancel a job in '{job.status}' status")
+
+    # Refund pre-committed credits for non-HITL-3 pending jobs
+    if job.status == "pending":
+        cred = db.query(CreditsAccount).filter(CreditsAccount.workspace_id == ws.id).with_for_update().first()
+        if cred:
+            pre_committed = job.credits_used or 0
+            if pre_committed > 0:
+                cred.used_credits = max(0, cred.used_credits - pre_committed)
+                cred.updated_at = datetime.utcnow()
+
+    job.status = "cancelled"
+    job.credits_used = 0
+    job.updated_at = datetime.utcnow()
+    db.commit()
+
+    return {"job_id": job_id, "status": "cancelled"}
+
+
+# ---------------------------------------------------------------------------
+# SSE streaming route
+# ---------------------------------------------------------------------------
+
+class StreamRequest(BaseModel):
+    prompt: str
+    context: dict = {}
+
+
+@router.post("/api/agents/{agent_id}/stream")
+async def stream_agent(
+    agent_id: str,
+    body: StreamRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """
+    Stream LLM output for an agent as Server-Sent Events.
+
+    - HITL-3 agents are blocked (too high-risk for the no-approval path).
+    - Deducts 1 credit upfront; no refund on stream (fire-and-forget billing).
+    - Does NOT create an AgentJob record.
+    - Guards: FINANCIAL_CONSTRAINT_BLOCK + INJECTION_GUARD applied to system prompt.
+    """
+    from app.agents.agent_registry import get_agent_hitl, normalize_agent_id, agent_exists
+    from app.agents.agent_prompts import get_agent_system_prompt
+    from app.agents.agent_executor import FINANCIAL_CONSTRAINT_BLOCK, INJECTION_GUARD, HITL_MODEL_MAP
+
+    user = _get_user(credentials, db)
+    _, ws, _ = _workspace_tier(user, db)
+
+    normalized = normalize_agent_id(agent_id)
+    if not agent_exists(normalized):
+        raise HTTPException(status_code=404, detail=f"Unknown agent: {agent_id}")
+
+    hitl = get_agent_hitl(normalized)
+    if hitl == "HITL-3":
+        raise HTTPException(
+            status_code=403,
+            detail="HITL-3 agents require owner approval and cannot be streamed directly.",
+        )
+
+    if not ws:
+        raise HTTPException(status_code=400, detail="No workspace found for this account")
+
+    # Credit check and upfront deduction (row-level lock to prevent concurrent overdraw)
+    cred = (
+        db.query(CreditsAccount)
+        .filter(CreditsAccount.workspace_id == ws.id)
+        .with_for_update()
+        .first()
+    )
+    remaining = (cred.total_credits - cred.used_credits) if cred else 0
+    if remaining < 1:
+        raise HTTPException(
+            status_code=402,
+            detail="Insufficient credits. Minimum 1 credit required to stream.",
+        )
+
+    if cred:
+        cred.used_credits = cred.used_credits + 1
+        cred.updated_at = datetime.utcnow()
+        db.commit()
+
+    # Build guarded prompt
+    system_prompt = get_agent_system_prompt(normalized)
+    guarded = FINANCIAL_CONSTRAINT_BLOCK + INJECTION_GUARD + system_prompt
+
+    user_message = body.prompt
+    if body.context:
+        ctx_lines = "\n".join(f"{k}: {v}" for k, v in body.context.items() if v)
+        if ctx_lines:
+            user_message = f"Context:\n{ctx_lines}\n\n---\n\nTask:\n{user_message}"
+
+    model = HITL_MODEL_MAP.get(hitl, "claude-sonnet-4-6")
+
+    async def event_generator():
+        # anthropic imported inside generator to avoid import errors when key is absent
+        import anthropic
+
+        api_key = os.getenv("ANTHROPIC_API_KEY", "").strip()
+        if not api_key:
+            yield f'data: {json.dumps({"type": "error", "message": "ANTHROPIC_API_KEY not configured"})}\n\n'
+            return
+
+        client = anthropic.Anthropic(api_key=api_key)
+        yield f'data: {json.dumps({"type": "start", "agent_id": normalized, "model": model})}\n\n'
+        try:
+            with client.messages.stream(
+                model=model,
+                max_tokens=4096,
+                system=[{"type": "text", "text": guarded, "cache_control": {"type": "ephemeral"}}],
+                messages=[{"role": "user", "content": user_message}],
+                timeout=90,
+            ) as stream:
+                for text_chunk in stream.text_stream:
+                    yield f'data: {json.dumps({"type": "chunk", "text": text_chunk})}\n\n'
+            yield f'data: {json.dumps({"type": "done", "credits_used": 1})}\n\n'
+        except Exception as e:
+            yield f'data: {json.dumps({"type": "error", "message": str(e)})}\n\n'
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Output rating
+# ---------------------------------------------------------------------------
+
+class RateJobRequest(BaseModel):
+    rating: int          # 1-5
+    comment: str = ""
+
+
+@router.post("/api/agents/jobs/{job_id}/rate")
+@limiter.limit("30/minute")
+async def rate_agent_job(
+    job_id: str,
+    request: Request,
+    body: RateJobRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Client rates a completed job output 1-5 stars."""
+    if body.rating < 1 or body.rating > 5:
+        raise HTTPException(status_code=400, detail="Rating must be 1-5")
+    user = _get_user(credentials, db)
+    _, ws, _ = _workspace_tier(user, db)
+    if not ws:
+        raise HTTPException(status_code=404, detail="No workspace found")
+
+    job = db.query(AgentJob).filter(AgentJob.id == job_id, AgentJob.workspace_id == ws.id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status not in ("completed", "pending_financial_review"):
+        raise HTTPException(status_code=400, detail="Can only rate completed jobs")
+
+    job.rating = body.rating
+    job.rating_comment = body.comment[:1000] if body.comment else None
+    job.updated_at = datetime.utcnow()
+
+    # Feed 5-star outputs into the few-shot example store (best-effort)
+    if body.rating == 5 and job.output_data:
+        try:
+            from app.models.agent_system import AgentExample  # type: ignore
+            clean_output = job.output_data.split(" -->\n", 1)[-1]
+            input_parsed = json.loads(job.input_data or "{}")
+            eg = AgentExample(
+                id=str(uuid.uuid4()),
+                agent_id=job.agent_id,
+                input_text=(input_parsed.get("prompt", "") or "")[:2000],
+                output_text=clean_output[:4000],
+                created_at=datetime.utcnow(),
+            )
+            db.add(eg)
+        except Exception:
+            pass
+
+    db.commit()
+    return {"job_id": job_id, "rating": body.rating, "saved": True}
+
+
+# ---------------------------------------------------------------------------
+# Output revision
+# ---------------------------------------------------------------------------
+
+class ReviseJobRequest(BaseModel):
+    revision_prompt: str    # what to change: "make it shorter and more direct"
+    output_language: str = ""
+
+
+@router.post("/api/agents/jobs/{job_id}/revise")
+@limiter.limit("10/minute")
+async def revise_agent_job(
+    job_id: str,
+    request: Request,
+    body: ReviseJobRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """
+    Queue a revision of a completed job with a specific instruction.
+    Creates a new AgentJob linked to the original via revision_of.
+    Inherits the original agent, input, and context — only the revision_prompt differs.
+    """
+    user = _get_user(credentials, db)
+    tier, ws, cred = _workspace_tier(user, db)
+    if not ws:
+        raise HTTPException(status_code=404, detail="No workspace found")
+
+    orig = db.query(AgentJob).filter(AgentJob.id == job_id, AgentJob.workspace_id == ws.id).first()
+    if not orig:
+        raise HTTPException(status_code=404, detail="Original job not found")
+    if orig.status not in ("completed", "pending_financial_review"):
+        raise HTTPException(status_code=400, detail="Can only revise completed jobs")
+
+    meta = AGENT_CATALOGUE.get(orig.agent_id, {})
+    credit_cost = meta.get("credit_estimate", 1)
+    remaining = (cred.total_credits - cred.used_credits) if cred else 0
+    if remaining < credit_cost:
+        raise HTTPException(status_code=402, detail=f"Insufficient credits. Need {credit_cost}, have {remaining}.")
+
+    if cred:
+        cred = db.query(CreditsAccount).filter(CreditsAccount.workspace_id == ws.id).with_for_update().first()
+        if cred:
+            cred.used_credits += credit_cost
+            cred.updated_at = datetime.utcnow()
+
+    now = datetime.utcnow()
+    revision_input = json.loads(orig.input_data or "{}")
+    if body.output_language:
+        revision_input.setdefault("context", {})["output_language"] = body.output_language
+
+    revision_job = AgentJob(
+        id=str(uuid.uuid4()),
+        workspace_id=ws.id,
+        agent_id=orig.agent_id,
+        agent_name=orig.agent_name,
+        status="pending",
+        hitl_level=orig.hitl_level,
+        input_data=json.dumps(revision_input),
+        credits_used=credit_cost,
+        revision_of=orig.id,
+        revision_prompt=body.revision_prompt[:2000],
+        output_language=body.output_language or orig.output_language,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(revision_job)
+    db.commit()
+    db.refresh(revision_job)
+
+    return {
+        "job_id": revision_job.id,
+        "revision_of": orig.id,
+        "agent_id": orig.agent_id,
+        "status": "pending",
+        "message": "Revision queued",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Scheduled runs
+# ---------------------------------------------------------------------------
+
+class ScheduleRunRequest(BaseModel):
+    agent_id: str
+    name: str = ""
+    cron_expr: str          # "0 9 * * 1" = Mon 9am UTC
+    prompt: str
+    context: dict = {}
+
+
+@router.get("/api/agents/schedules")
+@limiter.limit("30/minute")
+async def list_schedules(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    from app.models.agent_system import ScheduledRun
+    user = _get_user(credentials, db)
+    _, ws, _ = _workspace_tier(user, db)
+    if not ws:
+        return {"schedules": []}
+    rows = db.query(ScheduledRun).filter(ScheduledRun.workspace_id == ws.id).all()
+    return {"schedules": [
+        {"id": r.id, "agent_id": r.agent_id, "name": r.name, "cron_expr": r.cron_expr,
+         "is_active": r.is_active, "last_run_at": r.last_run_at.isoformat() if r.last_run_at else None,
+         "next_run_at": r.next_run_at.isoformat() if r.next_run_at else None}
+        for r in rows
+    ]}
+
+
+@router.post("/api/agents/schedules")
+@limiter.limit("10/minute")
+async def create_schedule(
+    request: Request,
+    body: ScheduleRunRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    from app.models.agent_system import ScheduledRun
+    from croniter import croniter  # type: ignore
+
+    user = _get_user(credentials, db)
+    _, ws, _ = _workspace_tier(user, db)
+    if not ws:
+        raise HTTPException(status_code=400, detail="No workspace found")
+
+    norm_id = normalize_agent_id(body.agent_id)
+    if norm_id not in AGENT_CATALOGUE:
+        raise HTTPException(status_code=404, detail=f"Unknown agent: {body.agent_id}")
+
+    try:
+        cron = croniter(body.cron_expr)
+        next_run = cron.get_next(datetime)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid cron expression. Example: '0 9 * * 1' (Mon 9am UTC)")
+
+    now = datetime.utcnow()
+    sched = ScheduledRun(
+        id=str(uuid.uuid4()),
+        workspace_id=ws.id,
+        agent_id=norm_id,
+        name=body.name or f"{AGENT_CATALOGUE[norm_id]['name']} — scheduled",
+        cron_expr=body.cron_expr,
+        prompt=body.prompt[:10_000],
+        context=json.dumps(body.context) if body.context else None,
+        is_active=True,
+        next_run_at=next_run,
+        created_at=now,
+    )
+    db.add(sched)
+    db.commit()
+    db.refresh(sched)
+
+    return {"schedule_id": sched.id, "next_run_at": next_run.isoformat(), "message": "Schedule created"}
+
+
+@router.delete("/api/agents/schedules/{schedule_id}")
+@limiter.limit("10/minute")
+async def delete_schedule(
+    schedule_id: str,
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    from app.models.agent_system import ScheduledRun
+    user = _get_user(credentials, db)
+    _, ws, _ = _workspace_tier(user, db)
+    if not ws:
+        raise HTTPException(status_code=404, detail="No workspace found")
+    sched = db.query(ScheduledRun).filter(ScheduledRun.id == schedule_id, ScheduledRun.workspace_id == ws.id).first()
+    if not sched:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+    db.delete(sched)
+    db.commit()
+    return {"deleted": schedule_id}
 
 
 # ---------------------------------------------------------------------------

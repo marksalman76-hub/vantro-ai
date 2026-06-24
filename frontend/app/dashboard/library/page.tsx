@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { SkeletonTable } from '@/components/Skeleton';
+import { sanitizeOutput } from '@/lib/sanitize-output';
 
 interface Job {
   id: string;
@@ -86,7 +87,8 @@ function CopyButton({ text }: { text: string }) {
 
 function JobCard({ job }: { job: Job }) {
   const [expanded, setExpanded] = useState(false);
-  const preview = job.output ? job.output.slice(0, 200) : null;
+  const clean = job.output ? sanitizeOutput(job.output) : null;
+  const preview = clean ? clean.slice(0, 200) : null;
   const hasMore = job.output && job.output.length > 200;
 
   return (
@@ -145,9 +147,9 @@ function JobCard({ job }: { job: Job }) {
                 <p className="text-orange-400/70 text-xs mb-3">This task is waiting for review before we continue.</p>
                 <a href="/dashboard/approvals" className="text-xs text-orange-400 hover:text-orange-300 font-medium">Review now →</a>
               </div>
-            ) : job.output ? (
+            ) : clean ? (
               <div className="space-y-1">
-                {job.output.split('\n').map((line, i) => {
+                {clean.split('\n').map((line, i) => {
                   if (/^#{1,3}\s/.test(line)) return <p key={i} className="font-bold text-white text-sm mt-4 mb-1">{line.replace(/^#+\s/, '')}</p>;
                   if (/^[-*]\s|^\d+\.\s/.test(line)) return <p key={i} className="text-gray-300 text-sm ml-3 leading-relaxed">{line}</p>;
                   if (!line.trim()) return <div key={i} className="h-2" />;

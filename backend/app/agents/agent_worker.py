@@ -250,7 +250,7 @@ async def _process_job(job_id: str) -> None:
                 job_id, financial_violations,
             )
             job.status      = "pending_financial_review"
-            job.output_data = f"<!-- provider:{provider_used} -->\n{output}"
+            job.output_data = output
             job.credits_used = credit_cost
             job.updated_at  = now
             # Notify admin
@@ -285,7 +285,7 @@ async def _process_job(job_id: str) -> None:
                 job_id,
             )
             job.status = "pending_approval"
-            job.output_data = f"<!-- provider:{provider_used} | confidence:LOW -->\n{output}"
+            job.output_data = output
             job.credits_used = credit_cost
             job.updated_at = now
             db.commit()
