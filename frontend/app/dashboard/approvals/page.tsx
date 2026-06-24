@@ -51,9 +51,8 @@ export default function ApprovalsPage() {
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                       job.status === 'pending_approval' ? 'text-orange-400 bg-orange-500/10 border-orange-500/20' : 'text-red-400 bg-red-500/10 border-red-500/20'
                     }`}>
-                      {job.status === 'pending_approval' ? 'Awaiting admin approval' : 'Declined'}
+                      {job.status === 'pending_approval' ? 'Under review' : 'Not approved'}
                     </span>
-                    <span className="text-[10px] text-gray-600 bg-gray-800 px-2 py-0.5 rounded-full">{job.hitl_level}</span>
                   </div>
                   <p className="text-white text-sm font-medium mb-1">{job.agent_name}</p>
                   <p className="text-xs text-gray-500">{job.created_at ? new Date(job.created_at).toLocaleString() : '—'}</p>
@@ -68,7 +67,7 @@ export default function ApprovalsPage() {
               {job.status === 'rejected' && (
                 <div className="mt-4 bg-red-500/5 border border-red-500/15 rounded-xl px-4 py-3">
                   <p className="text-red-400 text-xs font-medium mb-0.5">This request was not approved</p>
-                  <p className="text-gray-500 text-xs mb-2">{job.error_message || 'Your credits were not charged. Please contact support if you have questions.'}</p>
+                  <p className="text-gray-500 text-xs mb-2">Your credits were not charged. Contact support if you have questions.</p>
                   <Link href="/dashboard/support" className="text-xs text-violet-400 hover:text-violet-300">Contact support →</Link>
                 </div>
               )}

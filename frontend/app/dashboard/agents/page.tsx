@@ -34,10 +34,10 @@ const CAT_COLOR: Record<string,string> = {
   Operations:'bg-gray-500/10 text-gray-300 border-gray-500/20',
 };
 const HITL: Record<string,{label:string;color:string;tip:string}> = {
-  'HITL-0':{label:'Autonomous', color:'bg-green-500/10 text-green-400 border-green-500/20',   tip:'Runs without approval'},
-  'HITL-1':{label:'Review',     color:'bg-blue-500/10 text-blue-400 border-blue-500/20',      tip:'Output for your review'},
-  'HITL-2':{label:'Approval',   color:'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',tip:'You approve before external action'},
-  'HITL-3':{label:'Owner gate', color:'bg-red-500/10 text-red-400 border-red-500/20',         tip:'Admin approval required'},
+  'HITL-0':{label:'Autonomous',      color:'bg-green-500/10 text-green-400 border-green-500/20',   tip:'Runs automatically'},
+  'HITL-1':{label:'Reviewed',        color:'bg-blue-500/10 text-blue-400 border-blue-500/20',      tip:'Output reviewed before delivery'},
+  'HITL-2':{label:'You approve',     color:'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',tip:'You review before any external action'},
+  'HITL-3':{label:'Platform review', color:'bg-red-500/10 text-red-400 border-red-500/20',         tip:'Our team reviews before this runs'},
 };
 const TIER_BADGE: Record<string,string> = {
   starter:'bg-green-500/10 text-green-400 border-green-500/20', growth:'bg-blue-500/10 text-blue-400 border-blue-500/20',
@@ -70,8 +70,8 @@ function JobOutputModal({job,onDismiss}:{job:JobResult;onDismiss:()=>void}) {
         <div className="flex-1 overflow-y-auto px-6 py-5">
           {job.status==='failed' ? (
             <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-              <p className="text-red-400 text-sm font-medium mb-1">Execution failed</p>
-              <p className="text-red-400/70 text-xs">{job.error_message}</p>
+              <p className="text-red-400 text-sm font-medium mb-1">Could not complete</p>
+              <p className="text-red-400/70 text-xs">We couldn&apos;t complete this request. Your credits were not charged, were refunded, or are under review.</p>
             </div>
           ) : job.status==='pending_approval' ? (
             <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-xl p-4">
@@ -113,7 +113,7 @@ function RunModal({agent,onClose,onJobCreated}:{agent:AgentMeta;onClose:()=>void
     try{
       const res=await fetch(`/api/agents/${agent.id}/run`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:JSON.stringify({prompt:prompt.trim()})});
       const json=await res.json();
-      if(!res.ok){setError(json.detail||'Submission failed');return;}
+      if(!res.ok){setError('Could not start this task. Please try again or contact support.');return;}
       onJobCreated(json.job_id,json.agent_name);
     }catch{setError('Network error');}
     finally{setSubmitting(false);}
@@ -137,11 +137,11 @@ function RunModal({agent,onClose,onJobCreated}:{agent:AgentMeta;onClose:()=>void
             placeholder={`Describe what you want ${agent.name} to do. Be specific — the more context, the better.`}
             className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 resize-none focus:outline-none focus:border-violet-500 leading-relaxed"/>
           {error&&<p className="text-red-400 text-xs mt-2">{error}</p>}
-          {agent.hitl_level==='HITL-3'&&<div className="mt-3 bg-red-500/5 border border-red-500/20 rounded-lg px-3 py-2"><p className="text-red-400 text-xs">Requires admin approval before execution.</p></div>}
+          {agent.hitl_level==='HITL-3'&&<div className="mt-3 bg-orange-500/5 border border-orange-500/20 rounded-lg px-3 py-2"><p className="text-orange-400 text-xs">This task is sent to our team for review before it runs. You&apos;ll be notified when it&apos;s approved.</p></div>}
         </div>
         <div className="px-6 pb-5 flex gap-3">
           <button onClick={submit} disabled={!prompt.trim()||submitting} className="flex-1 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors">
-            {submitting?'Submitting…':agent.hitl_level==='HITL-3'?'Submit for approval':'Run agent'}
+            {submitting?'Submitting…':agent.hitl_level==='HITL-3'?'Send for review':'Run agent'}
           </button>
           <button onClick={onClose} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white border border-gray-700 rounded-xl">Cancel</button>
         </div>
@@ -287,13 +287,27 @@ function RunTaskPanel({agents,onJobCreated}:{agents:AgentMeta[];onJobCreated:(id
 function ExecutionHistory({onView}:{onView:(id:string)=>void}) {
   const [jobs,setJobs]=useState<HistoryJob[]>([]);
   const [loading,setLoading]=useState(true);
-  useEffect(()=>{
+  const [cancelling,setCancelling]=useState<string|null>(null);
+
+  function fetchJobs(){
     const token=localStorage.getItem('token');
     if(!token)return;
     fetch('/api/agents/jobs',{headers:{Authorization:`Bearer ${token}`}})
       .then(r=>r.ok?r.json():null).then(d=>{if(d?.jobs)setJobs(d.jobs.slice(0,15));}).finally(()=>setLoading(false));
-  },[]);
-  const S:Record<string,string>={completed:'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',running:'text-blue-400 bg-blue-500/10 border-blue-500/20',pending:'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',pending_approval:'text-orange-400 bg-orange-500/10 border-orange-500/20',failed:'text-red-400 bg-red-500/10 border-red-500/20',rejected:'text-red-400 bg-red-500/10 border-red-500/20'};
+  }
+  useEffect(()=>{fetchJobs();},[]);
+
+  async function handleCancel(jobId:string){
+    if(cancelling)return;
+    setCancelling(jobId);
+    const token=localStorage.getItem('token');
+    try{
+      const res=await fetch(`/api/agents/jobs/${jobId}/cancel`,{method:'POST',headers:{Authorization:`Bearer ${token}`,'Content-Type':'application/json'}});
+      if(res.ok)setJobs(prev=>prev.map(j=>j.id===jobId?{...j,status:'cancelled',credits_used:0}:j));
+    }catch{}finally{setCancelling(null);}
+  }
+
+  const S:Record<string,string>={completed:'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',running:'text-blue-400 bg-blue-500/10 border-blue-500/20',pending:'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',pending_approval:'text-orange-400 bg-orange-500/10 border-orange-500/20',failed:'text-red-400 bg-red-500/10 border-red-500/20',rejected:'text-red-400 bg-red-500/10 border-red-500/20',cancelled:'text-gray-500 bg-gray-700/20 border-gray-700'};
   if(loading)return <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 text-center text-gray-600 text-sm">Loading…</div>;
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
@@ -315,6 +329,11 @@ function ExecutionHistory({onView}:{onView:(id:string)=>void}) {
                 <span className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${S[job.status]||'text-gray-400 bg-gray-800 border-gray-700'}`}>{job.status.replace(/_/g,' ')}</span>
                 {job.credits_used>0&&<span className="text-[10px] text-gray-600">{job.credits_used}cr</span>}
                 {job.status==='completed'&&<button onClick={()=>onView(job.id)} className="text-[10px] text-violet-400 hover:text-violet-300 font-medium">View →</button>}
+                {(job.status==='pending'||job.status==='pending_approval')&&(
+                  <button onClick={()=>handleCancel(job.id)} disabled={cancelling===job.id} className="text-[10px] text-red-400 hover:text-red-300 font-medium disabled:opacity-40">
+                    {cancelling===job.id?'…':'Cancel'}
+                  </button>
+                )}
               </div>
             </div>
           ))}

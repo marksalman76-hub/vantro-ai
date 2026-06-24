@@ -73,7 +73,7 @@ export default function CreatePage() {
       if (res.ok && d.job_id) {
         router.push('/dashboard/jobs');
       } else {
-        setError(d.detail || 'Could not start task. Please try again or contact support.');
+        setError('Could not start this task. Please try again or contact support.');
       }
     } catch {
       setError('Could not start task. Please contact support.');

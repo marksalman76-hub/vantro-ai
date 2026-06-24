@@ -115,8 +115,8 @@ function JobCard({ job }: { job: Job }) {
               {preview}{hasMore ? '…' : ''}
             </p>
           )}
-          {!expanded && job.status === 'failed' && job.error_message && (
-            <p className="text-xs text-red-400/70 mt-2 line-clamp-1">{job.error_message}</p>
+          {!expanded && job.status === 'failed' && (
+            <p className="text-xs text-red-400/70 mt-2">Could not complete — tap for options</p>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0 pt-0.5">
