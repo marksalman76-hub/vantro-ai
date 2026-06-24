@@ -83,7 +83,7 @@ function StatCard({ number, label, description, index }: StatCardProps) {
 
 export function WhyVantro() {
   return (
-    <section className="py-32" style={{ backgroundColor: 'oklch(0.10 0 0)' }}>
+    <section className="py-32" style={{ backgroundColor: 'oklch(0.13 0 0)' }}>
       <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
         {/* Left: orb */}
         <motion.div

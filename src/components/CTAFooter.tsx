@@ -9,7 +9,7 @@ export function CTAFooter() {
   return (
     <section
       className="relative py-40 overflow-hidden"
-      style={{ backgroundColor: 'oklch(0.10 0 0)' }}
+      style={{ backgroundColor: 'oklch(0.13 0 0)' }}
     >
       {/* Radial glow behind orb */}
       <div

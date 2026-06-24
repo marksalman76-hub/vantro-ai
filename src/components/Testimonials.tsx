@@ -93,7 +93,7 @@ function QuoteCard({ quote, idx }: QuoteCardProps) {
 
 export function Testimonials() {
   return (
-    <section className="py-32 overflow-hidden" style={{ backgroundColor: 'oklch(0.14 0 0)' }}>
+    <section className="py-32 overflow-hidden" style={{ backgroundColor: 'oklch(0.17 0 0)' }}>
       <h2
         className="text-center mb-16 font-bold text-4xl md:text-5xl"
         style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}

@@ -14,10 +14,10 @@ const STATS = [
 ]
 
 const RAYS = [
-  { angle: -28, opacity: 0.09, dur: 4.2 },
-  { angle: -12, opacity: 0.13, dur: 5.8 },
-  { angle:   6, opacity: 0.10, dur: 4.9 },
-  { angle:  20, opacity: 0.07, dur: 6.5 },
+  { angle: -28, opacity: 0.22, dur: 4.2 },
+  { angle: -12, opacity: 0.32, dur: 5.8 },
+  { angle:   6, opacity: 0.26, dur: 4.9 },
+  { angle:  20, opacity: 0.18, dur: 6.5 },
 ]
 
 export function Hero() {
@@ -41,7 +41,7 @@ export function Hero() {
         paddingBottom: '6rem',
         position: 'relative',
         overflow: 'hidden',
-        background: 'oklch(0.10 0 0)',
+        background: 'oklch(0.13 0 0)',
       }}
     >
       {/* Scanline texture */}
