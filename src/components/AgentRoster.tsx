@@ -226,14 +226,14 @@ function AgentCarousel() {
         <div
           style={{
             position: 'absolute', left: 0, top: 0, bottom: 0, width: '18%',
-            background: 'linear-gradient(to right, oklch(0.14 0 0) 30%, transparent)',
+            background: 'linear-gradient(to right, oklch(0.22 0 0) 30%, transparent)',
             zIndex: 45, pointerEvents: 'none',
           }}
         />
         <div
           style={{
             position: 'absolute', right: 0, top: 0, bottom: 0, width: '18%',
-            background: 'linear-gradient(to left, oklch(0.14 0 0) 30%, transparent)',
+            background: 'linear-gradient(to left, oklch(0.22 0 0) 30%, transparent)',
             zIndex: 45, pointerEvents: 'none',
           }}
         />
@@ -410,7 +410,7 @@ export function AgentRoster() {
     <section
       id="agents"
       className="py-32 overflow-hidden"
-      style={{ backgroundColor: 'oklch(0.14 0 0)', position: 'relative' }}
+      style={{ backgroundColor: 'oklch(0.22 0 0)', position: 'relative' }}
     >
       <h2
         className="text-center mb-4 font-bold text-4xl md:text-5xl"

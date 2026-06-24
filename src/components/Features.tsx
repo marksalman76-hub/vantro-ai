@@ -158,7 +158,7 @@ export function Features() {
       style={{
         paddingTop: '8rem',
         paddingBottom: '8rem',
-        background: 'oklch(0.22 0 0)',
+        background: 'oklch(0.28 0 0)',
       }}
     >
       <div style={{ maxWidth: '72rem', margin: '0 auto', padding: '0 1.5rem' }}>

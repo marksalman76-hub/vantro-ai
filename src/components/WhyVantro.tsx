@@ -84,7 +84,7 @@ function StatCard({ number, label, description, index }: StatCardProps) {
 export function WhyVantro() {
   const prefersReduced = useReducedMotion()
   return (
-    <section className="py-32" style={{ backgroundColor: 'oklch(0.19 0 0)' }}>
+    <section className="py-32" style={{ backgroundColor: 'oklch(0.24 0 0)' }}>
       <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
         {/* Left: orb */}
         <motion.div
@@ -99,34 +99,69 @@ export function WhyVantro() {
             className="absolute inset-0 blur-3xl rounded-full"
             style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)' }}
           />
-          <motion.img
-            src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663790183318/saLNUqZiiYVuufKN.png"
-            alt="Vantro orb"
-            className="relative w-full max-w-md"
-            animate={
-              prefersReduced
-                ? {}
-                : {
-                    y: [0, -22, -5, -30, -8, 0],
-                    x: [0, -16, 11, -9, 5, 0],
-                    scale: [1, 1.06, 0.96, 1.08, 0.98, 1],
-                    filter: [
-                      'brightness(1) drop-shadow(0 0 25px rgba(255,255,255,0.12))',
-                      'brightness(1.35) drop-shadow(0 0 70px rgba(255,255,255,0.40))',
-                      'brightness(0.90) drop-shadow(0 0 10px rgba(255,255,255,0.04))',
-                      'brightness(1.25) drop-shadow(0 0 60px rgba(255,255,255,0.28))',
-                      'brightness(1.04) drop-shadow(0 0 35px rgba(255,255,255,0.16))',
-                      'brightness(1) drop-shadow(0 0 25px rgba(255,255,255,0.12))',
-                    ],
-                  }
-            }
-            transition={prefersReduced ? {} : { duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-            style={{
-              mixBlendMode: 'screen',
-              WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 75%)',
-              maskImage: 'radial-gradient(circle, black 40%, transparent 75%)',
+          <motion.div
+            initial={prefersReduced ? false : { scale: 0.80 }}
+            whileInView={prefersReduced ? {} : {
+              scale: [0.80, 1.22, 1.0],
+              filter: ['brightness(0.1)', 'brightness(4.0)', 'brightness(1)'],
             }}
-          />
+            viewport={{ once: true, amount: 0.5 }}
+            transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+            style={{ position: 'relative', width: '100%', maxWidth: '28rem' }}
+          >
+            {!prefersReduced && (
+              <motion.div
+                animate={{
+                  background: [
+                    'radial-gradient(circle 120px at 30% 28%, rgba(255,255,255,0.72) 0%, transparent 65%)',
+                    'radial-gradient(circle 120px at 72% 22%, rgba(255,255,255,0.72) 0%, transparent 65%)',
+                    'radial-gradient(circle 120px at 76% 74%, rgba(255,255,255,0.72) 0%, transparent 65%)',
+                    'radial-gradient(circle 120px at 28% 78%, rgba(255,255,255,0.72) 0%, transparent 65%)',
+                    'radial-gradient(circle 120px at 30% 28%, rgba(255,255,255,0.72) 0%, transparent 65%)',
+                  ],
+                }}
+                transition={{ duration: 5.5, repeat: Infinity, ease: 'linear' }}
+                style={{
+                  position: 'absolute', inset: 0,
+                  mixBlendMode: 'screen',
+                  pointerEvents: 'none',
+                  zIndex: 2,
+                  WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 75%)',
+                  maskImage: 'radial-gradient(circle, black 40%, transparent 75%)',
+                }}
+              />
+            )}
+            <motion.img
+              src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663790183318/saLNUqZiiYVuufKN.png"
+              alt="Vantro orb"
+              className="w-full"
+              animate={
+                prefersReduced
+                  ? {}
+                  : {
+                      y: [0, -22, -5, -30, -8, 0],
+                      x: [0, -16, 11, -9, 5, 0],
+                      scale: [1, 1.06, 0.96, 1.08, 0.98, 1],
+                      filter: [
+                        'brightness(1) drop-shadow(0 0 25px rgba(255,255,255,0.12))',
+                        'brightness(1.35) drop-shadow(0 0 70px rgba(255,255,255,0.40))',
+                        'brightness(0.90) drop-shadow(0 0 10px rgba(255,255,255,0.04))',
+                        'brightness(1.25) drop-shadow(0 0 60px rgba(255,255,255,0.28))',
+                        'brightness(1.04) drop-shadow(0 0 35px rgba(255,255,255,0.16))',
+                        'brightness(1) drop-shadow(0 0 25px rgba(255,255,255,0.12))',
+                      ],
+                    }
+              }
+              transition={prefersReduced ? {} : { duration: 12, repeat: Infinity, ease: 'easeInOut' }}
+              style={{
+                mixBlendMode: 'screen',
+                WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 75%)',
+                maskImage: 'radial-gradient(circle, black 40%, transparent 75%)',
+                position: 'relative',
+                zIndex: 1,
+              }}
+            />
+          </motion.div>
         </motion.div>
 
         {/* Right: stats */}

@@ -1,15 +1,16 @@
 'use client';
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useToast } from '../context/ToastContext';
 
 export function CTAFooter() {
   const { showToast } = useToast();
+  const prefersReduced = useReducedMotion();
 
   return (
     <section
       className="relative py-40 overflow-hidden"
-      style={{ backgroundColor: 'oklch(0.19 0 0)' }}
+      style={{ backgroundColor: 'oklch(0.24 0 0)' }}
     >
       {/* Radial glow behind orb */}
       <div
@@ -27,18 +28,58 @@ export function CTAFooter() {
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
         aria-hidden="true"
       >
-        <img
-          src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663790183318/saLNUqZiiYVuufKN.png"
-          alt=""
-          className="w-[560px] max-w-none"
-          style={{
-            mixBlendMode: 'screen',
-            opacity: 0.4,
-            WebkitMaskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
-            maskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
-            animation: 'float 10s ease-in-out infinite',
+        <motion.div
+          initial={prefersReduced ? false : { scale: 0.80 }}
+          whileInView={prefersReduced ? {} : {
+            scale: [0.80, 1.22, 1.0],
+            filter: ['brightness(0.1)', 'brightness(4.0)', 'brightness(1)'],
           }}
-        />
+          viewport={{ once: true, amount: 0.4 }}
+          transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+          style={{ position: 'relative', width: '560px' }}
+        >
+          {!prefersReduced && (
+            <motion.div
+              animate={{
+                background: [
+                  'radial-gradient(circle 150px at 30% 28%, rgba(255,255,255,0.65) 0%, transparent 65%)',
+                  'radial-gradient(circle 150px at 72% 22%, rgba(255,255,255,0.65) 0%, transparent 65%)',
+                  'radial-gradient(circle 150px at 76% 74%, rgba(255,255,255,0.65) 0%, transparent 65%)',
+                  'radial-gradient(circle 150px at 28% 78%, rgba(255,255,255,0.65) 0%, transparent 65%)',
+                  'radial-gradient(circle 150px at 30% 28%, rgba(255,255,255,0.65) 0%, transparent 65%)',
+                ],
+              }}
+              transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+              style={{
+                position: 'absolute', inset: 0,
+                mixBlendMode: 'screen',
+                pointerEvents: 'none',
+                zIndex: 2,
+                WebkitMaskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
+                maskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
+              }}
+            />
+          )}
+          <motion.img
+            src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663790183318/saLNUqZiiYVuufKN.png"
+            alt=""
+            className="w-full"
+            animate={prefersReduced ? {} : {
+              y: [0, -22, -6, -30, -8, 0],
+              x: [0, 14, -10, 8, -3, 0],
+              scale: [1, 1.06, 0.97, 1.08, 0.99, 1],
+            }}
+            transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut' }}
+            style={{
+              mixBlendMode: 'screen',
+              opacity: 0.55,
+              WebkitMaskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
+              maskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
+              position: 'relative',
+              zIndex: 1,
+            }}
+          />
+        </motion.div>
       </div>
 
       {/* Content */}
