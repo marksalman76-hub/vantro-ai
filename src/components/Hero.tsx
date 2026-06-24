@@ -28,7 +28,7 @@ export function Hero() {
   const { scrollY } = useScroll()
   const orbY = useTransform(scrollY, [0, 600], [0, prefersReduced ? 0 : -60])
 
-  const handleActivate = () => showToast('Agent activation launching soon.', 'info')
+  const handleActivate = () => showToast('Agent activation launching soon.')
 
   return (
     <section

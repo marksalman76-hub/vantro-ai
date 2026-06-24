@@ -173,7 +173,7 @@ function AgentCarousel() {
             cursor: 'grab',
             touchAction: 'none',
           }}
-          whileTap={{ cursor: 'grabbing' } as React.CSSProperties}
+          whileTap={{ cursor: 'grabbing' } as any}
         />
 
         <div

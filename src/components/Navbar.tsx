@@ -40,8 +40,8 @@ export function Navbar() {
     return () => { document.body.style.overflow = '' }
   }, [mobileOpen])
 
-  const handleSignIn = () => showToast('Sign in coming soon.', 'info')
-  const handleActivate = () => showToast('Agent activation launching soon.', 'info')
+  const handleSignIn = () => showToast('Sign in coming soon.')
+  const handleActivate = () => showToast('Agent activation launching soon.')
 
   return (
     <>
