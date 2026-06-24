@@ -20,7 +20,7 @@ const PLANS = [
       'Agent tasks: 1–5 credits each',
       '10 avatar styles',
       'Email support',
-      '72-hour refund if no tasks run',
+      'Refund T&Cs apply',
     ],
     cta: 'Get Starter',
     style: 'default' as const,
@@ -39,7 +39,7 @@ const PLANS = [
       '50 avatar styles',
       'Priority support',
       'Custom branding',
-      '72-hour refund if no tasks run',
+      'Refund T&Cs apply',
     ],
     cta: 'Get Growth',
     style: 'popular' as const,
@@ -818,7 +818,7 @@ export default function PricingPage() {
 
         {/* Footer note */}
         <p className="text-center text-white/30 text-sm mt-14">
-          Full refund within 72 hours if no tasks have been run. Cancel anytime.{' '}
+          Refund T&Cs apply. Cancel anytime.{' '}
           <button onClick={() => handlePlanCTA('enterprise')} className="text-violet-400 hover:text-violet-300 transition-colors">
             Talk to sales →
           </button>
