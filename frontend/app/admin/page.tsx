@@ -19,6 +19,13 @@ interface Stats {
   queued_jobs: number;
 }
 
+interface SecurityStats {
+  open_security_alerts: number;
+  critical_alerts: number;
+  financial_review_flagged: number;
+  pending_approvals: number;
+}
+
 interface Job {
   id: string;
   status: string;
@@ -52,6 +59,7 @@ function StatCard({ label, value, color, sub }: { label: string; value: number |
 export default function AdminCommandCenter() {
   const router = useRouter();
   const [stats, setStats] = useState<Stats | null>(null);
+  const [secStats, setSecStats] = useState<SecurityStats | null>(null);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -63,11 +71,13 @@ export default function AdminCommandCenter() {
     Promise.all([
       fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } }),
       fetch('/api/admin/jobs', { headers: { Authorization: `Bearer ${token}` } }),
+      fetch('/api/admin/security/stats', { headers: { Authorization: `Bearer ${token}` } }),
     ])
-      .then(async ([sr, jr]) => {
-        const [s, j] = await Promise.all([sr.json(), jr.json()]);
+      .then(async ([sr, jr, secr]) => {
+        const [s, j, sec] = await Promise.all([sr.json(), jr.json(), secr.json()]);
         setStats(s);
         setJobs((j.jobs || []).slice(0, 10));
+        setSecStats(sec);
       })
       .catch(() => setError('Failed to load dashboard data'))
       .finally(() => setLoading(false));
@@ -87,9 +97,62 @@ export default function AdminCommandCenter() {
 
   return (
     <div className="p-8 max-w-7xl">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-2xl font-bold">Command Center</h1>
         <p className="text-gray-500 text-sm mt-1">Platform health and activity overview</p>
+      </div>
+
+      {/* Health Strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
+        {[
+          {
+            label: 'Security Alerts',
+            value: secStats?.open_security_alerts ?? '—',
+            href: '/admin/security',
+            urgent: (secStats?.open_security_alerts ?? 0) > 0,
+            critical: (secStats?.critical_alerts ?? 0) > 0,
+          },
+          {
+            label: 'Pending Approvals',
+            value: secStats?.pending_approvals ?? '—',
+            href: '/admin/approvals',
+            urgent: (secStats?.pending_approvals ?? 0) > 0,
+            critical: false,
+          },
+          {
+            label: 'Financial Review',
+            value: secStats?.financial_review_flagged ?? '—',
+            href: '/admin/approvals',
+            urgent: (secStats?.financial_review_flagged ?? 0) > 0,
+            critical: false,
+          },
+          {
+            label: 'Critical Alerts',
+            value: secStats?.critical_alerts ?? '—',
+            href: '/admin/security?severity=critical',
+            urgent: false,
+            critical: (secStats?.critical_alerts ?? 0) > 0,
+          },
+        ].map((item) => (
+          <Link
+            key={item.label}
+            href={item.href}
+            className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-colors ${
+              item.critical
+                ? 'bg-red-500/10 border-red-500/30 hover:border-red-500/50'
+                : item.urgent
+                ? 'bg-amber-500/10 border-amber-500/20 hover:border-amber-500/40'
+                : 'bg-gray-900 border-gray-800 hover:border-gray-700'
+            }`}
+          >
+            <span className={`text-xs font-medium ${
+              item.critical ? 'text-red-400' : item.urgent ? 'text-amber-400' : 'text-gray-500'
+            }`}>{item.label}</span>
+            <span className={`text-lg font-bold ${
+              item.critical ? 'text-red-300' : item.urgent ? 'text-amber-300' : 'text-gray-300'
+            }`}>{item.value}</span>
+          </Link>
+        ))}
       </div>
 
       {stats && (

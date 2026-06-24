@@ -4,20 +4,23 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
 const NAV = [
-  { href: '/admin',              label: 'Command Center',    icon: '◈', exact: true },
-  { href: '/admin/clients',      label: 'Clients',           icon: '◉' },
-  { href: '/admin/jobs',         label: 'Jobs & Executions', icon: '⬡' },
-  { href: '/admin/agents',       label: 'Agents',            icon: '◆' },
-  { href: '/admin/agent-jobs',   label: 'Agent Jobs',        icon: '◈' },
-  { href: '/admin/packages',     label: 'Packages & Access', icon: '▤' },
-  { href: '/admin/billing',      label: 'Billing & Credits', icon: '◇' },
-  { href: '/admin/assets',       label: 'Assets & Outputs',  icon: '▣' },
-  { href: '/admin/approvals',    label: 'Approvals',         icon: '◬' },
-  { href: '/admin/providers',    label: 'Providers',         icon: '◎' },
+  { href: '/admin',              label: 'Command Center',     icon: '◈', exact: true },
+  { href: '/admin/clients',      label: 'Clients',            icon: '◉' },
+  { href: '/admin/jobs',         label: 'Jobs & Executions',  icon: '⬡' },
+  { href: '/admin/agents',       label: 'Agents',             icon: '◆' },
+  { href: '/admin/agent-jobs',   label: 'Agent Jobs',         icon: '◈' },
+  { href: '/admin/packages',     label: 'Packages & Access',  icon: '▤' },
+  { href: '/admin/billing',      label: 'Billing & Credits',  icon: '◇' },
+  { href: '/admin/assets',       label: 'Assets & Outputs',   icon: '▣' },
+  { href: '/admin/reports',      label: 'Client Reports',     icon: '◈' },
+  { href: '/admin/approvals',    label: 'Approvals',          icon: '◬' },
+  { href: '/admin/providers',    label: 'Providers',          icon: '◎' },
   { href: '/admin/aws',          label: 'AWS Infrastructure', icon: '▲' },
+  { href: '/admin/security',     label: 'Security Alerts',    icon: '⚠', alert: true },
   { href: '/admin/support',      label: 'Support & Incidents',icon: '◍' },
-  { href: '/admin/audit',        label: 'Audit Logs',        icon: '≡' },
-  { href: '/admin/downloads',    label: 'OTC Downloads',     icon: '⬇' },
+  { href: '/admin/audit',        label: 'Audit Logs',         icon: '≡' },
+  { href: '/admin/downloads',    label: 'OTC Downloads',      icon: '⬇' },
+  { href: '/admin/settings',     label: 'Settings & Governance', icon: '⚙' },
 ];
 
 export default function AdminSidebar() {
@@ -55,8 +58,8 @@ export default function AdminSidebar() {
                 active ? 'bg-violet-600/20 text-violet-300' : 'text-gray-400 hover:text-white hover:bg-gray-800'
               }`}
             >
-              <span className="text-sm leading-none opacity-60">{item.icon}</span>
-              {item.label}
+              <span className={`text-sm leading-none ${item.alert ? 'text-red-400' : 'opacity-60'}`}>{item.icon}</span>
+              <span className={item.alert && !active ? 'text-red-300' : ''}>{item.label}</span>
             </Link>
           );
         })}
