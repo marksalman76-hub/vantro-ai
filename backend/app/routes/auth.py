@@ -1,18 +1,42 @@
-import uuid
+import hashlib
+import os
+import re
 import secrets
+import uuid
+from datetime import datetime, timedelta
+
+import jwt as _jwt
 from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from datetime import datetime, timedelta
-from app.auth import hash_password, verify_password, create_access_token, verify_token
-from app.models import User
-from app.database import SessionLocal
-from app.services import email_service
 from sqlalchemy.orm import Session
+
+from app.auth import hash_password, verify_password, create_access_token, verify_token
+from app.auth.jwt import SECRET_KEY, REFRESH_TOKEN_EXPIRE_DAYS
+from app.database import SessionLocal
 from app.limiter import limiter
+from app.models import User
+from app.models.refresh_token import RefreshToken
+from app.models.audit_log import AuditLog
+from app.services import email_service
+
+_IS_PROD = os.getenv("ENVIRONMENT", "development") == "production"
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 security = HTTPBearer(auto_error=False)
+
+# Minimum password: 8 chars, at least one letter and one digit
+_PASSWORD_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d).{8,}$")
+
+
+def _validate_password(pw: str) -> None:
+    if not _PASSWORD_RE.match(pw):
+        raise HTTPException(
+            status_code=400,
+            detail="Password must be at least 8 characters and contain at least one letter and one number",
+        )
+
 
 def get_db():
     db = SessionLocal()
@@ -21,31 +45,116 @@ def get_db():
     finally:
         db.close()
 
+
+def _set_auth_cookie(response: JSONResponse, token: str) -> None:
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=_IS_PROD,
+        samesite="lax",
+        max_age=3600,  # matches 1-hour access token
+        path="/",
+    )
+
+
+def _set_refresh_cookie(response: JSONResponse, token: str) -> None:
+    response.set_cookie(
+        key="refresh_token",
+        value=token,
+        httponly=True,
+        secure=_IS_PROD,
+        samesite="lax",
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+        path="/api/auth/refresh",  # scope to refresh endpoint only
+    )
+
+
+def _create_refresh_token(user_id: str, request: Request, db: Session) -> str:
+    opaque = secrets.token_urlsafe(48)
+    token_hash = hashlib.sha256(opaque.encode()).hexdigest()
+    expires_at = datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    rt = RefreshToken(
+        id=str(uuid.uuid4()),
+        user_id=user_id,
+        token_hash=token_hash,
+        expires_at=expires_at,
+        user_agent=request.headers.get("user-agent", "")[:255],
+        ip_address=request.client.host if request.client else None,
+    )
+    db.add(rt)
+    db.commit()
+    return opaque
+
+
+def _audit(db: Session, request: Request, action: str, user_id: str | None = None,
+           resource_type: str | None = None, resource_id: str | None = None, extra: dict | None = None) -> None:
+    try:
+        log = AuditLog(
+            id=str(uuid.uuid4()),
+            user_id=user_id,
+            action=action,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent", "")[:255],
+            extra=extra,
+        )
+        db.add(log)
+        db.commit()
+    except Exception:
+        pass  # never block the main path for audit failure
+
+
+# ── Pydantic models ────────────────────────────────────────────────────────────
+
 class LoginRequest(BaseModel):
     email: str
     password: str
+
 
 class RegisterRequest(BaseModel):
     email: str
     password: str
     name: str
 
+
 class AuthResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user_id: str
+
 
 class UserResponse(BaseModel):
     id: str
     email: str
     name: str | None
     is_active: bool
+    is_admin: bool = False
     subscription_status: str | None = None
     stripe_customer_id: str | None = None
 
-@router.post("/register", response_model=AuthResponse, status_code=201)
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+
+
+# ── Endpoints ─────────────────────────────────────────────────────────────────
+
+@router.post("/register", status_code=201)
 @limiter.limit("5/minute")
 async def register(request: Request, body: RegisterRequest, db: Session = Depends(get_db)):
+    _validate_password(body.password)
     existing = db.query(User).filter(User.email == body.email).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -59,29 +168,140 @@ async def register(request: Request, body: RegisterRequest, db: Session = Depend
     )
     db.add(user)
     db.commit()
-    token = create_access_token(new_id, expires_delta=timedelta(hours=24))
-    email_service.send_welcome(body.email, body.name or body.email.split("@")[0])
-    return {"access_token": token, "user_id": new_id}
 
-@router.post("/login", response_model=AuthResponse)
+    access_token = create_access_token(new_id, expires_delta=timedelta(hours=1))
+    refresh_opaque = _create_refresh_token(new_id, request, db)
+    _audit(db, request, "register", user_id=new_id)
+    email_service.send_welcome(body.email, body.name or body.email.split("@")[0])
+
+    resp = JSONResponse(
+        content={"access_token": access_token, "token_type": "bearer", "user_id": new_id},
+        status_code=201,
+    )
+    _set_auth_cookie(resp, access_token)
+    _set_refresh_cookie(resp, refresh_opaque)
+    return resp
+
+
+@router.post("/login")
 @limiter.limit("10/minute")
 async def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == body.email).first()
     if not user or not verify_password(body.password, user.password_hash):
+        _audit(db, request, "login_failed", extra={"email": body.email})
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    token = create_access_token(user.id, expires_delta=timedelta(hours=24))
-    return {"access_token": token, "user_id": user.id}
+
+    access_token = create_access_token(user.id, expires_delta=timedelta(hours=1))
+    refresh_opaque = _create_refresh_token(user.id, request, db)
+    _audit(db, request, "login", user_id=user.id)
+
+    resp = JSONResponse(content={"access_token": access_token, "token_type": "bearer", "user_id": user.id})
+    _set_auth_cookie(resp, access_token)
+    _set_refresh_cookie(resp, refresh_opaque)
+    return resp
+
+
+@router.post("/refresh")
+@limiter.limit("30/minute")
+async def refresh_token(request: Request, db: Session = Depends(get_db)):
+    """Issue a new access token using a valid refresh token (rotation — old token revoked)."""
+    opaque = request.cookies.get("refresh_token")
+    if not opaque:
+        raise HTTPException(status_code=401, detail="No refresh token")
+
+    token_hash = hashlib.sha256(opaque.encode()).hexdigest()
+    rt = db.query(RefreshToken).filter(
+        RefreshToken.token_hash == token_hash,
+        RefreshToken.revoked_at.is_(None),
+    ).first()
+
+    if not rt or rt.expires_at < datetime.utcnow():
+        raise HTTPException(status_code=401, detail="Refresh token expired or invalid")
+
+    # Rotate: revoke the old refresh token and issue a new one
+    rt.revoked_at = datetime.utcnow()
+    db.commit()
+
+    new_access = create_access_token(rt.user_id, expires_delta=timedelta(hours=1))
+    new_refresh = _create_refresh_token(rt.user_id, request, db)
+    _audit(db, request, "token_refresh", user_id=rt.user_id)
+
+    resp = JSONResponse(content={"access_token": new_access, "token_type": "bearer"})
+    _set_auth_cookie(resp, new_access)
+    _set_refresh_cookie(resp, new_refresh)
+    return resp
+
 
 @router.post("/logout")
-async def logout():
-    return {"message": "Logged out successfully"}
+async def logout(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    # Revoke access token JTI in Redis blocklist
+    raw_token = credentials.credentials if credentials else request.cookies.get("access_token")
+    if raw_token:
+        try:
+            payload = _jwt.decode(raw_token, SECRET_KEY, algorithms=["HS256"], options={"verify_exp": False})
+            jti = payload.get("jti")
+            exp = payload.get("exp")
+            if jti and exp:
+                remaining = max(1, int(exp - datetime.utcnow().timestamp()))
+                from app.services.cache_service import revoke_jti
+                revoke_jti(jti, remaining)
+        except Exception:
+            pass
 
-class ForgotPasswordRequest(BaseModel):
-    email: str
+    # Revoke refresh token in DB
+    opaque = request.cookies.get("refresh_token")
+    if opaque:
+        token_hash = hashlib.sha256(opaque.encode()).hexdigest()
+        rt = db.query(RefreshToken).filter(
+            RefreshToken.token_hash == token_hash,
+            RefreshToken.revoked_at.is_(None),
+        ).first()
+        if rt:
+            rt.revoked_at = datetime.utcnow()
+            db.commit()
 
-class ResetPasswordRequest(BaseModel):
-    token: str
-    new_password: str
+    user_id = None
+    if raw_token:
+        try:
+            pl = _jwt.decode(raw_token, SECRET_KEY, algorithms=["HS256"], options={"verify_exp": False})
+            user_id = pl.get("sub")
+        except Exception:
+            pass
+    _audit(db, request, "logout", user_id=user_id)
+
+    resp = JSONResponse(content={"message": "Logged out successfully"})
+    resp.delete_cookie(key="access_token", path="/")
+    resp.delete_cookie(key="refresh_token", path="/api/auth/refresh")
+    return resp
+
+
+@router.post("/change-password")
+async def change_password(
+    request: Request,
+    body: ChangePasswordRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    _validate_password(body.new_password)
+    token = credentials.credentials if credentials else request.cookies.get("access_token")
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    payload = verify_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    user = db.query(User).filter(User.id == payload.get("sub")).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not verify_password(body.current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    user.password_hash = hash_password(body.new_password)
+    db.commit()
+    _audit(db, request, "change_password", user_id=user.id)
+    return {"message": "Password updated successfully"}
 
 
 @router.post("/forgot-password")
@@ -99,31 +319,30 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest, db: Ses
 
 
 @router.post("/reset-password")
-async def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
-    if len(request.new_password) < 8:
-        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
-    user = (
-        db.query(User)
-        .filter(User.reset_token == request.token)
-        .first()
-    )
+@limiter.limit("5/minute")
+async def reset_password(request: Request, body: ResetPasswordRequest, db: Session = Depends(get_db)):
+    _validate_password(body.new_password)
+    user = db.query(User).filter(User.reset_token == body.token).first()
     if not user or not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Reset link is invalid or has expired")
-    user.password_hash = hash_password(request.new_password)
+    user.password_hash = hash_password(body.new_password)
     user.reset_token = None
     user.reset_token_expires = None
     db.commit()
+    _audit(db, request, "password_reset", user_id=user.id)
     return {"message": "Password updated. You can now log in."}
 
 
 @router.get("/me", response_model=UserResponse)
 async def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
-    if not credentials:
+    token = credentials.credentials if credentials else request.cookies.get("access_token")
+    if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
-    payload = verify_token(credentials.credentials)
+    payload = verify_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     user = db.query(User).filter(User.id == payload.get("sub")).first()

@@ -3,7 +3,8 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 
 export async function GET(request: NextRequest) {
-  const token = request.headers.get("authorization")?.replace("Bearer ", "");
+  const token = request.cookies.get("access_token")?.value
+    ?? request.headers.get("authorization")?.replace("Bearer ", "");
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const headers = { Authorization: `Bearer ${token}` };

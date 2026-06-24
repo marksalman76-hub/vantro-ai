@@ -1,15 +1,21 @@
 import os
 import logging
+from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.auth import verify_token
+from app.config import get_config
 from app.database import SessionLocal
+from app.limiter import limiter
 from app.models import User, Organization
 from app.models.workspace import Workspace, CreditsAccount
 from app.services.stripe_service import StripeService
+from app.services.email_service import send_payment_failed
+from app.routes.billing import handle_first_payment_succeeded
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +38,7 @@ PLAN_CREDITS = {
 # Map Stripe price_id → plan name (for renewal events that don't carry metadata)
 PRICE_TO_PLAN = {v: k for k, v in PLANS.items()}
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://www.vantro.ai")
+FRONTEND_URL = get_config("FRONTEND_URL", "https://www.vantro.ai")
 
 
 def get_db():
@@ -194,7 +200,7 @@ async def create_customer_portal(
 
 @router.get("/config")
 async def get_stripe_config():
-    pub_key = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
+    pub_key = get_config("STRIPE_PUBLISHABLE_KEY", "")
     if not pub_key:
         raise HTTPException(status_code=503, detail="Stripe not configured")
     return {"publishable_key": pub_key}
@@ -265,10 +271,11 @@ def _add_topup_credits(user: User, credits: int, db: Session) -> None:
 
 
 @router.post("/webhook")
+@limiter.limit("300/minute")
 async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature", "")
-    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+    webhook_secret = get_config("STRIPE_WEBHOOK_SECRET", "")
 
     if not webhook_secret:
         raise HTTPException(status_code=503, detail="Webhook secret not configured")
@@ -277,8 +284,18 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
     if not event:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
+    event_id = event["id"]
     event_type = event["type"]
-    logger.info("Stripe event: %s", event_type)
+    logger.info("Stripe event: %s id=%s", event_type, event_id)
+
+    # Idempotency guard — return 200 immediately on replay to prevent double-processing
+    already = db.execute(
+        text("SELECT 1 FROM stripe_webhook_events WHERE id = :eid"),
+        {"eid": event_id},
+    ).first()
+    if already:
+        logger.info("Skipping duplicate Stripe event %s", event_id)
+        return {"status": "already_processed"}
 
     if event_type == "checkout.session.completed":
         session = event["data"]["object"]
@@ -288,35 +305,58 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
             user = db.query(User).filter(User.id == user_id).first()
             if user:
                 if metadata.get("type") == "topup":
-                    # One-time credit top-up purchase
                     extra_credits = int(metadata.get("credits", 0))
                     if extra_credits > 0:
                         _add_topup_credits(user, extra_credits, db)
-                        db.commit()
                         logger.info("Top-up %d credits for user %s", extra_credits, user_id)
                 else:
-                    # New subscription
                     plan = metadata.get("plan", "")
                     user.subscription_status = "active"
                     user.stripe_customer_id = session.get("customer")
                     _assign_credits(user, plan, db)
-                    db.commit()
                     logger.info("Activated subscription (plan=%s) for user %s", plan, user_id)
 
     elif event_type == "invoice.payment_succeeded":
-        # Monthly renewal — refresh credit allocation
         invoice = event["data"]["object"]
         customer_id = invoice.get("customer")
+        subscription_id = invoice.get("subscription", "")
         user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
-        if user and user.subscription_status == "active":
-            # Get plan from the subscription's price ID
+        if user:
             lines = invoice.get("lines", {}).get("data", [])
             price_id = lines[0].get("price", {}).get("id") if lines else None
             plan = PRICE_TO_PLAN.get(price_id, "")
+            # Track subscription ID and period end for pre-billing reminder job
+            if subscription_id and not user.stripe_subscription_id:
+                user.stripe_subscription_id = subscription_id
+            period_end_ts = lines[0].get("period", {}).get("end") if lines else None
+            if period_end_ts:
+                user.subscription_period_end = datetime.utcfromtimestamp(period_end_ts)
             if plan:
                 _assign_credits(user, plan, db)
-                db.commit()
-                logger.info("Renewed %s credits for user %s (invoice %s)", plan, user.id, invoice.get("id"))
+                logger.info("Assigned %s credits to user %s (invoice %s)", plan, user.id, invoice.get("id"))
+                # First payment — activate subscription and send one-time link
+                if user.subscription_status in ("pending_first_payment", None, ""):
+                    user.subscription_status = "active"
+                    handle_first_payment_succeeded(user, plan, subscription_id, db)
+                else:
+                    user.subscription_status = "active"
+
+    elif event_type == "payment_intent.payment_failed":
+        pi = event["data"]["object"]
+        customer_id = pi.get("customer")
+        if customer_id:
+            user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
+            if user:
+                user.subscription_status = "past_due"
+                error_msg = pi.get("last_payment_error", {}).get("message", "")
+                logger.warning(
+                    "Payment failed for user %s (customer %s): %s",
+                    user.id, customer_id, error_msg or "unknown",
+                )
+                try:
+                    send_payment_failed(user.email, user.name or "there", error_msg)
+                except Exception:
+                    logger.exception("Failed to send payment failed email to %s", user.email)
 
     elif event_type == "customer.subscription.updated":
         sub = event["data"]["object"]
@@ -324,7 +364,6 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
         if user:
             user.subscription_status = sub.get("status")
-            db.commit()
 
     elif event_type == "customer.subscription.deleted":
         sub = event["data"]["object"]
@@ -332,6 +371,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.stripe_customer_id == customer_id).first()
         if user:
             user.subscription_status = "canceled"
-            db.commit()
 
+    # Mark event as processed before committing — atomic with any model changes above
+    db.execute(
+        text("INSERT INTO stripe_webhook_events (id, event_type, processed_at) VALUES (:id, :type, :ts)"),
+        {"id": event_id, "type": event_type, "ts": datetime.utcnow()},
+    )
+    db.commit()
     return {"status": "received"}

@@ -32,21 +32,29 @@ export default function BrandProfilePage() {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { router.push('/login'); return; }
-    try {
-      const stored = localStorage.getItem('vantro_brand_profile');
-      if (stored) setProfile(JSON.parse(stored));
-    } catch {}
+    fetch('/api/users/brand-profile', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => { if (data.brand_profile) setProfile(p => ({ ...p, ...data.brand_profile })); })
+      .catch(() => {});
   }, [router]);
 
   const completedFields = Object.values(profile).filter(v => v.trim().length > 0).length;
   const completionPct = Math.round((completedFields / Object.keys(profile).length) * 100);
 
   const save = async () => {
+    const token = localStorage.getItem('token');
     setLoading(true);
-    localStorage.setItem('vantro_brand_profile', JSON.stringify(profile));
-    await new Promise(r => setTimeout(r, 500));
-    setSaved(true); setLoading(false);
-    setTimeout(() => setSaved(false), 3000);
+    try {
+      const res = await fetch('/api/users/brand-profile', {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(profile),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch {}
+    setLoading(false);
   };
 
   const F = ({ label, field, placeholder, multiline = false, options }: { label: string; field: keyof BrandProfile; placeholder?: string; multiline?: boolean; options?: string[] }) => (

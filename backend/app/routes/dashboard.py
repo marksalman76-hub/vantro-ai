@@ -130,6 +130,58 @@ async def get_media_jobs(
     return payload
 
 
+@router.get("/dashboard/summary")
+async def get_dashboard_summary(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Aggregated dashboard summary — credits + job counts in one call. Cached 60s."""
+    from fastapi.responses import JSONResponse
+    user = _get_user(credentials, db)
+
+    org = db.query(Organization).filter(Organization.owner_id == user.id).first()
+    workspace = None
+    if org:
+        workspace = db.query(Workspace).filter(Workspace.organization_id == org.id).first()
+
+    workspace_id = workspace.id if workspace else user.id
+    cache_key = f"dashboard:{workspace_id}"
+
+    cached = cache_service.get(cache_key)
+    if cached is not None:
+        return JSONResponse(content=cached, headers={"Cache-Control": "max-age=60, private"})
+
+    result = (
+        db.query(
+            func.coalesce(func.sum(CreditsAccount.total_credits), 0).label("total"),
+            func.coalesce(func.sum(CreditsAccount.used_credits), 0).label("used"),
+        )
+        .join(Workspace, Workspace.id == CreditsAccount.workspace_id)
+        .join(Organization, Organization.id == Workspace.organization_id)
+        .filter(Organization.owner_id == user.id)
+        .one()
+    )
+    total_credits = int(result.total)
+    used_credits = int(result.used)
+
+    job_count = 0
+    if workspace:
+        job_count = db.query(func.count(MediaJob.id)).filter(
+            MediaJob.workspace_id == workspace.id
+        ).scalar() or 0
+
+    payload = {
+        "user_id": user.id,
+        "workspace_id": workspace_id,
+        "total_credits": total_credits,
+        "used_credits": used_credits,
+        "remaining_credits": total_credits - used_credits,
+        "total_jobs": job_count,
+    }
+    cache_service.set(cache_key, payload, ttl=60)
+    return JSONResponse(content=payload, headers={"Cache-Control": "max-age=60, private"})
+
+
 class CreateJobRequest(BaseModel):
     avatar_id: str
     voice_id: str

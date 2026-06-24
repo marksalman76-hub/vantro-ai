@@ -35,3 +35,13 @@ tags = {
   CostCenter  = "Platform"
   Team        = "DevOps"
 }
+
+# ── Secrets ── copy to terraform.tfvars (gitignored), never commit real values ──
+# Alternatively export as TF_VAR_jwt_secret, TF_VAR_stripe_api_key, etc. in CI/CD
+jwt_secret             = "REPLACE_WITH_32+_CHAR_RANDOM_STRING"
+stripe_api_key         = "sk_live_REPLACE"
+stripe_webhook_secret  = "whsec_REPLACE"
+stripe_publishable_key = "pk_live_REPLACE"
+openai_api_key         = "sk-REPLACE"
+anthropic_api_key      = "sk-ant-REPLACE"
+admin_email            = "mark.salman76@gmail.com"

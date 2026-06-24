@@ -59,6 +59,27 @@ def delete(*keys: str) -> None:
         logger.debug("Cache delete error: %s", e)
 
 
+def revoke_jti(jti: str, ttl_seconds: int) -> None:
+    """Add a JWT ID to the revocation blocklist until it naturally expires."""
+    r = _get_client()
+    if r is None:
+        return
+    try:
+        r.setex(f"revoked:{jti}", ttl_seconds, "1")
+    except Exception as e:
+        logger.debug("Cache revoke_jti error: %s", e)
+
+
+def is_token_revoked(jti: str) -> bool:
+    r = _get_client()
+    if r is None:
+        return False  # fail open — no Redis means no blocklist
+    try:
+        return bool(r.exists(f"revoked:{jti}"))
+    except Exception:
+        return False
+
+
 def credits_key(user_id: str) -> str:
     return f"credits:{user_id}"
 

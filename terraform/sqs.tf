@@ -1,10 +1,27 @@
-﻿# SQS Queue for Media Generation Jobs
-resource "aws_sqs_queue" "media_jobs" {
-  name                       = "${var.app_name}-media-jobs.fifo"
-  fifo_queue                 = true
+﻿# Dead Letter Queue must be declared first so main queue can reference it
+resource "aws_sqs_queue" "media_jobs_dlq" {
+  name                        = "${var.app_name}-media-jobs-dlq.fifo"
+  fifo_queue                  = true
   content_based_deduplication = true
-  visibility_timeout_seconds = var.sqs_visibility_timeout
-  message_retention_seconds  = var.sqs_message_retention
+  message_retention_seconds   = 1209600 # 14 days
+
+  tags = {
+    Name = "${var.app_name}-media-jobs-dlq"
+  }
+}
+
+# SQS Queue for Media Generation Jobs
+resource "aws_sqs_queue" "media_jobs" {
+  name                        = "${var.app_name}-media-jobs.fifo"
+  fifo_queue                  = true
+  content_based_deduplication = true
+  visibility_timeout_seconds  = var.sqs_visibility_timeout
+  message_retention_seconds   = var.sqs_message_retention
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.media_jobs_dlq.arn
+    maxReceiveCount     = 3
+  })
 
   tags = {
     Name = "${var.app_name}-media-jobs"
@@ -35,17 +52,6 @@ resource "aws_sqs_queue_policy" "media_jobs" {
   })
 }
 
-# Dead Letter Queue
-resource "aws_sqs_queue" "media_jobs_dlq" {
-  name                      = "${var.app_name}-media-jobs-dlq.fifo"
-  fifo_queue                = true
-  content_based_deduplication = true
-  message_retention_seconds = 1209600  # 14 days
-
-  tags = {
-    Name = "${var.app_name}-media-jobs-dlq"
-  }
-}
 
 # CloudWatch Alarm for Queue Depth
 resource "aws_cloudwatch_metric_alarm" "sqs_queue_depth" {

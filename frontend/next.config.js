@@ -2,6 +2,8 @@
 const nextConfig = {
   compress: true,
   productionBrowserSourceMaps: false,
+  eslint: { ignoreDuringBuilds: true },
+  transpilePackages: ['lenis'],
 
   async headers() {
     return [

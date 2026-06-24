@@ -2,6 +2,7 @@ import uuid
 from sqlalchemy import Column, String, Integer, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
+from app.services.encrypted_column import EncryptedText
 
 
 class Workspace(Base):
@@ -13,6 +14,7 @@ class Workspace(Base):
     workspace_type = Column(String, nullable=True)
     created_at = Column(DateTime, nullable=True)
     updated_at = Column(DateTime, nullable=True)
+    business_context = Column(EncryptedText, nullable=True)  # PII — encrypted at rest
 
     credits_account = relationship("CreditsAccount", back_populates="workspace", uselist=False)
     media_jobs = relationship("MediaJob", back_populates="workspace")

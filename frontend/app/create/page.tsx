@@ -3,42 +3,42 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
+import GlassCard from '@/components/ui/glass-card';
+import GlassButton from '@/components/ui/glass-button';
+import Background3D from '@/components/ui/3d-background';
 
 const AVATARS = [
-  { id: 'avatar_alex',  name: 'Alex',    style: 'Professional male, business attire' },
-  { id: 'avatar_sofia', name: 'Sofia',   style: 'Professional female, modern style'  },
-  { id: 'avatar_james', name: 'James',   style: 'Casual male, friendly presenter'    },
-  { id: 'avatar_maria', name: 'Maria',   style: 'Casual female, energetic presenter' },
-  { id: 'avatar_kai',   name: 'Kai',     style: 'Gender-neutral, minimalist style'   },
-  { id: 'avatar_nova',  name: 'Nova',    style: 'Futuristic, tech-focused presenter' },
+  { id: 'avatar_alex',  name: 'Alex',  style: 'Professional male, business attire' },
+  { id: 'avatar_sofia', name: 'Sofia', style: 'Professional female, modern style'  },
+  { id: 'avatar_james', name: 'James', style: 'Casual male, friendly presenter'    },
+  { id: 'avatar_maria', name: 'Maria', style: 'Casual female, energetic presenter' },
+  { id: 'avatar_kai',   name: 'Kai',   style: 'Gender-neutral, minimalist style'   },
+  { id: 'avatar_nova',  name: 'Nova',  style: 'Futuristic, tech-focused presenter' },
 ];
 
 const VOICES = [
-  { id: 'voice_natural',     name: 'Natural',     desc: 'Warm, conversational tone' },
-  { id: 'voice_professional',name: 'Professional', desc: 'Clear, authoritative tone' },
-  { id: 'voice_energetic',   name: 'Energetic',   desc: 'Upbeat, enthusiastic tone'  },
-  { id: 'voice_calm',        name: 'Calm',        desc: 'Soothing, relaxed delivery' },
+  { id: 'voice_natural',      name: 'Natural',      desc: 'Warm, conversational tone'  },
+  { id: 'voice_professional', name: 'Professional', desc: 'Clear, authoritative tone'  },
+  { id: 'voice_energetic',    name: 'Energetic',    desc: 'Upbeat, enthusiastic tone'  },
+  { id: 'voice_calm',         name: 'Calm',         desc: 'Soothing, relaxed delivery' },
 ];
 
 const LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Portuguese', 'Italian', 'Japanese', 'Chinese'];
 const TONES = ['professional', 'casual', 'enthusiastic', 'formal', 'educational'];
 
-interface JobResult {
-  id: string;
-  status: string;
-  message: string;
-}
+interface JobResult { id: string; status: string; message: string }
 
 export default function CreatePage() {
   const router = useRouter();
-  const [script, setScript] = useState('');
+  const [script,   setScript]   = useState('');
   const [avatarId, setAvatarId] = useState('avatar_alex');
-  const [voiceId, setVoiceId] = useState('voice_natural');
+  const [voiceId,  setVoiceId]  = useState('voice_natural');
   const [language, setLanguage] = useState('English');
-  const [tone, setTone] = useState('professional');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [result, setResult] = useState<JobResult | null>(null);
+  const [tone,     setTone]     = useState('professional');
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
+  const [result,   setResult]   = useState<JobResult | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -55,7 +55,6 @@ export default function CreatePage() {
 
     setLoading(true);
     setError('');
-
     try {
       const res = await fetch('/api/media-jobs', {
         method: 'POST',
@@ -74,162 +73,183 @@ export default function CreatePage() {
 
   if (result) {
     return (
-      <div className="min-h-screen bg-gray-950 text-white flex items-center justify-center px-6">
-        <div className="max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-green-600 rounded-full mx-auto mb-6 flex items-center justify-center">
-            <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-bold mb-3">Video queued!</h1>
-          <p className="text-gray-400 mb-2">{result.message}</p>
-          <p className="text-gray-500 text-sm mb-8">Job ID: {result.id}</p>
-          <div className="flex flex-col gap-3">
-            <Link href="/dashboard" className="bg-purple-600 hover:bg-purple-700 text-white font-semibold px-8 py-3 rounded-xl transition-all">
-              View in dashboard
-            </Link>
-            <button
-              onClick={() => { setResult(null); setScript(''); }}
-              className="text-gray-400 hover:text-white text-sm"
-            >
-              Create another video
-            </button>
-          </div>
-        </div>
+      <div className="min-h-screen flex items-center justify-center px-6" style={{ backgroundColor: 'rgb(11,15,25)' }}>
+        <Background3D />
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="max-w-md w-full">
+          <GlassCard hover={false} className="text-center">
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
+              style={{ background: 'linear-gradient(135deg,#10B981,#059669)', boxShadow: '0 0 30px rgba(16,185,129,0.4)' }}>
+              <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h1 className="text-2xl font-bold text-white mb-2">Video queued!</h1>
+            <p className="mb-1" style={{ color: 'rgb(203,213,225)' }}>{result.message}</p>
+            <p className="text-xs mb-8" style={{ color: 'rgba(255,255,255,0.3)' }}>Job ID: {result.id}</p>
+            <div className="flex flex-col gap-3">
+              <Link href="/dashboard">
+                <GlassButton variant="solid" size="md" className="w-full justify-center">View in dashboard</GlassButton>
+              </Link>
+              <GlassButton variant="glass" size="md" onClick={() => { setResult(null); setScript(''); }} className="w-full justify-center">
+                Create another video
+              </GlassButton>
+            </div>
+          </GlassCard>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <nav className="border-b border-gray-800 px-6 py-4 flex items-center justify-between">
+    <div className="min-h-screen" style={{ backgroundColor: 'rgb(11,15,25)' }}>
+      <Background3D />
+
+      {/* Nav */}
+      <nav className="px-6 py-4 flex items-center justify-between relative z-10"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', backdropFilter: 'blur(12px)' }}>
         <Link href="/dashboard" className="flex items-center gap-2">
-          <span className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center text-white font-bold text-xs">V</span>
-          <span className="font-bold">Vantro<span className="text-violet-400">.ai</span></span>
+          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-sm"
+            style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 20px rgba(59,130,246,0.4)' }}>V</div>
+          <span className="font-bold text-white">Vantro<span className="text-blue-400">.ai</span></span>
         </Link>
-        <Link href="/dashboard" className="text-gray-400 hover:text-white text-sm">← Back to dashboard</Link>
+        <Link href="/dashboard" className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          ← Back to dashboard
+        </Link>
       </nav>
 
-      <div className="max-w-3xl mx-auto px-6 py-10">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">Create a video</h1>
-          <p className="text-gray-400">Write your script, choose an avatar and voice, then hit generate.</p>
-        </div>
+      <div className="max-w-3xl mx-auto px-6 py-10 relative z-10">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Create a video</h1>
+          <p style={{ color: 'rgb(203,213,225)' }}>Write your script, choose an avatar and voice, then hit generate.</p>
+        </motion.div>
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-6">
           {/* Script */}
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-            <label className="block text-sm font-semibold mb-3">
-              Script <span className="text-purple-400">*</span>
-            </label>
-            <textarea
-              value={script}
-              onChange={(e) => setScript(e.target.value)}
-              placeholder="Write what you want your AI avatar to say. E.g., 'Welcome to our new product launch. Today I want to walk you through...'"
-              rows={8}
-              className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-purple-500 resize-none text-sm"
-            />
-            <div className="flex justify-between mt-2">
-              <span className={`text-xs ${script.length < 20 && script.length > 0 ? 'text-red-400' : 'text-gray-500'}`}>
-                {script.length} characters
-              </span>
-              <span className="text-xs text-gray-500">Recommended: 50–500 words</span>
-            </div>
-          </div>
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+            <GlassCard hover={false} className="!p-5">
+              <label className="block text-sm font-semibold text-white mb-3">
+                Script <span className="text-blue-400">*</span>
+              </label>
+              <textarea
+                value={script}
+                onChange={e => setScript(e.target.value)}
+                placeholder="Write what you want your AI avatar to say. E.g., 'Welcome to our new product launch…'"
+                rows={8}
+                className="w-full rounded-xl px-4 py-3 text-white text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)' }}
+              />
+              <div className="flex justify-between mt-2">
+                <span className={`text-xs ${script.length > 0 && script.length < 20 ? 'text-red-400' : ''}`}
+                  style={{ color: script.length > 0 && script.length < 20 ? undefined : 'rgba(255,255,255,0.3)' }}>
+                  {script.length} characters
+                </span>
+                <span className="text-xs" style={{ color: 'rgba(255,255,255,0.3)' }}>50–500 words recommended</span>
+              </div>
+            </GlassCard>
+          </motion.div>
 
-          {/* Avatar selection */}
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-            <label className="block text-sm font-semibold mb-4">Choose avatar</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {AVATARS.map((av) => (
-                <button
-                  key={av.id}
-                  type="button"
-                  onClick={() => setAvatarId(av.id)}
-                  className={`p-4 rounded-xl border text-left transition-all ${
-                    avatarId === av.id
-                      ? 'border-purple-500 bg-purple-950/40'
-                      : 'border-gray-700 bg-gray-800 hover:border-gray-600'
-                  }`}
-                >
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center text-white font-bold text-sm mb-3">
-                    {av.name[0]}
-                  </div>
-                  <p className="font-medium text-sm">{av.name}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{av.style}</p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Voice + language + tone */}
-          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-6">
-            <div>
-              <label className="block text-sm font-semibold mb-3">Voice style</label>
-              <div className="grid grid-cols-2 gap-3">
-                {VOICES.map((v) => (
+          {/* Avatar */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <GlassCard hover={false} className="!p-5">
+              <label className="block text-sm font-semibold text-white mb-4">Choose avatar</label>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {AVATARS.map(av => (
                   <button
-                    key={v.id}
+                    key={av.id}
                     type="button"
-                    onClick={() => setVoiceId(v.id)}
-                    className={`p-3 rounded-xl border text-left transition-all ${
-                      voiceId === v.id
-                        ? 'border-purple-500 bg-purple-950/40'
-                        : 'border-gray-700 bg-gray-800 hover:border-gray-600'
+                    onClick={() => setAvatarId(av.id)}
+                    className={`p-4 rounded-xl text-left transition-all ${
+                      avatarId === av.id
+                        ? 'border border-blue-500/60 bg-blue-500/10'
+                        : 'border border-white/08 hover:border-white/20 hover:bg-white/[0.04]'
                     }`}
                   >
-                    <p className="font-medium text-sm">{v.name}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{v.desc}</p>
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm mb-3"
+                      style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)' }}>
+                      {av.name[0]}
+                    </div>
+                    <p className="font-medium text-sm text-white">{av.name}</p>
+                    <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{av.style}</p>
                   </button>
                 ))}
               </div>
-            </div>
+            </GlassCard>
+          </motion.div>
 
-            <div className="grid grid-cols-2 gap-4">
+          {/* Voice + language + tone */}
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+            <GlassCard hover={false} className="!p-5 space-y-6">
               <div>
-                <label className="block text-sm font-semibold mb-2">Language</label>
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-purple-500"
-                >
-                  {LANGUAGES.map((l) => <option key={l}>{l}</option>)}
-                </select>
+                <label className="block text-sm font-semibold text-white mb-3">Voice style</label>
+                <div className="grid grid-cols-2 gap-3">
+                  {VOICES.map(v => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => setVoiceId(v.id)}
+                      className={`p-3 rounded-xl text-left transition-all ${
+                        voiceId === v.id
+                          ? 'border border-blue-500/60 bg-blue-500/10'
+                          : 'border border-white/08 hover:border-white/20 hover:bg-white/[0.04]'
+                      }`}
+                    >
+                      <p className="font-medium text-sm text-white">{v.name}</p>
+                      <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{v.desc}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-semibold mb-2">Tone</label>
-                <select
-                  value={tone}
-                  onChange={(e) => setTone(e.target.value)}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-purple-500"
-                >
-                  {TONES.map((t) => <option key={t} className="capitalize">{t}</option>)}
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-white mb-2">Language</label>
+                  <select
+                    value={language}
+                    onChange={e => setLanguage(e.target.value)}
+                    className="w-full rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}
+                  >
+                    {LANGUAGES.map(l => <option key={l} style={{ background: '#0B0F19' }}>{l}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-white mb-2">Tone</label>
+                  <select
+                    value={tone}
+                    onChange={e => setTone(e.target.value)}
+                    className="w-full rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 capitalize"
+                    style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)' }}
+                  >
+                    {TONES.map(t => <option key={t} className="capitalize" style={{ background: '#0B0F19' }}>{t}</option>)}
+                  </select>
+                </div>
               </div>
-            </div>
-          </div>
+            </GlassCard>
+          </motion.div>
 
           {error && (
-            <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-3 rounded-xl text-sm">
+            <div className="px-4 py-3 rounded-xl text-sm text-red-300"
+              style={{ background: 'rgba(239,68,68,0.10)', border: '1px solid rgba(239,68,68,0.25)' }}>
               {error}
             </div>
           )}
 
-          <button
+          <GlassButton
             type="submit"
+            variant="solid"
+            size="lg"
             disabled={loading || !script.trim()}
-            className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-4 rounded-xl transition-all text-base"
+            className="w-full justify-center"
           >
             {loading ? (
-              <span className="flex items-center justify-center gap-2">
+              <span className="flex items-center gap-2">
                 <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                 </svg>
-                Submitting...
+                Submitting…
               </span>
             ) : 'Generate video'}
-          </button>
+          </GlassButton>
         </form>
       </div>
     </div>

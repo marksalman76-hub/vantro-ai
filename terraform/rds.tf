@@ -80,6 +80,35 @@ resource "aws_db_parameter_group" "main" {
   }
 }
 
+# RDS Read Replica — routes read-heavy GET traffic away from the primary
+resource "aws_db_instance" "read_replica" {
+  identifier             = "${var.app_name}-db-replica"
+  replicate_source_db    = aws_db_instance.main.identifier
+  instance_class         = var.rds_instance_class
+  storage_type           = "gp3"
+  storage_encrypted      = true
+  publicly_accessible    = false
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  parameter_group_name   = aws_db_parameter_group.main.name
+  skip_final_snapshot    = true
+
+  # Read replicas don't need independent backups — they inherit from primary
+  backup_retention_period = 0
+
+  tags = {
+    Name = "${var.app_name}-db-replica"
+    Role = "read-replica"
+  }
+
+  depends_on = [aws_db_instance.main]
+}
+
+output "rds_replica_endpoint" {
+  description = "Read replica endpoint — use as DATABASE_REPLICA_URL in ECS task env"
+  value       = aws_db_instance.read_replica.endpoint
+  sensitive   = false
+}
+
 # CloudWatch Alarm for DB CPU Utilization
 resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
   alarm_name          = "${var.app_name}-rds-high-cpu"

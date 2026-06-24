@@ -1,8 +1,0 @@
-{
-  "success": true,
-  "ttl_seconds": 3600,
-  "short_lived_tokens_required": true,
-  "max_allowed_ttl_seconds": 3600,
-  "production_rotation_executed": false,
-  "verification_only": true
-}

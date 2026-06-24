@@ -1,6 +1,0 @@
-{
-  "default_ttl_seconds": 3600,
-  "refresh_rotation_enabled": true,
-  "max_session_hours": 12,
-  "short_lived_admin_tokens": true
-}

@@ -31,14 +31,17 @@ resource "aws_secretsmanager_secret" "api_keys" {
   }
 }
 
-# Store API keys placeholder in Secrets Manager
+# Store API keys in Secrets Manager — values passed via terraform.tfvars or TF_VAR_* env vars
 resource "aws_secretsmanager_secret_version" "api_keys" {
   secret_id = aws_secretsmanager_secret.api_keys.id
   secret_string = jsonencode({
-    JWT_SECRET         = "PLACEHOLDER_JWT_SECRET_CHANGE_IN_PRODUCTION"
-    STRIPE_API_KEY     = "PLACEHOLDER_STRIPE_KEY_CHANGE_IN_PRODUCTION"
-    OPENAI_API_KEY     = "PLACEHOLDER_OPENAI_KEY_CHANGE_IN_PRODUCTION"
-    ANTHROPIC_API_KEY  = "PLACEHOLDER_ANTHROPIC_KEY_CHANGE_IN_PRODUCTION"
+    JWT_SECRET             = var.jwt_secret
+    STRIPE_API_KEY         = var.stripe_api_key
+    STRIPE_SECRET_KEY      = var.stripe_secret_key
+    STRIPE_WEBHOOK_SECRET  = var.stripe_webhook_secret
+    STRIPE_PUBLISHABLE_KEY = var.stripe_publishable_key
+    OPENAI_API_KEY         = var.openai_api_key
+    ANTHROPIC_API_KEY      = var.anthropic_api_key
   })
 }
 

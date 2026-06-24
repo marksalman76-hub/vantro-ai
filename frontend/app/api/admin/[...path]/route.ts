@@ -7,7 +7,9 @@ async function handler(
   { params }: { params: { path: string[] } }
 ) {
   const path = params.path.join("/");
-  const token = request.headers.get("authorization") || "";
+  // Prefer httpOnly cookie; fall back to Authorization header for backward compat
+  const cookieToken = request.cookies.get("access_token")?.value;
+  const token = cookieToken ? `Bearer ${cookieToken}` : (request.headers.get("authorization") || "");
 
   let body: string | undefined;
   if (request.method !== "GET" && request.method !== "HEAD") {

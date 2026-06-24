@@ -1,0 +1,173 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [develop]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPO_API: 685570573617.dkr.ecr.us-east-1.amazonaws.com/trance-formation/api
+  ECR_REPO_WORKER: 685570573617.dkr.ecr.us-east-1.amazonaws.com/trance-formation/worker
+  ECS_CLUSTER: trance-formation-staging
+  ECS_SERVICE_API: trance-formation-api-staging
+  ECS_SERVICE_WORKER: vantro-worker-staging
+
+jobs:
+  build:
+    name: Build & push staging images
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      api-image: ${{ steps.push.outputs.api-image }}
+      worker-image: ${{ steps.push.outputs.worker-image }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push images (staging tag)
+        id: push
+        run: |
+          SHA="${{ github.sha }}"
+          TAG="staging-$SHA"
+
+          docker build \
+            -f backend/Dockerfile \
+            -t "$ECR_REPO_API:$TAG" \
+            -t "$ECR_REPO_API:staging-latest" \
+            backend/
+          docker push "$ECR_REPO_API:$TAG"
+          docker push "$ECR_REPO_API:staging-latest"
+
+          docker build \
+            -f backend/Dockerfile.worker \
+            -t "$ECR_REPO_WORKER:$TAG" \
+            -t "$ECR_REPO_WORKER:staging-latest" \
+            backend/
+          docker push "$ECR_REPO_WORKER:$TAG"
+          docker push "$ECR_REPO_WORKER:staging-latest"
+
+          echo "api-image=$ECR_REPO_API:$TAG" >> "$GITHUB_OUTPUT"
+          echo "worker-image=$ECR_REPO_WORKER:$TAG" >> "$GITHUB_OUTPUT"
+
+  migrate:
+    name: Run DB migration (staging)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: build
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run alembic upgrade head (staging DB)
+        run: |
+          TASK_ARN=$(aws ecs run-task \
+            --cluster "$ECS_CLUSTER" \
+            --task-definition trance-formation-api-staging \
+            --overrides '{"containerOverrides":[{"name":"api","command":["python","-m","alembic","upgrade","head"]}]}' \
+            --launch-type FARGATE \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ secrets.ECS_STAGING_SUBNET_IDS }}],securityGroups=[${{ secrets.ECS_STAGING_SECURITY_GROUP_ID }}],assignPublicIp=DISABLED}" \
+            --region "$AWS_REGION" \
+            --query 'tasks[0].taskArn' \
+            --output text)
+
+          aws ecs wait tasks-stopped \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --region "$AWS_REGION"
+
+          EXIT_CODE=$(aws ecs describe-tasks \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --region "$AWS_REGION" \
+            --query 'tasks[0].containers[0].exitCode' \
+            --output text)
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Staging migration failed — exit code: $EXIT_CODE"
+            exit 1
+          fi
+          echo "Staging migration succeeded"
+
+  deploy-staging:
+    name: Deploy to staging ECS
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build, migrate]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Render API task definition
+        id: render-api
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-def.json
+          container-name: api
+          image: ${{ needs.build.outputs.api-image }}
+
+      - name: Deploy API to staging
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-api.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE_API }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Render worker task definition
+        id: render-worker
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-def-worker.json
+          container-name: worker
+          image: ${{ needs.build.outputs.worker-image }}
+
+      - name: Deploy worker to staging
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render-worker.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE_WORKER }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+  smoke-test-staging:
+    name: Staging smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: deploy-staging
+
+    steps:
+      - name: Health check — staging API
+        run: |
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://staging-api.vantro.ai/health)
+            echo "Attempt $i — HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Staging smoke test passed"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Staging smoke test FAILED"
+          exit 1

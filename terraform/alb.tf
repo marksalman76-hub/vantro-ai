@@ -42,15 +42,69 @@ resource "aws_lb_target_group" "main" {
   }
 }
 
-# ALB Listener (HTTP)
-resource "aws_lb_listener" "main" {
+# ACM Certificate for HTTPS
+resource "aws_acm_certificate" "main" {
+  domain_name               = var.domain_name
+  subject_alternative_names = ["*.${var.domain_name}"]
+  validation_method         = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Name = "${var.app_name}-cert"
+  }
+}
+
+# DNS validation record (add these CNAMEs to your DNS provider)
+resource "aws_acm_certificate_validation" "main" {
+  certificate_arn = aws_acm_certificate.main.arn
+  # validation_record_fqdns must be added manually to DNS if not using Route53
+  # Outputs will show the required CNAME records
+}
+
+# ALB Listener — HTTP redirects to HTTPS (port 80 → 443)
+resource "aws_lb_listener" "http_redirect" {
   load_balancer_arn = aws_lb.main.arn
   port              = "80"
   protocol          = "HTTP"
 
   default_action {
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+# ALB Listener — HTTPS (port 443)
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = aws_acm_certificate.main.arn
+
+  default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.main.arn
+  }
+
+  depends_on = [aws_acm_certificate_validation.main]
+}
+
+# Output the DNS validation CNAME records needed for ACM cert
+output "acm_validation_records" {
+  description = "Add these CNAME records to your DNS provider to validate the ACM certificate"
+  value = {
+    for dvo in aws_acm_certificate.main.domain_validation_options : dvo.domain_name => {
+      name  = dvo.resource_record_name
+      type  = dvo.resource_record_type
+      value = dvo.resource_record_value
+    }
   }
 }
 

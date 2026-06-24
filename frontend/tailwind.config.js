@@ -21,11 +21,17 @@ module.exports = {
           purple: '#7C3AED',
           blue:   '#3B82F6',
           teal:   '#06B6D4',
+          green:  '#9fff00',
         },
+        // Landing hero design tokens
+        'bg-base':     '#EDEEF5',
+        'brand-green': '#9fff00',
       },
       fontFamily: {
-        sans:  ['var(--font-poppins)', 'system-ui', 'sans-serif'],
-        serif: ['var(--font-playfair)', 'Georgia', 'serif'],
+        sans:    ['var(--font-poppins)', 'system-ui', 'sans-serif'],
+        serif:   ['var(--font-playfair)', 'Georgia', 'serif'],
+        inter:   ['var(--font-inter)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-outfit)', 'system-ui', 'sans-serif'],
       },
       backgroundImage: {
         'gradient-hero':    'radial-gradient(ellipse 80% 80% at 50% -20%, rgba(124,58,237,0.18) 0%, transparent 65%), radial-gradient(ellipse 60% 60% at 80% 60%, rgba(59,130,246,0.10) 0%, transparent 65%)',

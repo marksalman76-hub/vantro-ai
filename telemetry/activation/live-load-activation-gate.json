@@ -1,8 +1,0 @@
-{
-  "success": true,
-  "live_load_activation_gate_ready": true,
-  "owner_approved_live_load_test": false,
-  "high_volume_load_allowed": false,
-  "default_allowed_without_owner_approval": "dry_run_or_safe_low_volume_only",
-  "generated_at": "2026-05-30T13:32:49.177024"
-}

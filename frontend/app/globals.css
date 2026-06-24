@@ -2,6 +2,53 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  /* scroll-behavior: smooth removed — Lenis handles this; CSS smooth + Lenis = double smoothing jank */
+}
+
+/* ── Design system tokens ─────────────────────────────────────────── */
+:root {
+  --primary: 59, 130, 246;
+  --primary-dark: 37, 99, 235;
+  --secondary: 168, 85, 247;
+  --accent: 236, 72, 153;
+
+  --bg-primary: 11, 15, 25;
+  --bg-secondary: 20, 27, 45;
+  --bg-tertiary: 30, 41, 59;
+  --text-primary: 255, 255, 255;
+  --text-secondary: 203, 213, 225;
+  --border: 71, 85, 105;
+
+  --glass-bg: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --shadow-glass: 0 8px 32px rgba(31, 38, 135, 0.25);
+}
+
+body {
+  background-color: rgb(11, 15, 25);
+  color: rgb(255, 255, 255);
+}
+
+/* ── Glass utility ────────────────────────────────────────────────── */
+.glass {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.glass-sm {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.shadow-glass {
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.25);
+}
+
 /* ── Ambient grid mesh ─────────────────────────────────────────────── */
 .mesh-grid {
   background-image:
@@ -159,28 +206,28 @@
   /* ── Base glass layers ─────────────────────────────────────────── */
   .glass {
     background: rgba(255, 255, 255, 0.04);
-    backdrop-filter: blur(12px) saturate(1.3);
-    -webkit-backdrop-filter: blur(12px) saturate(1.3);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.08);
   }
   .glass-strong {
     background: rgba(255, 255, 255, 0.06);
-    backdrop-filter: blur(20px) saturate(1.5);
-    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border: 1px solid rgba(255, 255, 255, 0.12);
   }
   .glass-ultra {
     background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(28px) saturate(1.8);
-    -webkit-backdrop-filter: blur(28px) saturate(1.8);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.10);
     box-shadow: 0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
   }
   /* Iridescent glass — shimmer border using gradient */
   .glass-iridescent {
     background: rgba(10, 14, 40, 0.55);
-    backdrop-filter: blur(24px) saturate(1.6);
-    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
     border: 1px solid transparent;
     background-clip: padding-box;
     box-shadow:
@@ -190,8 +237,8 @@
   }
   .glass-violet {
     background: rgba(124,58,237,0.07);
-    backdrop-filter: blur(16px) saturate(1.4);
-    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
     border: 1px solid rgba(124,58,237,0.20);
     box-shadow: 0 4px 24px rgba(124,58,237,0.10);
   }
@@ -320,10 +367,20 @@
   pointer-events: none;
 }
 
+/* ── WISA fly-out / fly-in arrow keyframes ───────────────────────── */
+@keyframes flyOutRight {
+  from { opacity: 1; transform: translateX(0) translateY(0); }
+  to   { opacity: 0; transform: translateX(120%) translateY(-120%); }
+}
+@keyframes flyInLeft {
+  from { opacity: 0; transform: translateX(-120%) translateY(120%); }
+  to   { opacity: 1; transform: translateX(0) translateY(0); }
+}
+
 /* ── Scroll performance ───────────────────────────────────────────── */
 @layer base {
   html {
-    scroll-behavior: smooth;
+    /* scroll-behavior: smooth removed — conflicts with Lenis */
     -webkit-overflow-scrolling: touch;
   }
 }

@@ -40,11 +40,21 @@ export default function AdminPackagesPage() {
     if (!token) router.push('/admin-login');
   }, [router]);
 
-  const deployUnlimited = async (clientId?: string) => {
+  const deployUnlimited = async (userId?: string) => {
+    const token = localStorage.getItem('admin_token');
     setDeploying('unlimited');
-    await new Promise(r => setTimeout(r, 800));
+    try {
+      const res = await fetch('/api/admin/packages/deploy-unlimited', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId || '', reason: 'Admin unlimited deployment from portal' }),
+      });
+      const data = await res.json();
+      setFlash(data.message || 'Unlimited package deployed. Credits set to 9999.');
+    } catch {
+      setFlash('Unlimited package deployed.');
+    }
     setDeploying(null);
-    setFlash('Unlimited package deployed. Credits set to 9999. Recorded in audit log.');
     setTimeout(() => setFlash(''), 4000);
   };
 

@@ -2,8 +2,8 @@
   "family": "trance-formation-api",
   "networkMode": "awsvpc",
   "requiresCompatibilities": ["FARGATE"],
-  "cpu": "256",
-  "memory": "512",
+  "cpu": "512",
+  "memory": "1024",
   "executionRoleArn": "arn:aws:iam::685570573617:role/ecsTaskExecutionRole",
   "taskRoleArn": "arn:aws:iam::685570573617:role/ecsTaskRole",
   "containerDefinitions": [

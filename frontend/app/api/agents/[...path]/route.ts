@@ -4,7 +4,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 
 async function handler(request: NextRequest, { params }: { params: { path: string[] } }) {
   const path = params.path.join("/");
-  const token = request.headers.get("authorization") || "";
+  const cookieToken = request.cookies.get("access_token")?.value;
+  const token = cookieToken ? `Bearer ${cookieToken}` : (request.headers.get("authorization") || "");
   const url = new URL(request.url);
   const query = url.search;
 

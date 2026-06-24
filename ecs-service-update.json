@@ -1,9 +1,0 @@
-{
-  "loadBalancers": [
-    {
-      "targetGroupArn": "arn:aws:elasticloadbalancing:ap-southeast-2:685570573617:targetgroup/trance-formation-tg/77c12aa0cea77f5c",
-      "containerName": "trance-formation-backend",
-      "containerPort": 8000
-    }
-  ]
-}

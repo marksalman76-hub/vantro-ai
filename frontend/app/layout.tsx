@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Poppins, Playfair_Display } from 'next/font/google'
+import { Poppins, Playfair_Display, Inter, Outfit } from 'next/font/google'
 import './globals.css'
 import GTMScript       from '@/components/GTMScript'
 import CookieConsent   from '@/components/CookieConsent'
@@ -16,6 +16,19 @@ const poppins = Poppins({
 const playfair = Playfair_Display({
   subsets: ['latin'],
   variable: '--font-playfair',
+  display: 'swap',
+})
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-outfit',
   display: 'swap',
 })
 
@@ -63,7 +76,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${poppins.variable} ${playfair.variable}`}>
+    <html lang="en" className={`${poppins.variable} ${playfair.variable} ${inter.variable} ${outfit.variable}`}>
       <body className="font-sans bg-dark text-white antialiased">
         <GTMScript />
         {children}
