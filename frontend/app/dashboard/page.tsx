@@ -132,7 +132,7 @@ export default function DashboardPage() {
   const dismiss = (id: string) => {
     const next = new Set(dismissed).add(id);
     setDismissed(next);
-    localStorage.setItem('dismissed_announcements', JSON.stringify([...next]));
+    localStorage.setItem('dismissed_announcements', JSON.stringify(Array.from(next)));
   };
 
   const completedThisMonth = jobs.filter(

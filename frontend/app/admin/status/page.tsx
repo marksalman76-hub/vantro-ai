@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { AGENT_CATALOGUE_CLIENT } from '@/lib/agent-catalogue';
 
 type ComponentStatus = 'operational' | 'degraded' | 'maintenance' | 'outage';
 

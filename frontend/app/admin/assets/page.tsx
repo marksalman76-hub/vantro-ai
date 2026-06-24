@@ -30,23 +30,55 @@ const TYPE_COLOR: Record<string, string> = {
   campaign:'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
 };
 
-const MOCK: Asset[] = [
-  { id:'AST-001', client:'Acme Corp', type:'video', name:'Product demo — Summer 2026', agent:'UGC Media Agent', status:'visible', consent_required:true, job_id:'job_v001', created_at:'2026-06-22T10:00:00Z', size_label:'42 MB' },
-  { id:'AST-002', client:'Blue Sky Studio', type:'social_post', name:'Instagram campaign brief Q3', agent:'Social Media Agent', status:'visible', consent_required:false, job_id:'job_s002', created_at:'2026-06-21T15:00:00Z', size_label:'3 KB' },
-  { id:'AST-003', client:'GrowthCo', type:'report', name:'Q2 analytics breakdown', agent:'Analytics Agent', status:'visible', consent_required:false, job_id:'job_r003', created_at:'2026-06-21T11:00:00Z', size_label:'18 KB' },
-  { id:'AST-004', client:'RetailPros', type:'email', name:'Welcome sequence — 5 emails', agent:'Email Reply Agent', status:'hidden', consent_required:false, job_id:'job_e004', created_at:'2026-06-20T09:00:00Z', size_label:'8 KB' },
-  { id:'AST-005', client:'Founder Mode', type:'campaign', name:'Full launch campaign plan', agent:'Marketing Specialist Agent', status:'archived', consent_required:false, job_id:'job_c005', created_at:'2026-06-18T14:00:00Z', size_label:'22 KB' },
-];
+const AGENT_TYPE_MAP: Record<string, Asset['type']> = {
+  ugc_media: 'video', ugc: 'video', video: 'video',
+  social: 'social_post', social_media: 'social_post',
+  email: 'email', email_reply: 'email',
+  analytics: 'report', report: 'report',
+  marketing: 'campaign', campaign: 'campaign',
+  audio: 'audio', script: 'script', image: 'image',
+};
+
+function inferType(agentId = '', agentName = ''): Asset['type'] {
+  const key = (agentId + '_' + agentName).toLowerCase();
+  for (const [k, v] of Object.entries(AGENT_TYPE_MAP)) {
+    if (key.includes(k)) return v;
+  }
+  return 'report';
+}
 
 export default function AdminAssetsPage() {
   const router = useRouter();
-  const [assets, setAssets] = useState<Asset[]>(MOCK);
+  const [assets, setAssets] = useState<Asset[]>([]);
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { const t = localStorage.getItem('admin_token'); if (!t) router.push('/admin-login'); }, [router]);
+  useEffect(() => {
+    const t = localStorage.getItem('admin_token');
+    if (!t) { router.push('/admin-login'); return; }
+    fetch('/api/admin/agents/jobs', { headers: { Authorization: `Bearer ${t}` } })
+      .then(r => r.json())
+      .then(data => setAssets((data.jobs || [])
+        .filter((j: any) => j.status === 'completed')
+        .map((j: any): Asset => ({
+          id: j.id,
+          client: j.client_email || 'Unknown',
+          type: inferType(j.agent_id, j.agent_name),
+          name: (j.agent_name || j.agent_id) + (j.created_at ? ' — ' + new Date(j.created_at).toLocaleDateString() : ''),
+          agent: j.agent_name || j.agent_id,
+          status: 'visible',
+          consent_required: false,
+          job_id: j.id,
+          created_at: j.created_at || '',
+          size_label: j.credits_used ? `${j.credits_used} cr` : '—',
+        }))
+      ))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [router]);
 
-  const types = ['all', ...Array.from(new Set(MOCK.map(a => a.type)))];
+  const types = ['all', ...Array.from(new Set(assets.map(a => a.type)))];
   const visible = assets.filter(a =>
     (typeFilter === 'all' || a.type === typeFilter) &&
     (statusFilter === 'all' || a.status === statusFilter)
@@ -89,8 +121,11 @@ export default function AdminAssetsPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-800/60">
-            {visible.length === 0 && (
-              <tr><td colSpan={8} className="text-center text-gray-600 text-sm py-10">No assets match filters.</td></tr>
+            {loading && (
+              <tr><td colSpan={8} className="py-6 px-5"><div className="space-y-2">{[1,2,3].map(i=><div key={i} className="h-10 bg-gray-800 rounded animate-pulse"/>)}</div></td></tr>
+            )}
+            {!loading && visible.length === 0 && (
+              <tr><td colSpan={8} className="text-center text-gray-600 text-sm py-10">No completed jobs found.</td></tr>
             )}
             {visible.map(asset => (
               <tr key={asset.id} className="hover:bg-gray-800/30 transition-colors">

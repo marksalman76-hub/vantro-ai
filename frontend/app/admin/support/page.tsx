@@ -28,22 +28,41 @@ const STATUS_STYLE: Record<string, string> = {
   escalated:   'text-red-400 bg-red-500/10 border-red-500/20',
 };
 
-const MOCK: Ticket[] = [
-  { id:'TKT-001', client:'Acme Corp', subject:'Video generation failed — credits not returned', type:'failed_job', status:'open', job_id:'job_abc123', created_at:'2026-06-22T09:00:00Z', last_updated:'2026-06-22T09:00:00Z' },
-  { id:'TKT-002', client:'Blue Sky Studio', subject:'Incorrect charge on invoice #INV-055', type:'billing', status:'in_progress', created_at:'2026-06-21T14:00:00Z', last_updated:'2026-06-22T07:00:00Z' },
-  { id:'TKT-003', client:'RetailPros', subject:'Credit deduction for email that did not send', type:'credit_review', status:'open', created_at:'2026-06-21T11:00:00Z', last_updated:'2026-06-21T11:00:00Z' },
-  { id:'TKT-004', client:'GrowthCo', subject:'Agent returned empty output on second attempt', type:'general', status:'resolved', created_at:'2026-06-20T16:00:00Z', last_updated:'2026-06-21T10:00:00Z' },
-];
-
 export default function AdminSupportPage() {
   const router = useRouter();
-  const [tickets, setTickets] = useState<Ticket[]>(MOCK);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const [filter, setFilter] = useState<string>('open');
   const [selected, setSelected] = useState<Ticket | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => { const t = localStorage.getItem('admin_token'); if (!t) router.push('/admin-login'); }, [router]);
+  useEffect(() => {
+    const t = localStorage.getItem('admin_token');
+    if (!t) { router.push('/admin-login'); return; }
+    fetch('/api/admin/support/tickets', { headers: { Authorization: `Bearer ${t}` } })
+      .then(r => r.json())
+      .then(data => setTickets((data.tickets || []).map((tk: any) => ({
+        id: tk.id,
+        client: tk.email || 'Unknown',
+        subject: (tk.message || '').split('\n')[0].replace('Subject: ', '') || tk.ticket_type,
+        type: tk.ticket_type as Ticket['type'],
+        status: tk.status as Ticket['status'],
+        job_id: (tk.message || '').match(/Job reference: (\S+)/)?.[1],
+        created_at: tk.created_at,
+        last_updated: tk.updated_at || tk.created_at,
+      }))))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [router]);
 
-  const resolve = (id: string) => setTickets(prev => prev.map(t => t.id === id ? { ...t, status: 'resolved' } : t));
+  const resolve = async (id: string) => {
+    const t = localStorage.getItem('admin_token');
+    await fetch(`/api/admin/support/tickets/${id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'resolved' }),
+    }).catch(() => {});
+    setTickets(prev => prev.map(tk => tk.id === id ? { ...tk, status: 'resolved' } : tk));
+  };
 
   const visible = tickets.filter(t => filter === 'all' || t.status === filter);
   const open = tickets.filter(t => t.status === 'open' || t.status === 'escalated').length;
@@ -68,7 +87,8 @@ export default function AdminSupportPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        {visible.length === 0 && <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center text-gray-600 text-sm">No tickets.</div>}
+        {loading && [1,2,3].map(i => <div key={i} className="h-16 bg-gray-800/50 rounded-2xl animate-pulse"/>)}
+        {!loading && visible.length === 0 && <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8 text-center text-gray-600 text-sm">No tickets.</div>}
         {visible.map(ticket => (
           <div key={ticket.id} className={`bg-gray-900 border rounded-2xl p-5 cursor-pointer hover:border-gray-700 transition-colors ${selected?.id === ticket.id ? 'border-violet-500/40' : 'border-gray-800'}`}
             onClick={() => setSelected(selected?.id === ticket.id ? null : ticket)}>

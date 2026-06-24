@@ -325,7 +325,6 @@ export default function ClientDetailPage() {
         </div>
       </div>
 
-      </div> {/* end overview grid */}
       )} {/* end overview tab */}
 
       {/* ── Jobs Tab ── */}
