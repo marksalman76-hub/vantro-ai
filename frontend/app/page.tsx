@@ -1,4 +1,3 @@
-import Navbar        from '@/components/Navbar'
 import Hero          from '@/components/sections/hero'
 import LogoStrip     from '@/components/sections/LogoStrip'
 import Features      from '@/components/sections/features'
@@ -19,8 +18,7 @@ export const metadata = {
 
 export default function Home() {
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'rgb(11, 15, 25)' }}>
-      <Navbar />
+    <div className="min-h-screen" style={{ backgroundColor: '#000' }}>
       <Hero />
       <LogoStrip />
       <Features />

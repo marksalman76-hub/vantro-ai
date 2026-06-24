@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Poppins, Playfair_Display, Inter, Outfit, Instrument_Serif, Barlow } from 'next/font/google'
+import { Poppins, Playfair_Display, Inter, Outfit, Instrument_Serif, Barlow, Space_Mono } from 'next/font/google'
 import './globals.css'
 import GTMScript       from '@/components/GTMScript'
 import CookieConsent   from '@/components/CookieConsent'
@@ -47,6 +47,13 @@ const barlow = Barlow({
   display: 'swap',
 })
 
+const spaceMono = Space_Mono({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-space-mono',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
   title: {
     default: 'Vantro — Deploy AI Agents That Work For You',
@@ -91,7 +98,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${poppins.variable} ${playfair.variable} ${inter.variable} ${outfit.variable} ${instrumentSerif.variable} ${barlow.variable}`}>
+    <html lang="en" className={`${poppins.variable} ${playfair.variable} ${inter.variable} ${outfit.variable} ${instrumentSerif.variable} ${barlow.variable} ${spaceMono.variable}`}>
       <body className="font-sans bg-dark text-white antialiased">
         <GTMScript />
         {children}
