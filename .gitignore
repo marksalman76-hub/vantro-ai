@@ -35,7 +35,7 @@ row8_client_live.html
 live_client_page.html
 ExecutionResult
 None
-reports/
+/reports/
 runtime_data/*.jsonl
 
 # Production secret protection
