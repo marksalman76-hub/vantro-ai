@@ -85,11 +85,26 @@ function isThisMonth(dateStr: string | null): boolean {
   return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 }
 
+interface Announcement {
+  id: string; title: string; body: string; affects: string | null;
+  type: string; show_as: string;
+}
+
+const ANN_COLORS: Record<string, string> = {
+  info:        'bg-blue-500/10 border-blue-500/20 text-blue-300',
+  new_feature: 'bg-violet-500/10 border-violet-500/20 text-violet-300',
+  new_agent:   'bg-purple-500/10 border-purple-500/20 text-purple-300',
+  warning:     'bg-amber-500/10 border-amber-500/20 text-amber-300',
+  maintenance: 'bg-orange-500/10 border-orange-500/20 text-orange-300',
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const [credits, setCredits] = useState<CreditsData | null>(null);
   const [jobs, setJobs] = useState<HistoryJob[]>([]);
   const [loading, setLoading] = useState(true);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -97,14 +112,28 @@ export default function DashboardPage() {
 
     const headers = { Authorization: `Bearer ${token}` };
 
+    // Load dismissed IDs from localStorage
+    try {
+      const d = JSON.parse(localStorage.getItem('dismissed_announcements') || '[]');
+      setDismissed(new Set(d));
+    } catch { /* ignore */ }
+
     Promise.all([
       fetch('/api/workspace/credits', { headers }).then(r => r.ok ? r.json() : null),
       fetch('/api/agents/jobs?skip=0&limit=200', { headers }).then(r => r.ok ? r.json() : null),
-    ]).then(([c, j]) => {
+      fetch('/api/platform/announcements', { headers }).then(r => r.ok ? r.json() : []),
+    ]).then(([c, j, ann]) => {
       if (c) setCredits(c);
       if (j?.jobs) setJobs(j.jobs);
+      if (Array.isArray(ann)) setAnnouncements(ann);
     }).finally(() => setLoading(false));
   }, [router]);
+
+  const dismiss = (id: string) => {
+    const next = new Set(dismissed).add(id);
+    setDismissed(next);
+    localStorage.setItem('dismissed_announcements', JSON.stringify([...next]));
+  };
 
   const completedThisMonth = jobs.filter(
     j => j.status === 'completed' && isThisMonth(j.completed_at || j.created_at)
@@ -162,6 +191,20 @@ export default function DashboardPage() {
           </span>
         )}
       </div>
+
+      {/* Platform announcements */}
+      {announcements.filter(a => a.show_as === 'banner' && !dismissed.has(a.id)).map(a => (
+        <div key={a.id} className={`border rounded-2xl px-4 py-3 mb-3 flex items-start justify-between gap-3 ${ANN_COLORS[a.type] || ANN_COLORS.info}`}>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">{a.title}</p>
+            <p className="text-xs opacity-75 mt-0.5">{a.body}</p>
+            {a.affects && (
+              <p className="text-xs opacity-60 mt-0.5"><span className="opacity-80">Affects:</span> {a.affects}</p>
+            )}
+          </div>
+          <button onClick={() => dismiss(a.id)} className="shrink-0 text-xs opacity-50 hover:opacity-100 mt-0.5">✕</button>
+        </div>
+      ))}
 
       {/* Pending approvals / failed notice */}
       {(pendingApprovals > 0 || failedJobs > 0) && (

@@ -280,3 +280,51 @@ class AuditLog(Base):
         Index('idx_audit_resource', 'resource_type', 'resource_id'),
         Index('idx_audit_user_action', 'user_id', 'action'),
     )
+
+
+class Announcement(Base):
+    """Admin-authored platform announcements pushed to client portal."""
+    __tablename__ = "announcements"
+
+    id            = Column(String(36), primary_key=True)
+    title         = Column(String(200), nullable=False)
+    body          = Column(Text, nullable=False)
+    affects       = Column(Text)          # what agents/features this impacts
+    type          = Column(String(30), nullable=False, default="info")  # info|warning|maintenance|new_feature|new_agent
+    target_tier   = Column(String(30), nullable=False, default="all")   # all|starter|growth|business|enterprise
+    active        = Column(Boolean, default=True, nullable=False)
+    show_as       = Column(String(20), nullable=False, default="banner") # banner|notification
+    created_at    = Column(DateTime, default=datetime.utcnow, nullable=False)
+    expires_at    = Column(DateTime, nullable=True)
+    created_by    = Column(String(200))   # admin email
+
+
+class AgentChangelog(Base):
+    """Per-agent version changelog entries shown to clients on their agent cards."""
+    __tablename__ = "agent_changelogs"
+
+    id          = Column(String(36), primary_key=True)
+    agent_id    = Column(String(100), nullable=False, index=True)
+    agent_name  = Column(String(200), nullable=False)
+    version     = Column(String(30), nullable=False)
+    summary     = Column(String(300), nullable=False)   # one-line headline
+    changes     = Column(JSON, default=list)             # list of strings — what changed
+    affects     = Column(Text)                           # what the client will notice
+    release_date = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_by  = Column(String(200))
+
+    __table_args__ = (
+        Index('idx_agent_changelog_agent_date', 'agent_id', 'release_date'),
+    )
+
+
+class SystemStatus(Base):
+    """Single-row system status record shown on public /status page and in client portal."""
+    __tablename__ = "system_status"
+
+    id             = Column(Integer, primary_key=True, default=1)
+    overall        = Column(String(30), nullable=False, default="operational")  # operational|degraded|maintenance|outage
+    message        = Column(Text)            # optional banner message
+    components     = Column(JSON, default=list)  # [{name, status, description}]
+    updated_at     = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_by     = Column(String(200))

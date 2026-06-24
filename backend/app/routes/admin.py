@@ -1,4 +1,5 @@
 import os
+import uuid
 import logging
 from datetime import datetime
 
@@ -7,6 +8,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
+from typing import Optional, List
 
 from app.auth import verify_token
 from app.database import SessionLocal
@@ -14,6 +16,7 @@ from app.models import User, Organization
 from app.models.workspace import Workspace, CreditsAccount, MediaJob
 from app.models.agent_system import AgentJob, PackageDownload
 from app.models.audit_log import AuditLog
+from app.models import Announcement, AgentChangelog, SystemStatus
 from app.agents.agent_registry import (
     AGENT_CATALOGUE,
     INTERNAL_AGENTS,
@@ -1540,4 +1543,271 @@ async def get_audit_logs(
             }
             for log in logs
         ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Announcements
+# ---------------------------------------------------------------------------
+
+class AnnouncementCreate(BaseModel):
+    title: str = Field(..., max_length=200)
+    body: str
+    affects: Optional[str] = None
+    type: str = "info"
+    target_tier: str = "all"
+    show_as: str = "banner"
+    expires_at: Optional[str] = None
+
+
+@router.get("/announcements")
+async def list_announcements(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    _require_admin(credentials, db)
+    rows = db.query(Announcement).order_by(Announcement.created_at.desc()).all()
+    return [
+        {
+            "id": a.id, "title": a.title, "body": a.body, "affects": a.affects,
+            "type": a.type, "target_tier": a.target_tier, "active": a.active,
+            "show_as": a.show_as,
+            "created_at": a.created_at.isoformat() if a.created_at else None,
+            "expires_at": a.expires_at.isoformat() if a.expires_at else None,
+            "created_by": a.created_by,
+        }
+        for a in rows
+    ]
+
+
+@router.post("/announcements", status_code=201)
+async def create_announcement(
+    payload: AnnouncementCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    admin = _require_admin(credentials, db)
+    expires = None
+    if payload.expires_at:
+        try:
+            expires = datetime.fromisoformat(payload.expires_at)
+        except ValueError:
+            pass
+    a = Announcement(
+        id=str(uuid.uuid4()),
+        title=payload.title,
+        body=payload.body,
+        affects=payload.affects,
+        type=payload.type,
+        target_tier=payload.target_tier,
+        show_as=payload.show_as,
+        active=True,
+        created_at=datetime.utcnow(),
+        expires_at=expires,
+        created_by=admin.email,
+    )
+    db.add(a)
+    db.commit()
+    return {"id": a.id, "created": True}
+
+
+@router.put("/announcements/{announcement_id}")
+async def update_announcement(
+    announcement_id: str,
+    payload: AnnouncementCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    _require_admin(credentials, db)
+    a = db.query(Announcement).filter(Announcement.id == announcement_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+    a.title = payload.title
+    a.body = payload.body
+    a.affects = payload.affects
+    a.type = payload.type
+    a.target_tier = payload.target_tier
+    a.show_as = payload.show_as
+    if payload.expires_at:
+        try:
+            a.expires_at = datetime.fromisoformat(payload.expires_at)
+        except ValueError:
+            pass
+    db.commit()
+    return {"updated": True}
+
+
+@router.patch("/announcements/{announcement_id}/toggle")
+async def toggle_announcement(
+    announcement_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    _require_admin(credentials, db)
+    a = db.query(Announcement).filter(Announcement.id == announcement_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+    a.active = not a.active
+    db.commit()
+    return {"active": a.active}
+
+
+@router.delete("/announcements/{announcement_id}", status_code=204)
+async def delete_announcement(
+    announcement_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    _require_admin(credentials, db)
+    a = db.query(Announcement).filter(Announcement.id == announcement_id).first()
+    if not a:
+        raise HTTPException(status_code=404, detail="Announcement not found")
+    db.delete(a)
+    db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Agent Changelog
+# ---------------------------------------------------------------------------
+
+class ChangelogCreate(BaseModel):
+    agent_id: str
+    agent_name: str
+    version: str
+    summary: str = Field(..., max_length=300)
+    changes: Optional[List[str]] = []
+    affects: Optional[str] = None
+    release_date: Optional[str] = None
+
+
+@router.get("/agent-changelogs")
+async def list_changelogs(
+    agent_id: Optional[str] = Query(None),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    _require_admin(credentials, db)
+    q = db.query(AgentChangelog)
+    if agent_id:
+        q = q.filter(AgentChangelog.agent_id == agent_id)
+    rows = q.order_by(AgentChangelog.release_date.desc()).all()
+    return [_fmt_changelog(c) for c in rows]
+
+
+@router.post("/agent-changelogs", status_code=201)
+async def create_changelog(
+    payload: ChangelogCreate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    admin = _require_admin(credentials, db)
+    release = datetime.utcnow()
+    if payload.release_date:
+        try:
+            release = datetime.fromisoformat(payload.release_date)
+        except ValueError:
+            pass
+    c = AgentChangelog(
+        id=str(uuid.uuid4()),
+        agent_id=payload.agent_id,
+        agent_name=payload.agent_name,
+        version=payload.version,
+        summary=payload.summary,
+        changes=payload.changes or [],
+        affects=payload.affects,
+        release_date=release,
+        created_by=admin.email,
+    )
+    db.add(c)
+    db.commit()
+    return {"id": c.id, "created": True}
+
+
+@router.delete("/agent-changelogs/{changelog_id}", status_code=204)
+async def delete_changelog(
+    changelog_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    _require_admin(credentials, db)
+    c = db.query(AgentChangelog).filter(AgentChangelog.id == changelog_id).first()
+    if not c:
+        raise HTTPException(status_code=404, detail="Changelog not found")
+    db.delete(c)
+    db.commit()
+
+
+def _fmt_changelog(c: AgentChangelog) -> dict:
+    return {
+        "id": c.id, "agent_id": c.agent_id, "agent_name": c.agent_name,
+        "version": c.version, "summary": c.summary, "changes": c.changes or [],
+        "affects": c.affects,
+        "release_date": c.release_date.isoformat() if c.release_date else None,
+        "created_by": c.created_by,
+    }
+
+
+# ---------------------------------------------------------------------------
+# System Status
+# ---------------------------------------------------------------------------
+
+DEFAULT_COMPONENTS = [
+    {"name": "Agent Execution", "status": "operational", "description": ""},
+    {"name": "Media Generation", "status": "operational", "description": ""},
+    {"name": "API",             "status": "operational", "description": ""},
+    {"name": "Billing",         "status": "operational", "description": ""},
+    {"name": "Reports",         "status": "operational", "description": ""},
+    {"name": "File Storage",    "status": "operational", "description": ""},
+]
+
+
+class StatusUpdate(BaseModel):
+    overall: str
+    message: Optional[str] = None
+    components: Optional[List[dict]] = None
+
+
+@router.get("/system-status")
+async def get_system_status(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    _require_admin(credentials, db)
+    return _fetch_status(db)
+
+
+@router.put("/system-status")
+async def update_system_status(
+    payload: StatusUpdate,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    admin = _require_admin(credentials, db)
+    row = db.query(SystemStatus).filter(SystemStatus.id == 1).first()
+    if not row:
+        row = SystemStatus(id=1, overall="operational", updated_at=datetime.utcnow())
+        db.add(row)
+    row.overall = payload.overall
+    row.message = payload.message
+    if payload.components is not None:
+        row.components = payload.components
+    row.updated_at = datetime.utcnow()
+    row.updated_by = admin.email
+    db.commit()
+    return _fetch_status(db)
+
+
+def _fetch_status(db: Session) -> dict:
+    row = db.query(SystemStatus).filter(SystemStatus.id == 1).first()
+    if not row:
+        return {
+            "overall": "operational", "message": None,
+            "components": DEFAULT_COMPONENTS, "updated_at": None, "updated_by": None,
+        }
+    return {
+        "overall": row.overall,
+        "message": row.message,
+        "components": row.components or DEFAULT_COMPONENTS,
+        "updated_at": row.updated_at.isoformat() if row.updated_at else None,
+        "updated_by": row.updated_by,
     }

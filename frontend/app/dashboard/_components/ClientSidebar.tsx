@@ -118,6 +118,10 @@ export default function ClientSidebar() {
 
       {/* Quick actions */}
       <div className="px-3 py-3 border-t border-white/[0.06] space-y-0.5">
+        <Link href="/status" target="_blank"
+          className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-gray-500 hover:text-white hover:bg-white/5 transition-all border border-transparent">
+          ◉ System status
+        </Link>
         <Link href="/pricing"
           className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs text-violet-400 hover:text-violet-300 hover:bg-violet-600/10 transition-all font-semibold border border-transparent hover:border-violet-500/20">
           ↑ Upgrade plan

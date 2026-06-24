@@ -50,6 +50,7 @@ from app.routes.reports import router as reports_router
 from app.routes.integrations import router as integrations_router
 from app.routes.billing import router as billing_router
 from app.routes.api_v1 import router as api_v1_router
+from app.routes.platform import router as platform_router
 
 logger = logging.getLogger(__name__)
 
@@ -277,6 +278,7 @@ app.include_router(reports_router)
 app.include_router(integrations_router)
 app.include_router(billing_router)
 app.include_router(api_v1_router)
+app.include_router(platform_router)
 
 
 @app.get("/health")

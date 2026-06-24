@@ -344,7 +344,7 @@ function ExecutionHistory({onView}:{onView:(id:string)=>void}) {
   );
 }
 
-function AgentCatalogue({agents,onRun}:{agents:AgentMeta[];onRun:(a:AgentMeta)=>void}) {
+function AgentCatalogue({agents,onRun,changelogs}:{agents:AgentMeta[];onRun:(a:AgentMeta)=>void;changelogs:ChangelogEntry[]}) {
   const [catFilter,setCatFilter]=useState('All');
   const [showLocked,setShowLocked]=useState(false);
   const [expanded,setExpanded]=useState<string|null>(null);
@@ -354,6 +354,13 @@ function AgentCatalogue({agents,onRun}:{agents:AgentMeta[];onRun:(a:AgentMeta)=>
     if(!showLocked&&!a.unlocked)return false;
     return true;
   });
+  const RECENT_DAYS=30;
+  const recentCutoff=Date.now()-RECENT_DAYS*24*60*60*1000;
+  const logsByAgent=changelogs.reduce<Record<string,ChangelogEntry[]>>((acc,c)=>{
+    if(!acc[c.agent_id])acc[c.agent_id]=[];
+    acc[c.agent_id].push(c);
+    return acc;
+  },{});
   return (
     <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
       <div className="flex items-center justify-between mb-4">
@@ -367,6 +374,9 @@ function AgentCatalogue({agents,onRun}:{agents:AgentMeta[];onRun:(a:AgentMeta)=>
         {filtered.map(agent=>{
           const h=HITL[agent.hitl_level]??HITL['HITL-1'];
           const isExp=expanded===agent.id;
+          const logs=logsByAgent[agent.id]||[];
+          const latestLog=logs[0]||null;
+          const isRecent=latestLog&&new Date(latestLog.release_date).getTime()>recentCutoff;
           return (
             <div key={agent.id} className={`rounded-xl border p-4 cursor-pointer transition-all ${agent.unlocked?'bg-gray-800/50 border-gray-700 hover:border-gray-600':'bg-gray-900/30 border-gray-800/40 opacity-50'}`} onClick={()=>setExpanded(isExp?null:agent.id)}>
               <div className="flex items-start gap-2 mb-2">
@@ -375,6 +385,7 @@ function AgentCatalogue({agents,onRun}:{agents:AgentMeta[];onRun:(a:AgentMeta)=>
                     <p className="text-xs font-semibold text-white">{agent.name}</p>
                     {!agent.unlocked&&<span className="text-xs">🔒</span>}
                     {agent.unlocked&&<StatusBadge active={true}/>}
+                    {isRecent&&<span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">Updated</span>}
                   </div>
                   <div className="flex flex-wrap gap-1">
                     <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded border ${CAT_COLOR[agent.category]||''}`}>{agent.category}</span>
@@ -387,6 +398,14 @@ function AgentCatalogue({agents,onRun}:{agents:AgentMeta[];onRun:(a:AgentMeta)=>
               {isExp&&(
                 <div className="mt-3 pt-3 border-t border-gray-700">
                   {agent.capabilities.length>0&&<div className="flex flex-wrap gap-1 mb-3">{agent.capabilities.map(c=><span key={c} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-700 text-gray-300 border border-gray-600">{c}</span>)}</div>}
+                  {logs.length>0&&(
+                    <div className="mb-3 bg-emerald-500/5 border border-emerald-500/15 rounded-lg p-2.5">
+                      <p className="text-[10px] font-bold text-emerald-400 mb-1">What&apos;s new — v{latestLog!.version}</p>
+                      <p className="text-[10px] text-gray-300 mb-1">{latestLog!.summary}</p>
+                      {latestLog!.changes.length>0&&<ul className="space-y-0.5">{latestLog!.changes.map((c,i)=><li key={i} className="text-[9px] text-gray-500 flex gap-1"><span className="text-gray-700">•</span>{c}</li>)}</ul>}
+                      {latestLog!.affects&&<p className="text-[9px] text-gray-500 mt-1"><span className="text-gray-400">You&apos;ll notice:</span> {latestLog!.affects}</p>}
+                    </div>
+                  )}
                   {agent.unlocked?(
                     <button onClick={e=>{e.stopPropagation();onRun(agent);}} className="w-full bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-400 text-[11px] font-medium px-3 py-1.5 rounded-lg transition-colors">Run this agent →</button>
                   ):(
@@ -403,6 +422,8 @@ function AgentCatalogue({agents,onRun}:{agents:AgentMeta[];onRun:(a:AgentMeta)=>
   );
 }
 
+interface ChangelogEntry { id: string; agent_id: string; version: string; summary: string; changes: string[]; affects: string | null; release_date: string; }
+
 export default function DashboardAgentsPage() {
   const router=useRouter();
   const [data,setData]=useState<AgentListResponse|null>(null);
@@ -412,6 +433,7 @@ export default function DashboardAgentsPage() {
   const [activeJob,setActiveJob]=useState<{jobId:string;agentName:string}|null>(null);
   const [jobResult,setJobResult]=useState<JobResult|null>(null);
   const [viewJobId,setViewJobId]=useState<string|null>(null);
+  const [changelogs,setChangelogs]=useState<ChangelogEntry[]>([]);
   const pollRef=useRef<NodeJS.Timeout|null>(null);
 
   useEffect(()=>{
@@ -421,8 +443,10 @@ export default function DashboardAgentsPage() {
   useEffect(()=>{
     const token=localStorage.getItem('token');
     if(!token){router.push('/login');return;}
-    fetch('/api/agents/all',{headers:{Authorization:`Bearer ${token}`}})
-      .then(r=>r.ok?r.json():Promise.reject(r.status)).then(setData).catch(()=>router.push('/login')).finally(()=>setLoading(false));
+    Promise.all([
+      fetch('/api/agents/all',{headers:{Authorization:`Bearer ${token}`}}).then(r=>r.ok?r.json():Promise.reject(r.status)),
+      fetch('/api/platform/agent-changelogs',{headers:{Authorization:`Bearer ${token}`}}).then(r=>r.ok?r.json():[]),
+    ]).then(([agentData, logs])=>{setData(agentData);if(Array.isArray(logs))setChangelogs(logs);}).catch(()=>router.push('/login')).finally(()=>setLoading(false));
   },[router]);
 
   const updateIntegrations=(updated:Integration[])=>{setIntegrations(updated);localStorage.setItem('vantro_integrations',JSON.stringify(updated));};
@@ -504,7 +528,7 @@ export default function DashboardAgentsPage() {
 
         <ExecutionHistory onView={id=>setViewJobId(id)}/>
 
-        <AgentCatalogue agents={data.agents} onRun={setRunningAgent}/>
+        <AgentCatalogue agents={data.agents} onRun={setRunningAgent} changelogs={changelogs}/>
 
         {tierIdx<TIER_ORDER.length-1&&(
           <div className="bg-violet-950/30 border border-violet-500/20 rounded-2xl p-6 text-center">
