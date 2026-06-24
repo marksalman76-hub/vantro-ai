@@ -202,3 +202,13 @@ html {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Accent color token */
+:root {
+  --accent: oklch(0.72 0.15 250);
+}
+
+/* Subtle section separator */
+section + section {
+  box-shadow: inset 0 1px 0 oklch(0.97 0 0 / 0.04);
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef } from 'react';
+import { motion } from 'framer-motion';
 
 const QUOTES = [
   {
@@ -94,15 +95,23 @@ function QuoteCard({ quote, idx }: QuoteCardProps) {
 export function Testimonials() {
   return (
     <section className="py-32 overflow-hidden" style={{ backgroundColor: 'oklch(0.33 0 0)' }}>
-      <h2
+      <motion.h2
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
         className="text-center mb-16 font-bold text-4xl md:text-5xl"
         style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
       >
         Operators are moving faster.
-      </h2>
+      </motion.h2>
 
-      <div
+      <motion.div
         className="marquee-row overflow-hidden"
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.7, delay: 0.2 }}
         style={{ cursor: 'default' }}
         onMouseEnter={(e) => {
           const track = e.currentTarget.querySelector('.marquee-track') as HTMLElement;
@@ -121,7 +130,7 @@ export function Testimonials() {
             <QuoteCard key={i} quote={quote} idx={i} />
           ))}
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

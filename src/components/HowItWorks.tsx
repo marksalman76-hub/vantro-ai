@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { useRef } from 'react'
+import { motion, useScroll, useReducedMotion } from 'framer-motion'
 
 interface Step {
   label: string
@@ -223,6 +224,13 @@ function StepCard({
 }
 
 export function HowItWorks() {
+  const timelineRef = useRef<HTMLDivElement>(null)
+  const prefersReduced = useReducedMotion()
+  const { scrollYProgress } = useScroll({
+    target: timelineRef,
+    offset: ['start 80%', 'end 20%'],
+  })
+
   return (
     <section
       id="how-it-works"
@@ -267,13 +275,14 @@ export function HowItWorks() {
 
         {/* Timeline container */}
         <div
+          ref={timelineRef}
           style={{
             maxWidth: '52rem',
             margin: '0 auto',
             position: 'relative',
           }}
         >
-          {/* Vertical center line */}
+          {/* Track */}
           <div
             style={{
               position: 'absolute',
@@ -281,11 +290,29 @@ export function HowItWorks() {
               top: 0,
               bottom: 0,
               width: '1px',
-              background: 'oklch(0.97 0 0 / 0.10)',
+              background: 'oklch(0.97 0 0 / 0.06)',
               transform: 'translateX(-50%)',
               pointerEvents: 'none',
             }}
           />
+          {/* Animated fill */}
+          {!prefersReduced && (
+            <motion.div
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: 0,
+                bottom: 0,
+                width: '1px',
+                background: 'linear-gradient(to bottom, oklch(0.97 0 0 / 0.60), oklch(0.97 0 0 / 0.20))',
+                transform: 'translateX(-50%)',
+                scaleY: scrollYProgress,
+                transformOrigin: 'top center',
+                pointerEvents: 'none',
+                willChange: 'transform',
+              }}
+            />
+          )}
 
           {STEPS.map((step, i) => (
             <StepCard key={step.label} step={step} index={i} />

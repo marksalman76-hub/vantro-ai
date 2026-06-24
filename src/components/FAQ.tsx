@@ -55,8 +55,16 @@ export function FAQ() {
           return (
             <div
               key={i}
-              className={`${i < FAQS.length - 1 ? 'border-b' : ''}`}
-              style={{ borderColor: 'rgba(255,255,255,0.08)' }}
+              className={i < FAQS.length - 1 ? 'border-b' : ''}
+              style={{
+                borderColor: 'rgba(255,255,255,0.08)',
+                background: isOpen ? 'oklch(1 0 0 / 0.04)' : 'transparent',
+                borderRadius: isOpen ? '0.5rem' : '0',
+                padding: isOpen ? '0 0.75rem' : '0',
+                transition: 'background 0.25s ease, border-radius 0.25s ease, padding 0.2s ease',
+                marginLeft: isOpen ? '-0.75rem' : '0',
+                marginRight: isOpen ? '-0.75rem' : '0',
+              }}
             >
               <button
                 className="w-full py-5 flex items-center justify-between text-left gap-4 cursor-pointer"

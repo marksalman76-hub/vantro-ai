@@ -3,8 +3,6 @@
 import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
-import { useToast } from '../context/ToastContext';
-
 const TIERS = [
   {
     name: 'Starter',
@@ -12,6 +10,7 @@ const TIERS = [
     tagline: 'For solo builders testing the waters.',
     features: ['3 active agents', '1,000 actions / mo', 'Core integrations', 'Community support'],
     cta: 'Start free',
+    href: 'https://app.vantro.ai/signup?plan=starter',
     featured: false,
   },
   {
@@ -20,6 +19,7 @@ const TIERS = [
     tagline: 'For small teams finding their pace.',
     features: ['10 active agents', '15,000 actions / mo', '100+ integrations', 'Email support'],
     cta: 'Start Growth',
+    href: 'https://app.vantro.ai/signup?plan=growth',
     featured: false,
   },
   {
@@ -34,6 +34,7 @@ const TIERS = [
       'Priority support',
     ],
     cta: 'Activate your agents',
+    href: 'https://app.vantro.ai/signup?plan=business',
     featured: true,
   },
   {
@@ -48,6 +49,7 @@ const TIERS = [
       'SLA & solutions team',
     ],
     cta: 'Talk to sales',
+    href: 'mailto:sales@vantro.ai',
     featured: false,
   },
 ];
@@ -59,7 +61,6 @@ interface TierCardProps {
 
 function TierCard({ tier, index }: TierCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { showToast } = useToast();
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const el = cardRef.current;
@@ -145,16 +146,23 @@ function TierCard({ tier, index }: TierCardProps) {
         ))}
       </ul>
 
-      <button
-        onClick={() => showToast()}
+      <a
+        href={tier.href}
+        {...(!tier.href.startsWith('mailto:') && { target: '_blank', rel: 'noopener noreferrer' })}
         className="w-full py-3 rounded-full font-semibold transition-all duration-200 cursor-pointer"
         style={
           tier.featured
             ? {
+                display: 'block',
+                textAlign: 'center',
+                textDecoration: 'none',
                 backgroundColor: 'oklch(0.97 0 0)',
                 color: 'oklch(0.14 0 0)',
               }
             : {
+                display: 'block',
+                textAlign: 'center',
+                textDecoration: 'none',
                 border: '1px solid rgba(255,255,255,0.15)',
                 color: 'oklch(0.97 0 0)',
                 background: 'transparent',
@@ -162,21 +170,21 @@ function TierCard({ tier, index }: TierCardProps) {
         }
         onMouseEnter={(e) => {
           if (tier.featured) {
-            (e.currentTarget as HTMLButtonElement).style.opacity = '0.90';
+            (e.currentTarget as HTMLAnchorElement).style.opacity = '0.90';
           } else {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.30)';
+            (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.30)';
           }
         }}
         onMouseLeave={(e) => {
           if (tier.featured) {
-            (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+            (e.currentTarget as HTMLAnchorElement).style.opacity = '1';
           } else {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.15)';
+            (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.15)';
           }
         }}
       >
         {tier.cta}
-      </button>
+      </a>
     </motion.div>
   );
 }

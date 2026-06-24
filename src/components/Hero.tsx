@@ -4,8 +4,8 @@ import {
   useScroll,
   useTransform,
   useReducedMotion,
+  useMotionValue,
 } from 'framer-motion'
-import { useToast } from '../context/ToastContext'
 
 const STATS = [
   { big: '24/7', small: 'Always on' },
@@ -21,18 +21,30 @@ const RAYS = [
 ]
 
 export function Hero() {
-  const { showToast } = useToast()
   const prefersReduced = useReducedMotion()
   const containerRef = useRef<HTMLElement>(null)
 
   const { scrollY } = useScroll()
   const orbY = useTransform(scrollY, [0, 600], [0, prefersReduced ? 0 : -60])
 
-  const handleActivate = () => showToast('Agent activation launching soon.')
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+  const orbPX = useTransform(mouseX, [-1, 1], [prefersReduced ? 0 : -14, prefersReduced ? 0 : 14])
+  const orbPY = useTransform(mouseY, [-1, 1], [prefersReduced ? 0 : -10, prefersReduced ? 0 : 10])
+  const orbCombinedY = useTransform(
+    [orbY, orbPY],
+    ([scroll, mouse]: number[]) => scroll + mouse
+  )
 
   return (
     <section
       ref={containerRef}
+      onMouseMove={(e) => {
+        if (prefersReduced) return
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+        mouseX.set((e.clientX - rect.left) / rect.width * 2 - 1)
+        mouseY.set((e.clientY - rect.top) / rect.height * 2 - 1)
+      }}
       style={{
         minHeight: '100dvh',
         display: 'flex',
@@ -133,7 +145,7 @@ export function Hero() {
             Autonomous AI Workforce
           </div>
 
-          {/* Chrome gradient H1 */}
+          {/* Chrome gradient H1 — split-text word animation */}
           <h1
             style={{
               fontFamily: "'Space Grotesk', sans-serif",
@@ -144,28 +156,47 @@ export function Hero() {
               margin: 0,
             }}
           >
-            <span
-              style={{
-                background: 'linear-gradient(180deg, #ffffff 0%, #d8d8d8 28%, #9a9a9a 62%, #555555 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                display: 'inline',
-              }}
-            >
-              Deploy a workforce that
-            </span>
-            <br />
-            <span
-              style={{
-                background: 'linear-gradient(180deg, #c8c8c8 0%, #888888 50%, #444444 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                display: 'inline',
-              }}
-            >
-              never sleeps.
+            <span style={{ display: 'block' }}>
+              {['Deploy', 'a', 'workforce', 'that'].map((word, wordIndex) => (
+                <motion.span
+                  key={word + wordIndex}
+                  initial={prefersReduced ? false : { opacity: 0, y: 18 }}
+                  animate={prefersReduced ? {} : { opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: wordIndex * 0.065, ease: [0.22, 1, 0.36, 1] }}
+                  style={{
+                    display: 'inline-block',
+                    marginRight: '0.28em',
+                    background: 'linear-gradient(180deg, #ffffff 0%, #d8d8d8 28%, #9a9a9a 62%, #555555 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                  }}
+                >
+                  {word}
+                </motion.span>
+              ))}
+              <br />
+              {['never', 'sleeps.'].map((word, i) => {
+                const wordIndex = 4 + i
+                return (
+                  <motion.span
+                    key={word + wordIndex}
+                    initial={prefersReduced ? false : { opacity: 0, y: 18 }}
+                    animate={prefersReduced ? {} : { opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: wordIndex * 0.065, ease: [0.22, 1, 0.36, 1] }}
+                    style={{
+                      display: 'inline-block',
+                      marginRight: '0.28em',
+                      background: 'linear-gradient(180deg, #c8c8c8 0%, #888888 50%, #444444 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      backgroundClip: 'text',
+                    }}
+                  >
+                    {word}
+                  </motion.span>
+                )
+              })}
             </span>
           </h1>
 
@@ -184,8 +215,10 @@ export function Hero() {
           </p>
 
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            <button
-              onClick={handleActivate}
+            <a
+              href="https://app.vantro.ai/signup"
+              target="_blank"
+              rel="noopener noreferrer"
               style={{
                 background: 'linear-gradient(180deg, #ffffff 0%, #d8d8d8 100%)',
                 color: 'oklch(0.14 0 0)',
@@ -198,18 +231,20 @@ export function Hero() {
                 borderRadius: '9999px',
                 boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.60), 0 4px 16px rgba(0,0,0,0.40)',
                 transition: 'opacity 0.2s ease, transform 0.15s ease',
+                textDecoration: 'none',
+                display: 'inline-block',
               }}
               onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.opacity = '0.88'
-                ;(e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.02)'
+                ;(e.currentTarget as HTMLAnchorElement).style.opacity = '0.88'
+                ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1.02)'
               }}
               onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.opacity = '1'
-                ;(e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'
+                ;(e.currentTarget as HTMLAnchorElement).style.opacity = '1'
+                ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1)'
               }}
             >
               Activate your agents
-            </button>
+            </a>
             <a
               href="#agents"
               style={{
@@ -285,7 +320,8 @@ export function Hero() {
         {/* RIGHT - Orb */}
         <motion.div
           style={{
-            y: orbY,
+            y: orbCombinedY,
+            x: orbPX,
             position: 'relative',
             display: 'flex',
             alignItems: 'center',
