@@ -4,11 +4,12 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
+  const { jobId } = await params;
   const token = request.headers.get("authorization") || "";
   try {
-    const res = await fetch(`${API_URL}/api/admin/agents/jobs/${params.jobId}`, {
+    const res = await fetch(`${API_URL}/api/admin/agents/jobs/${jobId}`, {
       headers: { Authorization: token },
     });
     const data = await res.json();

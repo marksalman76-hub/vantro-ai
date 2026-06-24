@@ -71,31 +71,34 @@ async function proxyTeams(request: NextRequest, params: { path: string[] }) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  if (params.path[0] === "teams") return proxyTeams(request, params);
-  return proxy(request, params);
+  const p = await params;
+  if (p.path[0] === "teams") return proxyTeams(request, p);
+  return proxy(request, p);
 }
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  if (params.path[0] === "teams") return proxyTeams(request, params);
-  return proxy(request, params);
+  const p = await params;
+  if (p.path[0] === "teams") return proxyTeams(request, p);
+  return proxy(request, p);
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  return proxy(request, params);
+  return proxy(request, await params);
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
-  if (params.path[0] === "teams") return proxyTeams(request, params);
-  return proxy(request, params);
+  const p = await params;
+  if (p.path[0] === "teams") return proxyTeams(request, p);
+  return proxy(request, p);
 }

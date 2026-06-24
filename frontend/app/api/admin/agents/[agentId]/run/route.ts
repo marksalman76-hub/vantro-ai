@@ -4,12 +4,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { agentId: string } }
+  { params }: { params: Promise<{ agentId: string }> }
 ) {
+  const { agentId } = await params;
   const token = request.headers.get("authorization") || "";
   try {
     const body = await request.text();
-    const res = await fetch(`${API_URL}/api/admin/agents/${params.agentId}/run`, {
+    const res = await fetch(`${API_URL}/api/admin/agents/${agentId}/run`, {
       method: "POST",
       headers: { Authorization: token, "Content-Type": "application/json" },
       body,

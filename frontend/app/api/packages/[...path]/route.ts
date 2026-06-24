@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 
-async function handler(request: NextRequest, { params }: { params: { path: string[] } }) {
-  const path = params.path.join("/");
+async function handler(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+  const { path: pathArr } = await params;
+  const path = pathArr.join("/");
   const token = request.headers.get("authorization") || "";
 
   let body: string | undefined;
