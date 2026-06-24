@@ -98,7 +98,7 @@ export function FAQ() {
                   >
                     <p
                       className="text-sm leading-relaxed pb-5"
-                      style={{ color: 'oklch(0.70 0 0)' }}
+                      style={{ color: 'oklch(0.78 0 0)' }}
                     >
                       {item.a}
                     </p>

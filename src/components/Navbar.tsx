@@ -180,8 +180,8 @@ export function Navbar() {
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                background: 'linear-gradient(180deg, #ffffff 0%, #d8d8d8 100%)',
-                color: 'oklch(0.14 0 0)',
+                background: 'linear-gradient(160deg, oklch(0.78 0.13 250) 0%, oklch(0.60 0.18 250) 100%)',
+                color: 'oklch(0.98 0 0)',
                 border: 'none',
                 cursor: 'pointer',
                 fontFamily: "'Inter', sans-serif",
@@ -189,7 +189,7 @@ export function Navbar() {
                 fontWeight: 600,
                 padding: '0.5rem 1.25rem',
                 borderRadius: '9999px',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.60), 0 2px 8px rgba(0,0,0,0.35)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 16px oklch(0.60 0.18 250 / 0.45)',
                 transition: 'opacity 0.2s ease, transform 0.15s ease',
                 textDecoration: 'none',
                 display: 'inline-block',
@@ -322,8 +322,8 @@ export function Navbar() {
               rel="noopener noreferrer"
               onClick={() => setMobileOpen(false)}
               style={{
-                background: 'oklch(0.97 0 0)',
-                color: 'oklch(0.14 0 0)',
+                background: 'linear-gradient(160deg, oklch(0.78 0.13 250) 0%, oklch(0.60 0.18 250) 100%)',
+                color: 'oklch(0.98 0 0)',
                 border: 'none',
                 cursor: 'pointer',
                 fontFamily: "'Inter', sans-serif",
@@ -334,6 +334,7 @@ export function Navbar() {
                 textAlign: 'center',
                 textDecoration: 'none',
                 display: 'inline-block',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 16px oklch(0.60 0.18 250 / 0.45)',
               }}
             >
               Activate agents

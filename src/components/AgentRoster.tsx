@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, useReducedMotion, type PanInfo } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -45,9 +45,10 @@ function getOffset(i: number, active: number, count: number) {
 interface AgentCardInnerProps {
   agent: typeof AGENTS[0];
   isCenter: boolean;
+  displayedName?: string;
 }
 
-function AgentCardInner({ agent, isCenter }: AgentCardInnerProps) {
+function AgentCardInner({ agent, isCenter, displayedName }: AgentCardInnerProps) {
   const prefersReduced = useReducedMotion()
 
   return (
@@ -169,7 +170,7 @@ function AgentCardInner({ agent, isCenter }: AgentCardInnerProps) {
             marginBottom: '0.1rem',
           }}
         >
-          {agent.name}
+          {isCenter && displayedName !== undefined ? displayedName : agent.name}
         </p>
         <p style={{ fontSize: '0.76rem', color: 'rgba(255,255,255,0.40)', lineHeight: 1.4 }}>
           {agent.role}
@@ -196,6 +197,42 @@ function AgentCarousel() {
   const [active, setActive] = useState(0);
   const prefersReduced = useReducedMotion();
   const count = AGENTS.length;
+  const [displayedName, setDisplayedName] = useState(AGENTS[0].name);
+  const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const targetName = AGENTS[active].name;
+
+    if (typingRef.current) clearTimeout(typingRef.current);
+
+    if (prefersReduced) {
+      setDisplayedName(targetName);
+      return;
+    }
+
+    let charIndex = 0;
+    setDisplayedName('');
+
+    function typeNext() {
+      charIndex++;
+      setDisplayedName(targetName.slice(0, charIndex));
+      if (charIndex < targetName.length) {
+        typingRef.current = setTimeout(typeNext, 38);
+      } else {
+        // Cursor blink: show '|' then remove after 400ms
+        setDisplayedName(targetName + '|');
+        typingRef.current = setTimeout(() => {
+          setDisplayedName(targetName);
+        }, 400);
+      }
+    }
+
+    typingRef.current = setTimeout(typeNext, 38);
+
+    return () => {
+      if (typingRef.current) clearTimeout(typingRef.current);
+    };
+  }, [active, prefersReduced]);
 
   function next() { setActive((i) => mod(i + 1, count)); }
   function prev() { setActive((i) => mod(i - 1, count)); }
@@ -272,7 +309,7 @@ function AgentCarousel() {
               }}
               onClick={() => { if (!isCenter && isVisible) setActive(i); }}
             >
-              <AgentCardInner agent={agent} isCenter={isCenter} />
+              <AgentCardInner agent={agent} isCenter={isCenter} displayedName={isCenter ? displayedName : undefined} />
             </motion.div>
           );
         })}

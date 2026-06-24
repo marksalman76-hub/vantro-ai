@@ -2,6 +2,11 @@
 
 import { motion, useReducedMotion } from 'framer-motion';
 import { useRef } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
+
+gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 const STATS = [
   {
@@ -35,6 +40,7 @@ interface StatCardProps {
 
 function StatCard({ number, label, description, index }: StatCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const numberRef = useRef<HTMLParagraphElement>(null);
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const el = cardRef.current;
@@ -43,6 +49,33 @@ function StatCard({ number, label, description, index }: StatCardProps) {
     el.style.setProperty('--mx', `${e.clientX - rect.left}px`);
     el.style.setProperty('--my', `${e.clientY - rect.top}px`);
   }
+
+  useGSAP(() => {
+    const el = numberRef.current;
+    if (!el) return;
+
+    if (number === '10x') {
+      const obj = { val: 0 };
+      gsap.to(obj, {
+        val: 10,
+        duration: 1.4,
+        ease: 'power2.out',
+        snap: { val: 1 },
+        scrollTrigger: { trigger: el, start: 'top 85%', once: true },
+        onUpdate: () => { el.textContent = `${obj.val}x`; },
+      });
+    } else if (number === '70%') {
+      const obj = { val: 0 };
+      gsap.to(obj, {
+        val: 70,
+        duration: 1.4,
+        ease: 'power2.out',
+        snap: { val: 1 },
+        scrollTrigger: { trigger: el, start: 'top 85%', once: true },
+        onUpdate: () => { el.textContent = `${obj.val}%`; },
+      });
+    }
+  }, { scope: numberRef });
 
   return (
     <motion.div
@@ -58,11 +91,12 @@ function StatCard({ number, label, description, index }: StatCardProps) {
       <div className="sheen" />
       <p
         className="text-xs uppercase tracking-widest mb-2"
-        style={{ fontFamily: 'JetBrains Mono, monospace', color: 'oklch(0.70 0 0)' }}
+        style={{ fontFamily: 'JetBrains Mono, monospace', color: 'oklch(0.78 0 0)' }}
       >
         {label}
       </p>
       <p
+        ref={numberRef}
         className="font-bold text-4xl mb-2"
         style={{
           fontFamily: 'Space Grotesk, sans-serif',
@@ -74,7 +108,7 @@ function StatCard({ number, label, description, index }: StatCardProps) {
       >
         {number}
       </p>
-      <p className="text-sm leading-relaxed mt-2" style={{ color: 'oklch(0.70 0 0)' }}>
+      <p className="text-sm leading-relaxed mt-2" style={{ color: 'oklch(0.78 0 0)' }}>
         {description}
       </p>
     </motion.div>

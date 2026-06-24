@@ -220,8 +220,8 @@ export function Hero() {
               target="_blank"
               rel="noopener noreferrer"
               style={{
-                background: 'linear-gradient(180deg, #ffffff 0%, #d8d8d8 100%)',
-                color: 'oklch(0.14 0 0)',
+                background: 'linear-gradient(160deg, oklch(0.78 0.13 250) 0%, oklch(0.60 0.18 250) 100%)',
+                color: 'oklch(0.98 0 0)',
                 border: 'none',
                 cursor: 'pointer',
                 fontFamily: "'Inter', sans-serif",
@@ -229,7 +229,7 @@ export function Hero() {
                 fontWeight: 600,
                 padding: '0.75rem 1.5rem',
                 borderRadius: '9999px',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.60), 0 4px 16px rgba(0,0,0,0.40)',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 20px oklch(0.60 0.18 250 / 0.50)',
                 transition: 'opacity 0.2s ease, transform 0.15s ease',
                 textDecoration: 'none',
                 display: 'inline-block',
@@ -343,7 +343,7 @@ export function Hero() {
             whileInView={prefersReduced ? {} : { scale: 1, opacity: 1 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-            style={{ position: 'relative', width: '100%', maxWidth: '520px' }}
+            style={{ position: 'relative', width: '100%', maxWidth: 'min(520px, 85vw)' }}
           >
             {!prefersReduced && (
               <motion.div

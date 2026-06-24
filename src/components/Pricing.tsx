@@ -156,8 +156,8 @@ function TierCard({ tier, index }: TierCardProps) {
                 display: 'block',
                 textAlign: 'center',
                 textDecoration: 'none',
-                backgroundColor: 'oklch(0.97 0 0)',
-                color: 'oklch(0.14 0 0)',
+                background: 'linear-gradient(160deg, oklch(0.78 0.13 250) 0%, oklch(0.60 0.18 250) 100%)',
+                color: 'oklch(0.98 0 0)',
               }
             : {
                 display: 'block',

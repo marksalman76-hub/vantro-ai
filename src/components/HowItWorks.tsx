@@ -1,5 +1,10 @@
 import { useRef } from 'react'
-import { motion, useScroll, useReducedMotion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useGSAP } from '@gsap/react'
+
+gsap.registerPlugin(ScrollTrigger, useGSAP)
 
 interface Step {
   label: string
@@ -225,14 +230,31 @@ function StepCard({
 
 export function HowItWorks() {
   const timelineRef = useRef<HTMLDivElement>(null)
+  const sectionRef = useRef<HTMLElement>(null)
+  const lineRef = useRef<HTMLDivElement>(null)
   const prefersReduced = useReducedMotion()
-  const { scrollYProgress } = useScroll({
-    target: timelineRef,
-    offset: ['start 80%', 'end 20%'],
-  })
+
+  useGSAP(() => {
+    if (prefersReduced) return
+    gsap.fromTo(
+      lineRef.current,
+      { scaleY: 0 },
+      {
+        scaleY: 1,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top 70%',
+          end: 'bottom 30%',
+          scrub: 1,
+        },
+      }
+    )
+  }, { scope: sectionRef })
 
   return (
     <section
+      ref={sectionRef}
       id="how-it-works"
       style={{
         paddingTop: '8rem',
@@ -297,7 +319,8 @@ export function HowItWorks() {
           />
           {/* Animated fill */}
           {!prefersReduced && (
-            <motion.div
+            <div
+              ref={lineRef}
               style={{
                 position: 'absolute',
                 left: '50%',
@@ -306,10 +329,8 @@ export function HowItWorks() {
                 width: '1px',
                 background: 'linear-gradient(to bottom, oklch(0.97 0 0 / 0.60), oklch(0.97 0 0 / 0.20))',
                 transform: 'translateX(-50%)',
-                scaleY: scrollYProgress,
                 transformOrigin: 'top center',
                 pointerEvents: 'none',
-                willChange: 'transform',
               }}
             />
           )}

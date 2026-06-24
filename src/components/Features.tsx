@@ -136,7 +136,7 @@ function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
         <p
           style={{
             fontFamily: "'Inter', sans-serif",
-            color: 'oklch(0.70 0 0)',
+            color: 'oklch(0.78 0 0)',
             fontSize: '0.875rem',
             lineHeight: 1.65,
             margin: 0,

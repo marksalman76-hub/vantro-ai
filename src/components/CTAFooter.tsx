@@ -105,10 +105,10 @@ export function CTAFooter() {
             rel="noopener noreferrer"
             className="rounded-full px-8 py-4 font-semibold text-lg cursor-pointer"
             style={{
-              background: 'linear-gradient(180deg, #ffffff 0%, #d8d8d8 100%)',
-              color: 'oklch(0.14 0 0)',
+              background: 'linear-gradient(160deg, oklch(0.78 0.13 250) 0%, oklch(0.60 0.18 250) 100%)',
+              color: 'oklch(0.98 0 0)',
               border: 'none',
-              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.60), 0 4px 16px rgba(0,0,0,0.40)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 24px oklch(0.60 0.18 250 / 0.50)',
               transition: 'opacity 0.2s ease, transform 0.15s ease',
               textDecoration: 'none',
               display: 'inline-block',
