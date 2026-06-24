@@ -183,7 +183,7 @@ function TierCard({ tier, index }: TierCardProps) {
 
 export function Pricing() {
   return (
-    <section id="pricing" className="py-32" style={{ backgroundColor: 'oklch(0.24 0 0)' }}>
+    <section id="pricing" className="py-32" style={{ backgroundColor: 'oklch(0.28 0 0)' }}>
       <h2
         className="text-center mb-4 font-bold text-4xl md:text-5xl"
         style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}

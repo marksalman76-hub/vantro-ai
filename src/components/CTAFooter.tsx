@@ -10,7 +10,7 @@ export function CTAFooter() {
   return (
     <section
       className="relative py-40 overflow-hidden"
-      style={{ backgroundColor: 'oklch(0.24 0 0)' }}
+      style={{ backgroundColor: 'oklch(0.28 0 0)' }}
     >
       {/* Radial glow behind orb */}
       <div
@@ -29,13 +29,10 @@ export function CTAFooter() {
         aria-hidden="true"
       >
         <motion.div
-          initial={prefersReduced ? false : { scale: 0.80 }}
-          whileInView={prefersReduced ? {} : {
-            scale: [0.80, 1.22, 1.0],
-            filter: ['brightness(0.1)', 'brightness(4.0)', 'brightness(1)'],
-          }}
-          viewport={{ once: true, amount: 0.4 }}
-          transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+          initial={prefersReduced ? false : { scale: 0.86, opacity: 0 }}
+          whileInView={prefersReduced ? {} : { scale: 1, opacity: 1 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
           style={{ position: 'relative', width: '560px' }}
         >
           {!prefersReduced && (
@@ -55,8 +52,8 @@ export function CTAFooter() {
                 mixBlendMode: 'screen',
                 pointerEvents: 'none',
                 zIndex: 2,
-                WebkitMaskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
-                maskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
+                WebkitMaskImage: 'radial-gradient(circle, black 16%, rgba(0,0,0,0.40) 42%, transparent 76%)',
+                maskImage: 'radial-gradient(circle, black 16%, rgba(0,0,0,0.40) 42%, transparent 76%)',
               }}
             />
           )}
@@ -73,8 +70,8 @@ export function CTAFooter() {
             style={{
               mixBlendMode: 'screen',
               opacity: 0.55,
-              WebkitMaskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
-              maskImage: 'radial-gradient(circle, black 30%, transparent 70%)',
+              WebkitMaskImage: 'radial-gradient(circle, black 16%, rgba(0,0,0,0.40) 42%, transparent 76%)',
+              maskImage: 'radial-gradient(circle, black 16%, rgba(0,0,0,0.40) 42%, transparent 76%)',
               position: 'relative',
               zIndex: 1,
             }}

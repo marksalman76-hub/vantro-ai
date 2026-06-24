@@ -84,7 +84,7 @@ function StatCard({ number, label, description, index }: StatCardProps) {
 export function WhyVantro() {
   const prefersReduced = useReducedMotion()
   return (
-    <section className="py-32" style={{ backgroundColor: 'oklch(0.24 0 0)' }}>
+    <section className="py-32" style={{ backgroundColor: 'oklch(0.28 0 0)' }}>
       <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
         {/* Left: orb */}
         <motion.div
@@ -100,13 +100,10 @@ export function WhyVantro() {
             style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)' }}
           />
           <motion.div
-            initial={prefersReduced ? false : { scale: 0.80 }}
-            whileInView={prefersReduced ? {} : {
-              scale: [0.80, 1.22, 1.0],
-              filter: ['brightness(0.1)', 'brightness(4.0)', 'brightness(1)'],
-            }}
-            viewport={{ once: true, amount: 0.5 }}
-            transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+            initial={prefersReduced ? false : { scale: 0.86, opacity: 0 }}
+            whileInView={prefersReduced ? {} : { scale: 1, opacity: 1 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
             style={{ position: 'relative', width: '100%', maxWidth: '28rem' }}
           >
             {!prefersReduced && (
@@ -126,8 +123,8 @@ export function WhyVantro() {
                   mixBlendMode: 'screen',
                   pointerEvents: 'none',
                   zIndex: 2,
-                  WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 75%)',
-                  maskImage: 'radial-gradient(circle, black 40%, transparent 75%)',
+                  WebkitMaskImage: 'radial-gradient(circle, black 20%, rgba(0,0,0,0.50) 48%, transparent 82%)',
+                  maskImage: 'radial-gradient(circle, black 20%, rgba(0,0,0,0.50) 48%, transparent 82%)',
                 }}
               />
             )}
@@ -155,8 +152,8 @@ export function WhyVantro() {
               transition={prefersReduced ? {} : { duration: 12, repeat: Infinity, ease: 'easeInOut' }}
               style={{
                 mixBlendMode: 'screen',
-                WebkitMaskImage: 'radial-gradient(circle, black 40%, transparent 75%)',
-                maskImage: 'radial-gradient(circle, black 40%, transparent 75%)',
+                WebkitMaskImage: 'radial-gradient(circle, black 20%, rgba(0,0,0,0.50) 48%, transparent 82%)',
+                maskImage: 'radial-gradient(circle, black 20%, rgba(0,0,0,0.50) 48%, transparent 82%)',
                 position: 'relative',
                 zIndex: 1,
               }}

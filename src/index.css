@@ -75,7 +75,7 @@
 }
 
 html {
-  background-color: oklch(0.26 0 0);
+  background-color: oklch(0.30 0 0);
   color: oklch(0.97 0 0);
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -95,10 +95,10 @@ html {
     overflow: hidden;
     background: linear-gradient(
       145deg,
-      oklch(1 0 0 / 0.24) 0%,
-      oklch(1 0 0 / 0.10) 100%
+      oklch(1 0 0 / 0.30) 0%,
+      oklch(1 0 0 / 0.14) 100%
     );
-    border: 1px solid oklch(1 0 0 / 0.40);
+    border: 1px solid oklch(1 0 0 / 0.55);
     backdrop-filter: blur(20px) saturate(200%);
     -webkit-backdrop-filter: blur(20px) saturate(200%);
     box-shadow:

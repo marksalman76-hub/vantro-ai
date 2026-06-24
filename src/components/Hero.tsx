@@ -41,7 +41,7 @@ export function Hero() {
         paddingBottom: '6rem',
         position: 'relative',
         overflow: 'hidden',
-        background: 'oklch(0.24 0 0)',
+        background: 'oklch(0.28 0 0)',
       }}
     >
       {/* Scanline texture */}
@@ -303,13 +303,10 @@ export function Hero() {
             }}
           />
           <motion.div
-            initial={prefersReduced ? false : { scale: 0.80 }}
-            whileInView={prefersReduced ? {} : {
-              scale: [0.80, 1.22, 1.0],
-              filter: ['brightness(0.1)', 'brightness(4.0)', 'brightness(1)'],
-            }}
-            viewport={{ once: true, amount: 0.4 }}
-            transition={{ duration: 1.1, ease: [0.22, 1, 0.36, 1] }}
+            initial={prefersReduced ? false : { scale: 0.86, opacity: 0 }}
+            whileInView={prefersReduced ? {} : { scale: 1, opacity: 1 }}
+            viewport={{ once: true, amount: 0.3 }}
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
             style={{ position: 'relative', width: '100%', maxWidth: '520px' }}
           >
             {!prefersReduced && (
@@ -329,8 +326,8 @@ export function Hero() {
                   mixBlendMode: 'screen',
                   pointerEvents: 'none',
                   zIndex: 2,
-                  maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 55%, transparent 100%)',
-                  WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 55%, transparent 100%)',
+                  maskImage: 'radial-gradient(ellipse 90% 90% at 50% 50%, black 22%, rgba(0,0,0,0.55) 52%, transparent 86%)',
+                  WebkitMaskImage: 'radial-gradient(ellipse 90% 90% at 50% 50%, black 22%, rgba(0,0,0,0.55) 52%, transparent 86%)',
                 }}
               />
             )}
@@ -359,8 +356,8 @@ export function Hero() {
                 width: '100%',
                 height: 'auto',
                 mixBlendMode: 'screen',
-                maskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 55%, transparent 100%)',
-                WebkitMaskImage: 'radial-gradient(ellipse 80% 80% at 50% 50%, black 55%, transparent 100%)',
+                maskImage: 'radial-gradient(ellipse 90% 90% at 50% 50%, black 22%, rgba(0,0,0,0.55) 52%, transparent 86%)',
+                WebkitMaskImage: 'radial-gradient(ellipse 90% 90% at 50% 50%, black 22%, rgba(0,0,0,0.55) 52%, transparent 86%)',
                 position: 'relative',
                 zIndex: 1,
               }}
