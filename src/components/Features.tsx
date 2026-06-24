@@ -158,11 +158,15 @@ export function Features() {
       style={{
         paddingTop: '8rem',
         paddingBottom: '8rem',
-        background: 'oklch(0.33 0 0)',
+        background: 'oklch(0.22 0 0)',
       }}
     >
       <div style={{ maxWidth: '72rem', margin: '0 auto', padding: '0 1.5rem' }}>
-        <h2
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           style={{
             fontFamily: "'Space Grotesk', sans-serif",
             fontWeight: 700,
@@ -175,9 +179,13 @@ export function Features() {
           }}
         >
           Built like a real operating system.
-        </h2>
+        </motion.h2>
 
-        <p
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
           style={{
             fontFamily: "'Inter', sans-serif",
             color: 'oklch(0.70 0 0)',
@@ -192,7 +200,7 @@ export function Features() {
         >
           Every layer is designed so your agents can work independently and together -
           reliably, at scale.
-        </p>
+        </motion.p>
 
         <div
           style={{

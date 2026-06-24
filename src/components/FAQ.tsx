@@ -35,19 +35,27 @@ export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section id="faq" className="py-32" style={{ backgroundColor: 'oklch(0.33 0 0)' }}>
-      <h2
+    <section id="faq" className="py-32" style={{ backgroundColor: 'oklch(0.24 0 0)' }}>
+      <motion.h2
         className="text-center mb-4 font-bold text-4xl md:text-5xl"
         style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       >
         Questions, answered.
-      </h2>
-      <p
+      </motion.h2>
+      <motion.p
         className="text-center mb-12 text-base"
         style={{ color: 'oklch(0.70 0 0)' }}
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
       >
         Everything you need to know before deploying your first agent.
-      </p>
+      </motion.p>
 
       <div className="max-w-2xl mx-auto px-6">
         {FAQS.map((item, i) => {

@@ -9,41 +9,47 @@ const QUOTES = [
     name: 'Maya Renner',
     title: 'COO',
     company: 'Northwind Labs',
+    avatar: 'https://randomuser.me/api/portraits/women/44.jpg',
   },
   {
     text: 'We deployed Nova and Echo in an afternoon. Pipeline coverage went up and response times dropped overnight.',
     name: 'Daniel Okafor',
     title: 'VP Revenue',
     company: 'Cleardesk',
+    avatar: 'https://randomuser.me/api/portraits/men/32.jpg',
   },
   {
     text: 'The shared-memory model is the real unlock. Handoffs between agents are seamless in a way our humans envy.',
     name: 'Sofia Marchetti',
     title: 'Head of Product',
     company: 'Lumen Systems',
+    avatar: 'https://randomuser.me/api/portraits/women/68.jpg',
   },
   {
     text: 'Forge ships small fixes while my engineers focus on the hard problems. It is like adding a tireless junior dev.',
     name: 'Aaron Patel',
     title: 'CTO',
     company: 'Stacksmith',
+    avatar: 'https://randomuser.me/api/portraits/men/75.jpg',
   },
   {
     text: 'Compliance was our blocker for AI. Sentinel\'s audit trail and approval gates got us a green light from legal.',
     name: 'Greta Lindqvist',
     title: 'GC',
     company: 'Halden Group',
+    avatar: 'https://randomuser.me/api/portraits/women/55.jpg',
   },
   {
     text: 'It feels less like software and more like hiring a whole department that onboards in minutes.',
     name: 'Marcus Webb',
     title: 'Founder',
     company: 'Tidalflow',
+    avatar: 'https://randomuser.me/api/portraits/men/11.jpg',
   },
 ];
 
 interface QuoteCardProps {
-  quote: typeof QUOTES[0];
+  quote: typeof QUOTES[0] & { avatar: string };
   idx: number;
 }
 
@@ -80,13 +86,30 @@ function QuoteCard({ quote, idx }: QuoteCardProps) {
         </span>
         {quote.text}
       </p>
-      <div className="mt-auto">
-        <p className="text-snow font-semibold text-sm" style={{ color: 'oklch(0.97 0 0)' }}>
-          {quote.name}
-        </p>
-        <p className="text-sm" style={{ color: 'oklch(0.70 0 0)' }}>
-          {quote.title}, {quote.company}
-        </p>
+      <div className="mt-auto flex items-center gap-3">
+        <img
+          src={quote.avatar}
+          alt={quote.name}
+          width={40}
+          height={40}
+          style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            objectFit: 'cover',
+            flexShrink: 0,
+            border: '1.5px solid oklch(1 0 0 / 0.15)',
+          }}
+          loading="lazy"
+        />
+        <div>
+          <p className="text-snow font-semibold text-sm" style={{ color: 'oklch(0.97 0 0)' }}>
+            {quote.name}
+          </p>
+          <p className="text-sm" style={{ color: 'oklch(0.55 0 0)' }}>
+            {quote.title}, {quote.company}
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -94,7 +117,7 @@ function QuoteCard({ quote, idx }: QuoteCardProps) {
 
 export function Testimonials() {
   return (
-    <section className="py-32 overflow-hidden" style={{ backgroundColor: 'oklch(0.33 0 0)' }}>
+    <section className="py-32 overflow-hidden" style={{ backgroundColor: 'oklch(0.24 0 0)' }}>
       <motion.h2
         initial={{ opacity: 0, y: 24 }}
         whileInView={{ opacity: 1, y: 0 }}

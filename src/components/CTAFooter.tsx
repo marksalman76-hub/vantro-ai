@@ -1,14 +1,36 @@
 'use client';
 
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion, useAnimation } from 'framer-motion';
+import { useEffect } from 'react';
 
 export function CTAFooter() {
   const prefersReduced = useReducedMotion();
+  const orbControls = useAnimation();
+
+  useEffect(() => {
+    if (prefersReduced) return
+    const startAnim = () => orbControls.start({
+      y: [0, -22, -6, -30, -8, 0],
+      x: [0, 14, -10, 8, -3, 0],
+      scale: [1, 1.06, 0.97, 1.08, 0.99, 1],
+      transition: { duration: 11, repeat: Infinity, ease: 'easeInOut' },
+    })
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') orbControls.stop()
+      else startAnim()
+    }
+    startAnim()
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      orbControls.stop()
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [prefersReduced, orbControls])
 
   return (
     <section
       className="relative py-40 overflow-hidden"
-      style={{ backgroundColor: 'oklch(0.28 0 0)' }}
+      style={{ backgroundColor: 'oklch(0.14 0 0)' }}
     >
       {/* Radial glow behind orb */}
       <div
@@ -17,7 +39,7 @@ export function CTAFooter() {
       >
         <div
           className="w-[600px] h-[600px] rounded-full blur-3xl"
-          style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, oklch(0.60 0.18 250 / 0.08) 0%, oklch(0.97 0 0 / 0.02) 40%, transparent 70%)' }}
         />
       </div>
 
@@ -59,15 +81,10 @@ export function CTAFooter() {
             src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663790183318/saLNUqZiiYVuufKN.png"
             alt=""
             className="w-full"
-            animate={prefersReduced ? {} : {
-              y: [0, -22, -6, -30, -8, 0],
-              x: [0, 14, -10, 8, -3, 0],
-              scale: [1, 1.06, 0.97, 1.08, 0.99, 1],
-            }}
-            transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut' }}
+            animate={prefersReduced ? {} : orbControls}
             style={{
               mixBlendMode: 'screen',
-              opacity: 0.55,
+              opacity: 0.88,
               WebkitMaskImage: 'radial-gradient(circle, black 16%, rgba(0,0,0,0.40) 42%, transparent 76%)',
               maskImage: 'radial-gradient(circle, black 16%, rgba(0,0,0,0.40) 42%, transparent 76%)',
               position: 'relative',
@@ -109,16 +126,16 @@ export function CTAFooter() {
               color: 'oklch(0.98 0 0)',
               border: 'none',
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 24px oklch(0.60 0.18 250 / 0.50)',
-              transition: 'opacity 0.2s ease, transform 0.15s ease',
+              transition: 'box-shadow 0.2s ease, transform 0.15s ease',
               textDecoration: 'none',
               display: 'inline-block',
             }}
             onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLAnchorElement).style.opacity = '0.88'
+              ;(e.currentTarget as HTMLAnchorElement).style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.40), 0 8px 40px oklch(0.60 0.18 250 / 0.80)'
               ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1.02)'
             }}
             onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLAnchorElement).style.opacity = '1'
+              ;(e.currentTarget as HTMLAnchorElement).style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 24px oklch(0.60 0.18 250 / 0.50)'
               ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1)'
             }}
           >

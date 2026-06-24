@@ -131,6 +131,7 @@ function StepCard({
 
       {/* Center circle */}
       <motion.div
+        className="timeline-circle"
         initial={{ opacity: 0, scale: 0.6 }}
         whileInView={{ opacity: 1, scale: 1 }}
         viewport={{ once: true, margin: '-60px' }}
@@ -247,6 +248,27 @@ export function HowItWorks() {
           start: 'top 70%',
           end: 'bottom 30%',
           scrub: 1,
+          onUpdate: (self) => {
+            const milestones = [0.18, 0.42, 0.66, 0.90]
+            const circles = sectionRef.current?.querySelectorAll('.timeline-circle')
+            if (!circles) return
+            milestones.forEach((threshold, i) => {
+              const diff = Math.abs(self.progress - threshold)
+              if (diff < 0.015) {
+                const circle = circles[i] as HTMLElement
+                if (circle) {
+                  gsap.to(circle, {
+                    boxShadow: '0 0 0 4px oklch(0.82 0.18 65 / 0.55), 0 0 16px oklch(0.82 0.18 65 / 0.30)',
+                    borderColor: 'oklch(0.82 0.18 65)',
+                    duration: 0.12,
+                    yoyo: true,
+                    repeat: 1,
+                    overwrite: 'auto',
+                  })
+                }
+              }
+            })
+          },
         },
       }
     )
@@ -259,11 +281,15 @@ export function HowItWorks() {
       style={{
         paddingTop: '8rem',
         paddingBottom: '8rem',
-        background: 'oklch(0.28 0 0)',
+        background: 'oklch(0.18 0 0)',
       }}
     >
       <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '0 1.5rem' }}>
-        <h2
+        <motion.h2
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           style={{
             fontFamily: "'Space Grotesk', sans-serif",
             fontWeight: 700,
@@ -276,9 +302,13 @@ export function HowItWorks() {
           }}
         >
           From signup to deployed in minutes.
-        </h2>
+        </motion.h2>
 
-        <p
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-60px' }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
           style={{
             fontFamily: "'Inter', sans-serif",
             color: 'oklch(0.70 0 0)',
@@ -293,7 +323,7 @@ export function HowItWorks() {
         >
           No complex setup. No engineering overhead. Your team is up and running
           faster than any traditional hiring process.
-        </p>
+        </motion.p>
 
         {/* Timeline container */}
         <div

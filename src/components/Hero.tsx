@@ -1,6 +1,7 @@
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import {
   motion,
+  AnimatePresence,
   useScroll,
   useTransform,
   useReducedMotion,
@@ -8,9 +9,9 @@ import {
 } from 'framer-motion'
 
 const STATS = [
-  { big: '24/7', small: 'Always on' },
-  { big: '200+', small: 'Integrations' },
-  { big: '5 min', small: 'To deploy' },
+  { big: '22', small: 'AI agents' },
+  { big: 'SOC 2', small: 'Type II' },
+  { big: '$0', small: 'To start' },
 ]
 
 const RAYS = [
@@ -18,6 +19,17 @@ const RAYS = [
   { angle: -12, opacity: 0.32, dur: 5.8 },
   { angle:   6, opacity: 0.26, dur: 4.9 },
   { angle:  20, opacity: 0.18, dur: 6.5 },
+]
+
+const ACTIVITIES = [
+  { agent: 'Atlas', action: 'Routed 14 inbound leads to Nova', time: '2s ago' },
+  { agent: 'Echo', action: 'Resolved ticket #4,471 via chat', time: '5s ago' },
+  { agent: 'Forge', action: 'Merged PR #88 — feat/auth-v2', time: '9s ago' },
+  { agent: 'Ledger', action: 'Flagged $2.4K anomaly for review', time: '13s ago' },
+  { agent: 'Pulse', action: 'Published Q3 campaign deck', time: '19s ago' },
+  { agent: 'Nova', action: 'Closed deal — Westridge Corp', time: '26s ago' },
+  { agent: 'Scout', action: 'Compiled 14pg competitor brief', time: '33s ago' },
+  { agent: 'Sentinel', action: 'Blocked 3 suspicious login attempts', time: '41s ago' },
 ]
 
 export function Hero() {
@@ -29,12 +41,22 @@ export function Hero() {
 
   const mouseX = useMotionValue(0)
   const mouseY = useMotionValue(0)
-  const orbPX = useTransform(mouseX, [-1, 1], [prefersReduced ? 0 : -14, prefersReduced ? 0 : 14])
-  const orbPY = useTransform(mouseY, [-1, 1], [prefersReduced ? 0 : -10, prefersReduced ? 0 : 10])
+  const orbPX = useTransform(mouseX, [-1, 1], [prefersReduced ? 0 : -24, prefersReduced ? 0 : 24])
+  const orbPY = useTransform(mouseY, [-1, 1], [prefersReduced ? 0 : -16, prefersReduced ? 0 : 16])
   const orbCombinedY = useTransform(
     [orbY, orbPY],
     ([scroll, mouse]: number[]) => scroll + mouse
   )
+  const orbRotate = useTransform(mouseX, [-1, 1], [prefersReduced ? 0 : -4, prefersReduced ? 0 : 4])
+
+  const [feedStart, setFeedStart] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => {
+      setFeedStart((i) => (i + 1) % ACTIVITIES.length)
+    }, 2200)
+    return () => clearInterval(id)
+  }, [])
+  const feedItems = [0, 1, 2, 3].map((offset) => ACTIVITIES[(feedStart + offset) % ACTIVITIES.length])
 
   return (
     <section
@@ -53,7 +75,7 @@ export function Hero() {
         paddingBottom: '6rem',
         position: 'relative',
         overflow: 'hidden',
-        background: 'oklch(0.28 0 0)',
+        background: 'oklch(0.14 0 0)',
       }}
     >
       {/* Scanline texture */}
@@ -235,11 +257,11 @@ export function Hero() {
                 display: 'inline-block',
               }}
               onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLAnchorElement).style.opacity = '0.88'
+                ;(e.currentTarget as HTMLAnchorElement).style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.40), 0 8px 32px oklch(0.60 0.18 250 / 0.75)'
                 ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1.02)'
               }}
               onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLAnchorElement).style.opacity = '1'
+                ;(e.currentTarget as HTMLAnchorElement).style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 20px oklch(0.60 0.18 250 / 0.50)'
                 ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1)'
               }}
             >
@@ -272,6 +294,96 @@ export function Hero() {
               Meet the roster
             </a>
           </div>
+
+          {/* Live agent activity feed */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            style={{
+              marginTop: '2rem',
+              width: '100%',
+              maxWidth: '420px',
+              background: 'oklch(1 0 0 / 0.05)',
+              border: '1px solid oklch(1 0 0 / 0.12)',
+              borderRadius: '0.875rem',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header bar */}
+            <div style={{
+              padding: '0.5rem 0.875rem',
+              borderBottom: '1px solid oklch(1 0 0 / 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}>
+              <span style={{
+                width: '6px', height: '6px', borderRadius: '50%',
+                background: 'oklch(0.75 0.22 145)',
+                boxShadow: '0 0 6px oklch(0.75 0.22 145 / 0.7)',
+                flexShrink: 0,
+              }} />
+              <span style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: '0.6rem',
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: 'oklch(0.55 0 0)',
+              }}>
+                Live agent activity
+              </span>
+            </div>
+            {/* Activity rows */}
+            <AnimatePresence mode="popLayout">
+              {feedItems.map((item, i) => (
+                <motion.div
+                  key={`${item.agent}-${item.action}`}
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: i === 0 ? 1 : 0.6 - i * 0.12 }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.625rem',
+                    padding: '0.45rem 0.875rem',
+                    borderBottom: i < 3 ? '1px solid oklch(1 0 0 / 0.04)' : 'none',
+                  }}
+                >
+                  <span style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: '0.65rem',
+                    fontWeight: 600,
+                    color: 'oklch(0.82 0.18 65)',
+                    flexShrink: 0,
+                    width: '3.5rem',
+                  }}>
+                    {item.agent}
+                  </span>
+                  <span style={{
+                    fontFamily: "'Inter', sans-serif",
+                    fontSize: '0.72rem',
+                    color: 'oklch(0.65 0 0)',
+                    flex: 1,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
+                    {item.action}
+                  </span>
+                  <span style={{
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: '0.6rem',
+                    color: 'oklch(0.45 0 0)',
+                    flexShrink: 0,
+                  }}>
+                    {item.time}
+                  </span>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
 
           <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
             {STATS.map((stat, i) => (
@@ -343,7 +455,7 @@ export function Hero() {
             whileInView={prefersReduced ? {} : { scale: 1, opacity: 1 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-            style={{ position: 'relative', width: '100%', maxWidth: 'min(520px, 85vw)' }}
+            style={{ position: 'relative', width: '100%', maxWidth: 'min(520px, 85vw)', rotate: orbRotate }}
           >
             {!prefersReduced && (
               <motion.div

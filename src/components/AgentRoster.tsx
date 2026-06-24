@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, useReducedMotion, type PanInfo } from 'framer-motion';
+import { motion, useReducedMotion, useAnimation, type PanInfo } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const AGENTS = [
@@ -50,14 +50,35 @@ interface AgentCardInnerProps {
 
 function AgentCardInner({ agent, isCenter, displayedName }: AgentCardInnerProps) {
   const prefersReduced = useReducedMotion()
+  const borderControls = useAnimation()
+
+  useEffect(() => {
+    if (!isCenter || prefersReduced) return
+
+    const startSpin = () => borderControls.start({
+      rotate: 360,
+      transition: { duration: 3, repeat: Infinity, ease: 'linear' },
+    })
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') borderControls.stop()
+      else startSpin()
+    }
+
+    startSpin()
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      borderControls.stop()
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [isCenter, prefersReduced, borderControls])
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>
       {/* Rotating gradient border — sits outside overflow:hidden */}
       {isCenter && !prefersReduced && (
         <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+          animate={borderControls}
           style={{
             position: 'absolute',
             inset: -1.5,
@@ -189,6 +210,32 @@ function AgentCardInner({ agent, isCenter, displayedName }: AgentCardInnerProps)
         )}
       </div>
       </div>
+
+      {isCenter && (
+        <motion.span
+          aria-label="Agent online"
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            top: '0.625rem',
+            right: '0.625rem',
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            background: 'oklch(0.75 0.22 145)',
+            zIndex: 10,
+            boxShadow: '0 0 0 0 oklch(0.75 0.22 145 / 0.70)',
+          }}
+          animate={prefersReduced ? {} : {
+            boxShadow: [
+              '0 0 0 0 oklch(0.75 0.22 145 / 0.70)',
+              '0 0 0 5px oklch(0.75 0.22 145 / 0)',
+              '0 0 0 0 oklch(0.75 0.22 145 / 0)',
+            ],
+          }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: 'easeOut' }}
+        />
+      )}
     </div>
   );
 }
@@ -314,6 +361,22 @@ function AgentCarousel() {
           );
         })}
       </div>
+
+      {/* Position indicator */}
+      <p
+        style={{
+          textAlign: 'center',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: '0.68rem',
+          letterSpacing: '0.14em',
+          color: 'oklch(0.38 0 0)',
+          marginTop: '1.25rem',
+          userSelect: 'none',
+        }}
+        aria-label={`Agent ${active + 1} of ${count}`}
+      >
+        {String(active + 1).padStart(2, '0')} / {String(count).padStart(2, '0')}
+      </p>
 
       <div
         style={{

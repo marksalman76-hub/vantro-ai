@@ -45,13 +45,6 @@ const COLUMNS = [
 export function Footer() {
   const { showToast } = useToast();
 
-  function handleLink(e: React.MouseEvent<HTMLAnchorElement>, href: string | null) {
-    if (!href) {
-      e.preventDefault();
-      showToast();
-    }
-  }
-
   return (
     <footer
       className="pt-20 pb-10"
@@ -95,20 +88,27 @@ export function Footer() {
               <ul className="flex flex-col gap-3">
                 {col.links.map((link) => (
                   <li key={link.label}>
-                    <a
-                      href={link.href ?? '#'}
-                      onClick={(e) => handleLink(e, link.href)}
-                      className="text-sm transition-colors duration-150"
-                      style={{ color: 'oklch(0.70 0 0)' }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.97 0 0)';
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.70 0 0)';
-                      }}
-                    >
-                      {link.label}
-                    </a>
+                    {link.href ? (
+                      <a
+                        href={link.href}
+                        className="text-sm transition-colors duration-150"
+                        style={{ color: 'oklch(0.70 0 0)', textDecoration: 'none' }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.97 0 0)' }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.70 0 0)' }}
+                      >
+                        {link.label}
+                      </a>
+                    ) : (
+                      <button
+                        onClick={() => showToast()}
+                        className="text-sm transition-colors duration-150 cursor-pointer"
+                        style={{ color: 'oklch(0.70 0 0)', background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', textAlign: 'left' }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'oklch(0.97 0 0)' }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.color = 'oklch(0.70 0 0)' }}
+                      >
+                        {link.label}
+                      </button>
+                    )}
                   </li>
                 ))}
               </ul>

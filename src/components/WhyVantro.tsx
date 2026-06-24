@@ -104,6 +104,7 @@ function StatCard({ number, label, description, index }: StatCardProps) {
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
           backgroundClip: 'text',
+          fontVariantNumeric: 'tabular-nums',
         }}
       >
         {number}
@@ -118,7 +119,7 @@ function StatCard({ number, label, description, index }: StatCardProps) {
 export function WhyVantro() {
   const prefersReduced = useReducedMotion()
   return (
-    <section className="py-32" style={{ backgroundColor: 'oklch(0.28 0 0)' }}>
+    <section className="py-32" style={{ backgroundColor: 'oklch(0.18 0 0)' }}>
       <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
         {/* Left: orb */}
         <motion.div

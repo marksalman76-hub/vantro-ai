@@ -1,111 +1,78 @@
-const COMPANIES = [
-  'Northwind',
-  'Cleardesk',
-  'Lumen',
-  'Stacksmith',
-  'Halden',
-  'Tidalflow',
-  'Vertex',
-  'Quanta',
-]
-
 export function LogoStrip() {
+  const STATS = [
+    { value: '22', label: 'Specialized agents' },
+    { value: '200+', label: 'Native integrations' },
+    { value: '5 min', label: 'Time to first deploy' },
+    { value: 'SOC 2', label: 'Type II certified' },
+    { value: '24/7', label: 'Always running' },
+    { value: '$0', label: 'To get started' },
+  ]
+
   return (
     <section
       style={{
-        paddingTop: '3rem',
-        paddingBottom: '3rem',
+        paddingTop: '2rem',
+        paddingBottom: '2rem',
         borderTop: '1px solid oklch(0.97 0 0 / 0.08)',
         borderBottom: '1px solid oklch(0.97 0 0 / 0.08)',
-        background: 'oklch(0.20 0 0 / 0.30)',
-        overflow: 'hidden',
+        background: 'oklch(0.18 0 0)',
       }}
     >
-      <p
+      <div
         style={{
-          textAlign: 'center',
-          fontSize: '0.875rem',
-          fontFamily: "'JetBrains Mono', monospace",
-          letterSpacing: '0.12em',
-          color: 'oklch(0.70 0 0)',
-          marginBottom: '1.5rem',
-          textTransform: 'uppercase',
-          margin: '0 0 1.5rem 0',
+          maxWidth: '80rem',
+          margin: '0 auto',
+          padding: '0 1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+          gap: '0.5rem 1.5rem',
         }}
       >
-        Trusted by operators at fast-moving teams
-      </p>
-
-      <div
-        className="marquee-row"
-        style={{ overflow: 'hidden', position: 'relative' }}
-      >
-        <div
-          className="marquee-track"
-          style={{
-            display: 'flex',
-            animation: 'marquee 35s linear infinite',
-            width: 'max-content',
-          }}
-        >
-          {/* First pass */}
-          {COMPANIES.map((name) => (
+        {STATS.map((stat, i) => (
+          <div
+            key={stat.label}
+            style={{
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: '0.5rem',
+            }}
+          >
             <span
-              key={`a-${name}`}
               style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: '0.875rem',
-                letterSpacing: '0.15em',
-                textTransform: 'uppercase',
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontWeight: 700,
+                fontSize: '1.125rem',
                 color: 'oklch(0.97 0 0)',
-                marginLeft: '2rem',
-                marginRight: '2rem',
-                opacity: 0.6,
-                transition: 'opacity 0.2s ease',
-                cursor: 'default',
-                userSelect: 'none',
-                whiteSpace: 'nowrap',
-              }}
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLSpanElement).style.opacity = '1'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLSpanElement).style.opacity = '0.6'
+                letterSpacing: '-0.02em',
               }}
             >
-              {name}
+              {stat.value}
             </span>
-          ))}
-          {/* Second pass for seamless loop */}
-          {COMPANIES.map((name) => (
             <span
-              key={`b-${name}`}
-              aria-hidden="true"
               style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: '0.875rem',
-                letterSpacing: '0.15em',
-                textTransform: 'uppercase',
-                color: 'oklch(0.97 0 0)',
-                marginLeft: '2rem',
-                marginRight: '2rem',
-                opacity: 0.6,
-                transition: 'opacity 0.2s ease',
-                cursor: 'default',
-                userSelect: 'none',
-                whiteSpace: 'nowrap',
-              }}
-              onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLSpanElement).style.opacity = '1'
-              }}
-              onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLSpanElement).style.opacity = '0.6'
+                fontFamily: "'Inter', sans-serif",
+                fontSize: '0.8rem',
+                color: 'oklch(0.55 0 0)',
               }}
             >
-              {name}
+              {stat.label}
             </span>
-          ))}
-        </div>
+            {i < STATS.length - 1 && (
+              <span
+                aria-hidden="true"
+                style={{
+                  marginLeft: '1rem',
+                  color: 'oklch(0.30 0 0)',
+                  fontSize: '0.75rem',
+                }}
+              >
+                ·
+              </span>
+            )}
+          </div>
+        ))}
       </div>
     </section>
   )

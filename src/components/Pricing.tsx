@@ -102,8 +102,8 @@ function TierCard({ tier, index }: TierCardProps) {
           className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full"
           style={{
             fontFamily: 'JetBrains Mono, monospace',
-            backgroundColor: 'oklch(0.97 0 0)',
-            color: 'oklch(0.14 0 0)',
+            backgroundColor: 'oklch(0.60 0.18 250)',
+            color: 'oklch(0.98 0 0)',
           }}
         >
           Most popular
@@ -191,19 +191,27 @@ function TierCard({ tier, index }: TierCardProps) {
 
 export function Pricing() {
   return (
-    <section id="pricing" className="py-32" style={{ backgroundColor: 'oklch(0.28 0 0)' }}>
-      <h2
+    <section id="pricing" className="py-32" style={{ backgroundColor: 'oklch(0.18 0 0)' }}>
+      <motion.h2
         className="text-center mb-4 font-bold text-4xl md:text-5xl"
         style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
       >
         Scale your workforce, not your headcount.
-      </h2>
-      <p
+      </motion.h2>
+      <motion.p
         className="text-center mb-16 max-w-xl mx-auto text-base"
         style={{ color: 'oklch(0.70 0 0)' }}
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
       >
         Every plan includes the full agent platform. Pick the tier that fits your volume.
-      </p>
+      </motion.p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto px-6">
         {TIERS.map((tier, i) => (

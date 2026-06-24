@@ -12,12 +12,27 @@ const NAV_LINKS = [
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [activeSection, setActiveSection] = useState<string>('')
   const overlayRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 50)
     window.addEventListener('scroll', onScroll, { passive: true })
     return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  useEffect(() => {
+    const sections = document.querySelectorAll('section[id]')
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveSection(entry.target.id)
+        })
+      },
+      { threshold: 0.3 }
+    )
+    sections.forEach((s) => observer.observe(s))
+    return () => observer.disconnect()
   }, [])
 
   // Close mobile menu on route changes or outside clicks
@@ -121,28 +136,52 @@ export function Navbar() {
             }}
             className="hidden md:flex"
           >
-            {NAV_LINKS.map((link) => (
-              <li key={link.href}>
-                <a
-                  href={link.href}
-                  style={{
-                    fontFamily: "'Inter', sans-serif",
-                    fontSize: '0.875rem',
-                    color: 'oklch(0.70 0 0)',
-                    textDecoration: 'none',
-                    transition: 'color 0.2s ease',
-                  }}
-                  onMouseEnter={(e) =>
-                    ((e.target as HTMLAnchorElement).style.color = 'oklch(0.97 0 0)')
-                  }
-                  onMouseLeave={(e) =>
-                    ((e.target as HTMLAnchorElement).style.color = 'oklch(0.70 0 0)')
-                  }
-                >
-                  {link.label}
-                </a>
-              </li>
-            ))}
+            {NAV_LINKS.map((link) => {
+              const sectionId = link.href.replace('#', '')
+              const isActive = activeSection === sectionId
+              return (
+                <li key={link.href}>
+                  <a
+                    href={link.href}
+                    style={{
+                      fontFamily: "'Inter', sans-serif",
+                      fontSize: '0.875rem',
+                      color: isActive ? 'oklch(0.97 0 0)' : 'oklch(0.70 0 0)',
+                      textDecoration: 'none',
+                      transition: 'color 0.2s ease',
+                      position: 'relative' as const,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.97 0 0)'
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.70 0 0)'
+                      }
+                    }}
+                  >
+                    {link.label}
+                    {isActive && (
+                      <span
+                        aria-hidden="true"
+                        style={{
+                          position: 'absolute',
+                          bottom: '-6px',
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          width: '3px',
+                          height: '3px',
+                          borderRadius: '50%',
+                          background: 'oklch(0.82 0.18 65)',
+                        }}
+                      />
+                    )}
+                  </a>
+                </li>
+              )
+            })}
           </ul>
 
           {/* Right actions - desktop */}
@@ -190,16 +229,16 @@ export function Navbar() {
                 padding: '0.5rem 1.25rem',
                 borderRadius: '9999px',
                 boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 16px oklch(0.60 0.18 250 / 0.45)',
-                transition: 'opacity 0.2s ease, transform 0.15s ease',
+                transition: 'box-shadow 0.2s ease, transform 0.15s ease',
                 textDecoration: 'none',
                 display: 'inline-block',
               }}
               onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLAnchorElement).style.opacity = '0.88'
+                ;(e.currentTarget as HTMLAnchorElement).style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.40), 0 8px 28px oklch(0.60 0.18 250 / 0.75)'
                 ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1.02)'
               }}
               onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLAnchorElement).style.opacity = '1'
+                ;(e.currentTarget as HTMLAnchorElement).style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 16px oklch(0.60 0.18 250 / 0.45)'
                 ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1)'
               }}
             >
