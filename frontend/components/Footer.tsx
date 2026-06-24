@@ -21,6 +21,7 @@ const LINKS: Record<string, NavItem[]> = {
   Legal: [
     { label: 'Privacy Policy',   href: '/privacy'          },
     { label: 'Terms of Service', href: '/terms'            },
+    { label: 'Refund Policy',    href: '/refund-policy'    },
     { label: 'Cookie Policy',    href: '/privacy#cookies'  },
   ],
   Resources: [
@@ -107,6 +108,7 @@ export default function Footer() {
           <div className="flex items-center gap-4">
             <Link href="/privacy" className="text-xs text-white/35 hover:text-white/70 transition-colors">Privacy Policy</Link>
             <Link href="/terms"   className="text-xs text-white/35 hover:text-white/70 transition-colors">Terms of Service</Link>
+            <Link href="/refund-policy" className="text-xs text-white/35 hover:text-white/70 transition-colors">Refund Policy</Link>
             <Link href="/privacy#cookies" className="text-xs text-white/35 hover:text-white/70 transition-colors">Cookie Policy</Link>
           </div>
         </div>

@@ -8,9 +8,11 @@ env:
   AWS_REGION: us-east-1
   ECR_REPO_API: 685570573617.dkr.ecr.us-east-1.amazonaws.com/trance-formation/api
   ECR_REPO_WORKER: 685570573617.dkr.ecr.us-east-1.amazonaws.com/trance-formation/worker
+  ECR_REPO_AGENT_WORKER: 685570573617.dkr.ecr.us-east-1.amazonaws.com/trance-formation/agent-worker
   ECS_CLUSTER: trance-formation-prod
   ECS_SERVICE_API: trance-formation-api-service
   ECS_SERVICE_WORKER: vantro-worker
+  ECS_SERVICE_AGENT_WORKER: vantro-agent-worker
 
 jobs:
   build:
@@ -20,6 +22,7 @@ jobs:
     outputs:
       api-image: ${{ steps.push.outputs.api-image }}
       worker-image: ${{ steps.push.outputs.worker-image }}
+      agent-worker-image: ${{ steps.push.outputs.agent-worker-image }}
 
     steps:
       - uses: actions/checkout@v4
@@ -55,8 +58,17 @@ jobs:
           docker push "$ECR_REPO_WORKER:$SHA"
           docker push "$ECR_REPO_WORKER:latest"
 
+          docker build \
+            -f backend/Dockerfile.agent-worker \
+            -t "$ECR_REPO_AGENT_WORKER:$SHA" \
+            -t "$ECR_REPO_AGENT_WORKER:latest" \
+            backend/
+          docker push "$ECR_REPO_AGENT_WORKER:$SHA"
+          docker push "$ECR_REPO_AGENT_WORKER:latest"
+
           echo "api-image=$ECR_REPO_API:$SHA" >> "$GITHUB_OUTPUT"
           echo "worker-image=$ECR_REPO_WORKER:$SHA" >> "$GITHUB_OUTPUT"
+          echo "agent-worker-image=$ECR_REPO_AGENT_WORKER:$SHA" >> "$GITHUB_OUTPUT"
 
   migrate:
     name: Run DB migration
@@ -79,7 +91,7 @@ jobs:
             --task-definition trance-formation-api \
             --overrides '{"containerOverrides":[{"name":"api","command":["python","-m","alembic","upgrade","head"]}]}' \
             --launch-type FARGATE \
-            --network-configuration "awsvpcConfiguration={subnets=[subnet-0270ce09e0a0eb95c,subnet-0ec7af84b894e581c],securityGroups=[sg-0c783bf5d3eb894cc],assignPublicIp=ENABLED}" \
+            --network-configuration "awsvpcConfiguration={subnets=[${{ secrets.ECS_SUBNET_IDS }}],securityGroups=[${{ secrets.ECS_SECURITY_GROUP_ID }}],assignPublicIp=DISABLED}" \
             --region "$AWS_REGION" \
             --query 'tasks[0].taskArn' \
             --output text)
@@ -109,6 +121,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     needs: [build, migrate]
+    outputs:
+      previous-task-def: ${{ steps.snapshot.outputs.previous-task-def }}
 
     steps:
       - uses: actions/checkout@v4
@@ -119,6 +133,18 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
+
+      - name: Snapshot current (pre-deploy) task definition for rollback
+        id: snapshot
+        run: |
+          PREV=$(aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE_API" \
+            --region "$AWS_REGION" \
+            --query 'services[0].taskDefinition' \
+            --output text)
+          echo "Pre-deploy task def: $PREV"
+          echo "previous-task-def=$PREV" >> "$GITHUB_OUTPUT"
 
       - name: Render task definition with new image
         id: render
@@ -167,3 +193,90 @@ jobs:
           service: ${{ env.ECS_SERVICE_WORKER }}
           cluster: ${{ env.ECS_CLUSTER }}
           wait-for-service-stability: true
+
+  deploy-agent-worker:
+    name: Deploy agent worker service
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [build, migrate]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Render agent worker task definition with new image
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-def-agent-worker.json
+          container-name: ${{ env.ECS_SERVICE_AGENT_WORKER }}
+          image: ${{ needs.build.outputs.agent-worker-image }}
+
+      - name: Deploy agent worker to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE_AGENT_WORKER }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+  smoke-test:
+    name: Post-deploy smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [deploy-api, deploy-worker, deploy-agent-worker]
+
+    steps:
+      - name: Health check — API /health
+        run: |
+          for i in 1 2 3 4 5; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.vantro.ai/health)
+            echo "Attempt $i — HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Smoke test passed"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Smoke test FAILED after 5 attempts"
+          exit 1
+
+      - name: Health check — root endpoint
+        run: |
+          curl -sf https://api.vantro.ai/ | grep -q "Vantro"
+
+  rollback:
+    name: Rollback on smoke-test failure
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [smoke-test, deploy-api]
+    if: failure()
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Roll back API service to pre-deploy task definition
+        run: |
+          PREV_TASK_DEF="${{ needs.deploy-api.outputs.previous-task-def }}"
+          if [ -z "$PREV_TASK_DEF" ] || [ "$PREV_TASK_DEF" = "None" ]; then
+            echo "No previous task def available — cannot rollback"
+            exit 1
+          fi
+          echo "Rolling back API to: $PREV_TASK_DEF"
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE_API" \
+            --task-definition "$PREV_TASK_DEF" \
+            --region "$AWS_REGION"
+          echo "Rollback initiated — monitor ECS console for service stability"

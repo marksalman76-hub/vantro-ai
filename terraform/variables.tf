@@ -97,8 +97,98 @@ variable "container_image" {
   type        = string
   default     = "python:3.11-slim"
 }
+variable "container_image_agent_worker" {
+  description = "Docker image URI for the agent worker ECS service"
+  type        = string
+  default     = "python:3.11-slim"
+}
+variable "container_image_media_worker" {
+  description = "Docker image URI for the media/SQS worker ECS service"
+  type        = string
+  default     = "python:3.11-slim"
+}
+variable "agent_worker_cpu" {
+  description = "Agent worker task CPU units"
+  type        = number
+  default     = 512
+}
+variable "agent_worker_memory" {
+  description = "Agent worker task memory (MB)"
+  type        = number
+  default     = 1024
+}
+variable "agent_worker_min_capacity" {
+  description = "Min agent worker tasks"
+  type        = number
+  default     = 1
+}
+variable "agent_worker_max_capacity" {
+  description = "Max agent worker tasks"
+  type        = number
+  default     = 4
+}
 variable "enable_multi_az" {
   description = "Enable Multi-AZ for RDS"
   type        = bool
   default     = true
+}
+
+# ── Secrets (pass via terraform.tfvars or TF_VAR_* environment variables) ──────
+variable "jwt_secret" {
+  description = "JWT signing secret (≥32 chars, random)"
+  type        = string
+  sensitive   = true
+}
+variable "stripe_api_key" {
+  description = "Stripe publishable-facing API key reference — use stripe_secret_key for server-side operations"
+  type        = string
+  sensitive   = true
+}
+
+variable "stripe_secret_key" {
+  description = "Stripe secret key (sk_live_...) — server-side only, never exposed to clients"
+  type        = string
+  sensitive   = true
+}
+
+variable "redis_node_type" {
+  description = "ElastiCache Redis node type"
+  type        = string
+  default     = "cache.t3.micro"
+}
+
+variable "redis_num_cache_nodes" {
+  description = "Number of ElastiCache Redis nodes (1 for single, 2+ for HA)"
+  type        = number
+  default     = 1
+}
+variable "stripe_webhook_secret" {
+  description = "Stripe webhook signing secret (whsec_...)"
+  type        = string
+  sensitive   = true
+}
+variable "stripe_publishable_key" {
+  description = "Stripe publishable key (pk_live_...)"
+  type        = string
+  sensitive   = true
+}
+variable "openai_api_key" {
+  description = "OpenAI API key"
+  type        = string
+  sensitive   = true
+}
+variable "anthropic_api_key" {
+  description = "Anthropic API key"
+  type        = string
+  sensitive   = true
+}
+variable "admin_email" {
+  description = "Admin notification email address"
+  type        = string
+  default     = "mark.salman76@gmail.com"
+}
+variable "domain_name" {
+  description = "Primary domain name for ACM certificate (e.g. vantro.ai)"
+  type        = string
+  default     = "vantro.ai"
 }

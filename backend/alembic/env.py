@@ -6,6 +6,13 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Load .env so DATABASE_URL is available when running alembic from the CLI
+try:
+    from dotenv import load_dotenv as _load_dotenv
+    _load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"), override=True, encoding="utf-8-sig")
+except ImportError:
+    pass
+
 from app.database import Base
 from app.models import *
 

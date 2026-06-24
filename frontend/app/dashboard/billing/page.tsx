@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import RefundModal from './RefundModal';
 
 interface DashData {
   user: { email: string; name: string | null; subscription_status: string | null };
@@ -22,6 +23,8 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true);
   const [portalLoading, setPortalLoading] = useState(false);
   const [isOwnerTest, setIsOwnerTest] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [refundResult, setRefundResult] = useState<{ ok: boolean; message: string } | null>(null);
 
   const openPortal = useCallback(async () => {
     const token = localStorage.getItem('token');
@@ -137,12 +140,44 @@ export default function BillingPage() {
         </button>
       </div>
 
+      {/* Refund request */}
+      {subActive && (
+        <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 mb-6">
+          <h2 className="font-semibold text-white text-sm mb-2">Request a Refund</h2>
+          <p className="text-gray-500 text-xs mb-3">
+            You may be eligible for a full refund within 72 hours of signup if no agent tasks have been run.
+            {' '}<Link href="/refund-policy" className="text-violet-400 hover:text-violet-300">View refund policy →</Link>
+          </p>
+          {refundResult ? (
+            <div className={`rounded-xl px-4 py-3 text-xs font-medium ${refundResult.ok ? 'bg-emerald-500/10 border border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border border-red-500/20 text-red-400'}`}>
+              {refundResult.message}
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowRefundModal(true)}
+              className="px-4 py-2 rounded-xl text-sm font-medium border border-red-500/30 text-red-400 hover:bg-red-500/10 hover:border-red-500/50 transition-colors"
+            >
+              Request Refund
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Help */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
         <h2 className="font-semibold text-white text-sm mb-2">Need help with billing?</h2>
         <p className="text-gray-500 text-xs mb-3">If you believe you were charged incorrectly, credits were not applied, or you need a refund, contact support and we will review within 24 hours.</p>
         <Link href="/dashboard/support" className="text-xs text-violet-400 hover:text-violet-300 font-medium">Open a support request →</Link>
       </div>
+
+      {/* Refund confirmation modal */}
+      {showRefundModal && (
+        <RefundModal
+          onClose={() => setShowRefundModal(false)}
+          onSuccess={(msg) => { setRefundResult({ ok: true, message: msg }); setShowRefundModal(false); }}
+          onError={(msg) => { setRefundResult({ ok: false, message: msg }); setShowRefundModal(false); }}
+        />
+      )}
     </div>
   );
 }

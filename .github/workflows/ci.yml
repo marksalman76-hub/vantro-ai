@@ -28,7 +28,7 @@ jobs:
         run: pip install -r requirements.txt pytest pytest-cov pytest-mock httpx
 
       - name: Run tests with coverage
-        run: python -m pytest tests/ -v --tb=short --cov=app --cov-report=term-missing --cov-fail-under=40
+        run: python -m pytest tests/ -v --tb=short --cov=app/routes --cov=app/services --cov=app/auth --cov-report=term-missing --cov-fail-under=70
         env:
           SECRET_KEY: ci-test-secret-key
           DATABASE_URL: sqlite:///./ci-test.db
@@ -38,6 +38,7 @@ jobs:
           STRIPE_WEBHOOK_SECRET: whsec_test_secret
           SQS_JOBS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/123/test.fifo
           HEYGEN_API_KEY: test_key
+          TESTING: "1"
 
   frontend-lint:
     name: Frontend — ESLint & TypeScript

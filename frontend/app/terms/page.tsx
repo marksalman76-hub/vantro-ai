@@ -38,7 +38,7 @@ export default function TermsPage() {
           <div className="max-w-3xl mx-auto">
             <p className="text-xs font-semibold text-violet-400 uppercase tracking-widest mb-3">Legal</p>
             <h1 className="text-4xl sm:text-5xl font-bold text-white mb-4">Terms of Service</h1>
-            <p className="text-white/55 text-lg">Last updated: <time dateTime="2026-06-19">June 19, 2026</time></p>
+            <p className="text-white/55 text-lg">Last updated: <time dateTime="2026-06-24">June 24, 2026</time></p>
             <p className="mt-4 text-white/60 leading-relaxed max-w-2xl">
               These Terms of Service ("Terms") govern your access to and use of the Vantro platform and services. Please read them carefully before using our services.
             </p>
@@ -162,7 +162,7 @@ export default function TermsPage() {
                 </p>
                 <h3>Refunds</h3>
                 <p>
-                  Annual subscriptions are eligible for a full refund within 14 days of purchase if you have not used the Services in that period. Monthly subscriptions are non-refundable. In the event of a service outage exceeding our stated SLA, you may be eligible for a pro-rated service credit.
+                  You are eligible for a <strong>full refund within 72 hours of account creation</strong> provided that no AI agent tasks have been executed on your account. Once any agent task has been run, no refund will be issued. To request a refund, visit your <Link href="/dashboard/billing">Billing dashboard</Link> or review our full <Link href="/refund-policy">Refund Policy</Link>. In the event of a service outage exceeding our stated SLA, you may be eligible for a pro-rated service credit at our discretion.
                 </p>
                 <h3>Late Payments</h3>
                 <p>

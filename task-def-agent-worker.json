@@ -1,0 +1,62 @@
+{
+  "family": "vantro-agent-worker",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::685570573617:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::685570573617:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "vantro-agent-worker",
+      "image": "685570573617.dkr.ecr.us-east-1.amazonaws.com/trance-formation/agent-worker:latest",
+      "essential": true,
+      "environment": [
+        { "name": "AWS_REGION",              "value": "us-east-1" },
+        { "name": "ENVIRONMENT",             "value": "production" },
+        { "name": "DISABLE_INLINE_WORKER",   "value": "1" }
+      ],
+      "secrets": [
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/database-url-hVRSA3"
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/anthropic-api-key"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/openai-api-key"
+        },
+        {
+          "name": "SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/secret-key"
+        },
+        {
+          "name": "BREVO_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/brevo-api-key"
+        },
+        {
+          "name": "STRIPE_SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/stripe-secret-key"
+        }
+      ],
+      "healthCheck": {
+        "command": ["CMD-SHELL", "python3 -c \"import sys; sys.exit(0)\""],
+        "interval": 60,
+        "timeout": 10,
+        "retries": 2,
+        "startPeriod": 30
+      },
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/vantro-agent-worker",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "agent-worker"
+        }
+      }
+    }
+  ]
+}

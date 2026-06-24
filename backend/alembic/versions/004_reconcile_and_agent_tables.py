@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "004_reconcile_and_agent_tables"
-down_revision = "001_initial_schema"
+down_revision = "003_add_agent_system"
 branch_labels = None
 depends_on = None
 

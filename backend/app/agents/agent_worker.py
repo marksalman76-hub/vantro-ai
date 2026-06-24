@@ -17,10 +17,52 @@ import logging
 import os
 from datetime import datetime
 
+import boto3
+
 logger = logging.getLogger(__name__)
 
-POLL_INTERVAL_SECONDS = 5   # how often to check for new jobs
-MAX_CONCURRENT_JOBS   = 3   # max parallel agent executions
+_CW_NAMESPACE = "Vantro/AgentJobs"
+_AWS_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+
+_cloudwatch = None
+
+
+def _get_cloudwatch():
+    global _cloudwatch
+    if _cloudwatch is None:
+        try:
+            _cloudwatch = boto3.client("cloudwatch", region_name=_AWS_REGION)
+        except Exception:
+            pass
+    return _cloudwatch
+
+
+def _emit_metric(metric_name: str, value: float, unit: str = "Count", dimensions: list | None = None) -> None:
+    cw = _get_cloudwatch()
+    if cw is None:
+        return
+    try:
+        cw.put_metric_data(
+            Namespace=_CW_NAMESPACE,
+            MetricData=[
+                {
+                    "MetricName": metric_name,
+                    "Value": value,
+                    "Unit": unit,
+                    "Dimensions": dimensions or [],
+                }
+            ],
+        )
+    except Exception as exc:
+        logger.debug("CloudWatch emit failed: %s", exc)
+
+POLL_INTERVAL_SECONDS       = 5     # how often to check for new jobs
+MAX_CONCURRENT_JOBS         = 3     # max parallel agent executions
+STALE_JOB_MINUTES           = 15    # jobs stuck "running" longer than this are force-failed
+STALE_CHECK_INTERVAL        = 60    # seconds between stale-job sweeps
+REPORT_CHECK_INTERVAL       = 3600  # seconds between weekly report checks (1 hour)
+SKILL_REINDEX_INTERVAL      = 21600 # seconds between skill freshness checks (6 hours)
+BILLING_REMINDER_INTERVAL   = 86400 # seconds between billing reminder sweeps (24 hours)
 
 
 async def _process_job(job_id: str) -> None:
@@ -32,7 +74,7 @@ async def _process_job(job_id: str) -> None:
     from app.models.workspace import CreditsAccount, Workspace
     from app.agents.agent_prompts import get_agent_system_prompt
     from app.agents.agent_executor import execute_agent
-    from app.agents.agent_registry import get_agent_credit_estimate, agent_exists
+    from app.agents.agent_registry import get_agent_credit_estimate, agent_exists, get_agent_hitl
 
     db = SessionLocal()
     try:
@@ -66,41 +108,231 @@ async def _process_job(job_id: str) -> None:
         except (json.JSONDecodeError, TypeError):
             pass
 
-        output, provider_used = await asyncio.get_event_loop().run_in_executor(
+        # Inject workspace business_context + brand profile into context dict
+        try:
+            ws = db.query(Workspace).filter(Workspace.id == job.workspace_id).first()
+            if ws and getattr(ws, "business_context", None):
+                context["_workspace_context"] = ws.business_context
+            # Brand profile: resolve workspace → org → user.brand_profile
+            if ws:
+                from app.models import Organization, User as _User
+                org = db.query(Organization).filter(Organization.id == ws.organization_id).first()
+                if org:
+                    owner = db.query(_User).filter(_User.id == org.owner_id).first()
+                    if owner and getattr(owner, "brand_profile", None):
+                        import json as _json
+                        bp = owner.brand_profile
+                        context["_brand_profile"] = _json.dumps(bp) if isinstance(bp, dict) else str(bp)
+        except Exception:
+            pass
+
+        # Parse output_language from job input context (if client specified one)
+        _output_language: str | None = None
+        try:
+            _parsed_input = json.loads(job.input_data or "{}")
+            _output_language = _parsed_input.get("context", {}).get("output_language")
+            if _output_language:
+                job.output_language = _output_language
+        except Exception:
+            pass
+
+        # RAG: retrieve relevant skill chunks for this task (non-blocking — silent on failure)
+        try:
+            from app.services.skill_retriever import retrieve_relevant_skills
+            _skill_ctx = retrieve_relevant_skills(db, user_prompt)
+            if _skill_ctx:
+                context["_skill_context"] = _skill_ctx
+        except Exception:
+            pass
+
+        # Few-shot: inject quality-reference examples for this agent (non-blocking)
+        try:
+            from app.services.example_retriever import get_few_shot_examples
+            _examples = get_few_shot_examples(db, job.agent_id)
+            if _examples:
+                context["_few_shot_examples"] = _examples
+        except Exception:
+            pass
+
+        # Composio: pass workspace credentials so executor can build live tool list (non-blocking)
+        try:
+            from app.services.composio_service import get_composio_credentials
+            _creds = get_composio_credentials(db, job.workspace_id)
+            if _creds:
+                context["_composio_api_key"], context["_composio_entity_id"] = _creds
+        except Exception:
+            pass
+
+        # Workspace memory: inject top-3 recent outcomes for this agent (non-blocking)
+        try:
+            from sqlalchemy import text as _text
+            _mem_rows = db.execute(
+                _text(
+                    "SELECT encrypted_value FROM workspace_integrations"
+                    " WHERE workspace_id=:ws AND integration_name='agent_memory'"
+                    "   AND integration_key LIKE :prefix"
+                    " ORDER BY created_at DESC LIMIT 3"
+                ),
+                {"ws": job.workspace_id, "prefix": f"AGENT_MEMORY_{job.agent_id}%"},
+            ).fetchall()
+            if _mem_rows:
+                context["_workspace_memory"] = "\n".join(r[0] for r in _mem_rows)
+        except Exception:
+            pass
+
+        hitl_level = get_agent_hitl(job.agent_id)
+
+        # Mark step: execution started
+        _step_ts = datetime.utcnow().isoformat()
+        job.steps = json.dumps([
+            {"step": "Queued",          "status": "done", "ts": job.created_at.isoformat() if job.created_at else _step_ts},
+            {"step": "Executing agent", "status": "running", "ts": _step_ts},
+        ])
+        db.commit()
+
+        # Fetch revision context if this job is a revision
+        _revision_output: str | None = None
+        _revision_prompt_text: str | None = None
+        try:
+            if getattr(job, "revision_of", None):
+                orig = db.query(AgentJob).filter(AgentJob.id == job.revision_of).first()
+                if orig and orig.output_data:
+                    _revision_output = orig.output_data.split(" -->\n", 1)[-1]
+                _revision_prompt_text = getattr(job, "revision_prompt", None)
+        except Exception:
+            pass
+
+        output, provider_used, actual_credits, financial_violations, prompt_version = await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: execute_agent(
                 agent_id=job.agent_id,
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
                 context=context,
+                workspace_id=job.workspace_id,
+                hitl_level=hitl_level,
+                output_language=_output_language,
+                revision_of_output=_revision_output,
+                revision_prompt=_revision_prompt_text,
             ),
         )
 
-        # Credit deduction
-        credit_cost = get_agent_credit_estimate(job.agent_id) if agent_exists(job.agent_id) else 1
+        job.agent_version   = prompt_version
+        job.prompt_snapshot = system_prompt[:4000]  # cap to avoid DB bloat
+
+        # actual_credits is derived from real token usage; adjust the pre-committed
+        # estimate up or down accordingly.
+        credit_cost = actual_credits
         cred = (
             db.query(CreditsAccount)
             .join(Workspace, Workspace.id == CreditsAccount.workspace_id)
             .filter(Workspace.id == job.workspace_id)
+            .with_for_update()
             .first()
         )
-        if cred:
-            cred.used_credits = min(cred.total_credits, cred.used_credits + credit_cost)
+        pre_committed = job.credits_used or 0
+        delta = credit_cost - pre_committed  # positive = underpaid, negative = refund
+        if cred and delta != 0:
+            cred.used_credits = max(0, min(cred.total_credits, cred.used_credits + delta))
             cred.updated_at = datetime.utcnow()
 
         now = datetime.utcnow()
+
+        # ── Financial governance gate ────────────────────────────────────────
+        # If the output scanner detected financial-action language (the agent
+        # attempted to authorise/commit a financial action instead of suggesting),
+        # hold the job in pending_financial_review so a human can inspect and
+        # decide whether to release or reject the output.
+        # This fires regardless of HITL level — it is a hard platform rule.
+        if financial_violations:
+            logger.warning(
+                "Worker: job %s held for financial review — violations: %s",
+                job_id, financial_violations,
+            )
+            job.status      = "pending_financial_review"
+            job.output_data = f"<!-- provider:{provider_used} -->\n{output}"
+            job.credits_used = credit_cost
+            job.updated_at  = now
+            # Notify admin
+            try:
+                admin_email = os.getenv("ADMIN_EMAIL", "")
+                if admin_email:
+                    from app.services.email_service import _send as _send_email
+                    _send_email(
+                        admin_email,
+                        f"[ACTION REQUIRED] Agent output held for financial review — job {job_id}",
+                        (
+                            f"Job {job_id} (agent: {job.agent_id}) produced output that matched "
+                            f"financial-action language and has been held for your review.\n\n"
+                            f"Matched phrases: {', '.join(financial_violations)}\n\n"
+                            f"Review and release or reject this job in the Admin > Approvals panel."
+                        ),
+                        None,
+                    )
+            except Exception:
+                pass
+            db.commit()
+            return
+        # ────────────────────────────────────────────────────────────────────
+
+        # Confidence auto-escalation: if agent output signals low confidence,
+        # hold the job for human review before marking it completed.
+        import re as _re
+        _confidence_low = bool(_re.search(r'\[CONFIDENCE:\s*LOW\]', output, _re.IGNORECASE))
+        if _confidence_low and job.status not in ("pending_financial_review",):
+            logger.warning(
+                "Worker: job %s escalated to pending_approval — agent output [CONFIDENCE: LOW]",
+                job_id,
+            )
+            job.status = "pending_approval"
+            job.output_data = f"<!-- provider:{provider_used} | confidence:LOW -->\n{output}"
+            job.credits_used = credit_cost
+            job.updated_at = now
+            db.commit()
+            # Notify workspace owner that their job is held for approval
+            try:
+                from app.services.email_service import send_approval_needed_owner
+                from app.models import Organization
+                from app.models import User as _NotifyUser
+                ws_obj = db.query(Workspace).filter(Workspace.id == job.workspace_id).first()
+                if ws_obj:
+                    org_obj = db.query(Organization).filter(Organization.id == ws_obj.organization_id).first()
+                    if org_obj:
+                        owner_obj = db.query(_NotifyUser).filter(_NotifyUser.id == org_obj.owner_id).first()
+                        if owner_obj:
+                            send_approval_needed_owner(
+                                owner_email=owner_obj.email,
+                                owner_name=getattr(owner_obj, "name", None) or owner_obj.email,
+                                agent_name=getattr(job, "agent_name", None) or job.agent_id,
+                                job_id=job_id,
+                            )
+            except Exception:
+                pass
+            return
+
         job.status       = "completed"
-        job.output_data  = output
+        job.output_data  = f"<!-- provider:{provider_used} -->\n{output}"
         job.credits_used = credit_cost
         job.updated_at   = now
         job.completed_at = now
-        # Store provider used as metadata prefix in output
-        job.output_data  = f"<!-- provider:{provider_used} -->\n{output}"
+        job.steps = json.dumps([
+            {"step": "Queued",          "status": "done", "ts": job.created_at.isoformat() if job.created_at else now.isoformat()},
+            {"step": "Executing agent", "status": "done", "ts": _step_ts},
+            {"step": "Completed",       "status": "done", "ts": now.isoformat()},
+        ])
         db.commit()
 
         logger.info(
             "Worker: job %s completed via %s (%d credits deducted)",
             job_id, provider_used, credit_cost,
+        )
+        ws_dims = [{"Name": "WorkspaceId", "Value": str(job.workspace_id)}]
+        _emit_metric("AgentJobsCompleted", 1, dimensions=ws_dims)
+        _emit_metric("CreditsDeducted", credit_cost, dimensions=ws_dims)
+
+        # Persist outcome to workspace memory (async, best-effort)
+        asyncio.create_task(
+            _save_workspace_outcome_memory(job_id, job.workspace_id, job.agent_id, output)
         )
 
     except Exception as exc:
@@ -108,12 +340,359 @@ async def _process_job(job_id: str) -> None:
         try:
             job = db.query(AgentJob).filter(AgentJob.id == job_id).first()
             if job:
+                ws_dims = [{"Name": "WorkspaceId", "Value": str(job.workspace_id)}]
+                _emit_metric("AgentJobsFailed", 1, dimensions=ws_dims)
+                # Refund pre-committed credits on failure
+                pre_committed = job.credits_used or 0
+                if pre_committed > 0:
+                    cred = (
+                        db.query(CreditsAccount)
+                        .join(Workspace, Workspace.id == CreditsAccount.workspace_id)
+                        .filter(Workspace.id == job.workspace_id)
+                        .first()
+                    )
+                    if cred:
+                        cred.used_credits = max(0, cred.used_credits - pre_committed)
+                        cred.updated_at = datetime.utcnow()
                 job.status        = "failed"
                 job.error_message = str(exc)[:2000]
+                job.credits_used  = 0  # refunded
                 job.updated_at    = datetime.utcnow()
                 db.commit()
         except Exception as db_exc:
             logger.error("Worker: failed to update job status: %s", db_exc)
+    finally:
+        db.close()
+
+
+async def _recover_stale_jobs() -> None:
+    """Reset jobs stuck in 'running' for longer than STALE_JOB_MINUTES to 'failed'."""
+    from app.database import SessionLocal
+    from app.models.agent_system import AgentJob
+    from app.models.workspace import CreditsAccount, Workspace
+
+    stale_cutoff = datetime.utcnow() - __import__("datetime").timedelta(minutes=STALE_JOB_MINUTES)
+    db = SessionLocal()
+    try:
+        stale = (
+            db.query(AgentJob)
+            .filter(AgentJob.status == "running", AgentJob.updated_at < stale_cutoff)
+            .all()
+        )
+        for job in stale:
+            logger.warning("Worker: force-failing stale job %s (stuck running since %s)", job.id, job.updated_at)
+            # Refund any pre-committed credits
+            pre_committed = job.credits_used or 0
+            if pre_committed > 0:
+                cred = (
+                    db.query(CreditsAccount)
+                    .join(Workspace, Workspace.id == CreditsAccount.workspace_id)
+                    .filter(Workspace.id == job.workspace_id)
+                    .first()
+                )
+                if cred:
+                    cred.used_credits = max(0, cred.used_credits - pre_committed)
+                    cred.updated_at = datetime.utcnow()
+            job.status = "failed"
+            job.error_message = f"Job timed out after {STALE_JOB_MINUTES} minutes"
+            job.credits_used = 0
+            job.updated_at = datetime.utcnow()
+        if stale:
+            db.commit()
+            logger.info("Worker: recovered %d stale job(s)", len(stale))
+    except Exception as exc:
+        logger.error("Worker: stale job recovery error: %s", exc)
+    finally:
+        db.close()
+
+
+async def _run_weekly_reports() -> None:
+    """
+    Generate and email weekly reports for workspaces that have reached their
+    configured send day/hour (UTC). Called hourly from the main worker loop.
+    Skips workspaces that already received a report within the past 6 days.
+    """
+    from datetime import timedelta
+    from app.database import SessionLocal
+    from app.models.workspace import Workspace
+    from app.models.reports import WorkspaceReportSettings, WeeklyReport
+    from app.services.weekly_report_service import generate_workspace_report, send_report_email
+
+    now = datetime.utcnow()
+    weekday_name = now.strftime("%A").lower()
+
+    db = SessionLocal()
+    try:
+        due_settings = (
+            db.query(WorkspaceReportSettings)
+            .filter(
+                WorkspaceReportSettings.enabled == True,
+                WorkspaceReportSettings.schedule_day == weekday_name,
+                WorkspaceReportSettings.schedule_hour == now.hour,
+            )
+            .all()
+        )
+        for settings in due_settings:
+            try:
+                recent = (
+                    db.query(WeeklyReport)
+                    .filter(
+                        WeeklyReport.workspace_id == settings.workspace_id,
+                        WeeklyReport.created_at >= now - timedelta(days=6),
+                    )
+                    .first()
+                )
+                if recent:
+                    continue
+
+                report = generate_workspace_report(settings.workspace_id, db)
+                recipients = list(settings.recipients or [])
+
+                if not recipients:
+                    ws = db.query(Workspace).filter(Workspace.id == settings.workspace_id).first()
+                    if ws:
+                        from app.models import Organization, User
+                        org = db.query(Organization).filter(Organization.id == ws.organization_id).first()
+                        if org:
+                            owner = db.query(User).filter(User.id == org.owner_id).first()
+                            if owner and owner.email:
+                                recipients = [owner.email]
+
+                if recipients:
+                    send_report_email(report, recipients, db)
+
+            except Exception as exc:
+                logger.error("Weekly report failed for workspace %s: %s", settings.workspace_id, exc)
+    except Exception as exc:
+        logger.error("Weekly report scheduler error: %s", exc)
+    finally:
+        db.close()
+
+
+async def _reindex_new_skills() -> None:
+    """
+    Auto-index any skills installed in ~/.claude/skills/ since the last run.
+    Detects: (a) brand-new skill dirs, (b) SKILL.md files modified after last index.
+    Silent on failure — skill RAG is best-effort, never blocks job execution.
+    Requires OPENAI_API_KEY to embed; skips silently if not configured.
+    """
+    if not os.getenv("OPENAI_API_KEY", "").strip():
+        return
+    from app.database import SessionLocal
+    from app.services.skill_indexer import get_skills_needing_index, index_skills_by_name
+
+    db = SessionLocal()
+    try:
+        needing = get_skills_needing_index(db)
+        if not needing:
+            return
+        logger.info("Worker: auto-indexing %d new/updated skill(s): %s", len(needing), needing)
+        result = index_skills_by_name(db, needing)
+        if result["indexed"]:
+            logger.info(
+                "Worker: skill auto-index complete — %d skill(s), %d chunks",
+                result["indexed"], result["total_chunks"],
+            )
+        if result["failed"]:
+            logger.warning("Worker: skill auto-index failures: %s", result["failed"])
+    except Exception as exc:
+        logger.debug("Worker: skill auto-index error: %s", exc)
+    finally:
+        db.close()
+
+
+async def _save_workspace_outcome_memory(job_id: str, workspace_id: str, agent_id: str, output_text: str) -> None:
+    """
+    Persist a compressed summary of a completed job to workspace memory.
+    On future runs for same workspace, top-3 memories injected as context.
+    Best-effort — never blocks job completion.
+    """
+    from app.database import SessionLocal
+    from sqlalchemy import text
+    try:
+        summary = f"[{agent_id}] {output_text[:500]}".replace("\n", " ")
+        db = SessionLocal()
+        try:
+            # Store in a simple key-value memory table (uses existing workspace_integrations pattern)
+            # Uses a special integration_key namespace "AGENT_MEMORY_*"
+            mem_key = f"AGENT_MEMORY_{agent_id}_{job_id[:8]}"
+            db.execute(
+                text(
+                    "INSERT INTO workspace_integrations "
+                    "(id, workspace_id, integration_key, integration_name, encrypted_value, is_active, created_at)"
+                    " VALUES (:id, :ws, :key, :name, :val, true, :ts)"
+                    " ON CONFLICT DO NOTHING"
+                ),
+                {
+                    "id": str(__import__("uuid").uuid4()),
+                    "ws": workspace_id,
+                    "key": mem_key,
+                    "name": "agent_memory",
+                    "val": summary[:1000],
+                    "ts": datetime.utcnow(),
+                },
+            )
+            db.commit()
+        finally:
+            db.close()
+    except Exception as exc:
+        logger.debug("Workspace memory save error for job %s: %s", job_id, exc)
+
+
+async def _run_scheduled_agents() -> None:
+    """
+    Every 5 minutes: check for ScheduledRun rows whose next_run_at has passed,
+    create an AgentJob for each, and advance next_run_at.
+    """
+    from datetime import datetime
+    from sqlalchemy import text
+    from app.database import SessionLocal
+    import uuid as _uuid
+    try:
+        from croniter import croniter as _croniter  # type: ignore
+    except ImportError:
+        logger.debug("croniter not installed — scheduled runs skipped")
+        return
+
+    db = SessionLocal()
+    try:
+        now = datetime.utcnow()
+        from app.models.agent_system import ScheduledRun, AgentJob as _AgentJob
+        due = db.query(ScheduledRun).filter(
+            ScheduledRun.is_active == True,
+            ScheduledRun.next_run_at <= now,
+        ).all()
+        for sched in due:
+            try:
+                from app.agents.agent_registry import AGENT_CATALOGUE, get_agent_hitl
+                meta = AGENT_CATALOGUE.get(sched.agent_id, {})
+                credit_cost = meta.get("credit_estimate", 1)
+                hitl = get_agent_hitl(sched.agent_id)
+                ctx = {}
+                if sched.context:
+                    try:
+                        ctx = json.loads(sched.context)
+                    except Exception:
+                        pass
+                job = _AgentJob(
+                    id=str(_uuid.uuid4()),
+                    workspace_id=sched.workspace_id,
+                    agent_id=sched.agent_id,
+                    agent_name=meta.get("name", sched.agent_id),
+                    status="pending" if hitl != "HITL-3" else "pending_approval",
+                    hitl_level=hitl,
+                    input_data=json.dumps({"prompt": sched.prompt, "context": ctx, "_scheduled_run_id": sched.id}),
+                    credits_used=credit_cost,
+                    created_at=now,
+                    updated_at=now,
+                )
+                db.add(job)
+                sched.last_run_at = now
+                cron = _croniter(sched.cron_expr, now)
+                sched.next_run_at = cron.get_next(datetime)
+                logger.info("Scheduled run triggered: agent=%s schedule=%s", sched.agent_id, sched.id)
+            except Exception as exc:
+                logger.error("Scheduled run error for schedule %s: %s", sched.id, exc)
+        db.commit()
+    except Exception as exc:
+        logger.error("Scheduled run sweep error: %s", exc)
+    finally:
+        db.close()
+
+
+async def _send_billing_reminder_emails() -> None:
+    """
+    Daily sweep: find users whose subscription renews in ~2 days and send a heads-up email.
+    Billing itself is handled by Stripe (billing_cycle_anchor set 28 days out at subscription
+    creation so Stripe charges 2 days before the natural monthly anniversary).
+    """
+    from datetime import datetime, timedelta
+    from sqlalchemy import text
+    from app.database import SessionLocal
+    from app.services.email_service import send_billing_reminder
+
+    db = SessionLocal()
+    try:
+        now = datetime.utcnow()
+        window_start = now + timedelta(hours=47)
+        window_end = now + timedelta(hours=49)
+        rows = db.execute(
+            text(
+                "SELECT id, email, name, subscription_period_end FROM users"
+                " WHERE subscription_status='active'"
+                "   AND subscription_period_end IS NOT NULL"
+                "   AND subscription_period_end BETWEEN :s AND :e"
+            ),
+            {"s": window_start, "e": window_end},
+        ).fetchall()
+        for row in rows:
+            try:
+                send_billing_reminder(
+                    to_email=row.email,
+                    name=row.name or "there",
+                    renewal_date=row.subscription_period_end,
+                )
+                logger.info("Billing reminder sent to user %s", row.id)
+            except Exception as exc:
+                logger.error("Billing reminder email failed for user %s: %s", row.id, exc)
+    except Exception as exc:
+        logger.error("Billing reminder sweep error: %s", exc)
+    finally:
+        db.close()
+
+
+DATA_RETENTION_INTERVAL = 86400  # 24 hours
+
+
+async def _enforce_data_retention() -> None:
+    """
+    Daily sweep to purge old rows per retention policy:
+    - agent_jobs completed > 90 days ago
+    - audit_logs > 365 days old
+    - webhooks_log > 30 days old (table may not exist — silently skipped)
+    """
+    from datetime import datetime, timedelta
+    from sqlalchemy import text
+    from app.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        now = datetime.utcnow()
+        cutoff_jobs = now - timedelta(days=90)
+        cutoff_audit = now - timedelta(days=365)
+        cutoff_webhooks = now - timedelta(days=30)
+
+        result = db.execute(
+            text(
+                "DELETE FROM agent_jobs"
+                " WHERE status = 'completed'"
+                "   AND created_at < :cutoff"
+            ),
+            {"cutoff": cutoff_jobs},
+        )
+        jobs_deleted = result.rowcount
+        logger.info("Data retention: deleted %d completed agent_jobs older than 90 days", jobs_deleted)
+
+        result = db.execute(
+            text("DELETE FROM audit_logs WHERE created_at < :cutoff"),
+            {"cutoff": cutoff_audit},
+        )
+        audit_deleted = result.rowcount
+        logger.info("Data retention: deleted %d audit_logs older than 365 days", audit_deleted)
+
+        try:
+            result = db.execute(
+                text("DELETE FROM webhooks_log WHERE created_at < :cutoff"),
+                {"cutoff": cutoff_webhooks},
+            )
+            hooks_deleted = result.rowcount
+            logger.info("Data retention: deleted %d webhooks_log rows older than 30 days", hooks_deleted)
+        except Exception as exc:
+            logger.debug("Data retention: webhooks_log sweep skipped (%s)", exc)
+
+        db.commit()
+    except Exception as exc:
+        logger.error("Data retention sweep error: %s", exc)
     finally:
         db.close()
 
@@ -126,6 +705,15 @@ async def run_agent_worker() -> None:
     logger.info("Agent worker started (poll interval: %ds)", POLL_INTERVAL_SECONDS)
 
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
+    _stale_check_counter = 0
+    _report_check_counter = 0
+    _skill_check_counter          = SKILL_REINDEX_INTERVAL  # fire immediately on first tick
+    _billing_reminder_counter     = 0
+    _schedule_check_counter       = 0
+    _data_retention_counter       = 0
+
+    # Run data retention once at startup (non-blocking)
+    asyncio.create_task(_enforce_data_retention())
 
     async def _guarded_process(job_id: str) -> None:
         async with semaphore:
@@ -135,6 +723,42 @@ async def run_agent_worker() -> None:
         try:
             from app.database import SessionLocal
             from app.models.agent_system import AgentJob
+
+            # Periodic stale-job recovery sweep
+            _stale_check_counter += POLL_INTERVAL_SECONDS
+            if _stale_check_counter >= STALE_CHECK_INTERVAL:
+                _stale_check_counter = 0
+                asyncio.create_task(_recover_stale_jobs())
+
+            # Hourly weekly report scheduler
+            _report_check_counter += POLL_INTERVAL_SECONDS
+            if _report_check_counter >= REPORT_CHECK_INTERVAL:
+                _report_check_counter = 0
+                asyncio.create_task(_run_weekly_reports())
+
+            # Skill freshness check: auto-index new/updated skills every 6h
+            _skill_check_counter += POLL_INTERVAL_SECONDS
+            if _skill_check_counter >= SKILL_REINDEX_INTERVAL:
+                _skill_check_counter = 0
+                asyncio.create_task(_reindex_new_skills())
+
+            # Billing reminder: send renewal notices to users 2 days before charge (daily)
+            _billing_reminder_counter += POLL_INTERVAL_SECONDS
+            if _billing_reminder_counter >= BILLING_REMINDER_INTERVAL:
+                _billing_reminder_counter = 0
+                asyncio.create_task(_send_billing_reminder_emails())
+
+            # Data retention: purge old rows daily
+            _data_retention_counter += POLL_INTERVAL_SECONDS
+            if _data_retention_counter >= DATA_RETENTION_INTERVAL:
+                _data_retention_counter = 0
+                asyncio.create_task(_enforce_data_retention())
+
+            # Scheduled agent runs: check every 5 minutes
+            _schedule_check_counter += POLL_INTERVAL_SECONDS
+            if _schedule_check_counter >= 300:
+                _schedule_check_counter = 0
+                asyncio.create_task(_run_scheduled_agents())
 
             db = SessionLocal()
             try:
