@@ -2,6 +2,8 @@
 
 import { useRef } from 'react'
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
+import dynamic from 'next/dynamic'
+const FloatingShape = dynamic(() => import('@/components/ui/FloatingShape'), { ssr: false })
 
 const REASONS = [
   {
@@ -54,6 +56,14 @@ export default function WhyVantro() {
     >
       <div className="absolute inset-0 mesh-grid-fine opacity-50 pointer-events-none" />
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-violet-600/07 blur-[160px] rounded-full pointer-events-none" />
+
+      {/* Decorative 3D shapes */}
+      <div className="absolute top-20 right-[3%] opacity-20">
+        <FloatingShape type="torusKnot" color="#C084FC" size={130} speed={0.5} />
+      </div>
+      <div className="absolute bottom-16 left-[2%] opacity-15">
+        <FloatingShape type="octahedron" color="#67E8F9" size={90} speed={0.8} />
+      </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 

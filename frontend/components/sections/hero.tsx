@@ -4,6 +4,9 @@ import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { ArrowUpRight } from 'lucide-react'
+import dynamic from 'next/dynamic'
+
+const HeroCanvas = dynamic(() => import('@/components/ui/HeroCanvas'), { ssr: false })
 
 /* ── Constants ─────────────────────────────────────────────────────── */
 const VIDEO_URL =
@@ -114,6 +117,7 @@ export default function Hero() {
      * pinned via sticky until the section scrolls out.
      */
     <section ref={sectionRef} className="relative min-h-[200vh] w-full">
+      <HeroCanvas />
 
       {/* ── Pinned viewport ─────────────────────────────────────────── */}
       <div className="sticky top-0 h-screen w-full overflow-hidden">

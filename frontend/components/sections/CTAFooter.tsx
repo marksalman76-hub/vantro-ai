@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { ArrowRight, Github, Twitter, Linkedin, Zap } from 'lucide-react'
+import dynamic from 'next/dynamic'
+const FloatingShape = dynamic(() => import('@/components/ui/FloatingShape'), { ssr: false })
 
 const FOOTER_LINKS = [
   {
@@ -69,6 +71,17 @@ export default function CTAFooter() {
           style={{ background: '#EC4899' }} />
 
         <div className="absolute inset-0 mesh-grid-fine opacity-20 pointer-events-none" />
+
+        {/* Decorative 3D shapes */}
+        <div className="absolute top-12 left-[5%] opacity-40">
+          <FloatingShape type="torus" color="#7C3AED" size={100} speed={0.6} />
+        </div>
+        <div className="absolute top-16 right-[6%] opacity-30">
+          <FloatingShape type="icosahedron" color="#3B82F6" size={80} speed={0.9} />
+        </div>
+        <div className="absolute bottom-20 left-[12%] opacity-25">
+          <FloatingShape type="octahedron" color="#06B6D4" size={70} speed={0.7} />
+        </div>
 
         <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
