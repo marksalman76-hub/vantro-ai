@@ -793,6 +793,29 @@ export default function PricingPage() {
           </div>
         </div>
 
+        {/* How credits work */}
+        <div className="mt-16 max-w-3xl mx-auto rounded-2xl border border-white/[0.08] bg-white/[0.03] px-8 py-7">
+          <h3 className="text-white font-semibold text-base mb-4">How credits work</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-white/55 leading-relaxed">
+            <div>
+              <p className="text-white/80 font-medium mb-1">AI video generation</p>
+              <p>1 credit per 15 seconds of video (minimum 1 credit). A 30-second video costs 2 credits; a 90-second video costs 6 credits.</p>
+            </div>
+            <div>
+              <p className="text-white/80 font-medium mb-1">AI agent tasks</p>
+              <p>Every agent task (research, copywriting, strategy, email sequences, etc.) consumes 1–5 credits depending on complexity. You always see the credit cost before confirming a task.</p>
+            </div>
+            <div>
+              <p className="text-white/80 font-medium mb-1">Unused credits</p>
+              <p>Credits reset each billing cycle and do not roll over. Top up at any time from your billing dashboard if you need more mid-cycle.</p>
+            </div>
+            <div>
+              <p className="text-white/80 font-medium mb-1">No hidden charges</p>
+              <p>You are only ever charged the monthly subscription price. Credits are the usage unit within that subscription — there are no surprise per-task fees on top.</p>
+            </div>
+          </div>
+        </div>
+
         {/* Footer note */}
         <p className="text-center text-white/30 text-sm mt-14">
           All paid plans include a 14-day free trial. Cancel anytime.{' '}
