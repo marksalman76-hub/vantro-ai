@@ -24,15 +24,28 @@ interface JobsResponse {
 
 const PAGE_SIZE = 20;
 
+const CLIENT_STATUS: Record<string, string> = {
+  pending:                  'Waiting to start',
+  queued:                   'Waiting to start',
+  running:                  'In progress',
+  processing:               'In progress',
+  approved:                 'In progress',
+  pending_approval:         'Needs your approval',
+  pending_financial_review: 'Needs your approval',
+  completed:                'Ready',
+  failed:                   'Could not complete',
+  cancelled:                'Cancelled',
+  rejected:                 'Not approved',
+};
+
 const STATUS_STYLES: Record<string, string> = {
-  completed:               'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-  running:                 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-  pending:                 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
-  pending_approval:        'text-orange-400 bg-orange-500/10 border-orange-500/20',
-  pending_financial_review:'text-amber-400 bg-amber-500/10 border-amber-500/20',
-  failed:                  'text-red-400 bg-red-500/10 border-red-500/20',
-  rejected:                'text-red-400 bg-red-500/10 border-red-500/20',
-  cancelled:               'text-gray-500 bg-gray-700/20 border-gray-700',
+  'Waiting to start':    'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
+  'In progress':         'text-blue-400 bg-blue-500/10 border-blue-500/20',
+  'Needs your approval': 'text-orange-400 bg-orange-500/10 border-orange-500/20',
+  'Ready':               'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+  'Could not complete':  'text-red-400 bg-red-500/10 border-red-500/20',
+  'Cancelled':           'text-gray-500 bg-gray-700/20 border-gray-700',
+  'Not approved':        'text-red-400 bg-red-500/10 border-red-500/20',
 };
 
 type DateRange = '7d' | '30d' | '90d' | 'all';
@@ -87,10 +100,10 @@ function JobCard({ job }: { job: Job }) {
             <p className="text-sm font-semibold text-white truncate">{job.agent_name}</p>
             <span
               className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${
-                STATUS_STYLES[job.status] || 'text-gray-400 bg-gray-800 border-gray-700'
+                STATUS_STYLES[CLIENT_STATUS[job.status]] || 'text-gray-400 bg-gray-800 border-gray-700'
               }`}
             >
-              {job.status.replace(/_/g, ' ')}
+              {CLIENT_STATUS[job.status] || 'In progress'}
             </span>
           </div>
           <div className="flex items-center gap-3 text-xs text-gray-600">
@@ -116,13 +129,21 @@ function JobCard({ job }: { job: Job }) {
           <div className="mt-4">
             {job.status === 'failed' ? (
               <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-                <p className="text-red-400 text-sm font-medium mb-1">Execution failed</p>
-                <p className="text-red-400/70 text-xs">{job.error_message || 'No details available'}</p>
+                <p className="text-red-400 text-sm font-medium mb-1">Could not complete</p>
+                <p className="text-red-400/70 text-xs mb-3">
+                  We couldn&apos;t complete this request. Your credits were not charged, were refunded, or are under review.
+                </p>
+                <div className="flex gap-2">
+                  <a href="/dashboard/support" className="text-xs text-violet-400 hover:text-violet-300 font-medium">Contact support</a>
+                  <span className="text-gray-700">·</span>
+                  <a href="/dashboard/billing" className="text-xs text-gray-400 hover:text-gray-300">Review credits</a>
+                </div>
               </div>
-            ) : job.status === 'pending_financial_review' ? (
-              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
-                <p className="text-amber-400 text-sm font-medium mb-1">Pending financial review</p>
-                <p className="text-amber-400/70 text-xs">This output contains items that require review before proceeding.</p>
+            ) : job.status === 'pending_financial_review' || job.status === 'pending_approval' ? (
+              <div className="bg-orange-500/10 border border-orange-500/20 rounded-xl p-4">
+                <p className="text-orange-400 text-sm font-medium mb-1">Needs your approval</p>
+                <p className="text-orange-400/70 text-xs mb-3">This task is waiting for review before we continue.</p>
+                <a href="/dashboard/approvals" className="text-xs text-orange-400 hover:text-orange-300 font-medium">Review now →</a>
               </div>
             ) : job.output ? (
               <div className="space-y-1">

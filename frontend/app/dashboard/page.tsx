@@ -28,14 +28,28 @@ interface AgentUsage {
   count: number;
 }
 
+const CLIENT_STATUS: Record<string, string> = {
+  pending:                  'Waiting to start',
+  queued:                   'Waiting to start',
+  running:                  'In progress',
+  processing:               'In progress',
+  approved:                 'In progress',
+  pending_approval:         'Needs your approval',
+  pending_financial_review: 'Needs your approval',
+  completed:                'Ready',
+  failed:                   'Could not complete',
+  cancelled:                'Cancelled',
+  rejected:                 'Not approved',
+};
+
 const STATUS_STYLES: Record<string, string> = {
-  completed: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-  running:   'text-blue-400 bg-blue-500/10 border-blue-500/20',
-  pending:   'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
-  pending_approval: 'text-orange-400 bg-orange-500/10 border-orange-500/20',
-  pending_financial_review: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
-  failed:    'text-red-400 bg-red-500/10 border-red-500/20',
-  cancelled: 'text-gray-500 bg-gray-700/20 border-gray-700',
+  'Waiting to start':    'text-yellow-400 bg-yellow-500/10 border-yellow-500/20',
+  'In progress':         'text-blue-400 bg-blue-500/10 border-blue-500/20',
+  'Needs your approval': 'text-orange-400 bg-orange-500/10 border-orange-500/20',
+  'Ready':               'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+  'Could not complete':  'text-red-400 bg-red-500/10 border-red-500/20',
+  'Cancelled':           'text-gray-500 bg-gray-700/20 border-gray-700',
+  'Not approved':        'text-red-400 bg-red-500/10 border-red-500/20',
 };
 
 function MetricCard({ label, value, sub, color }: { label: string; value: string | number; sub?: string; color?: string }) {
@@ -130,12 +144,55 @@ export default function DashboardPage() {
     );
   }
 
+  const pendingApprovals = jobs.filter(j =>
+    j.status === 'pending_approval' || j.status === 'pending_financial_review'
+  ).length;
+  const failedJobs = jobs.filter(j => j.status === 'failed').length;
+
   return (
     <div className="p-8 max-w-5xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
-        <p className="text-gray-500 text-sm">Your AI agent workspace at a glance</p>
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold mb-1">Dashboard</h1>
+          <p className="text-gray-500 text-sm">Your AI agent workspace at a glance</p>
+        </div>
+        {credits?.tier && (
+          <span className="shrink-0 text-xs font-semibold px-3 py-1.5 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 capitalize mt-1">
+            {credits.tier} plan
+          </span>
+        )}
       </div>
+
+      {/* Pending approvals / failed notice */}
+      {(pendingApprovals > 0 || failedJobs > 0) && (
+        <div className="flex gap-3 mb-6 flex-wrap">
+          {pendingApprovals > 0 && (
+            <Link
+              href="/dashboard/approvals"
+              className="flex-1 min-w-[180px] bg-orange-500/10 border border-orange-500/20 hover:border-orange-500/40 rounded-2xl px-4 py-3 flex items-center justify-between transition-colors"
+            >
+              <div>
+                <p className="text-orange-300 text-xs font-semibold">Needs your approval</p>
+                <p className="text-orange-200/60 text-[10px] mt-0.5">Review before we continue</p>
+              </div>
+              <span className="text-2xl font-bold text-orange-400">{pendingApprovals}</span>
+            </Link>
+          )}
+          {failedJobs > 0 && (
+            <Link
+              href="/dashboard/jobs?filter=failed"
+              className="flex-1 min-w-[180px] bg-red-500/10 border border-red-500/15 hover:border-red-500/30 rounded-2xl px-4 py-3 flex items-center justify-between transition-colors"
+            >
+              <div>
+                <p className="text-red-300 text-xs font-semibold">Could not complete</p>
+                <p className="text-red-200/60 text-[10px] mt-0.5">Retry or contact support</p>
+              </div>
+              <span className="text-2xl font-bold text-red-400">{failedJobs}</span>
+            </Link>
+          )}
+        </div>
+      )}
+
 
       {/* Metrics row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -206,7 +263,7 @@ export default function DashboardPage() {
       <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
           <h2 className="font-semibold text-white text-sm">Recent jobs</h2>
-          <Link href="/dashboard/library" className="text-xs text-violet-400 hover:text-violet-300 font-medium">
+          <Link href="/dashboard/jobs" className="text-xs text-violet-400 hover:text-violet-300 font-medium">
             View all →
           </Link>
         </div>
@@ -230,10 +287,10 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-2 shrink-0">
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full border font-semibold ${
-                      STATUS_STYLES[job.status] || 'text-gray-400 bg-gray-800 border-gray-700'
+                      STATUS_STYLES[CLIENT_STATUS[job.status]] || 'text-gray-400 bg-gray-800 border-gray-700'
                     }`}
                   >
-                    {job.status.replace(/_/g, ' ')}
+                    {CLIENT_STATUS[job.status] || 'In progress'}
                   </span>
                   {job.credits_used > 0 && (
                     <span className="text-[10px] text-gray-600">{job.credits_used}cr</span>
