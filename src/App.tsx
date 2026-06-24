@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { useRoute } from 'wouter'
 import { motion } from 'framer-motion'
-import { DraftPage } from './pages'
+import { DraftPage, LoginPage, SignupPage, OnboardingPage } from './pages'
+import { DashboardPage } from './pages/DashboardPage'
 import { ToastProvider } from './context/ToastContext'
 import { CursorFollower } from './components/CursorFollower'
 import { ScrollProgress } from './components/ScrollProgress'
@@ -21,6 +22,11 @@ import { Toast } from './components/Toast'
 
 export default function App() {
   const [isDraft] = useRoute('/draft')
+  const [isLogin] = useRoute('/login')
+  const [isSignup] = useRoute('/signup')
+  const [isOnboarding] = useRoute('/onboarding')
+  const [isDashboard] = useRoute('/dashboard')
+  const [isDashboardSub] = useRoute('/dashboard/:rest*')
 
   useEffect(() => {
     const handle = () => {
@@ -35,6 +41,10 @@ export default function App() {
   }, [])
 
   if (isDraft) return <DraftPage />
+  if (isLogin) return <LoginPage />
+  if (isSignup) return <SignupPage />
+  if (isOnboarding) return <OnboardingPage />
+  if (isDashboard || isDashboardSub) return <DashboardPage />
   return (
     <ToastProvider>
       <div className="bg-canvas text-snow min-h-[100dvh]" style={{ fontFamily: "'Inter', sans-serif" }}>

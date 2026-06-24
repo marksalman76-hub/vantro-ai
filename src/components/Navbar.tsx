@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'wouter'
 import { Menu, X } from 'lucide-react'
 
 const NAV_LINKS = [
@@ -189,10 +190,8 @@ export function Navbar() {
             style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
             className="hidden md:flex"
           >
-            <a
-              href="https://app.vantro.ai/login"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/login"
               style={{
                 background: 'none',
                 border: 'none',
@@ -213,11 +212,9 @@ export function Navbar() {
               }
             >
               Sign in
-            </a>
-            <a
-              href="https://app.vantro.ai/signup"
-              target="_blank"
-              rel="noopener noreferrer"
+            </Link>
+            <Link
+              href="/signup"
               style={{
                 background: 'linear-gradient(160deg, oklch(0.78 0.13 250) 0%, oklch(0.60 0.18 250) 100%)',
                 color: 'oklch(0.98 0 0)',
@@ -243,7 +240,7 @@ export function Navbar() {
               }}
             >
               Activate agents
-            </a>
+            </Link>
           </div>
 
           {/* Mobile hamburger */}
@@ -335,10 +332,8 @@ export function Navbar() {
               marginTop: '1.25rem',
             }}
           >
-            <a
-              href="https://app.vantro.ai/login"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/login"
               onClick={() => setMobileOpen(false)}
               style={{
                 background: 'none',
@@ -354,11 +349,9 @@ export function Navbar() {
               }}
             >
               Sign in
-            </a>
-            <a
-              href="https://app.vantro.ai/signup"
-              target="_blank"
-              rel="noopener noreferrer"
+            </Link>
+            <Link
+              href="/signup"
               onClick={() => setMobileOpen(false)}
               style={{
                 background: 'linear-gradient(160deg, oklch(0.78 0.13 250) 0%, oklch(0.60 0.18 250) 100%)',
@@ -377,7 +370,7 @@ export function Navbar() {
               }}
             >
               Activate agents
-            </a>
+            </Link>
           </div>
         </div>
       </div>

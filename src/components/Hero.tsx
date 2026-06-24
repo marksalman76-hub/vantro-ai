@@ -1,4 +1,5 @@
 import { useRef, useState, useEffect } from 'react'
+import { Link } from 'wouter'
 import {
   motion,
   AnimatePresence,
@@ -237,10 +238,8 @@ export function Hero() {
           </p>
 
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            <a
-              href="https://app.vantro.ai/signup"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/signup"
               style={{
                 background: 'linear-gradient(160deg, oklch(0.78 0.13 250) 0%, oklch(0.60 0.18 250) 100%)',
                 color: 'oklch(0.98 0 0)',
@@ -266,7 +265,7 @@ export function Hero() {
               }}
             >
               Activate your agents
-            </a>
+            </Link>
             <a
               href="#agents"
               style={{

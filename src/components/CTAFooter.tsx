@@ -1,6 +1,5 @@
-'use client';
-
 import { motion, useReducedMotion, useAnimation } from 'framer-motion';
+import { Link } from 'wouter';
 import { useEffect } from 'react';
 
 export function CTAFooter() {
@@ -116,10 +115,8 @@ export function CTAFooter() {
         </p>
 
         <div className="flex justify-center">
-          <a
-            href="https://app.vantro.ai/signup"
-            target="_blank"
-            rel="noopener noreferrer"
+          <Link
+            href="/signup"
             className="rounded-full px-8 py-4 font-semibold text-lg cursor-pointer"
             style={{
               background: 'linear-gradient(160deg, oklch(0.78 0.13 250) 0%, oklch(0.60 0.18 250) 100%)',
@@ -140,7 +137,7 @@ export function CTAFooter() {
             }}
           >
             Activate your agents
-          </a>
+          </Link>
         </div>
       </motion.div>
     </section>
