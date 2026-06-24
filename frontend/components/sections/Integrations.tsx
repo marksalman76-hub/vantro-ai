@@ -26,19 +26,42 @@ const PILL_COLORS = [
 
 const BG_COLOR = '#070D1F'
 
+const BRAND_COLORS: Record<string, { text: string; dot: string }> = {
+  Salesforce:        { text: 'rgba(0,161,224,0.9)',   dot: '#00A1E0' },
+  HubSpot:          { text: 'rgba(255,122,89,0.9)',   dot: '#FF7A59' },
+  Slack:            { text: 'rgba(224,30,90,0.9)',    dot: '#E01E5A' },
+  Stripe:           { text: 'rgba(123,115,247,0.9)',  dot: '#7B73F7' },
+  Shopify:          { text: 'rgba(150,191,72,0.9)',   dot: '#96BF48' },
+  Notion:           { text: 'rgba(255,255,255,0.75)', dot: '#fff'    },
+  GitHub:           { text: 'rgba(255,255,255,0.75)', dot: '#f0f6fc' },
+  Zapier:           { text: 'rgba(255,74,0,0.9)',     dot: '#FF4A00' },
+  Jira:             { text: 'rgba(0,82,204,0.9)',     dot: '#0052CC' },
+  Zendesk:          { text: 'rgba(31,115,183,0.9)',   dot: '#1F73B7' },
+  Linear:           { text: 'rgba(94,106,210,0.9)',   dot: '#5E6AD2' },
+  Intercom:         { text: 'rgba(31,138,255,0.9)',   dot: '#1F8AFF' },
+  Snowflake:        { text: 'rgba(41,181,232,0.9)',   dot: '#29B5E8' },
+  Datadog:          { text: 'rgba(99,44,166,0.9)',    dot: '#632CA6' },
+  Vercel:           { text: 'rgba(255,255,255,0.75)', dot: '#fff'    },
+}
+
 function Pill({ label, index }: { label: string; index: number }) {
+  const branded = BRAND_COLORS[label]
   const ci = index % PILL_COLORS.length
   const p = PILL_COLORS[ci]
+  const textColor = branded?.text ?? p.text
+  const dotColor  = branded?.dot  ?? p.dot
+  const bgColor   = branded ? `${branded.dot}12` : p.bg
+
   return (
     <span
-      className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap mx-2"
+      className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap mx-2 transition-opacity duration-200 hover:opacity-100 opacity-70"
       style={{
-        background: p.bg,
-        color: p.text,
-        border: `1px solid ${p.dot}25`,
+        background: bgColor,
+        color: textColor,
+        border: `1px solid ${dotColor}20`,
       }}
     >
-      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: p.dot }} />
+      <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: dotColor }} />
       {label}
     </span>
   )

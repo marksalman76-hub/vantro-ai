@@ -99,7 +99,7 @@ export default function HowItWorks() {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true, margin: '-60px' }}
                   transition={{ type: 'spring', stiffness: 160, damping: 22, delay: i * 0.12 }}
-                  className={`relative flex flex-col lg:flex-row items-center gap-8 lg:gap-0 mb-12 lg:mb-16 ${
+                  className={`group relative flex flex-col lg:flex-row items-center gap-8 lg:gap-0 mb-12 lg:mb-16 ${
                     isLeft ? 'lg:flex-row' : 'lg:flex-row-reverse'
                   }`}
                 >
@@ -124,6 +124,14 @@ export default function HowItWorks() {
                       />
 
                       <div className="relative">
+                        {/* Giant watermark number */}
+                        <div
+                          className="absolute -right-3 -bottom-6 font-black select-none pointer-events-none leading-none"
+                          style={{ fontSize: '120px', color: `${step.bg}08` }}
+                          aria-hidden="true"
+                        >
+                          {step.num}
+                        </div>
                         <div className="flex items-center gap-4 mb-5">
                           <div
                             className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-all duration-300 group-hover:scale-110"
@@ -159,8 +167,8 @@ export default function HowItWorks() {
                     >
                       {/* Pulse ring */}
                       <div
-                        className="absolute -inset-2 rounded-full opacity-30 animate-ping"
-                        style={{ background: step.bg, animationDuration: '2s', animationDelay: `${i * 0.5}s` }}
+                        className="absolute -inset-2 rounded-full opacity-0 group-hover:opacity-20 group-hover:animate-ping"
+                        style={{ background: step.bg, animationDuration: '2s' }}
                       />
                       <div
                         className="relative z-10 w-11 h-11 rounded-full flex items-center justify-center text-xs font-black text-white"

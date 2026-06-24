@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronLeft, ChevronRight, Quote, Star } from 'lucide-react'
 
@@ -23,7 +23,7 @@ const TESTIMONIALS = [
     avatar: 'MR',
     avatarColor: '#06B6D4',
     avatarLight: '#67E8F9',
-    metric: '15 hours saved per person / week',
+    metric: '15 hours saved / person / week',
     metricColor: '#67E8F9',
     quote: "Forge automated 23 workflows we had been meaning to build for two years. The setup took an afternoon. Our ops team now spends 15 fewer hours a week on repetitive tasks — and they actually enjoy their jobs now.",
   },
@@ -51,17 +51,108 @@ const TESTIMONIALS = [
   },
 ]
 
+function FullCard({ t }: { t: typeof TESTIMONIALS[0] }) {
+  return (
+    <div
+      className="relative glass-ultra rounded-3xl p-8 lg:p-10 overflow-hidden h-full"
+      style={{ border: `1px solid ${t.avatarColor}20` }}
+    >
+      <div className="absolute inset-0 rounded-3xl opacity-40 pointer-events-none"
+        style={{ background: `radial-gradient(ellipse at 80% 20%, ${t.avatarColor}15 0%, transparent 60%)` }} />
+      <div className="absolute top-0 left-12 right-12 h-px"
+        style={{ background: `linear-gradient(90deg, transparent, ${t.avatarLight}50, transparent)` }} />
+
+      <Quote className="absolute top-6 right-6 w-10 h-10 opacity-[0.08]" style={{ color: t.avatarColor }} />
+
+      <div className="flex items-center gap-1 mb-5 relative z-10">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+        ))}
+      </div>
+
+      <div
+        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold mb-6 relative z-10"
+        style={{
+          background: `${t.avatarColor}15`,
+          color: t.metricColor,
+          border: `1px solid ${t.avatarColor}30`,
+          boxShadow: `0 4px 16px ${t.avatarColor}15`,
+        }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: t.metricColor }} />
+        {t.metric}
+      </div>
+
+      <blockquote className="text-base lg:text-lg font-light text-white/85 leading-relaxed mb-8 relative z-10">
+        &ldquo;{t.quote}&rdquo;
+      </blockquote>
+
+      <div className="flex items-center gap-3 relative z-10">
+        <div
+          className="w-11 h-11 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
+          style={{
+            background: `linear-gradient(135deg, ${t.avatarColor}, ${t.avatarColor}88)`,
+            boxShadow: `0 4px 16px ${t.avatarColor}40`,
+          }}
+        >
+          {t.avatar}
+        </div>
+        <div>
+          <p className="font-bold text-white text-sm">{t.name}</p>
+          <p className="text-xs text-white/40">{t.role} · {t.company}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MiniCard({ t, onClick }: { t: typeof TESTIMONIALS[0]; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className="relative glass rounded-2xl p-5 overflow-hidden w-full h-full text-left cursor-pointer hover:bg-white/[0.07] transition-colors"
+      style={{ border: `1px solid ${t.avatarColor}12` }}
+    >
+      <div
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold mb-4"
+        style={{ background: `${t.avatarColor}12`, color: t.metricColor, border: `1px solid ${t.avatarColor}20` }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.metricColor }} />
+        {t.metric}
+      </div>
+      <p className="text-xs text-white/50 leading-relaxed mb-4 line-clamp-3">
+        &ldquo;{t.quote.slice(0, 100)}...&rdquo;
+      </p>
+      <div className="flex items-center gap-2">
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0"
+          style={{ background: `linear-gradient(135deg, ${t.avatarColor}, ${t.avatarColor}88)` }}
+        >
+          {t.avatar}
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-white/70">{t.name}</p>
+          <p className="text-[10px] text-white/30">{t.company}</p>
+        </div>
+      </div>
+    </button>
+  )
+}
+
 export default function Testimonials() {
   const [current, setCurrent] = useState(0)
   const n = TESTIMONIALS.length
 
-  useEffect(() => {
-    const id = setInterval(() => setCurrent((c) => (c + 1) % n), 7000)
-    return () => clearInterval(id)
-  }, [n])
+  const prev = useCallback(() => setCurrent((c) => (c - 1 + n) % n), [n])
+  const next = useCallback(() => setCurrent((c) => (c + 1) % n), [n])
 
-  const prev = () => setCurrent((c) => (c - 1 + n) % n)
-  const next = () => setCurrent((c) => (c + 1) % n)
+  useEffect(() => {
+    const id = setInterval(next, 10000)
+    return () => clearInterval(id)
+  }, [next])
+
+  const prevIdx = (current - 1 + n) % n
+  const nextIdx = (current + 1) % n
   const t = TESTIMONIALS[current]
 
   return (
@@ -70,34 +161,75 @@ export default function Testimonials() {
       className="section-padding relative overflow-hidden"
       style={{ background: 'linear-gradient(180deg, #080D1E 0%, #0A1230 100%)' }}
     >
-      {/* Background */}
       <div className="absolute inset-0 mesh-grid-fine opacity-30 pointer-events-none" />
       <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] rounded-full blur-[160px] pointer-events-none transition-all duration-1000"
         style={{ background: `${t.avatarColor}10` }}
       />
 
-      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Heading */}
         <motion.div
           initial={{ opacity: 0, y: 28 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ type: 'spring', stiffness: 200, damping: 22 }}
-          className="text-center mb-16"
+          className="text-center mb-14"
         >
           <span className="section-badge-pink mb-5">
             <span className="w-1.5 h-1.5 rounded-full bg-pink-400 animate-pulse" />
             Real Results
           </span>
           <h2 className="section-heading mt-4 mb-4">
-            Trusted by <span className="gradient-text">Forward-Thinking Teams</span>
+            Teams That Replaced Headcount{' '}
+            <span className="gradient-text">With Vantro</span>
           </h2>
-          <p className="section-sub mt-2">Don&apos;t take our word for it — see what our customers have achieved.</p>
+          <p className="section-sub mt-2">See what our customers have achieved in their first 90 days.</p>
         </motion.div>
 
-        {/* Carousel */}
-        <div className="relative" style={{ perspective: '1200px' }}>
+        {/* Desktop: 3-up layout */}
+        <div className="hidden lg:grid grid-cols-12 gap-5 items-stretch" style={{ perspective: '1200px' }}>
+          {/* Prev card */}
+          <motion.div
+            key={`prev-${prevIdx}`}
+            className="col-span-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.45, scale: 0.95 }}
+            transition={{ duration: 0.4 }}
+          >
+            <MiniCard t={TESTIMONIALS[prevIdx]} onClick={prev} />
+          </motion.div>
+
+          {/* Active center card */}
+          <div className="col-span-6 relative" style={{ perspective: '1200px' }}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={current}
+                initial={{ opacity: 0, rotateY: 8, scale: 0.96 }}
+                animate={{ opacity: 1, rotateY: 0, scale: 1 }}
+                exit={{ opacity: 0, rotateY: -8, scale: 0.96 }}
+                transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+                className="h-full"
+              >
+                <FullCard t={t} />
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Next card */}
+          <motion.div
+            key={`next-${nextIdx}`}
+            className="col-span-3"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.45, scale: 0.95 }}
+            transition={{ duration: 0.4 }}
+          >
+            <MiniCard t={TESTIMONIALS[nextIdx]} onClick={next} />
+          </motion.div>
+        </div>
+
+        {/* Mobile: single card */}
+        <div className="lg:hidden relative" style={{ perspective: '1200px' }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={current}
@@ -105,119 +237,43 @@ export default function Testimonials() {
               animate={{ opacity: 1, rotateY: 0, scale: 1, x: 0 }}
               exit={{ opacity: 0, rotateY: -8, scale: 0.96, x: -40 }}
               transition={{ type: 'spring', stiffness: 200, damping: 25 }}
-              className="relative glass-ultra rounded-3xl p-8 lg:p-12 overflow-hidden"
-              style={{ border: `1px solid ${t.avatarColor}20` }}
             >
-              {/* Dynamic gradient background */}
-              <div
-                className="absolute inset-0 rounded-3xl opacity-40 pointer-events-none transition-all duration-700"
-                style={{
-                  background: `radial-gradient(ellipse at 80% 20%, ${t.avatarColor}15 0%, transparent 60%)`,
-                }}
-              />
-
-              {/* Top shine */}
-              <div
-                className="absolute top-0 left-12 right-12 h-px"
-                style={{ background: `linear-gradient(90deg, transparent, ${t.avatarLight}50, transparent)` }}
-              />
-
-              {/* Quote icon */}
-              <Quote
-                className="absolute top-8 right-8 w-12 h-12 opacity-08"
-                style={{ color: t.avatarColor }}
-              />
-
-              {/* Stars */}
-              <div className="flex items-center gap-1 mb-6 relative z-10">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                ))}
-              </div>
-
-              {/* Metric badge */}
-              <div
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold mb-7 relative z-10"
-                style={{
-                  background: `${t.avatarColor}15`,
-                  color: t.metricColor,
-                  border: `1px solid ${t.avatarColor}30`,
-                  boxShadow: `0 4px 20px ${t.avatarColor}15`,
-                }}
-              >
-                <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: t.metricColor }} />
-                {t.metric}
-              </div>
-
-              {/* Quote */}
-              <blockquote className="text-xl lg:text-2xl font-light text-white/85 leading-relaxed mb-10 relative z-10">
-                &ldquo;{t.quote}&rdquo;
-              </blockquote>
-
-              {/* Author */}
-              <div className="flex items-center gap-4 relative z-10">
-                <div
-                  className="w-13 h-13 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0 shadow-lg"
-                  style={{
-                    background: `linear-gradient(135deg, ${t.avatarColor}, ${t.avatarColor}88)`,
-                    width: 52,
-                    height: 52,
-                    boxShadow: `0 4px 20px ${t.avatarColor}40`,
-                  }}
-                >
-                  {t.avatar}
-                </div>
-                <div>
-                  <p className="font-bold text-white">{t.name}</p>
-                  <p className="text-sm text-white/45 font-medium">{t.role} · {t.company}</p>
-                </div>
-              </div>
+              <FullCard t={t} />
             </motion.div>
           </AnimatePresence>
+        </div>
 
-          {/* Controls */}
-          <div className="flex items-center justify-between mt-8">
-            {/* Progress dots */}
-            <div className="flex items-center gap-2">
-              {TESTIMONIALS.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrent(i)}
-                  aria-label={`Testimonial ${i + 1}`}
-                  className="transition-all duration-400 rounded-full focus:outline-none"
-                  style={{
-                    width: i === current ? 28 : 8,
-                    height: 8,
-                    background: i === current
-                      ? `linear-gradient(90deg, ${TESTIMONIALS[i].avatarColor}, ${TESTIMONIALS[i].avatarLight})`
-                      : 'rgba(255,255,255,0.15)',
-                    boxShadow: i === current ? `0 0 12px ${TESTIMONIALS[i].avatarColor}60` : 'none',
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* Arrow buttons */}
-            <div className="flex items-center gap-2">
-              <motion.button
-                onClick={prev}
-                aria-label="Previous"
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.94 }}
-                className="w-11 h-11 rounded-full glass-strong border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:border-white/30 transition-colors"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </motion.button>
-              <motion.button
-                onClick={next}
-                aria-label="Next"
-                whileHover={{ scale: 1.08 }}
-                whileTap={{ scale: 0.94 }}
-                className="w-11 h-11 rounded-full glass-strong border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:border-white/30 transition-colors"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </motion.button>
-            </div>
+        {/* Controls */}
+        <div className="flex items-center justify-between mt-8">
+          <div className="flex items-center gap-2">
+            {TESTIMONIALS.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrent(i)}
+                aria-label={`Testimonial ${i + 1}`}
+                className="transition-all duration-400 rounded-full focus:outline-none"
+                style={{
+                  width: i === current ? 28 : 8,
+                  height: 8,
+                  background: i === current
+                    ? `linear-gradient(90deg, ${TESTIMONIALS[i].avatarColor}, ${TESTIMONIALS[i].avatarLight})`
+                    : 'rgba(255,255,255,0.15)',
+                  boxShadow: i === current ? `0 0 12px ${TESTIMONIALS[i].avatarColor}60` : 'none',
+                }}
+              />
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            <motion.button onClick={prev} aria-label="Previous"
+              whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.94 }}
+              className="w-10 h-10 rounded-full glass-strong border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:border-white/30 transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+            </motion.button>
+            <motion.button onClick={next} aria-label="Next"
+              whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.94 }}
+              className="w-10 h-10 rounded-full glass-strong border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:border-white/30 transition-colors">
+              <ChevronRight className="w-4 h-4" />
+            </motion.button>
           </div>
         </div>
       </div>
