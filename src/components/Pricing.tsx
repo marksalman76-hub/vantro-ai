@@ -3,7 +3,6 @@
 import { useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
-import { useToast } from '../context/ToastContext';
 
 const TIERS = [
   {
@@ -59,7 +58,6 @@ interface TierCardProps {
 
 function TierCard({ tier, index }: TierCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  const { showToast } = useToast();
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const el = cardRef.current;
@@ -145,38 +143,40 @@ function TierCard({ tier, index }: TierCardProps) {
         ))}
       </ul>
 
-      <button
-        onClick={() => showToast()}
-        className="w-full py-3 rounded-full font-semibold transition-all duration-200 cursor-pointer"
+      <a
+        href={tier.cta === 'Talk to sales' ? 'mailto:hello@vantro.ai' : '/pricing'}
+        className="w-full py-3 rounded-full font-semibold transition-all duration-200 cursor-pointer block text-center"
         style={
           tier.featured
             ? {
                 backgroundColor: 'oklch(0.97 0 0)',
                 color: 'oklch(0.14 0 0)',
+                textDecoration: 'none',
               }
             : {
                 border: '1px solid rgba(255,255,255,0.15)',
                 color: 'oklch(0.97 0 0)',
                 background: 'transparent',
+                textDecoration: 'none',
               }
         }
         onMouseEnter={(e) => {
           if (tier.featured) {
-            (e.currentTarget as HTMLButtonElement).style.opacity = '0.90';
+            (e.currentTarget as HTMLAnchorElement).style.opacity = '0.90';
           } else {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.30)';
+            (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.30)';
           }
         }}
         onMouseLeave={(e) => {
           if (tier.featured) {
-            (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+            (e.currentTarget as HTMLAnchorElement).style.opacity = '1';
           } else {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.15)';
+            (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.15)';
           }
         }}
       >
         {tier.cta}
-      </button>
+      </a>
     </motion.div>
   );
 }

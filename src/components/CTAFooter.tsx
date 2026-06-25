@@ -1,10 +1,8 @@
 'use client';
 
 import { motion, useReducedMotion } from 'framer-motion';
-import { useToast } from '../context/ToastContext';
 
 export function CTAFooter() {
-  const { showToast } = useToast();
   const prefersReduced = useReducedMotion();
 
   return (
@@ -101,8 +99,8 @@ export function CTAFooter() {
         </p>
 
         <div className="flex gap-4 justify-center flex-wrap">
-          <button
-            onClick={() => showToast()}
+          <a
+            href="/pricing"
             className="rounded-full px-8 py-4 font-semibold text-lg cursor-pointer"
             style={{
               background: 'linear-gradient(180deg, #ffffff 0%, #d8d8d8 100%)',
@@ -110,35 +108,39 @@ export function CTAFooter() {
               border: 'none',
               boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.60), 0 4px 16px rgba(0,0,0,0.40)',
               transition: 'opacity 0.2s ease, transform 0.15s ease',
+              textDecoration: 'none',
+              display: 'inline-block',
             }}
             onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.opacity = '0.88'
-              ;(e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.02)'
+              ;(e.currentTarget as HTMLAnchorElement).style.opacity = '0.88'
+              ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1.02)'
             }}
             onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.opacity = '1'
-              ;(e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'
+              ;(e.currentTarget as HTMLAnchorElement).style.opacity = '1'
+              ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1)'
             }}
           >
             Activate your agents
-          </button>
-          <button
-            onClick={() => showToast()}
+          </a>
+          <a
+            href="mailto:hello@vantro.ai"
             className="rounded-full px-8 py-4 font-semibold text-lg transition-all duration-200 cursor-pointer"
             style={{
               border: '1px solid rgba(255,255,255,0.20)',
               color: 'oklch(0.97 0 0)',
               background: 'transparent',
+              textDecoration: 'none',
+              display: 'inline-block',
             }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.40)';
+              (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.40)';
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.20)';
+              (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.20)';
             }}
           >
             Book a demo
-          </button>
+          </a>
         </div>
       </motion.div>
     </section>

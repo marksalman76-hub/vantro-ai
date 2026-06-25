@@ -1,7 +1,6 @@
 'use client';
 
 import { Twitter, Linkedin, Github } from 'lucide-react';
-import { useToast } from '../context/ToastContext';
 
 const COLUMNS = [
   {
@@ -9,49 +8,46 @@ const COLUMNS = [
     links: [
       { label: 'Features', href: '#features' },
       { label: 'Agents', href: '#agents' },
-      { label: 'Pricing', href: '#pricing' },
-      { label: 'Integrations', href: null },
-      { label: 'Changelog', href: null },
+      { label: 'Pricing', href: '/pricing' },
     ],
   },
   {
     heading: 'Company',
     links: [
-      { label: 'About', href: null },
-      { label: 'Careers', href: null },
-      { label: 'Blog', href: null },
-      { label: 'Contact', href: null },
+      // TODO: create /about page before linking here
+      { label: 'About', href: 'mailto:hello@vantro.ai' },
+      // TODO: create /careers page before linking here
+      { label: 'Careers', href: 'mailto:hello@vantro.ai' },
+      // TODO: create /blog page before linking here
+      { label: 'Blog', href: 'mailto:hello@vantro.ai' },
+      { label: 'Contact', href: 'mailto:hello@vantro.ai' },
     ],
   },
   {
     heading: 'Resources',
     links: [
-      { label: 'Docs', href: null },
-      { label: 'API', href: null },
-      { label: 'Status', href: null },
-      { label: 'Security', href: null },
+      // TODO: create /docs page before linking here
+      { label: 'Docs', href: 'mailto:hello@vantro.ai' },
+      // TODO: create /api-docs page before linking here
+      { label: 'API', href: 'mailto:hello@vantro.ai' },
+      // TODO: link to real status page when available
+      { label: 'Status', href: 'mailto:hello@vantro.ai' },
+      // TODO: create /security page before linking here
+      { label: 'Security', href: 'mailto:hello@vantro.ai' },
     ],
   },
   {
     heading: 'Legal',
     links: [
-      { label: 'Privacy', href: null },
-      { label: 'Terms', href: null },
-      { label: 'DPA', href: null },
+      { label: 'Privacy', href: '/privacy' },
+      { label: 'Terms', href: '/terms' },
+      // TODO: create /dpa page before linking here
+      { label: 'DPA', href: 'mailto:hello@vantro.ai' },
     ],
   },
 ];
 
 export function Footer() {
-  const { showToast } = useToast();
-
-  function handleLink(e: React.MouseEvent<HTMLAnchorElement>, href: string | null) {
-    if (!href) {
-      e.preventDefault();
-      showToast();
-    }
-  }
-
   return (
     <footer
       className="pt-20 pb-10"
@@ -96,8 +92,7 @@ export function Footer() {
                 {col.links.map((link) => (
                   <li key={link.label}>
                     <a
-                      href={link.href ?? '#'}
-                      onClick={(e) => handleLink(e, link.href)}
+                      href={link.href}
                       className="text-sm transition-colors duration-150"
                       style={{ color: 'oklch(0.70 0 0)' }}
                       onMouseEnter={(e) => {
@@ -127,25 +122,28 @@ export function Footer() {
 
           <div className="flex items-center gap-4">
             {[
-              { Icon: Twitter, label: 'Twitter' },
-              { Icon: Linkedin, label: 'LinkedIn' },
-              { Icon: Github, label: 'GitHub' },
-            ].map(({ Icon, label }) => (
-              <button
+              // TODO: replace href values with real Vantro social profile URLs when available
+              { Icon: Twitter, label: 'Twitter', href: 'https://twitter.com/vantroai' },
+              { Icon: Linkedin, label: 'LinkedIn', href: 'https://linkedin.com/company/vantroai' },
+              { Icon: Github, label: 'GitHub', href: 'https://github.com/vantroai' },
+            ].map(({ Icon, label, href }) => (
+              <a
                 key={label}
+                href={href}
                 aria-label={label}
-                onClick={() => showToast()}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="transition-colors duration-150 cursor-pointer"
-                style={{ color: 'oklch(0.70 0 0)', background: 'none', border: 'none', padding: 0 }}
+                style={{ color: 'oklch(0.70 0 0)', display: 'inline-flex' }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.color = 'oklch(0.97 0 0)';
+                  (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.97 0 0)';
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLButtonElement).style.color = 'oklch(0.70 0 0)';
+                  (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.70 0 0)';
                 }}
               >
                 <Icon size={16} />
-              </button>
+              </a>
             ))}
           </div>
         </div>

@@ -136,7 +136,8 @@ function DraftA() {
 
         {/* Buttons */}
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          <button
+          <a
+            href="/pricing"
             style={{
               background: 'linear-gradient(90deg, #fff 0%, #e8e8e8 100%)',
               color: '#000',
@@ -149,23 +150,26 @@ function DraftA() {
               boxShadow:
                 '0 0 30px rgba(255,255,255,0.25), inset 0 1px 0 rgba(255,255,255,0.9)',
               transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+              textDecoration: 'none',
+              display: 'inline-block',
             }}
             onMouseEnter={e => {
-              const el = e.currentTarget as HTMLButtonElement
+              const el = e.currentTarget as HTMLAnchorElement
               el.style.boxShadow =
                 '0 0 50px rgba(255,255,255,0.45), inset 0 1px 0 rgba(255,255,255,1)'
               el.style.transform = 'translateY(-1px)'
             }}
             onMouseLeave={e => {
-              const el = e.currentTarget as HTMLButtonElement
+              const el = e.currentTarget as HTMLAnchorElement
               el.style.boxShadow =
                 '0 0 30px rgba(255,255,255,0.25), inset 0 1px 0 rgba(255,255,255,0.9)'
               el.style.transform = 'translateY(0)'
             }}
           >
             Deploy your team
-          </button>
-          <button
+          </a>
+          <a
+            href="#how-it-works"
             style={{
               background: 'transparent',
               color: 'rgba(255,255,255,0.70)',
@@ -176,20 +180,22 @@ function DraftA() {
               border: '1px solid rgba(255,255,255,0.18)',
               cursor: 'pointer',
               transition: 'border-color 0.2s ease, color 0.2s ease',
+              textDecoration: 'none',
+              display: 'inline-block',
             }}
             onMouseEnter={e => {
-              const el = e.currentTarget as HTMLButtonElement
+              const el = e.currentTarget as HTMLAnchorElement
               el.style.borderColor = 'rgba(255,255,255,0.40)'
               el.style.color = '#fff'
             }}
             onMouseLeave={e => {
-              const el = e.currentTarget as HTMLButtonElement
+              const el = e.currentTarget as HTMLAnchorElement
               el.style.borderColor = 'rgba(255,255,255,0.18)'
               el.style.color = 'rgba(255,255,255,0.70)'
             }}
           >
             See how it works
-          </button>
+          </a>
         </div>
       </div>
     </section>

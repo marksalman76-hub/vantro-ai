@@ -1,19 +1,17 @@
 import { useState, useEffect, useRef } from 'react'
 import { Menu, X } from 'lucide-react'
-import { useToast } from '../context/ToastContext'
 
 const NAV_LINKS = [
   { label: 'Features', href: '#features' },
   { label: 'How it works', href: '#how-it-works' },
   { label: 'Agents', href: '#agents' },
-  { label: 'Pricing', href: '#pricing' },
+  { label: 'Pricing', href: '/pricing' },
   { label: 'FAQ', href: '#faq' },
 ]
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const { showToast } = useToast()
   const overlayRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -39,9 +37,6 @@ export function Navbar() {
     document.body.style.overflow = mobileOpen ? 'hidden' : ''
     return () => { document.body.style.overflow = '' }
   }, [mobileOpen])
-
-  const handleSignIn = () => showToast('Sign in coming soon.')
-  const handleActivate = () => showToast('Agent activation launching soon.')
 
   return (
     <>
@@ -154,8 +149,8 @@ export function Navbar() {
             style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}
             className="hidden md:flex"
           >
-            <button
-              onClick={handleSignIn}
+            <a
+              href="https://app.vantro.ai/login"
               style={{
                 background: 'none',
                 border: 'none',
@@ -166,18 +161,19 @@ export function Navbar() {
                 padding: '0.5rem 0.75rem',
                 borderRadius: '0.5rem',
                 transition: 'color 0.2s ease',
+                textDecoration: 'none',
               }}
               onMouseEnter={(e) =>
-                ((e.currentTarget as HTMLButtonElement).style.color = 'oklch(0.97 0 0)')
+                ((e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.97 0 0)')
               }
               onMouseLeave={(e) =>
-                ((e.currentTarget as HTMLButtonElement).style.color = 'oklch(0.70 0 0)')
+                ((e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.70 0 0)')
               }
             >
               Sign in
-            </button>
-            <button
-              onClick={handleActivate}
+            </a>
+            <a
+              href="/pricing"
               style={{
                 background: 'linear-gradient(180deg, #ffffff 0%, #d8d8d8 100%)',
                 color: 'oklch(0.14 0 0)',
@@ -190,18 +186,20 @@ export function Navbar() {
                 borderRadius: '9999px',
                 boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.60), 0 2px 8px rgba(0,0,0,0.35)',
                 transition: 'opacity 0.2s ease, transform 0.15s ease',
+                textDecoration: 'none',
+                display: 'inline-block',
               }}
               onMouseEnter={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.opacity = '0.88'
-                ;(e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.02)'
+                ;(e.currentTarget as HTMLAnchorElement).style.opacity = '0.88'
+                ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1.02)'
               }}
               onMouseLeave={(e) => {
-                ;(e.currentTarget as HTMLButtonElement).style.opacity = '1'
-                ;(e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'
+                ;(e.currentTarget as HTMLAnchorElement).style.opacity = '1'
+                ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1)'
               }}
             >
               Activate agents
-            </button>
+            </a>
           </div>
 
           {/* Mobile hamburger */}
@@ -293,8 +291,9 @@ export function Navbar() {
               marginTop: '1.25rem',
             }}
           >
-            <button
-              onClick={() => { setMobileOpen(false); handleSignIn() }}
+            <a
+              href="https://app.vantro.ai/login"
+              onClick={() => setMobileOpen(false)}
               style={{
                 background: 'none',
                 border: '1px solid oklch(0.97 0 0 / 0.15)',
@@ -305,12 +304,15 @@ export function Navbar() {
                 padding: '0.75rem',
                 borderRadius: '0.75rem',
                 textAlign: 'center',
+                textDecoration: 'none',
+                display: 'block',
               }}
             >
               Sign in
-            </button>
-            <button
-              onClick={() => { setMobileOpen(false); handleActivate() }}
+            </a>
+            <a
+              href="/pricing"
+              onClick={() => setMobileOpen(false)}
               style={{
                 background: 'oklch(0.97 0 0)',
                 color: 'oklch(0.14 0 0)',
@@ -322,10 +324,12 @@ export function Navbar() {
                 padding: '0.75rem',
                 borderRadius: '9999px',
                 textAlign: 'center',
+                textDecoration: 'none',
+                display: 'block',
               }}
             >
               Activate agents
-            </button>
+            </a>
           </div>
         </div>
       </div>
