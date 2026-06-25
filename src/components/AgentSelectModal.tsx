@@ -41,9 +41,7 @@ interface AgentSelectModalProps {
 
 export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
   const allIncluded = plan.maxAgents >= ALL_AGENTS.length;
-  const [selected, setSelected] = useState<string[]>(
-    allIncluded ? ALL_AGENTS.map((a) => a.name) : []
-  );
+  const [selected, setSelected] = useState<string[]>([]);
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
