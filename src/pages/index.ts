@@ -1,3 +1,6 @@
 export { DraftPage } from './DraftPage'
 export { PrivacyPage } from './PrivacyPage'
 export { TermsPage } from './TermsPage'
+export { AboutPage } from './AboutPage'
+export { BlogPage } from './BlogPage'
+export { ContactPage } from './ContactPage'

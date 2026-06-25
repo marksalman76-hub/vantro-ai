@@ -14,13 +14,9 @@ const COLUMNS = [
   {
     heading: 'Company',
     links: [
-      // TODO: create /about page before linking here
-      { label: 'About', href: 'mailto:hello@vantro.ai' },
-      // TODO: create /careers page before linking here
-      { label: 'Careers', href: 'mailto:hello@vantro.ai' },
-      // TODO: create /blog page before linking here
-      { label: 'Blog', href: 'mailto:hello@vantro.ai' },
-      { label: 'Contact', href: 'mailto:hello@vantro.ai' },
+      { label: 'About', href: '/about' },
+      { label: 'Blog', href: '/blog' },
+      { label: 'Contact', href: '/contact' },
     ],
   },
   {

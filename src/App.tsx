@@ -1,5 +1,5 @@
 import { useRoute } from 'wouter'
-import { DraftPage, PrivacyPage, TermsPage } from './pages'
+import { DraftPage, PrivacyPage, TermsPage, AboutPage, BlogPage, ContactPage } from './pages'
 import { ToastProvider } from './context/ToastContext'
 import { ScrollProgress } from './components/ScrollProgress'
 import { Navbar } from './components/Navbar'
@@ -21,8 +21,14 @@ export default function App() {
   const [isPrivacy] = useRoute('/privacy')
   const [isTerms] = useRoute('/terms')
   if (isDraft) return <DraftPage />
+  const [isAbout] = useRoute('/about')
+  const [isBlog] = useRoute('/blog')
+  const [isContact] = useRoute('/contact')
   if (isPrivacy) return <PrivacyPage />
   if (isTerms) return <TermsPage />
+  if (isAbout) return <AboutPage />
+  if (isBlog) return <BlogPage />
+  if (isContact) return <ContactPage />
   return (
     <ToastProvider>
       <div className="bg-canvas text-snow min-h-[100dvh]" style={{ fontFamily: "'Inter', sans-serif" }}>
