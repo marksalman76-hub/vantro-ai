@@ -11,9 +11,9 @@ import { NextRequest, NextResponse } from 'next/server'
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY || ''
 
 const PLAN_PRICE_IDS: Record<string, string> = {
-  starter:  process.env.STRIPE_PRICE_STARTER  || '',
-  growth:   process.env.STRIPE_PRICE_GROWTH   || '',
-  business: process.env.STRIPE_PRICE_BUSINESS || '',
+  starter:  process.env.STRIPE_PRICE_STARTER_MONTHLY  || '',
+  growth:   process.env.STRIPE_PRICE_GROWTH_MONTHLY   || '',
+  business: process.env.STRIPE_PRICE_BUSINESS_MONTHLY || '',
 }
 
 const SUCCESS_URL = 'https://app.vantro.ai/onboarding?session_id={CHECKOUT_SESSION_ID}'
