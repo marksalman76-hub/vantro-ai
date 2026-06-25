@@ -181,7 +181,7 @@ export function Hero() {
 
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
             <a
-              href="/?autoplan=business#pricing"
+              href="/#pricing"
               style={{
                 background: 'linear-gradient(180deg, #ffffff 0%, #d8d8d8 100%)',
                 color: 'oklch(0.14 0 0)',

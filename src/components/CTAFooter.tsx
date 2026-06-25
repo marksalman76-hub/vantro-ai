@@ -100,7 +100,7 @@ export function CTAFooter() {
 
         <div className="flex gap-4 justify-center flex-wrap">
           <a
-            href="/?autoplan=business#pricing"
+            href="/#pricing"
             className="rounded-full px-8 py-4 font-semibold text-lg cursor-pointer"
             style={{
               background: 'linear-gradient(180deg, #ffffff 0%, #d8d8d8 100%)',

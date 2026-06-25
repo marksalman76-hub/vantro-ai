@@ -57,7 +57,6 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
   }, [onClose]);
 
   function select(name: string) {
-    if (allIncluded) return;
     setSelected((prev) => {
       if (prev.includes(name)) return prev.filter((n) => n !== name);
       if (prev.length >= plan.maxAgents) return prev;
@@ -70,7 +69,7 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
     window.location.href = url;
   }
 
-  const ready = allIncluded || selected.length === plan.maxAgents;
+  const ready = selected.length > 0;
   const selectedSet = new Set(selected);
   const available = ALL_AGENTS.filter((a) => !selectedSet.has(a.name));
   const selectedAgents = selected.map((n) => ALL_AGENTS.find((a) => a.name === n)!).filter(Boolean);
@@ -129,12 +128,10 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
               color: 'oklch(0.97 0 0)',
               marginBottom: 3,
             }}>
-              {allIncluded ? 'Your full agent team' : `Pick your ${plan.maxAgents} agents`}
+              {allIncluded ? `Pick from all ${plan.maxAgents} agents` : `Pick your ${plan.maxAgents} agents`}
             </h2>
             <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', lineHeight: 1.5 }}>
-              {allIncluded
-                ? 'All 22 specialists ship with Business. Review and proceed to checkout.'
-                : `Choose ${plan.maxAgents} from 22. Selected agents drop below — click again to remove.`}
+              {`Choose up to ${plan.maxAgents} from 22. Selected agents drop below — click again to remove.`}
             </p>
           </div>
           <button
@@ -165,7 +162,7 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
           overflowY: 'auto',
           padding: '16px 26px',
         }}>
-          {!allIncluded && available.length > 0 && (
+          {available.length > 0 && (
             <p style={{
               fontFamily: 'JetBrains Mono, monospace',
               fontSize: 10,
@@ -182,35 +179,30 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
             gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
             gap: 8,
           }}>
-            {(allIncluded ? ALL_AGENTS : available).map((agent) => {
-              const atLimit = !allIncluded && selected.length >= plan.maxAgents;
+            {available.map((agent) => {
+              const atLimit = selected.length >= plan.maxAgents;
               return (
                 <button
                   key={agent.name}
                   onClick={() => select(agent.name)}
                   disabled={atLimit}
                   style={{
-                    background: allIncluded
-                      ? 'linear-gradient(145deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)'
-                      : 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                    border: allIncluded
-                      ? '1px solid rgba(255,255,255,0.22)'
-                      : '1px solid rgba(255,255,255,0.08)',
+                    background: 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                    border: '1px solid rgba(255,255,255,0.08)',
                     borderRadius: '0.85rem',
                     padding: 0,
-                    cursor: allIncluded ? 'default' : atLimit ? 'not-allowed' : 'pointer',
+                    cursor: atLimit ? 'not-allowed' : 'pointer',
                     opacity: atLimit ? 0.28 : 1,
                     transition: 'border-color 0.15s, opacity 0.15s',
                     textAlign: 'left',
                     overflow: 'hidden',
                   }}
                   onMouseEnter={(e) => {
-                    if (!atLimit && !allIncluded)
+                    if (!atLimit)
                       (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.28)';
                   }}
                   onMouseLeave={(e) => {
-                    if (!allIncluded)
-                      (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.08)';
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.08)';
                   }}
                 >
                   <img
@@ -222,7 +214,7 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
                       aspectRatio: '3/4',
                       objectFit: 'cover',
                       display: 'block',
-                      filter: allIncluded ? 'brightness(0.90)' : 'brightness(0.60)',
+                      filter: 'brightness(0.60)',
                     }}
                   />
                   <div style={{ padding: '7px 9px 9px' }}>
@@ -230,7 +222,7 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
                       fontFamily: 'Space Grotesk, sans-serif',
                       fontWeight: 600,
                       fontSize: 11,
-                      color: allIncluded ? 'oklch(0.85 0 0)' : 'oklch(0.55 0 0)',
+                      color: 'oklch(0.55 0 0)',
                       marginBottom: 2,
                     }}>
                       {agent.name}
@@ -252,7 +244,7 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
         </div>
 
         {/* ── Selected strip (drops in when agents picked) ── */}
-        {!allIncluded && selectedAgents.length > 0 && (
+        {selectedAgents.length > 0 && (
           <div style={{
             borderTop: '1px solid rgba(255,255,255,0.08)',
             padding: '14px 26px 12px',
@@ -336,11 +328,11 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
           flexShrink: 0,
         }}>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)' }}>
-            {allIncluded
-              ? `All ${ALL_AGENTS.length} agents included`
-              : ready
+            {selected.length === 0
+              ? `Select up to ${plan.maxAgents} agents`
+              : selected.length >= plan.maxAgents
               ? 'Team locked in. Ready to deploy.'
-              : `${plan.maxAgents - selected.length} more to go`}
+              : `${selected.length} selected — add ${plan.maxAgents - selected.length} more or proceed`}
           </p>
           <button
             onClick={handleCheckout}
