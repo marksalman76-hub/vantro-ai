@@ -27,7 +27,7 @@ const FAQS = [
   },
   {
     q: 'What happens if I outgrow my plan?',
-    a: 'Plans scale with you. Upgrade anytime for more agents and actions, or move to Enterprise for unlimited usage and dedicated support.',
+    a: 'Plans scale with you. Upgrade anytime for more agents and actions, or move to Enterprise for unlimited potential and dedicated support.',
   },
 ];
 
