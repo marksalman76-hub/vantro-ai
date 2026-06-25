@@ -18,13 +18,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     port: Number(process.env.SMTP_PORT ?? 587),
     secure: process.env.SMTP_SECURE === 'true',
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: process.env.SMTP_USERNAME,
+      pass: process.env.SMTP_PASSWORD,
     },
   });
 
   await transporter.sendMail({
-    from: `"Vantro Sales" <${process.env.SMTP_USER}>`,
+    from: `"Vantro Sales" <${process.env.SMTP_FROM_EMAIL ?? process.env.SMTP_USERNAME}>`,
     to: 'hello@vantro.ai',
     replyTo: email,
     subject: `Enterprise inquiry — ${company}`,

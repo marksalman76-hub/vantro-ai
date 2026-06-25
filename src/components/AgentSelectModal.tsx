@@ -62,9 +62,18 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
     });
   }
 
-  function handleCheckout() {
-    const url = `https://app.vantro.ai/register?plan=${plan.name.toLowerCase()}&agents=${encodeURIComponent(selected.join(','))}`;
-    window.location.href = url;
+  async function handleCheckout() {
+    try {
+      const res = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: plan.name, agents: selected }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch {
+      window.location.href = `https://app.vantro.ai/register?plan=${plan.name.toLowerCase()}&agents=${encodeURIComponent(selected.join(','))}`;
+    }
   }
 
   const ready = selected.length > 0;
