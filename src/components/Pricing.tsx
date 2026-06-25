@@ -11,6 +11,7 @@ const TIERS = [
     tagline: 'For solo builders testing the waters.',
     features: ['3 active agents', '1,000 actions / mo', 'Core integrations', 'Community support'],
     cta: 'Start free',
+    href: 'https://app.vantro.ai/register?plan=starter',
     featured: false,
   },
   {
@@ -19,6 +20,7 @@ const TIERS = [
     tagline: 'For small teams finding their pace.',
     features: ['10 active agents', '15,000 actions / mo', '100+ integrations', 'Email support'],
     cta: 'Start Growth',
+    href: 'https://app.vantro.ai/register?plan=growth',
     featured: false,
   },
   {
@@ -33,6 +35,7 @@ const TIERS = [
       'Priority support',
     ],
     cta: 'Activate your agents',
+    href: 'https://app.vantro.ai/register?plan=business',
     featured: true,
   },
   {
@@ -47,6 +50,7 @@ const TIERS = [
       'SLA & solutions team',
     ],
     cta: 'Talk to sales',
+    href: 'mailto:hello@vantro.ai',
     featured: false,
   },
 ];
@@ -144,7 +148,7 @@ function TierCard({ tier, index }: TierCardProps) {
       </ul>
 
       <a
-        href={tier.cta === 'Talk to sales' ? 'mailto:hello@vantro.ai' : '/pricing'}
+        href={tier.href}
         className="w-full py-3 rounded-full font-semibold transition-all duration-200 cursor-pointer block text-center"
         style={
           tier.featured
