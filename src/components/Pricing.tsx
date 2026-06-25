@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { AgentSelectModal, type PlanConfig } from './AgentSelectModal';
+import { SalesModal } from './SalesModal';
 
 const TIERS = [
   {
@@ -60,9 +61,10 @@ interface TierCardProps {
   tier: typeof TIERS[0];
   index: number;
   onSelect: (plan: PlanConfig) => void;
+  onSales: () => void;
 }
 
-function TierCard({ tier, index, onSelect }: TierCardProps) {
+function TierCard({ tier, index, onSelect, onSales }: TierCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const isEnterprise = tier.name === 'Enterprise';
 
@@ -76,7 +78,7 @@ function TierCard({ tier, index, onSelect }: TierCardProps) {
 
   function handleCTA(e: React.MouseEvent) {
     if (isEnterprise) {
-      window.location.href = 'mailto:hello@vantro.ai';
+      onSales();
       return;
     }
     e.preventDefault();
@@ -199,6 +201,7 @@ function TierCard({ tier, index, onSelect }: TierCardProps) {
 
 export function Pricing() {
   const [activePlan, setActivePlan] = useState<PlanConfig | null>(null);
+  const [salesOpen, setSalesOpen] = useState(false);
 
   return (
     <>
@@ -218,7 +221,7 @@ export function Pricing() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto px-6">
           {TIERS.map((tier, i) => (
-            <TierCard key={tier.name} tier={tier} index={i} onSelect={setActivePlan} />
+            <TierCard key={tier.name} tier={tier} index={i} onSelect={setActivePlan} onSales={() => setSalesOpen(true)} />
           ))}
         </div>
       </section>
@@ -226,6 +229,7 @@ export function Pricing() {
       {activePlan && (
         <AgentSelectModal plan={activePlan} onClose={() => setActivePlan(null)} />
       )}
+      {salesOpen && <SalesModal onClose={() => setSalesOpen(false)} />}
     </>
   );
 }

@@ -10,9 +10,11 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.106.0",
+    "@types/nodemailer": "^8.0.1",
     "@vercel/node": "^5.8.21",
     "framer-motion": "^11.11.0",
     "lucide-react": "^0.468.0",
+    "nodemailer": "^9.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "wouter": "^3.3.5"
