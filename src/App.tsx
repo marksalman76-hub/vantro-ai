@@ -7,7 +7,6 @@ import { ScrollProgress } from './components/ScrollProgress'
 import { Navbar } from './components/Navbar'
 import { Hero } from './components/Hero'
 import { LogoStrip } from './components/LogoStrip'
-import { Features } from './components/Features'
 import { HowItWorks } from './components/HowItWorks'
 import { AgentRoster } from './components/AgentRoster'
 import { WhyVantro } from './components/WhyVantro'
@@ -43,7 +42,6 @@ function PageContent() {
         <main>
           <Hero />
           <LogoStrip />
-          <Features />
           <HowItWorks />
           <AgentRoster />
           <WhyVantro />
