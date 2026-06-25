@@ -122,25 +122,6 @@ export function CTAFooter() {
           >
             Activate your agents
           </a>
-          <a
-            href="mailto:hello@vantro.ai"
-            className="rounded-full px-8 py-4 font-semibold text-lg transition-all duration-200 cursor-pointer"
-            style={{
-              border: '1px solid rgba(255,255,255,0.20)',
-              color: 'oklch(0.97 0 0)',
-              background: 'transparent',
-              textDecoration: 'none',
-              display: 'inline-block',
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.40)';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.20)';
-            }}
-          >
-            Book a demo
-          </a>
         </div>
       </motion.div>
     </section>
