@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.106.0",
+    "@vercel/node": "^5.8.21",
     "framer-motion": "^11.11.0",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
@@ -16,7 +18,9 @@
     "wouter": "^3.3.5"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["esbuild"]
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
