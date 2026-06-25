@@ -7,4 +7,13 @@ export default defineConfig({
     tailwindcss(),
     react(),
   ],
+  server: {
+    proxy: {
+      '/api/chat': {
+        target: 'http://localhost:8001',
+        rewrite: path => path.replace('/api/chat', '/chat'),
+        changeOrigin: true,
+      },
+    },
+  },
 })

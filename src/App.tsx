@@ -1,5 +1,6 @@
 import { useRoute } from 'wouter'
-import { DraftPage, PrivacyPage, TermsPage, AboutPage, BlogPage, ContactPage } from './pages'
+import { DraftPage, PrivacyPage, TermsPage, AboutPage, BlogPage, ContactPage, CookiesPage } from './pages'
+import { ChatWidget } from './components/ChatWidget'
 import { ToastProvider } from './context/ToastContext'
 import { ScrollProgress } from './components/ScrollProgress'
 import { Navbar } from './components/Navbar'
@@ -20,15 +21,19 @@ export default function App() {
   const [isDraft] = useRoute('/draft')
   const [isPrivacy] = useRoute('/privacy')
   const [isTerms] = useRoute('/terms')
-  if (isDraft) return <DraftPage />
   const [isAbout] = useRoute('/about')
   const [isBlog] = useRoute('/blog')
   const [isContact] = useRoute('/contact')
+  const [isCookies] = useRoute('/cookies')
+
+  if (isDraft) return <DraftPage />
   if (isPrivacy) return <PrivacyPage />
   if (isTerms) return <TermsPage />
   if (isAbout) return <AboutPage />
   if (isBlog) return <BlogPage />
   if (isContact) return <ContactPage />
+  if (isCookies) return <CookiesPage />
+
   return (
     <ToastProvider>
       <div className="bg-canvas text-snow min-h-[100dvh]" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -48,6 +53,7 @@ export default function App() {
         </main>
         <Footer />
         <Toast />
+        <ChatWidget />
       </div>
     </ToastProvider>
   )
