@@ -1,8 +1,9 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
+import { AgentSelectModal, type PlanConfig } from './AgentSelectModal';
 
 const TIERS = [
   {
@@ -11,7 +12,7 @@ const TIERS = [
     tagline: 'For solo builders testing the waters.',
     features: ['3 active agents', '1,000 actions / mo', 'Core integrations', 'Community support'],
     cta: 'Start free',
-    href: 'https://app.vantro.ai/register?plan=starter',
+    maxAgents: 3,
     featured: false,
   },
   {
@@ -20,7 +21,7 @@ const TIERS = [
     tagline: 'For small teams finding their pace.',
     features: ['10 active agents', '15,000 actions / mo', '100+ integrations', 'Email support'],
     cta: 'Start Growth',
-    href: 'https://app.vantro.ai/register?plan=growth',
+    maxAgents: 10,
     featured: false,
   },
   {
@@ -35,7 +36,7 @@ const TIERS = [
       'Priority support',
     ],
     cta: 'Activate your agents',
-    href: 'https://app.vantro.ai/register?plan=business',
+    maxAgents: 22,
     featured: true,
   },
   {
@@ -50,7 +51,7 @@ const TIERS = [
       'SLA & solutions team',
     ],
     cta: 'Talk to sales',
-    href: 'mailto:hello@vantro.ai',
+    maxAgents: 0,
     featured: false,
   },
 ];
@@ -58,10 +59,12 @@ const TIERS = [
 interface TierCardProps {
   tier: typeof TIERS[0];
   index: number;
+  onSelect: (plan: PlanConfig) => void;
 }
 
-function TierCard({ tier, index }: TierCardProps) {
+function TierCard({ tier, index, onSelect }: TierCardProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const isEnterprise = tier.name === 'Enterprise';
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const el = cardRef.current;
@@ -69,6 +72,15 @@ function TierCard({ tier, index }: TierCardProps) {
     const rect = el.getBoundingClientRect();
     el.style.setProperty('--mx', `${e.clientX - rect.left}px`);
     el.style.setProperty('--my', `${e.clientY - rect.top}px`);
+  }
+
+  function handleCTA(e: React.MouseEvent) {
+    if (isEnterprise) {
+      window.location.href = 'mailto:hello@vantro.ai';
+      return;
+    }
+    e.preventDefault();
+    onSelect({ name: tier.name, price: tier.price, maxAgents: tier.maxAgents });
   }
 
   return (
@@ -85,128 +97,135 @@ function TierCard({ tier, index }: TierCardProps) {
           Most popular
         </span>
       )}
-    <motion.div
-      ref={cardRef}
-      className="glass-card relative"
-      onMouseMove={handleMouseMove}
-      initial={{ opacity: 0, y: 28 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-60px' }}
-      transition={{ duration: 0.5, delay: index * 0.08 }}
-      style={{
-        borderRadius: '1.25rem',
-        padding: '1.5rem',
-        ...(tier.featured && {
-          border: '1px solid rgba(255,255,255,0.22)',
-          boxShadow: [
-            'inset 0 2px 0 rgba(255,255,255,0.30)',
-            'inset 0 -1px 0 rgba(255,255,255,0.05)',
-            '0 0 0 1px rgba(255,255,255,0.09)',
-            '0 32px 80px rgba(0,0,0,0.65)',
-            '0 0 60px rgba(255,255,255,0.05)',
-          ].join(', '),
-        }),
-      }}
-    >
-      <div className="spotlight" />
-      <div className="sheen" />
-
-      <p
-        className="text-xs uppercase tracking-widest mb-2"
-        style={{ fontFamily: 'JetBrains Mono, monospace', color: 'oklch(0.79 0 0)' }}
+      <motion.div
+        ref={cardRef}
+        className="glass-card relative"
+        onMouseMove={handleMouseMove}
+        initial={{ opacity: 0, y: 28 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: '-60px' }}
+        transition={{ duration: 0.5, delay: index * 0.08 }}
+        style={{
+          borderRadius: '1.25rem',
+          padding: '1.5rem',
+          ...(tier.featured && {
+            border: '1px solid rgba(255,255,255,0.22)',
+            boxShadow: [
+              'inset 0 2px 0 rgba(255,255,255,0.30)',
+              'inset 0 -1px 0 rgba(255,255,255,0.05)',
+              '0 0 0 1px rgba(255,255,255,0.09)',
+              '0 32px 80px rgba(0,0,0,0.65)',
+              '0 0 60px rgba(255,255,255,0.05)',
+            ].join(', '),
+          }),
+        }}
       >
-        {tier.name}
-      </p>
+        <div className="spotlight" />
+        <div className="sheen" />
 
-      <div className="flex items-baseline gap-1 mb-1">
-        <span
-          className="font-bold text-4xl"
-          style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
+        <p
+          className="text-xs uppercase tracking-widest mb-2"
+          style={{ fontFamily: 'JetBrains Mono, monospace', color: 'oklch(0.79 0 0)' }}
         >
-          {tier.price}
-        </span>
-        {tier.price !== 'Custom' && (
-          <span className="text-lg" style={{ color: 'oklch(0.70 0 0)' }}>
-            /mo
+          {tier.name}
+        </p>
+
+        <div className="flex items-baseline gap-1 mb-1">
+          <span
+            className="font-bold text-4xl"
+            style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
+          >
+            {tier.price}
           </span>
-        )}
-      </div>
-
-      <p className="text-sm mb-6" style={{ color: 'oklch(0.70 0 0)' }}>
-        {tier.tagline}
-      </p>
-
-      <ul className="flex flex-col gap-3 mb-8">
-        {tier.features.map((f) => (
-          <li key={f} className="flex items-center gap-2">
-            <Check size={14} style={{ color: 'rgba(200,200,200,0.70)', flexShrink: 0 }} />
-            <span className="text-sm" style={{ color: 'oklch(0.70 0 0)' }}>
-              {f}
+          {tier.price !== 'Custom' && (
+            <span className="text-lg" style={{ color: 'oklch(0.70 0 0)' }}>
+              /mo
             </span>
-          </li>
-        ))}
-      </ul>
+          )}
+        </div>
 
-      <a
-        href={tier.href}
-        className="w-full py-3 rounded-full font-semibold transition-all duration-200 cursor-pointer block text-center"
-        style={
-          tier.featured
-            ? {
-                backgroundColor: 'oklch(0.97 0 0)',
-                color: 'oklch(0.14 0 0)',
-                textDecoration: 'none',
-              }
-            : {
-                border: '1px solid rgba(255,255,255,0.15)',
-                color: 'oklch(0.97 0 0)',
-                background: 'transparent',
-                textDecoration: 'none',
-              }
-        }
-        onMouseEnter={(e) => {
-          if (tier.featured) {
-            (e.currentTarget as HTMLAnchorElement).style.opacity = '0.90';
-          } else {
-            (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.30)';
+        <p className="text-sm mb-6" style={{ color: 'oklch(0.70 0 0)' }}>
+          {tier.tagline}
+        </p>
+
+        <ul className="flex flex-col gap-3 mb-8">
+          {tier.features.map((f) => (
+            <li key={f} className="flex items-center gap-2">
+              <Check size={14} style={{ color: 'rgba(200,200,200,0.70)', flexShrink: 0 }} />
+              <span className="text-sm" style={{ color: 'oklch(0.70 0 0)' }}>
+                {f}
+              </span>
+            </li>
+          ))}
+        </ul>
+
+        <button
+          onClick={handleCTA}
+          className="w-full py-3 rounded-full font-semibold transition-all duration-200 cursor-pointer block text-center"
+          style={
+            tier.featured
+              ? {
+                  backgroundColor: 'oklch(0.97 0 0)',
+                  color: 'oklch(0.14 0 0)',
+                  border: 'none',
+                }
+              : {
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  color: 'oklch(0.97 0 0)',
+                  background: 'transparent',
+                }
           }
-        }}
-        onMouseLeave={(e) => {
-          if (tier.featured) {
-            (e.currentTarget as HTMLAnchorElement).style.opacity = '1';
-          } else {
-            (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(255,255,255,0.15)';
-          }
-        }}
-      >
-        {tier.cta}
-      </a>
-    </motion.div>
+          onMouseEnter={(e) => {
+            if (tier.featured) {
+              (e.currentTarget as HTMLButtonElement).style.opacity = '0.90';
+            } else {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.30)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (tier.featured) {
+              (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+            } else {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.15)';
+            }
+          }}
+        >
+          {tier.cta}
+        </button>
+      </motion.div>
     </div>
   );
 }
 
 export function Pricing() {
-  return (
-    <section id="pricing" className="py-32" style={{ backgroundColor: 'oklch(0.28 0 0)' }}>
-      <h2
-        className="text-center mb-4 font-bold text-4xl md:text-5xl"
-        style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
-      >
-        Scale your workforce, not your headcount.
-      </h2>
-      <p
-        className="text-center mb-16 max-w-xl mx-auto text-base"
-        style={{ color: 'oklch(0.70 0 0)' }}
-      >
-        Every plan includes the full agent platform. Pick the tier that fits your volume.
-      </p>
+  const [activePlan, setActivePlan] = useState<PlanConfig | null>(null);
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto px-6">
-        {TIERS.map((tier, i) => (
-          <TierCard key={tier.name} tier={tier} index={i} />
-        ))}
-      </div>
-    </section>
+  return (
+    <>
+      <section id="pricing" className="py-32" style={{ backgroundColor: 'oklch(0.28 0 0)' }}>
+        <h2
+          className="text-center mb-4 font-bold text-4xl md:text-5xl"
+          style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
+        >
+          Scale your workforce, not your headcount.
+        </h2>
+        <p
+          className="text-center mb-16 max-w-xl mx-auto text-base"
+          style={{ color: 'oklch(0.70 0 0)' }}
+        >
+          Every plan includes the full agent platform. Pick the tier that fits your volume.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto px-6">
+          {TIERS.map((tier, i) => (
+            <TierCard key={tier.name} tier={tier} index={i} onSelect={setActivePlan} />
+          ))}
+        </div>
+      </section>
+
+      {activePlan && (
+        <AgentSelectModal plan={activePlan} onClose={() => setActivePlan(null)} />
+      )}
+    </>
   );
 }
