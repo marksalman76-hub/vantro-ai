@@ -24,8 +24,6 @@ const COLUMNS = [
     links: [
       { label: 'Privacy', href: '/privacy' },
       { label: 'Terms', href: '/terms' },
-      // TODO: create /dpa page before linking here
-      { label: 'DPA', href: 'mailto:hello@vantro.ai' },
     ],
   },
 ];
