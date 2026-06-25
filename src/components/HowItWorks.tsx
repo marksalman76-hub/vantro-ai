@@ -84,7 +84,7 @@ function StepCard({
                 fontSize: '0.7rem',
                 letterSpacing: '0.12em',
                 textTransform: 'uppercase',
-                color: 'oklch(0.79 0 0)',
+                color: '#E5E7EB',
                 marginBottom: '0.5rem',
                 position: 'relative',
                 zIndex: 1,
@@ -96,7 +96,7 @@ function StepCard({
               style={{
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontWeight: 600,
-                color: 'oklch(0.97 0 0)',
+                color: '#FFFFFF',
                 fontSize: '1rem',
                 marginBottom: '0.5rem',
                 lineHeight: 1.3,
@@ -109,7 +109,7 @@ function StepCard({
             <p
               style={{
                 fontFamily: "'Inter', sans-serif",
-                color: 'oklch(0.70 0 0)',
+                color: '#9CA3AF',
                 fontSize: '0.875rem',
                 lineHeight: 1.6,
                 margin: 0,
@@ -133,14 +133,14 @@ function StepCard({
           width: '2.5rem',
           height: '2.5rem',
           borderRadius: '50%',
-          background: 'oklch(0.11 0.04 258)',
-          border: '1px solid oklch(0.62 0.22 248 / 0.32)',
+          background: '#232936',
+          border: '1px solid rgba(0,217,255,0.28)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontFamily: "'JetBrains Mono', monospace",
           fontSize: '0.75rem',
-          color: 'oklch(0.79 0 0)',
+          color: '#E5E7EB',
           flexShrink: 0,
           position: 'relative',
           zIndex: 2,
@@ -180,7 +180,7 @@ function StepCard({
                 fontSize: '0.7rem',
                 letterSpacing: '0.12em',
                 textTransform: 'uppercase',
-                color: 'oklch(0.79 0 0)',
+                color: '#E5E7EB',
                 marginBottom: '0.5rem',
                 position: 'relative',
                 zIndex: 1,
@@ -192,7 +192,7 @@ function StepCard({
               style={{
                 fontFamily: "'Space Grotesk', sans-serif",
                 fontWeight: 600,
-                color: 'oklch(0.97 0 0)',
+                color: '#FFFFFF',
                 fontSize: '1rem',
                 marginBottom: '0.5rem',
                 lineHeight: 1.3,
@@ -205,7 +205,7 @@ function StepCard({
             <p
               style={{
                 fontFamily: "'Inter', sans-serif",
-                color: 'oklch(0.70 0 0)',
+                color: '#9CA3AF',
                 fontSize: '0.875rem',
                 lineHeight: 1.6,
                 margin: 0,
@@ -229,7 +229,7 @@ export function HowItWorks() {
       style={{
         paddingTop: '8rem',
         paddingBottom: '8rem',
-        background: 'oklch(0.07 0.04 260)',
+        background: '#1A1F2E',
       }}
     >
       <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '0 1.5rem' }}>
@@ -237,7 +237,7 @@ export function HowItWorks() {
           style={{
             fontFamily: "'Space Grotesk', sans-serif",
             fontWeight: 700,
-            color: 'oklch(0.97 0 0)',
+            color: '#FFFFFF',
             letterSpacing: '-0.025em',
             textAlign: 'center',
             marginBottom: '1rem',
@@ -251,7 +251,7 @@ export function HowItWorks() {
         <p
           style={{
             fontFamily: "'Inter', sans-serif",
-            color: 'oklch(0.70 0 0)',
+            color: '#9CA3AF',
             fontSize: '1.125rem',
             textAlign: 'center',
             marginBottom: '5rem',
@@ -281,7 +281,7 @@ export function HowItWorks() {
               top: 0,
               bottom: 0,
               width: '1px',
-              background: 'oklch(0.62 0.22 248 / 0.18)',
+              background: 'rgba(0,217,255,0.15)',
               transform: 'translateX(-50%)',
               pointerEvents: 'none',
             }}

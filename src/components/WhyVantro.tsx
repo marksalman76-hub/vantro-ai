@@ -58,7 +58,7 @@ function StatCard({ number, label, description, index }: StatCardProps) {
       <div className="sheen" />
       <p
         className="text-xs uppercase tracking-widest mb-2"
-        style={{ fontFamily: 'JetBrains Mono, monospace', color: 'oklch(0.70 0 0)' }}
+        style={{ fontFamily: 'JetBrains Mono, monospace', color: '#9CA3AF' }}
       >
         {label}
       </p>
@@ -74,7 +74,7 @@ function StatCard({ number, label, description, index }: StatCardProps) {
       >
         {number}
       </p>
-      <p className="text-sm leading-relaxed mt-2" style={{ color: 'oklch(0.70 0 0)' }}>
+      <p className="text-sm leading-relaxed mt-2" style={{ color: '#9CA3AF' }}>
         {description}
       </p>
     </motion.div>
@@ -84,7 +84,7 @@ function StatCard({ number, label, description, index }: StatCardProps) {
 export function WhyVantro() {
   const prefersReduced = useReducedMotion()
   return (
-    <section className="py-32" style={{ backgroundColor: 'oklch(0.07 0.04 260)' }}>
+    <section className="py-32" style={{ backgroundColor: '#0F1419' }}>
       <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
         {/* Left: orb */}
         <motion.div
@@ -165,7 +165,7 @@ export function WhyVantro() {
         <div>
           <motion.h2
             className="font-bold text-4xl mb-8"
-            style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
+            style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#FFFFFF' }}
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}

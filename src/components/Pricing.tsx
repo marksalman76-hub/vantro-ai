@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { Check, Zap } from 'lucide-react';
 import { AgentSelectModal, type PlanConfig } from './AgentSelectModal';
 import { SalesModal } from './SalesModal';
 
@@ -29,13 +29,7 @@ const TIERS = [
     name: 'Business',
     price: '$499',
     tagline: 'For teams running real operations.',
-    features: [
-      '11 active agents',
-      '50,000 actions / mo',
-      '200+ integrations',
-      'Approval workflows',
-      'Priority support',
-    ],
+    features: ['11 active agents', '50,000 actions / mo', '200+ integrations', 'Approval workflows', 'Priority support'],
     cta: 'Activate your agents',
     maxAgents: 11,
     featured: true,
@@ -44,13 +38,7 @@ const TIERS = [
     name: 'Enterprise',
     price: 'Custom',
     tagline: 'For organizations at scale.',
-    features: [
-      'Unlimited agents',
-      'Unlimited actions',
-      'SSO & SCIM',
-      'Custom agent builds',
-      'SLA & solutions team',
-    ],
+    features: ['Unlimited agents', 'Unlimited actions', 'SSO & SCIM', 'Custom agent builds', 'SLA & solutions team'],
     cta: 'Talk to sales',
     maxAgents: 0,
     featured: false,
@@ -77,124 +65,130 @@ function TierCard({ tier, index, onSelect, onSales }: TierCardProps) {
   }
 
   function handleCTA(e: React.MouseEvent) {
-    if (isEnterprise) {
-      onSales();
-      return;
-    }
+    if (isEnterprise) { onSales(); return; }
     e.preventDefault();
     onSelect({ name: tier.name, price: tier.price, maxAgents: tier.maxAgents });
   }
 
   return (
-    <div className="relative" style={tier.featured ? { paddingTop: '1rem' } : {}}>
+    <div style={{ position: 'relative', paddingTop: tier.featured ? '1rem' : 0 }}>
       {tier.featured && (
         <span
-          className="absolute top-0 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full z-10"
           style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            backgroundColor: 'oklch(0.97 0 0)',
-            color: 'oklch(0.14 0 0)',
+            position: 'absolute',
+            top: 0,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: '#FF6B35',
+            color: '#FFFFFF',
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '0.65rem',
+            fontWeight: 600,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            padding: '0.25rem 0.75rem',
+            borderRadius: '2rem',
+            zIndex: 10,
+            whiteSpace: 'nowrap',
           }}
         >
           Most popular
         </span>
       )}
+
       <motion.div
         ref={cardRef}
-        className="glass-card relative"
         onMouseMove={handleMouseMove}
         initial={{ opacity: 0, y: 28 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-60px' }}
         transition={{ duration: 0.5, delay: index * 0.08 }}
         style={{
-          borderRadius: '1.25rem',
+          borderRadius: '0.875rem',
           padding: '1.5rem',
-          ...(tier.featured && {
-            border: '1px solid rgba(80,120,230,0.45)',
-            boxShadow: [
-              'inset 0 2px 0 rgba(160,180,255,0.20)',
-              'inset 0 -1px 0 rgba(80,100,220,0.08)',
-              '0 0 0 1px rgba(80,100,220,0.18)',
-              '0 32px 80px rgba(0,0,30,0.65)',
-              '0 0 60px rgba(80,100,220,0.18)',
-            ].join(', '),
-          }),
+          backgroundColor: '#1A1F2E',
+          border: tier.featured
+            ? '1px solid rgba(255,107,53,0.50)'
+            : '1px solid #2D3748',
+          boxShadow: tier.featured
+            ? '0 0 0 1px rgba(255,107,53,0.20), 0 32px 80px rgba(0,0,0,0.55), 0 0 60px rgba(255,107,53,0.12)'
+            : '0 4px 24px rgba(0,0,0,0.35)',
+          position: 'relative',
+          overflow: 'hidden',
         }}
       >
+        {/* Spotlight */}
         <div className="spotlight" />
         <div className="sheen" />
 
-        <p
-          className="text-xs uppercase tracking-widest mb-2"
-          style={{ fontFamily: 'JetBrains Mono, monospace', color: 'oklch(0.79 0 0)' }}
-        >
+        {/* Tier name */}
+        <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: tier.featured ? '#FF6B35' : '#9CA3AF', marginBottom: '0.5rem', position: 'relative', zIndex: 1 }}>
           {tier.name}
         </p>
 
-        <div className="flex items-baseline gap-1 mb-1">
-          <span
-            className="font-bold text-4xl"
-            style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
-          >
+        {/* Price */}
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', marginBottom: '0.375rem', position: 'relative', zIndex: 1 }}>
+          <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: '2.25rem', color: '#FFFFFF' }}>
             {tier.price}
           </span>
           {tier.price !== 'Custom' && (
-            <span className="text-lg" style={{ color: 'oklch(0.70 0 0)' }}>
-              /mo
-            </span>
+            <span style={{ fontSize: '0.95rem', color: '#9CA3AF' }}>/mo</span>
           )}
         </div>
 
-        <p className="text-sm mb-6" style={{ color: 'oklch(0.70 0 0)' }}>
+        <p style={{ fontSize: '0.85rem', color: '#9CA3AF', marginBottom: '1.5rem', position: 'relative', zIndex: 1 }}>
           {tier.tagline}
         </p>
 
-        <ul className="flex flex-col gap-3 mb-8">
+        {/* Features */}
+        <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1.75rem', listStyle: 'none', padding: 0, position: 'relative', zIndex: 1 }}>
           {tier.features.map((f) => (
-            <li key={f} className="flex items-center gap-2">
-              <Check size={14} style={{ color: 'rgba(200,200,200,0.70)', flexShrink: 0 }} />
-              <span className="text-sm" style={{ color: 'oklch(0.70 0 0)' }}>
-                {f}
-              </span>
+            <li key={f} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Check size={14} style={{ color: tier.featured ? '#FF6B35' : '#10B981', flexShrink: 0 }} />
+              <span style={{ fontSize: '0.875rem', color: '#E5E7EB' }}>{f}</span>
             </li>
           ))}
         </ul>
 
-        <button
-          onClick={handleCTA}
-          className="w-full py-3 rounded-full font-semibold transition-all duration-200 cursor-pointer block text-center"
-          style={
-            tier.featured
-              ? {
-                  background: 'linear-gradient(180deg, oklch(0.65 0.22 248) 0%, oklch(0.52 0.22 248) 100%)',
-                  color: 'oklch(0.97 0 0)',
-                  border: 'none',
-                  boxShadow: 'inset 0 1px 0 rgba(160,200,255,0.25), 0 4px 16px oklch(0.52 0.22 248 / 0.45)',
-                }
-              : {
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  color: 'oklch(0.97 0 0)',
-                  background: 'transparent',
-                }
-          }
-          onMouseEnter={(e) => {
-            if (tier.featured) {
-              (e.currentTarget as HTMLButtonElement).style.opacity = '0.90';
-            } else {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(80,120,230,0.55)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (tier.featured) {
-              (e.currentTarget as HTMLButtonElement).style.opacity = '1';
-            } else {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.15)';
-            }
-          }}
-        >
-          {tier.cta}
-        </button>
+        {/* CTA */}
+        {tier.featured ? (
+          <button
+            onClick={handleCTA}
+            className="btn-orange"
+            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.95rem', fontWeight: 700, justifyContent: 'center', cursor: 'pointer', position: 'relative', zIndex: 1 }}
+          >
+            <Zap size={16} />
+            {tier.cta}
+          </button>
+        ) : (
+          <button
+            onClick={handleCTA}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              borderRadius: '0.5rem',
+              fontSize: '0.95rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              backgroundColor: 'transparent',
+              border: '1px solid #2D3748',
+              color: '#E5E7EB',
+              transition: 'border-color 0.2s ease, color 0.2s ease',
+              position: 'relative',
+              zIndex: 1,
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(0,217,255,0.45)';
+              (e.currentTarget as HTMLButtonElement).style.color = '#FFFFFF';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = '#2D3748';
+              (e.currentTarget as HTMLButtonElement).style.color = '#E5E7EB';
+            }}
+          >
+            {tier.cta}
+          </button>
+        )}
       </motion.div>
     </div>
   );
@@ -206,30 +200,33 @@ export function Pricing() {
 
   return (
     <>
-      <section id="pricing" className="py-32" style={{ backgroundColor: 'oklch(0.07 0.04 260)' }}>
-        <h2
-          className="text-center mb-4 font-bold text-4xl md:text-5xl"
-          style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
-        >
-          Scale your workforce, not your headcount.
-        </h2>
-        <p
-          className="text-center mb-16 max-w-xl mx-auto text-base"
-          style={{ color: 'oklch(0.70 0 0)' }}
-        >
-          Every plan includes the full agent platform. Pick the tier that fits your volume.
-        </p>
+      <section id="pricing" style={{ backgroundColor: '#0F1419', paddingTop: '6rem', paddingBottom: '6rem' }}>
+        <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '0 1.5rem' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            style={{ textAlign: 'center', marginBottom: '3.5rem' }}
+          >
+            <h2 style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 800, fontSize: 'clamp(1.75rem, 4vw, 2.75rem)', letterSpacing: '-0.025em', color: '#FFFFFF', marginBottom: '0.875rem', lineHeight: 1.1 }}>
+              Scale your workforce,{' '}
+              <span style={{ color: '#FF6B35' }}>not your headcount.</span>
+            </h2>
+            <p style={{ color: '#9CA3AF', fontSize: '1.05rem', maxWidth: '32rem', margin: '0 auto', lineHeight: 1.6 }}>
+              Every plan includes the full agent platform. Pick the tier that fits your volume.
+            </p>
+          </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto px-6">
-          {TIERS.map((tier, i) => (
-            <TierCard key={tier.name} tier={tier} index={i} onSelect={setActivePlan} onSales={() => setSalesOpen(true)} />
-          ))}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 13rem), 1fr))', gap: '1rem', alignItems: 'start' }}>
+            {TIERS.map((tier, i) => (
+              <TierCard key={tier.name} tier={tier} index={i} onSelect={setActivePlan} onSales={() => setSalesOpen(true)} />
+            ))}
+          </div>
         </div>
       </section>
 
-      {activePlan && (
-        <AgentSelectModal plan={activePlan} onClose={() => setActivePlan(null)} />
-      )}
+      {activePlan && <AgentSelectModal plan={activePlan} onClose={() => setActivePlan(null)} />}
       {salesOpen && <SalesModal onClose={() => setSalesOpen(false)} />}
     </>
   );

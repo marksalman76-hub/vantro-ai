@@ -35,16 +35,16 @@ export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section id="faq" className="py-32" style={{ backgroundColor: 'oklch(0.09 0.04 260)' }}>
+    <section id="faq" className="py-32" style={{ backgroundColor: '#1A1F2E' }}>
       <h2
         className="text-center mb-4 font-bold text-4xl md:text-5xl"
-        style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
+        style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#FFFFFF' }}
       >
         Questions, answered.
       </h2>
       <p
         className="text-center mb-12 text-base"
-        style={{ color: 'oklch(0.70 0 0)' }}
+        style={{ color: '#9CA3AF' }}
       >
         Everything you need to know before deploying your first agent.
       </p>
@@ -65,7 +65,7 @@ export function FAQ() {
               >
                 <span
                   className="font-medium text-base"
-                  style={{ color: 'oklch(0.97 0 0)' }}
+                  style={{ color: '#FFFFFF' }}
                 >
                   {item.q}
                 </span>
@@ -74,7 +74,7 @@ export function FAQ() {
                   transition={{ duration: 0.2 }}
                   className="flex-shrink-0"
                 >
-                  <Plus size={18} style={{ color: 'oklch(0.70 0 0)' }} />
+                  <Plus size={18} style={{ color: '#9CA3AF' }} />
                 </motion.div>
               </button>
 
@@ -90,7 +90,7 @@ export function FAQ() {
                   >
                     <p
                       className="text-sm leading-relaxed pb-5"
-                      style={{ color: 'oklch(0.70 0 0)' }}
+                      style={{ color: '#9CA3AF' }}
                     >
                       {item.a}
                     </p>

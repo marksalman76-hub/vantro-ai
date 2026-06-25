@@ -1,126 +1,116 @@
 'use client';
 
 import { motion, useReducedMotion } from 'framer-motion';
+import { Zap } from 'lucide-react';
 
 export function CTAFooter() {
   const prefersReduced = useReducedMotion();
 
   return (
     <section
-      className="relative py-40 overflow-hidden"
-      style={{ backgroundColor: 'oklch(0.07 0.04 260)' }}
+      style={{
+        backgroundColor: '#0F1419',
+        paddingTop: '7rem',
+        paddingBottom: '7rem',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
     >
-      {/* Radial glow behind orb */}
+      {/* Orange radial glow */}
       <div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none"
         aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'none',
+        }}
       >
-        <div
-          className="w-[600px] h-[600px] rounded-full blur-3xl"
-          style={{ background: 'radial-gradient(circle, rgba(80,100,220,0.14) 0%, transparent 70%)' }}
-        />
-      </div>
-
-      {/* Orb image */}
-      <div
-        className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        aria-hidden="true"
-      >
-        <motion.div
-          initial={prefersReduced ? false : { scale: 0.86, opacity: 0 }}
-          whileInView={prefersReduced ? {} : { scale: 1, opacity: 1 }}
-          viewport={{ once: true, amount: 0.3 }}
-          transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
-          style={{ position: 'relative', width: '560px' }}
-        >
-          {!prefersReduced && (
-            <motion.div
-              animate={{
-                background: [
-                  'radial-gradient(circle 150px at 30% 28%, rgba(255,255,255,0.65) 0%, transparent 65%)',
-                  'radial-gradient(circle 150px at 72% 22%, rgba(255,255,255,0.65) 0%, transparent 65%)',
-                  'radial-gradient(circle 150px at 76% 74%, rgba(255,255,255,0.65) 0%, transparent 65%)',
-                  'radial-gradient(circle 150px at 28% 78%, rgba(255,255,255,0.65) 0%, transparent 65%)',
-                  'radial-gradient(circle 150px at 30% 28%, rgba(255,255,255,0.65) 0%, transparent 65%)',
-                ],
-              }}
-              transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
-              style={{
-                position: 'absolute', inset: 0,
-                mixBlendMode: 'screen',
-                pointerEvents: 'none',
-                zIndex: 2,
-                WebkitMaskImage: 'radial-gradient(circle, black 16%, rgba(0,0,0,0.40) 42%, transparent 76%)',
-                maskImage: 'radial-gradient(circle, black 16%, rgba(0,0,0,0.40) 42%, transparent 76%)',
-              }}
-            />
-          )}
-          <motion.img
-            src="https://files.manuscdn.com/user_upload_by_module/session_file/310519663790183318/saLNUqZiiYVuufKN.png"
-            alt=""
-            className="w-full"
-            animate={prefersReduced ? {} : {
-              y: [0, -22, -6, -30, -8, 0],
-              x: [0, 14, -10, 8, -3, 0],
-              scale: [1, 1.06, 0.97, 1.08, 0.99, 1],
-            }}
-            transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut' }}
+        {!prefersReduced && (
+          <motion.div
+            animate={{ scale: [1, 1.12, 1], opacity: [0.5, 0.8, 0.5] }}
+            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
             style={{
-              mixBlendMode: 'screen',
-              opacity: 0.55,
-              WebkitMaskImage: 'radial-gradient(circle, black 16%, rgba(0,0,0,0.40) 42%, transparent 76%)',
-              maskImage: 'radial-gradient(circle, black 16%, rgba(0,0,0,0.40) 42%, transparent 76%)',
-              position: 'relative',
-              zIndex: 1,
+              width: 600,
+              height: 300,
+              borderRadius: '50%',
+              background: 'radial-gradient(ellipse, rgba(255,107,53,0.18) 0%, transparent 70%)',
             }}
           />
-        </motion.div>
+        )}
       </div>
 
       {/* Content */}
       <motion.div
-        className="relative z-10 text-center max-w-3xl mx-auto px-6"
+        className="relative z-10"
+        style={{ textAlign: 'center', maxWidth: '44rem', margin: '0 auto', padding: '0 1.5rem', position: 'relative', zIndex: 1 }}
         initial={{ opacity: 0, y: 32 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-80px' }}
-        transition={{ duration: 0.7 }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
       >
         <h2
-          className="font-bold text-4xl md:text-6xl tracking-tight mb-6"
-          style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
+          style={{
+            fontFamily: "'Space Grotesk', sans-serif",
+            fontWeight: 800,
+            fontSize: 'clamp(2rem, 5vw, 3.25rem)',
+            letterSpacing: '-0.03em',
+            lineHeight: 1.08,
+            color: '#FFFFFF',
+            marginBottom: '1.25rem',
+          }}
         >
-          Your AI workforce is one click away.
+          Deploy Your{' '}
+          <span style={{ color: '#FF6B35' }}>Autonomous Workforce</span>{' '}
+          Today.
         </h2>
-        <p
-          className="text-lg max-w-lg mx-auto mb-10"
-          style={{ color: 'oklch(0.70 0 0)' }}
-        >
-          Activate your first agents in minutes. No credit card. No integrations team. Just momentum.
+
+        <p style={{ color: '#9CA3AF', fontSize: '1.1rem', lineHeight: 1.65, marginBottom: '2.5rem', maxWidth: '30rem', margin: '0 auto 2.5rem' }}>
+          First agents live in under 5 minutes. No credit card. No integrations team. No excuses.
         </p>
 
-        <div className="flex gap-4 justify-center flex-wrap">
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
           <a
             href="/#pricing"
-            className="rounded-full px-8 py-4 font-semibold text-lg cursor-pointer"
+            className="btn-orange"
             style={{
-              background: 'linear-gradient(180deg, oklch(0.65 0.22 248) 0%, oklch(0.52 0.22 248) 100%)',
-              color: 'oklch(0.97 0 0)',
-              border: 'none',
-              boxShadow: 'inset 0 1px 0 rgba(160,200,255,0.28), 0 4px 20px oklch(0.52 0.22 248 / 0.50)',
-              transition: 'opacity 0.2s ease, transform 0.15s ease',
+              padding: '1rem 2rem',
+              borderRadius: '0.5rem',
+              fontSize: '1.05rem',
+              fontWeight: 700,
               textDecoration: 'none',
-              display: 'inline-block',
-            }}
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLAnchorElement).style.opacity = '0.88'
-              ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1.02)'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLAnchorElement).style.opacity = '1'
-              ;(e.currentTarget as HTMLAnchorElement).style.transform = 'scale(1)'
+              boxShadow: '0 0 60px rgba(255,107,53,0.45), 0 0 120px rgba(255,107,53,0.20), 0 8px 24px rgba(255,107,53,0.40), inset 0 1px 0 rgba(255,255,255,0.20)',
             }}
           >
-            Activate your agents
+            <Zap size={20} />
+            Deploy Now — It's Free
+          </a>
+          <a
+            href="#agents"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
+              padding: '1rem 1.5rem',
+              borderRadius: '0.5rem',
+              fontSize: '1.05rem',
+              fontWeight: 600,
+              color: '#E5E7EB',
+              textDecoration: 'none',
+              border: '1px solid #2D3748',
+              backgroundColor: 'rgba(45,55,72,0.3)',
+              transition: 'border-color 0.2s ease, color 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.borderColor = 'rgba(0,217,255,0.45)';
+              (e.currentTarget as HTMLAnchorElement).style.color = '#FFFFFF';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLAnchorElement).style.borderColor = '#2D3748';
+              (e.currentTarget as HTMLAnchorElement).style.color = '#E5E7EB';
+            }}
+          >
+            Browse all 22 agents
           </a>
         </div>
       </motion.div>

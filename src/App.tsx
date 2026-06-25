@@ -37,7 +37,7 @@ function PageContent() {
 
   return (
     <ToastProvider>
-      <div className="bg-canvas text-snow min-h-[100dvh]" style={{ fontFamily: "'Inter', sans-serif" }}>
+      <div className="min-h-[100dvh]" style={{ backgroundColor: '#0F1419', color: '#FFFFFF', fontFamily: "'Inter', sans-serif" }}>
         <ScrollProgress />
         <Navbar />
         <main>

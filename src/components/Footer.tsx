@@ -34,7 +34,7 @@ export function Footer() {
     <footer
       className="pt-20 pb-10"
       style={{
-        backgroundColor: 'oklch(0.04 0.03 264)',
+        backgroundColor: '#0A0D14',
         borderTop: '1px solid rgba(255,255,255,0.08)',
       }}
     >
@@ -51,12 +51,12 @@ export function Footer() {
               />
               <span
                 className="font-bold text-sm tracking-widest"
-                style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
+                style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#FFFFFF' }}
               >
                 VANTRO.ai
               </span>
             </div>
-            <p className="text-sm mt-2" style={{ color: 'oklch(0.70 0 0)' }}>
+            <p className="text-sm mt-2" style={{ color: '#9CA3AF' }}>
               Deploy your autonomous AI workforce.
             </p>
           </div>
@@ -66,7 +66,7 @@ export function Footer() {
             <div key={col.heading}>
               <p
                 className="text-xs uppercase tracking-widest mb-4"
-                style={{ fontFamily: 'JetBrains Mono, monospace', color: 'oklch(0.79 0 0)' }}
+                style={{ fontFamily: 'JetBrains Mono, monospace', color: '#E5E7EB' }}
               >
                 {col.heading}
               </p>
@@ -76,7 +76,7 @@ export function Footer() {
                     <a
                       href={link.href}
                       className="text-sm transition-colors duration-150"
-                      style={{ color: 'oklch(0.70 0 0)' }}
+                      style={{ color: '#9CA3AF' }}
                       onMouseEnter={(e) => {
                         (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.97 0 0)';
                       }}
@@ -98,7 +98,7 @@ export function Footer() {
           className="mt-16 pt-8 flex justify-between items-center flex-wrap gap-4"
           style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
         >
-          <p className="text-sm" style={{ color: 'oklch(0.70 0 0)' }}>
+          <p className="text-sm" style={{ color: '#9CA3AF' }}>
             2026 Vantro.ai. All rights reserved.
           </p>
 
@@ -116,7 +116,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="transition-colors duration-150 cursor-pointer"
-                style={{ color: 'oklch(0.70 0 0)', display: 'inline-flex' }}
+                style={{ color: '#9CA3AF', display: 'inline-flex' }}
                 onMouseEnter={(e) => {
                   (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.97 0 0)';
                 }}
