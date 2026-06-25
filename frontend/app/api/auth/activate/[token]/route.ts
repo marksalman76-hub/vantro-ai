@@ -4,10 +4,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const res = await fetch(`${API_URL}/api/auth/activate/${params.token}`, {
+    const { token } = await params;
+    const res = await fetch(`${API_URL}/api/auth/activate/${token}`, {
       method: "GET",
     });
     const data = await res.json();
