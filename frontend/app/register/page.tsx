@@ -1,13 +1,12 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const justRegistered = searchParams.get('registered') === '1'
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -19,20 +18,17 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.vantro.ai'
-      const res = await fetch(`${apiUrl}/api/auth/login`, {
+      const res = await fetch(`${apiUrl}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name, email, password }),
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.detail || 'Invalid email or password.')
+        setError(data.detail || 'Registration failed. Please try again.')
         return
       }
-      if (data.access_token) {
-        localStorage.setItem('token', data.access_token)
-      }
-      router.push('/dashboard')
+      router.push('/login?registered=1')
     } catch {
       setError('Something went wrong. Please try again.')
     } finally {
@@ -52,25 +48,28 @@ export default function LoginPage() {
             <div className="w-9 h-9 rounded-xl flex items-center justify-center text-white font-black text-sm" style={{ background: 'linear-gradient(135deg,#FF6B35,#00D9FF)', boxShadow: '0 0 20px rgba(255,107,53,0.40)' }}>V</div>
             <span className="text-xl font-bold tracking-tight text-white">Vantro<span style={{ color: '#FF6B35' }}>.ai</span></span>
           </Link>
-          <p className="text-white/40 text-sm mt-3">Sign in to your workspace</p>
+          <p className="text-white/40 text-sm mt-3">Create your workspace</p>
         </div>
         <div className="rounded-2xl p-8" style={{ background: 'rgba(26,31,46,0.80)', border: '1px solid rgba(255,255,255,0.08)', backdropFilter: 'blur(20px)' }}>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
+              <label className="block text-xs font-semibold text-white/60 mb-2 uppercase tracking-widest">Full Name</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="Jane Smith" className="w-full bg-white/[0.05] border border-white/[0.10] rounded-xl px-4 py-3 text-white text-sm placeholder-white/25 focus:outline-none transition-all" onFocus={e => e.currentTarget.style.borderColor = 'rgba(255,107,53,0.60)'} onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'} />
+            </div>
+            <div>
               <label className="block text-xs font-semibold text-white/60 mb-2 uppercase tracking-widest">Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@company.com" className="w-full bg-white/[0.05] border border-white/[0.10] rounded-xl px-4 py-3 text-white text-sm placeholder-white/25 focus:outline-none transition-all" style={{ '--tw-ring-color': 'transparent' } as React.CSSProperties} onFocus={e => e.currentTarget.style.borderColor = 'rgba(255,107,53,0.60)'} onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'} />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@company.com" className="w-full bg-white/[0.05] border border-white/[0.10] rounded-xl px-4 py-3 text-white text-sm placeholder-white/25 focus:outline-none transition-all" onFocus={e => e.currentTarget.style.borderColor = 'rgba(255,107,53,0.60)'} onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-white/60 mb-2 uppercase tracking-widest">Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className="w-full bg-white/[0.05] border border-white/[0.10] rounded-xl px-4 py-3 text-white text-sm placeholder-white/25 focus:outline-none transition-all" onFocus={e => e.currentTarget.style.borderColor = 'rgba(255,107,53,0.60)'} onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'} />
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="Min 8 chars, include a number" className="w-full bg-white/[0.05] border border-white/[0.10] rounded-xl px-4 py-3 text-white text-sm placeholder-white/25 focus:outline-none transition-all" onFocus={e => e.currentTarget.style.borderColor = 'rgba(255,107,53,0.60)'} onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'} />
             </div>
-            {justRegistered && <p className="text-green-400 text-sm bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2.5">Account created! Sign in below.</p>}
             {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">{error}</p>}
-            <button type="submit" disabled={loading} className="w-full py-3 text-sm font-semibold text-white rounded-xl transition-opacity disabled:opacity-60" style={{ background: 'linear-gradient(135deg,#FF6B35,#CC4A18)', boxShadow: '0 0 20px rgba(255,107,53,0.30)' }}>{loading ? 'Signing in…' : 'Sign in'}</button>
+            <button type="submit" disabled={loading} className="w-full py-3 text-sm font-semibold text-white rounded-xl transition-opacity disabled:opacity-60" style={{ background: 'linear-gradient(135deg,#FF6B35,#CC4A18)', boxShadow: '0 0 20px rgba(255,107,53,0.30)' }}>{loading ? 'Creating account…' : 'Create account'}</button>
           </form>
           <div className="mt-6 text-center text-sm text-white/30">
-            Don&apos;t have an account?{' '}
-            <Link href="/register" className="hover:opacity-80 transition-opacity" style={{ color: '#FF6B35' }}>Create account</Link>
+            Already have an account?{' '}
+            <Link href="/login" className="hover:opacity-80 transition-opacity" style={{ color: '#FF6B35' }}>Sign in</Link>
           </div>
         </div>
       </div>
