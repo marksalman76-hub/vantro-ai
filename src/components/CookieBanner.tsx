@@ -6,14 +6,9 @@ import { X } from 'lucide-react';
 const STORAGE_KEY = 'vantro_cookie_consent';
 
 export function CookieBanner() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEY)) {
-      const t = setTimeout(() => setVisible(true), 600);
-      return () => clearTimeout(t);
-    }
-  }, []);
+  const [visible, setVisible] = useState(() => {
+    try { return !localStorage.getItem(STORAGE_KEY); } catch { return true; }
+  });
 
   function accept() {
     localStorage.setItem(STORAGE_KEY, 'all');
