@@ -1,14 +1,22 @@
 'use client';
 
-import { Twitter, Linkedin, Github } from 'lucide-react';
+import { Twitter, Linkedin, Facebook } from 'lucide-react';
+
+function TikTokIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-2.88 2.5 2.89 2.89 0 0 1-2.89-2.89 2.89 2.89 0 0 1 2.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 0 0-.79-.05 6.34 6.34 0 0 0-6.34 6.34 6.34 6.34 0 0 0 6.34 6.34 6.34 6.34 0 0 0 6.33-6.34V8.69a8.18 8.18 0 0 0 4.78 1.52V6.76a4.85 4.85 0 0 1-1.01-.07Z" />
+    </svg>
+  );
+}
 
 const COLUMNS = [
   {
     heading: 'Product',
     links: [
-      { label: 'Features', href: '#features' },
+      { label: 'Integrations', href: '#integrations' },
       { label: 'Agents', href: '#agents' },
-      { label: 'Pricing', href: '/#pricing' },
+      { label: 'Pricing', href: '#pricing' },
     ],
   },
   {
@@ -27,6 +35,13 @@ const COLUMNS = [
       { label: 'Cookies', href: '/cookies' },
     ],
   },
+];
+
+const SOCIALS = [
+  { Icon: Twitter, label: 'Twitter', href: 'https://twitter.com/vantroai' },
+  { Icon: Linkedin, label: 'LinkedIn', href: 'https://linkedin.com/company/vantroai' },
+  { Icon: Facebook, label: 'Facebook', href: 'https://facebook.com/vantroai' },
+  { Icon: TikTokIcon, label: 'TikTok', href: 'https://tiktok.com/@vantroai' },
 ];
 
 export function Footer() {
@@ -77,12 +92,8 @@ export function Footer() {
                       href={link.href}
                       className="text-sm transition-colors duration-150"
                       style={{ color: '#9CA3AF' }}
-                      onMouseEnter={(e) => {
-                        (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.97 0 0)';
-                      }}
-                      onMouseLeave={(e) => {
-                        (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.70 0 0)';
-                      }}
+                      onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = '#FFFFFF'; }}
+                      onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = '#9CA3AF'; }}
                     >
                       {link.label}
                     </a>
@@ -99,16 +110,11 @@ export function Footer() {
           style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}
         >
           <p className="text-sm" style={{ color: '#9CA3AF' }}>
-            2026 Vantro.ai. All rights reserved.
+            © 2026 Vantro.ai. All rights reserved.
           </p>
 
           <div className="flex items-center gap-4">
-            {[
-              // TODO: replace href values with real Vantro social profile URLs when available
-              { Icon: Twitter, label: 'Twitter', href: 'https://twitter.com/vantroai' },
-              { Icon: Linkedin, label: 'LinkedIn', href: 'https://linkedin.com/company/vantroai' },
-              { Icon: Github, label: 'GitHub', href: 'https://github.com/vantroai' },
-            ].map(({ Icon, label, href }) => (
+            {SOCIALS.map(({ Icon, label, href }) => (
               <a
                 key={label}
                 href={href}
@@ -117,12 +123,8 @@ export function Footer() {
                 rel="noopener noreferrer"
                 className="transition-colors duration-150 cursor-pointer"
                 style={{ color: '#9CA3AF', display: 'inline-flex' }}
-                onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.97 0 0)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLAnchorElement).style.color = 'oklch(0.70 0 0)';
-                }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = '#FFFFFF'; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = '#9CA3AF'; }}
               >
                 <Icon size={16} />
               </a>
