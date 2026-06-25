@@ -1,6 +1,7 @@
 import { useRoute } from 'wouter'
 import { DraftPage, PrivacyPage, TermsPage, AboutPage, BlogPage, ContactPage, CookiesPage } from './pages'
 import { ChatWidget } from './components/ChatWidget'
+import { CookieBanner } from './components/CookieBanner'
 import { ToastProvider } from './context/ToastContext'
 import { ScrollProgress } from './components/ScrollProgress'
 import { Navbar } from './components/Navbar'
@@ -54,6 +55,7 @@ export default function App() {
         <Footer />
         <Toast />
         <ChatWidget />
+        <CookieBanner />
       </div>
     </ToastProvider>
   )
