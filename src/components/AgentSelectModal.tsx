@@ -42,6 +42,8 @@ interface AgentSelectModalProps {
 export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
   const allIncluded = plan.maxAgents >= ALL_AGENTS.length;
   const [selected, setSelected] = useState<string[]>([]);
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -63,17 +65,21 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
   }
 
   async function handleCheckout() {
+    setCheckoutError('');
+    setCheckoutLoading(true);
     try {
-      const res = await fetch('https://api.vantro.ai/api/checkout', {
+      const res = await fetch('https://api.vantro.ai/api/stripe/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: plan.name, agents: selected }),
       });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
+      if (data.url) { window.location.href = data.url; return; }
+      setCheckoutError(data.detail || 'Checkout unavailable. Please try again.');
     } catch {
-      // Stripe checkout unavailable — surface error rather than wrong redirect
-      alert('Checkout is temporarily unavailable. Please try again or contact support@vantro.ai.');
+      setCheckoutError('Checkout unavailable. Contact support@vantro.ai.');
+    } finally {
+      setCheckoutLoading(false);
     }
   }
 
@@ -335,36 +341,42 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
           gap: 16,
           flexShrink: 0,
         }}>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)' }}>
-            {selected.length === 0
-              ? `Select up to ${plan.maxAgents} agents`
-              : selected.length >= plan.maxAgents
-              ? 'Team locked in. Ready to deploy.'
-              : `${selected.length} selected — add ${plan.maxAgents - selected.length} more or proceed`}
-          </p>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)' }}>
+              {selected.length === 0
+                ? `Select up to ${plan.maxAgents} agents`
+                : selected.length >= plan.maxAgents
+                ? 'Team locked in. Ready to deploy.'
+                : `${selected.length} selected — add ${plan.maxAgents - selected.length} more or proceed`}
+            </p>
+            {checkoutError && (
+              <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 4 }}>{checkoutError}</p>
+            )}
+          </div>
           <button
             onClick={handleCheckout}
-            disabled={!ready}
+            disabled={!ready || checkoutLoading}
             style={{
-              background: ready
+              background: ready && !checkoutLoading
                 ? 'linear-gradient(180deg, #ffffff 0%, #d4d4d4 100%)'
                 : 'rgba(255,255,255,0.08)',
-              color: ready ? 'oklch(0.12 0 0)' : 'rgba(255,255,255,0.22)',
+              color: ready && !checkoutLoading ? 'oklch(0.12 0 0)' : 'rgba(255,255,255,0.22)',
               border: 'none',
               borderRadius: '100px',
               padding: '11px 26px',
               fontFamily: 'Space Grotesk, sans-serif',
               fontWeight: 700,
               fontSize: 14,
-              cursor: ready ? 'pointer' : 'not-allowed',
+              cursor: ready && !checkoutLoading ? 'pointer' : 'not-allowed',
               transition: 'opacity 0.18s, transform 0.15s',
-              boxShadow: ready ? 'inset 0 1px 0 rgba(255,255,255,0.55), 0 4px 18px rgba(0,0,0,0.45)' : 'none',
+              boxShadow: ready && !checkoutLoading ? 'inset 0 1px 0 rgba(255,255,255,0.55), 0 4px 18px rgba(0,0,0,0.45)' : 'none',
               display: 'flex',
               alignItems: 'center',
               gap: 6,
+              flexShrink: 0,
             }}
             onMouseEnter={(e) => {
-              if (ready) {
+              if (ready && !checkoutLoading) {
                 (e.currentTarget as HTMLButtonElement).style.opacity = '0.88';
                 (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.02)';
               }
@@ -374,8 +386,11 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
               (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
             }}
           >
-            {ready && <Check size={14} strokeWidth={2.5} />}
-            {ready ? 'Continue to checkout' : `Select ${plan.maxAgents - selected.length} more`}
+            {checkoutLoading
+              ? 'Redirecting…'
+              : ready
+              ? <><Check size={14} strokeWidth={2.5} /> Continue to checkout</>
+              : `Select ${plan.maxAgents - selected.length} more`}
           </button>
         </div>
       </div>
