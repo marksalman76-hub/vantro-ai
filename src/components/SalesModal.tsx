@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 
 interface Props { onClose: () => void; }
