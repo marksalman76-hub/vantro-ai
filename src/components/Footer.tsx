@@ -24,19 +24,6 @@ const COLUMNS = [
     ],
   },
   {
-    heading: 'Resources',
-    links: [
-      // TODO: create /docs page before linking here
-      { label: 'Docs', href: 'mailto:hello@vantro.ai' },
-      // TODO: create /api-docs page before linking here
-      { label: 'API', href: 'mailto:hello@vantro.ai' },
-      // TODO: link to real status page when available
-      { label: 'Status', href: 'mailto:hello@vantro.ai' },
-      // TODO: create /security page before linking here
-      { label: 'Security', href: 'mailto:hello@vantro.ai' },
-    ],
-  },
-  {
     heading: 'Legal',
     links: [
       { label: 'Privacy', href: '/privacy' },
@@ -58,7 +45,7 @@ export function Footer() {
     >
       <div className="max-w-7xl mx-auto px-6">
         {/* Top row */}
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 lg:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 lg:gap-8">
           {/* Brand column */}
           <div className="lg:col-span-1">
             <div className="flex items-center gap-2 mb-2">
