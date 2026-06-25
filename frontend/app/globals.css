@@ -1,0 +1,87 @@
+@import "tailwindcss";
+
+:root {
+  --bg-primary: #070D1F;
+  --accent: #7C3AED;
+}
+
+body {
+  background: var(--bg-primary);
+  color: #fff;
+  font-family: system-ui, sans-serif;
+}
+
+.glass {
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.glass-iridescent {
+  background: linear-gradient(135deg, rgba(124,58,237,0.15) 0%, rgba(59,130,246,0.08) 100%);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(124,58,237,0.30);
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background: linear-gradient(135deg, #7C3AED, #3B82F6);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  transition: opacity 0.15s ease;
+  cursor: pointer;
+  border: none;
+}
+.btn-primary:hover { opacity: 0.85; }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  background: rgba(255,255,255,0.06);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 0.75rem;
+  padding: 0.625rem 1.25rem;
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: background 0.15s ease;
+  cursor: pointer;
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.10); }
+
+.gradient-text {
+  background: linear-gradient(135deg, #a78bfa, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.aurora {
+  background: linear-gradient(135deg, #7C3AED, #3B82F6);
+}
+
+.section-badge-violet {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: rgba(124,58,237,0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(124,58,237,0.30);
+  border-radius: 2rem;
+  padding: 0.25rem 0.875rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.mesh-grid {
+  background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
