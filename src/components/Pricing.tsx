@@ -218,7 +218,7 @@ export function Pricing() {
             </p>
           </motion.div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 13rem), 1fr))', gap: '1rem', alignItems: 'start' }}>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-start">
             {TIERS.map((tier, i) => (
               <TierCard key={tier.name} tier={tier} index={i} onSelect={setActivePlan} onSales={() => setSalesOpen(true)} />
             ))}
