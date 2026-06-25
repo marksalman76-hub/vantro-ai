@@ -12,49 +12,44 @@ const TIERS = [
     price: '$0',
     tagline: 'For solo builders testing the waters.',
     features: ['3 active agents', '1,000 actions / mo', 'Core integrations', 'Community support'],
-    cta: 'Start free',
     maxAgents: 3,
-    featured: false,
   },
   {
     name: 'Growth',
     price: '$199',
     tagline: 'For small teams finding their pace.',
     features: ['7 active agents', '15,000 actions / mo', '100+ integrations', 'Email support'],
-    cta: 'Start Growth',
     maxAgents: 7,
-    featured: false,
   },
   {
     name: 'Business',
     price: '$499',
     tagline: 'For teams running real operations.',
     features: ['11 active agents', '50,000 actions / mo', '200+ integrations', 'Approval workflows', 'Priority support'],
-    cta: 'Activate your agents',
     maxAgents: 11,
-    featured: true,
   },
   {
     name: 'Enterprise',
     price: 'Custom',
     tagline: 'For organizations at scale.',
     features: ['Unlimited agents', 'Unlimited actions', 'SSO & SCIM', 'Custom agent builds', 'SLA & solutions team'],
-    cta: 'Talk to sales',
     maxAgents: 0,
-    featured: false,
   },
 ];
 
 interface TierCardProps {
   tier: typeof TIERS[0];
   index: number;
-  onSelect: (plan: PlanConfig) => void;
-  onSales: () => void;
+  isSelected: boolean;
+  onHover: (name: string | null) => void;
+  onClick: (tier: typeof TIERS[0]) => void;
 }
 
-function TierCard({ tier, index, onSelect, onSales }: TierCardProps) {
+function TierCard({ tier, index, isSelected, onHover, onClick }: TierCardProps) {
+  const [hovered, setHovered] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const isEnterprise = tier.name === 'Enterprise';
+  const showOrangeBorder = isSelected || hovered;
 
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const el = cardRef.current;
@@ -64,15 +59,19 @@ function TierCard({ tier, index, onSelect, onSales }: TierCardProps) {
     el.style.setProperty('--my', `${e.clientY - rect.top}px`);
   }
 
-  function handleCTA(e: React.MouseEvent) {
-    if (isEnterprise) { onSales(); return; }
-    e.preventDefault();
-    onSelect({ name: tier.name, price: tier.price, maxAgents: tier.maxAgents });
+  function handleMouseEnter() {
+    setHovered(true);
+    onHover(tier.name);
+  }
+
+  function handleMouseLeave() {
+    setHovered(false);
+    onHover(null);
   }
 
   return (
-    <div style={{ position: 'relative', paddingTop: tier.featured ? '1rem' : 0 }}>
-      {tier.featured && (
+    <div style={{ position: 'relative', paddingTop: tier.name === 'Business' ? '1rem' : 0 }}>
+      {tier.name === 'Business' && (
         <span
           style={{
             position: 'absolute',
@@ -99,6 +98,9 @@ function TierCard({ tier, index, onSelect, onSales }: TierCardProps) {
       <motion.div
         ref={cardRef}
         onMouseMove={handleMouseMove}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onClick={() => onClick(tier)}
         initial={{ opacity: 0, y: 28 }}
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: '-60px' }}
@@ -107,22 +109,33 @@ function TierCard({ tier, index, onSelect, onSales }: TierCardProps) {
           borderRadius: '0.875rem',
           padding: '1.5rem',
           backgroundColor: '#1A1F2E',
-          border: tier.featured
-            ? '1px solid rgba(255,107,53,0.50)'
+          border: showOrangeBorder
+            ? '1px solid rgba(255,107,53,0.60)'
             : '1px solid #2D3748',
-          boxShadow: tier.featured
+          boxShadow: showOrangeBorder
             ? '0 0 0 1px rgba(255,107,53,0.20), 0 32px 80px rgba(0,0,0,0.55), 0 0 60px rgba(255,107,53,0.12)'
             : '0 4px 24px rgba(0,0,0,0.35)',
           position: 'relative',
           overflow: 'hidden',
+          cursor: 'pointer',
+          transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
         }}
       >
-        {/* Spotlight */}
         <div className="spotlight" />
         <div className="sheen" />
 
         {/* Tier name */}
-        <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: tier.featured ? '#FF6B35' : '#9CA3AF', marginBottom: '0.5rem', position: 'relative', zIndex: 1 }}>
+        <p style={{
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: '0.7rem',
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          color: showOrangeBorder ? '#FF6B35' : '#9CA3AF',
+          marginBottom: '0.5rem',
+          position: 'relative',
+          zIndex: 1,
+          transition: 'color 0.2s ease',
+        }}>
           {tier.name}
         </p>
 
@@ -140,29 +153,37 @@ function TierCard({ tier, index, onSelect, onSales }: TierCardProps) {
           {tier.tagline}
         </p>
 
-        {/* Features */}
+        {/* Features — all orange checks */}
         <ul style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '1.75rem', listStyle: 'none', padding: 0, position: 'relative', zIndex: 1 }}>
           {tier.features.map((f) => (
             <li key={f} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Check size={14} style={{ color: tier.featured ? '#FF6B35' : '#10B981', flexShrink: 0 }} />
+              <Check size={14} style={{ color: '#FF6B35', flexShrink: 0 }} />
               <span style={{ fontSize: '0.875rem', color: '#E5E7EB' }}>{f}</span>
             </li>
           ))}
         </ul>
 
-        {/* CTA */}
-        {tier.featured ? (
+        {/* CTA — orange only when selected */}
+        {isSelected && !isEnterprise ? (
           <button
-            onClick={handleCTA}
+            onClick={(e) => { e.stopPropagation(); onClick(tier); }}
             className="btn-orange"
             style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.95rem', fontWeight: 700, justifyContent: 'center', cursor: 'pointer', position: 'relative', zIndex: 1 }}
           >
             <Zap size={16} />
-            {tier.cta}
+            Activate your agents
+          </button>
+        ) : isSelected && isEnterprise ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onClick(tier); }}
+            className="btn-orange"
+            style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', fontSize: '0.95rem', fontWeight: 700, justifyContent: 'center', cursor: 'pointer', position: 'relative', zIndex: 1 }}
+          >
+            Talk to sales
           </button>
         ) : (
           <button
-            onClick={handleCTA}
+            onClick={(e) => { e.stopPropagation(); onClick(tier); }}
             style={{
               width: '100%',
               padding: '0.75rem',
@@ -173,20 +194,12 @@ function TierCard({ tier, index, onSelect, onSales }: TierCardProps) {
               backgroundColor: 'transparent',
               border: '1px solid #2D3748',
               color: '#E5E7EB',
-              transition: 'border-color 0.2s ease, color 0.2s ease',
               position: 'relative',
               zIndex: 1,
-            }}
-            onMouseEnter={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(0,217,255,0.45)';
-              (e.currentTarget as HTMLButtonElement).style.color = '#FFFFFF';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = '#2D3748';
-              (e.currentTarget as HTMLButtonElement).style.color = '#E5E7EB';
+              display: 'block',
             }}
           >
-            {tier.cta}
+            {isEnterprise ? 'Talk to sales' : 'Get started'}
           </button>
         )}
       </motion.div>
@@ -195,8 +208,18 @@ function TierCard({ tier, index, onSelect, onSales }: TierCardProps) {
 }
 
 export function Pricing() {
+  const [selectedTier, setSelectedTier] = useState<string>('Business');
   const [activePlan, setActivePlan] = useState<PlanConfig | null>(null);
   const [salesOpen, setSalesOpen] = useState(false);
+
+  function handleCardClick(tier: typeof TIERS[0]) {
+    setSelectedTier(tier.name);
+    if (tier.name === 'Enterprise') {
+      setSalesOpen(true);
+    } else {
+      setActivePlan({ name: tier.name, price: tier.price, maxAgents: tier.maxAgents });
+    }
+  }
 
   return (
     <>
@@ -220,7 +243,14 @@ export function Pricing() {
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 items-start">
             {TIERS.map((tier, i) => (
-              <TierCard key={tier.name} tier={tier} index={i} onSelect={setActivePlan} onSales={() => setSalesOpen(true)} />
+              <TierCard
+                key={tier.name}
+                tier={tier}
+                index={i}
+                isSelected={selectedTier === tier.name}
+                onHover={() => {}}
+                onClick={handleCardClick}
+              />
             ))}
           </div>
         </div>
