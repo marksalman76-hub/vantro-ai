@@ -52,7 +52,7 @@ function AgentCardInner({ agent, isCenter }: AgentCardInnerProps) {
 
   return (
     <div style={{ position: 'relative', width: '100%' }}>
-      {/* Rotating gradient border — sits outside overflow:hidden */}
+      {/* Rotating orange gradient border for center card */}
       {isCenter && !prefersReduced && (
         <motion.div
           animate={{ rotate: 360 }}
@@ -61,7 +61,7 @@ function AgentCardInner({ agent, isCenter }: AgentCardInnerProps) {
             position: 'absolute',
             inset: -1.5,
             borderRadius: '1.4rem',
-            background: 'conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255,255,255,0.85) 40deg, rgba(255,255,255,0.0) 80deg)',
+            background: 'conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255,107,53,0.90) 40deg, rgba(255,107,53,0.0) 80deg)',
             WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
             WebkitMaskComposite: 'xor',
             mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
@@ -79,14 +79,14 @@ function AgentCardInner({ agent, isCenter }: AgentCardInnerProps) {
           borderRadius: '1.25rem',
           overflow: 'hidden',
           background: isCenter
-            ? 'linear-gradient(145deg, rgba(255,255,255,0.13) 0%, rgba(255,255,255,0.04) 100%)'
+            ? 'linear-gradient(145deg, rgba(255,107,53,0.10) 0%, rgba(255,255,255,0.04) 100%)'
             : 'linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.025) 100%)',
           border: isCenter
-            ? '1.5px solid rgba(255,255,255,0.50)'
-            : '1px solid rgba(255,255,255,0.25)',
+            ? '1.5px solid rgba(255,107,53,0.55)'
+            : '1px solid rgba(255,255,255,0.18)',
           boxShadow: isCenter
-            ? 'inset 0 2.5px 0 rgba(255,255,255,0.65), inset 0 -1px 0 rgba(255,255,255,0.08), 0 0 0 1px rgba(255,255,255,0.12), 0 0 60px rgba(255,255,255,0.08), 0 32px 80px rgba(0,0,0,0.65)'
-            : 'inset 0 2px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.45)',
+            ? '0 0 0 1px rgba(255,107,53,0.20), 0 0 60px rgba(255,107,53,0.18), 0 32px 80px rgba(0,0,0,0.65)'
+            : '0 8px 32px rgba(0,0,0,0.45)',
           position: 'relative',
           transition: 'box-shadow 0.4s ease, border-color 0.4s ease',
         }}
@@ -165,7 +165,7 @@ function AgentCardInner({ agent, isCenter }: AgentCardInnerProps) {
             fontFamily: 'Space Grotesk, sans-serif',
             fontWeight: 600,
             fontSize: '1rem',
-            color: isCenter ? 'oklch(0.97 0 0)' : 'oklch(0.80 0 0)',
+            color: isCenter ? '#FFFFFF' : '#CCCCCC',
             marginBottom: '0.1rem',
           }}
         >
@@ -226,14 +226,14 @@ function AgentCarousel() {
         <div
           style={{
             position: 'absolute', left: 0, top: 0, bottom: 0, width: '18%',
-            background: 'linear-gradient(to right, oklch(0.27 0 0) 30%, transparent)',
+            background: 'linear-gradient(to right, #1A1F2E 30%, transparent)',
             zIndex: 45, pointerEvents: 'none',
           }}
         />
         <div
           style={{
             position: 'absolute', right: 0, top: 0, bottom: 0, width: '18%',
-            background: 'linear-gradient(to left, oklch(0.27 0 0) 30%, transparent)',
+            background: 'linear-gradient(to left, #1A1F2E 30%, transparent)',
             zIndex: 45, pointerEvents: 'none',
           }}
         />
@@ -299,7 +299,7 @@ function AgentCarousel() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'oklch(0.97 0 0)',
+            color: '#FFFFFF',
             cursor: 'pointer',
             transition: 'background 0.2s, border-color 0.2s',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.10)',
@@ -327,7 +327,7 @@ function AgentCarousel() {
               fontFamily: 'Space Grotesk, sans-serif',
               fontWeight: 600,
               fontSize: '0.9rem',
-              color: 'oklch(0.97 0 0)',
+              color: '#FFFFFF',
               marginBottom: '0.15rem',
             }}
           >
@@ -358,7 +358,7 @@ function AgentCarousel() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: 'oklch(0.97 0 0)',
+            color: '#FFFFFF',
             cursor: 'pointer',
             transition: 'background 0.2s, border-color 0.2s',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.10)',
@@ -390,7 +390,7 @@ function AgentCarousel() {
                 width: isActiveDot ? '22px' : '6px',
                 height: '6px',
                 borderRadius: '3px',
-                background: isActiveDot ? 'oklch(0.97 0 0)' : 'rgba(255,255,255,0.20)',
+                background: isActiveDot ? '#FFFFFF' : 'rgba(255,255,255,0.20)',
                 border: 'none',
                 cursor: 'pointer',
                 padding: 0,
@@ -410,15 +410,15 @@ export function AgentRoster() {
     <section
       id="agents"
       className="py-32 overflow-hidden"
-      style={{ backgroundColor: 'oklch(0.27 0 0)', position: 'relative' }}
+      style={{ backgroundColor: '#1A1F2E', position: 'relative' }}
     >
       <h2
         className="text-center mb-4 font-bold text-4xl md:text-5xl"
-        style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}
+        style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#FFFFFF' }}
       >
         Meet your 22 specialists.
       </h2>
-      <p className="text-center mb-16 text-base" style={{ color: 'oklch(0.70 0 0)' }}>
+      <p className="text-center mb-16 text-base" style={{ color: '#9CA3AF' }}>
         Every agent is purpose-built, always on, and wired to work together.
       </p>
       <AgentCarousel />
