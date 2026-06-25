@@ -41,8 +41,8 @@ interface AgentSelectModalProps {
 
 export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
   const allIncluded = plan.maxAgents >= ALL_AGENTS.length;
-  const [selected, setSelected] = useState<Set<string>>(
-    allIncluded ? new Set(ALL_AGENTS.map((a) => a.name)) : new Set()
+  const [selected, setSelected] = useState<string[]>(
+    allIncluded ? ALL_AGENTS.map((a) => a.name) : []
   );
 
   useEffect(() => {
@@ -56,34 +56,32 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  function toggle(name: string) {
+  function select(name: string) {
     if (allIncluded) return;
     setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) {
-        next.delete(name);
-      } else if (next.size < plan.maxAgents) {
-        next.add(name);
-      }
-      return next;
+      if (prev.includes(name)) return prev.filter((n) => n !== name);
+      if (prev.length >= plan.maxAgents) return prev;
+      return [...prev, name];
     });
   }
 
   function handleCheckout() {
-    const agents = Array.from(selected).join(',');
-    const url = `https://app.vantro.ai/register?plan=${plan.name.toLowerCase()}&agents=${encodeURIComponent(agents)}`;
+    const url = `https://app.vantro.ai/register?plan=${plan.name.toLowerCase()}&agents=${encodeURIComponent(selected.join(','))}`;
     window.location.href = url;
   }
 
-  const ready = allIncluded || selected.size === plan.maxAgents;
+  const ready = allIncluded || selected.length === plan.maxAgents;
+  const selectedSet = new Set(selected);
+  const available = ALL_AGENTS.filter((a) => !selectedSet.has(a.name));
+  const selectedAgents = selected.map((n) => ALL_AGENTS.find((a) => a.name === n)!).filter(Boolean);
 
   return (
     <div
       onClick={onClose}
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.75)',
-        backdropFilter: 'blur(6px)',
+        background: 'rgba(0,0,0,0.80)',
+        backdropFilter: 'blur(8px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '16px',
       }}
@@ -91,21 +89,21 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          background: 'linear-gradient(145deg, oklch(0.20 0 0) 0%, oklch(0.15 0 0) 100%)',
+          background: 'linear-gradient(145deg, oklch(0.20 0 0) 0%, oklch(0.14 0 0) 100%)',
           border: '1px solid rgba(255,255,255,0.12)',
           borderRadius: '1.5rem',
-          boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.08), 0 40px 100px rgba(0,0,0,0.8)',
+          boxShadow: 'inset 0 2px 0 rgba(255,255,255,0.08), 0 40px 120px rgba(0,0,0,0.9)',
           width: '100%',
-          maxWidth: '780px',
-          maxHeight: '90vh',
+          maxWidth: '820px',
+          maxHeight: '92vh',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
         }}
       >
-        {/* Header */}
+        {/* ── Header ── */}
         <div style={{
-          padding: '24px 28px 20px',
+          padding: '22px 26px 18px',
           borderBottom: '1px solid rgba(255,255,255,0.07)',
           display: 'flex',
           alignItems: 'flex-start',
@@ -116,27 +114,27 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
           <div>
             <p style={{
               fontFamily: 'JetBrains Mono, monospace',
-              fontSize: 11,
-              letterSpacing: '0.15em',
+              fontSize: 10,
+              letterSpacing: '0.16em',
               textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.35)',
-              marginBottom: 6,
+              color: 'rgba(255,255,255,0.30)',
+              marginBottom: 5,
             }}>
-              {plan.name} plan · {plan.price}{plan.price !== 'Custom' ? '/mo' : ''}
+              {plan.name} · {plan.price}{plan.price !== 'Custom' ? '/mo' : ''}
             </p>
             <h2 style={{
               fontFamily: 'Space Grotesk, sans-serif',
-              fontSize: 22,
+              fontSize: 20,
               fontWeight: 700,
               color: 'oklch(0.97 0 0)',
-              marginBottom: 4,
+              marginBottom: 3,
             }}>
-              {allIncluded ? 'Your full agent team' : `Choose your ${plan.maxAgents} agents`}
+              {allIncluded ? 'Your full agent team' : `Pick your ${plan.maxAgents} agents`}
             </h2>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.40)', lineHeight: 1.5 }}>
+            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', lineHeight: 1.5 }}>
               {allIncluded
-                ? 'All 22 specialists are included. Review your team and proceed to checkout.'
-                : `Select ${plan.maxAgents} agent${plan.maxAgents > 1 ? 's' : ''} to deploy. Swap them anytime from your dashboard.`}
+                ? 'All 22 specialists ship with Business. Review and proceed to checkout.'
+                : `Choose ${plan.maxAgents} from 22. Selected agents drop below — click again to remove.`}
             </p>
           </div>
           <button
@@ -146,9 +144,9 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
               background: 'rgba(255,255,255,0.06)',
               border: '1px solid rgba(255,255,255,0.10)',
               borderRadius: '50%',
-              width: 36, height: 36,
+              width: 34, height: 34,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'rgba(255,255,255,0.55)',
+              color: 'rgba(255,255,255,0.50)',
               cursor: 'pointer',
               flexShrink: 0,
               transition: 'background 0.15s',
@@ -156,109 +154,180 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
             onMouseEnter={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.12)'; }}
             onMouseLeave={(e) => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.06)'; }}
           >
-            <X size={16} />
+            <X size={15} />
           </button>
         </div>
 
-        {/* Agent grid */}
+        {/* ── Available agents (scrollable) ── */}
         <div style={{
-          overflowY: 'auto',
-          padding: '20px 28px',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-          gap: 10,
           flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          padding: '16px 26px',
         }}>
-          {ALL_AGENTS.map((agent) => {
-            const isSelected = selected.has(agent.name);
-            const isDisabled = !allIncluded && !isSelected && selected.size >= plan.maxAgents;
-            return (
-              <button
-                key={agent.name}
-                onClick={() => toggle(agent.name)}
-                disabled={isDisabled}
-                style={{
-                  background: isSelected
-                    ? 'linear-gradient(145deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.06) 100%)'
-                    : 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                  border: isSelected
-                    ? '1px solid rgba(255,255,255,0.35)'
-                    : '1px solid rgba(255,255,255,0.09)',
-                  borderRadius: '1rem',
-                  padding: 0,
-                  cursor: isDisabled ? 'not-allowed' : allIncluded ? 'default' : 'pointer',
-                  opacity: isDisabled ? 0.30 : 1,
-                  transition: 'all 0.18s ease',
-                  textAlign: 'left',
-                  overflow: 'hidden',
-                  position: 'relative',
-                }}
-                onMouseEnter={(e) => {
-                  if (!isDisabled && !allIncluded && !isSelected) {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.22)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (!isSelected) {
-                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.09)';
-                  }
-                }}
-              >
-                {isSelected && (
-                  <div style={{
-                    position: 'absolute', top: 8, right: 8, zIndex: 2,
-                    width: 20, height: 20,
-                    borderRadius: '50%',
-                    background: 'oklch(0.97 0 0)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                  }}>
-                    <Check size={11} color="oklch(0.14 0 0)" strokeWidth={2.5} />
-                  </div>
-                )}
-                <img
-                  src={agent.image}
-                  alt={agent.name}
-                  loading="lazy"
+          {!allIncluded && available.length > 0 && (
+            <p style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 10,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.25)',
+              marginBottom: 12,
+            }}>
+              Available — {available.length} agents
+            </p>
+          )}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+            gap: 8,
+          }}>
+            {(allIncluded ? ALL_AGENTS : available).map((agent) => {
+              const atLimit = !allIncluded && selected.length >= plan.maxAgents;
+              return (
+                <button
+                  key={agent.name}
+                  onClick={() => select(agent.name)}
+                  disabled={atLimit}
                   style={{
-                    width: '100%',
-                    aspectRatio: '3/4',
-                    objectFit: 'cover',
-                    display: 'block',
-                    filter: isSelected ? 'brightness(1.05)' : 'brightness(0.65)',
-                    transition: 'filter 0.18s ease',
+                    background: allIncluded
+                      ? 'linear-gradient(145deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)'
+                      : 'linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                    border: allIncluded
+                      ? '1px solid rgba(255,255,255,0.22)'
+                      : '1px solid rgba(255,255,255,0.08)',
+                    borderRadius: '0.85rem',
+                    padding: 0,
+                    cursor: allIncluded ? 'default' : atLimit ? 'not-allowed' : 'pointer',
+                    opacity: atLimit ? 0.28 : 1,
+                    transition: 'border-color 0.15s, opacity 0.15s',
+                    textAlign: 'left',
+                    overflow: 'hidden',
                   }}
-                />
-                <div style={{ padding: '8px 10px 10px' }}>
-                  <p style={{
+                  onMouseEnter={(e) => {
+                    if (!atLimit && !allIncluded)
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.28)';
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!allIncluded)
+                      (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.08)';
+                  }}
+                >
+                  <img
+                    src={agent.image}
+                    alt={agent.name}
+                    loading="lazy"
+                    style={{
+                      width: '100%',
+                      aspectRatio: '3/4',
+                      objectFit: 'cover',
+                      display: 'block',
+                      filter: allIncluded ? 'brightness(0.90)' : 'brightness(0.60)',
+                    }}
+                  />
+                  <div style={{ padding: '7px 9px 9px' }}>
+                    <p style={{
+                      fontFamily: 'Space Grotesk, sans-serif',
+                      fontWeight: 600,
+                      fontSize: 11,
+                      color: allIncluded ? 'oklch(0.85 0 0)' : 'oklch(0.55 0 0)',
+                      marginBottom: 2,
+                    }}>
+                      {agent.name}
+                    </p>
+                    <p style={{
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontSize: 8,
+                      letterSpacing: '0.10em',
+                      textTransform: 'uppercase',
+                      color: 'rgba(255,255,255,0.22)',
+                    }}>
+                      {agent.category}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Selected strip (drops in when agents picked) ── */}
+        {!allIncluded && selectedAgents.length > 0 && (
+          <div style={{
+            borderTop: '1px solid rgba(255,255,255,0.08)',
+            padding: '14px 26px 12px',
+            flexShrink: 0,
+          }}>
+            <p style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 10,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.40)',
+              marginBottom: 10,
+            }}>
+              Selected · {selectedAgents.length} / {plan.maxAgents}
+            </p>
+            <div style={{
+              display: 'flex',
+              gap: 8,
+              flexWrap: 'wrap',
+            }}>
+              {selectedAgents.map((agent) => (
+                <button
+                  key={agent.name}
+                  onClick={() => select(agent.name)}
+                  title={`Remove ${agent.name}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    background: 'linear-gradient(145deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.07) 100%)',
+                    border: '1px solid rgba(255,255,255,0.30)',
+                    borderRadius: '100px',
+                    padding: '4px 12px 4px 4px',
+                    cursor: 'pointer',
+                    transition: 'border-color 0.15s, background 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.50)';
+                    (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(145deg, rgba(255,255,255,0.20) 0%, rgba(255,255,255,0.10) 100%)';
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.30)';
+                    (e.currentTarget as HTMLButtonElement).style.background = 'linear-gradient(145deg, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0.07) 100%)';
+                  }}
+                >
+                  <img
+                    src={agent.image}
+                    alt={agent.name}
+                    style={{
+                      width: 28, height: 28,
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      objectPosition: 'top',
+                      border: '1px solid rgba(255,255,255,0.25)',
+                      filter: 'brightness(1.05)',
+                    }}
+                  />
+                  <span style={{
                     fontFamily: 'Space Grotesk, sans-serif',
                     fontWeight: 600,
                     fontSize: 12,
-                    color: isSelected ? 'oklch(0.97 0 0)' : 'oklch(0.60 0 0)',
-                    marginBottom: 2,
-                    transition: 'color 0.18s',
+                    color: 'oklch(0.92 0 0)',
                   }}>
                     {agent.name}
-                  </p>
-                  <p style={{
-                    fontFamily: 'JetBrains Mono, monospace',
-                    fontSize: 9,
-                    letterSpacing: '0.10em',
-                    textTransform: 'uppercase',
-                    color: 'rgba(255,255,255,0.25)',
-                    lineHeight: 1.4,
-                  }}>
-                    {agent.category}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+                  </span>
+                  <X size={10} color="rgba(255,255,255,0.40)" style={{ marginLeft: 2 }} />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
-        {/* Footer */}
+        {/* ── Footer ── */}
         <div style={{
-          padding: '16px 28px 24px',
+          padding: '14px 26px 20px',
           borderTop: '1px solid rgba(255,255,255,0.07)',
           display: 'flex',
           alignItems: 'center',
@@ -266,28 +335,33 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
           gap: 16,
           flexShrink: 0,
         }}>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.35)' }}>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)' }}>
             {allIncluded
               ? `All ${ALL_AGENTS.length} agents included`
-              : `${selected.size} / ${plan.maxAgents} selected`}
+              : ready
+              ? 'Team locked in. Ready to deploy.'
+              : `${plan.maxAgents - selected.length} more to go`}
           </p>
           <button
             onClick={handleCheckout}
             disabled={!ready}
             style={{
               background: ready
-                ? 'linear-gradient(180deg, #ffffff 0%, #d8d8d8 100%)'
-                : 'rgba(255,255,255,0.10)',
-              color: ready ? 'oklch(0.14 0 0)' : 'rgba(255,255,255,0.25)',
+                ? 'linear-gradient(180deg, #ffffff 0%, #d4d4d4 100%)'
+                : 'rgba(255,255,255,0.08)',
+              color: ready ? 'oklch(0.12 0 0)' : 'rgba(255,255,255,0.22)',
               border: 'none',
               borderRadius: '100px',
-              padding: '12px 28px',
+              padding: '11px 26px',
               fontFamily: 'Space Grotesk, sans-serif',
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: 14,
               cursor: ready ? 'pointer' : 'not-allowed',
-              transition: 'opacity 0.2s, transform 0.15s',
-              boxShadow: ready ? 'inset 0 1px 0 rgba(255,255,255,0.60), 0 4px 16px rgba(0,0,0,0.40)' : 'none',
+              transition: 'opacity 0.18s, transform 0.15s',
+              boxShadow: ready ? 'inset 0 1px 0 rgba(255,255,255,0.55), 0 4px 18px rgba(0,0,0,0.45)' : 'none',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
             }}
             onMouseEnter={(e) => {
               if (ready) {
@@ -300,7 +374,8 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
               (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
             }}
           >
-            {ready ? 'Continue to checkout →' : `Select ${plan.maxAgents - selected.size} more`}
+            {ready && <Check size={14} strokeWidth={2.5} />}
+            {ready ? 'Continue to checkout' : `Select ${plan.maxAgents - selected.length} more`}
           </button>
         </div>
       </div>
