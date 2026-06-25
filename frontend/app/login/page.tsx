@@ -1,10 +1,10 @@
-﻿'use client'
+'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const justRegistered = searchParams.get('registered') === '1'
@@ -32,7 +32,8 @@ export default function LoginPage() {
       if (data.access_token) {
         localStorage.setItem('token', data.access_token)
       }
-      router.push('/dashboard')
+      const onboarded = localStorage.getItem('onboarding_complete')
+      router.push(onboarded ? '/dashboard' : '/onboarding')
     } catch {
       setError('Something went wrong. Please try again.')
     } finally {
@@ -58,7 +59,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-xs font-semibold text-white/60 mb-2 uppercase tracking-widest">Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@company.com" className="w-full bg-white/[0.05] border border-white/[0.10] rounded-xl px-4 py-3 text-white text-sm placeholder-white/25 focus:outline-none transition-all" style={{ '--tw-ring-color': 'transparent' } as React.CSSProperties} onFocus={e => e.currentTarget.style.borderColor = 'rgba(255,107,53,0.60)'} onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'} />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="you@company.com" className="w-full bg-white/[0.05] border border-white/[0.10] rounded-xl px-4 py-3 text-white text-sm placeholder-white/25 focus:outline-none transition-all" onFocus={e => e.currentTarget.style.borderColor = 'rgba(255,107,53,0.60)'} onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'} />
             </div>
             <div>
               <label className="block text-xs font-semibold text-white/60 mb-2 uppercase tracking-widest">Password</label>
@@ -75,5 +76,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   )
 }

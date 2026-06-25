@@ -28,7 +28,10 @@ export default function RegisterPage() {
         setError(data.detail || 'Registration failed. Please try again.')
         return
       }
-      router.push('/login?registered=1')
+      if (data.access_token) {
+        localStorage.setItem('token', data.access_token)
+      }
+      router.push('/onboarding')
     } catch {
       setError('Something went wrong. Please try again.')
     } finally {
