@@ -25,11 +25,6 @@
     "stripe": "^22.2.3",
     "wouter": "^3.3.5"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
-  },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.0",
     "@types/node": "^20",
