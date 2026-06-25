@@ -10,7 +10,7 @@ export function CookieBanner() {
 
   useEffect(() => {
     if (!localStorage.getItem(STORAGE_KEY)) {
-      const t = setTimeout(() => setVisible(true), 1200);
+      const t = setTimeout(() => setVisible(true), 600);
       return () => clearTimeout(t);
     }
   }, []);

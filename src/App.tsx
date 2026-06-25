@@ -18,7 +18,7 @@ import { CTAFooter } from './components/CTAFooter'
 import { Footer } from './components/Footer'
 import { Toast } from './components/Toast'
 
-export default function App() {
+function PageContent() {
   const [isDraft] = useRoute('/draft')
   const [isPrivacy] = useRoute('/privacy')
   const [isTerms] = useRoute('/terms')
@@ -54,9 +54,17 @@ export default function App() {
         </main>
         <Footer />
         <Toast />
-        <ChatWidget />
-        <CookieBanner />
       </div>
     </ToastProvider>
+  )
+}
+
+export default function App() {
+  return (
+    <>
+      <PageContent />
+      <ChatWidget />
+      <CookieBanner />
+    </>
   )
 }
