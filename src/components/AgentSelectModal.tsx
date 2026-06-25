@@ -42,6 +42,7 @@ interface AgentSelectModalProps {
 export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
   const allIncluded = plan.maxAgents >= ALL_AGENTS.length;
   const [selected, setSelected] = useState<string[]>([]);
+  const [email, setEmail] = useState('');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
 
@@ -65,13 +66,17 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
   }
 
   async function handleCheckout() {
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setCheckoutError('Enter a valid email to continue.');
+      return;
+    }
     setCheckoutError('');
     setCheckoutLoading(true);
     try {
-      const res = await fetch('https://api.vantro.ai/api/stripe/create-checkout-session', {
+      const res = await fetch('https://app.vantro.ai/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: plan.name, agents: selected }),
+        body: JSON.stringify({ plan: plan.name, agents: selected, email }),
       });
       const data = await res.json();
       if (data.url) { window.location.href = data.url; return; }
@@ -336,62 +341,75 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
           padding: '14px 26px 20px',
           borderTop: '1px solid rgba(255,255,255,0.07)',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 16,
+          flexDirection: 'column',
+          gap: 12,
           flexShrink: 0,
         }}>
-          <div style={{ flex: 1 }}>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)' }}>
-              {selected.length === 0
-                ? `Select up to ${plan.maxAgents} agents`
-                : selected.length >= plan.maxAgents
-                ? 'Team locked in. Ready to deploy.'
-                : `${selected.length} selected — add ${plan.maxAgents - selected.length} more or proceed`}
-            </p>
-            {checkoutError && (
-              <p style={{ fontSize: 12, color: '#ff6b6b', marginTop: 4 }}>{checkoutError}</p>
-            )}
+          {/* Email + CTA row */}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); setCheckoutError(''); }}
+              placeholder="your@email.com"
+              style={{
+                flex: 1,
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: '100px',
+                padding: '10px 16px',
+                color: '#fff',
+                fontSize: 13,
+                outline: 'none',
+                fontFamily: 'Space Grotesk, sans-serif',
+              }}
+              onFocus={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'; }}
+              onBlur={(e) => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; }}
+            />
+            <button
+              onClick={handleCheckout}
+              disabled={!ready || checkoutLoading}
+              style={{
+                background: ready && !checkoutLoading
+                  ? 'linear-gradient(180deg, #ffffff 0%, #d4d4d4 100%)'
+                  : 'rgba(255,255,255,0.08)',
+                color: ready && !checkoutLoading ? 'oklch(0.12 0 0)' : 'rgba(255,255,255,0.22)',
+                border: 'none',
+                borderRadius: '100px',
+                padding: '11px 26px',
+                fontFamily: 'Space Grotesk, sans-serif',
+                fontWeight: 700,
+                fontSize: 14,
+                cursor: ready && !checkoutLoading ? 'pointer' : 'not-allowed',
+                transition: 'opacity 0.18s, transform 0.15s',
+                boxShadow: ready && !checkoutLoading ? 'inset 0 1px 0 rgba(255,255,255,0.55), 0 4px 18px rgba(0,0,0,0.45)' : 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                flexShrink: 0,
+                whiteSpace: 'nowrap',
+              }}
+              onMouseEnter={(e) => {
+                if (ready && !checkoutLoading) {
+                  (e.currentTarget as HTMLButtonElement).style.opacity = '0.88';
+                  (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.02)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLButtonElement).style.opacity = '1';
+                (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
+              }}
+            >
+              {checkoutLoading
+                ? 'Redirecting…'
+                : ready
+                ? <><Check size={14} strokeWidth={2.5} /> Continue to checkout</>
+                : `Select ${plan.maxAgents - selected.length} more`}
+            </button>
           </div>
-          <button
-            onClick={handleCheckout}
-            disabled={!ready || checkoutLoading}
-            style={{
-              background: ready && !checkoutLoading
-                ? 'linear-gradient(180deg, #ffffff 0%, #d4d4d4 100%)'
-                : 'rgba(255,255,255,0.08)',
-              color: ready && !checkoutLoading ? 'oklch(0.12 0 0)' : 'rgba(255,255,255,0.22)',
-              border: 'none',
-              borderRadius: '100px',
-              padding: '11px 26px',
-              fontFamily: 'Space Grotesk, sans-serif',
-              fontWeight: 700,
-              fontSize: 14,
-              cursor: ready && !checkoutLoading ? 'pointer' : 'not-allowed',
-              transition: 'opacity 0.18s, transform 0.15s',
-              boxShadow: ready && !checkoutLoading ? 'inset 0 1px 0 rgba(255,255,255,0.55), 0 4px 18px rgba(0,0,0,0.45)' : 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              flexShrink: 0,
-            }}
-            onMouseEnter={(e) => {
-              if (ready && !checkoutLoading) {
-                (e.currentTarget as HTMLButtonElement).style.opacity = '0.88';
-                (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.02)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.opacity = '1';
-              (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)';
-            }}
-          >
-            {checkoutLoading
-              ? 'Redirecting…'
-              : ready
-              ? <><Check size={14} strokeWidth={2.5} /> Continue to checkout</>
-              : `Select ${plan.maxAgents - selected.length} more`}
-          </button>
+          {checkoutError && (
+            <p style={{ fontSize: 12, color: '#ff6b6b', paddingLeft: 16 }}>{checkoutError}</p>
+          )}
         </div>
       </div>
     </div>
