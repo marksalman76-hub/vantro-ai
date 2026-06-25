@@ -68,6 +68,19 @@ function TierCard({ tier, index }: TierCardProps) {
   }
 
   return (
+    <div className="relative" style={tier.featured ? { paddingTop: '1rem' } : {}}>
+      {tier.featured && (
+        <span
+          className="absolute top-0 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full z-10"
+          style={{
+            fontFamily: 'JetBrains Mono, monospace',
+            backgroundColor: 'oklch(0.97 0 0)',
+            color: 'oklch(0.14 0 0)',
+          }}
+        >
+          Most popular
+        </span>
+      )}
     <motion.div
       ref={cardRef}
       className="glass-card relative"
@@ -93,19 +106,6 @@ function TierCard({ tier, index }: TierCardProps) {
     >
       <div className="spotlight" />
       <div className="sheen" />
-
-      {tier.featured && (
-        <span
-          className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs font-semibold px-3 py-1 rounded-full"
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            backgroundColor: 'oklch(0.97 0 0)',
-            color: 'oklch(0.14 0 0)',
-          }}
-        >
-          Most popular
-        </span>
-      )}
 
       <p
         className="text-xs uppercase tracking-widest mb-2"
@@ -178,6 +178,7 @@ function TierCard({ tier, index }: TierCardProps) {
         {tier.cta}
       </a>
     </motion.div>
+    </div>
   );
 }
 
