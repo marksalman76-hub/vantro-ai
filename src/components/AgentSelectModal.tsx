@@ -346,7 +346,7 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
           flexShrink: 0,
         }}>
           {/* Email + CTA row */}
-          <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <input
               type="email"
               value={email}
@@ -387,7 +387,9 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
                 alignItems: 'center',
                 gap: 6,
                 flexShrink: 0,
+                flexGrow: 1,
                 whiteSpace: 'nowrap',
+                justifyContent: 'center',
               }}
               onMouseEnter={(e) => {
                 if (ready && !checkoutLoading) {
