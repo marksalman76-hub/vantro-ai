@@ -69,7 +69,7 @@ export function Navbar() {
             {/* Desktop CTA */}
             <div className="hidden md:flex" style={{ alignItems: 'center', gap: '0.75rem' }}>
               <a
-                href="/signin"
+                href="https://app.vantro.ai/login"
                 style={{ color: '#9CA3AF', fontSize: '0.875rem', fontWeight: 500, textDecoration: 'none', transition: 'color 0.15s ease' }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = '#FFFFFF'; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = '#9CA3AF'; }}
