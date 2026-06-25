@@ -5,7 +5,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Zap } from 'lucide-react';
 
 const NAV_LINKS = [
-  { label: 'Features', href: '#features' },
   { label: 'Agents', href: '#agents' },
   { label: 'Integrations', href: '#integrations' },
   { label: 'Pricing', href: '/#pricing' },
