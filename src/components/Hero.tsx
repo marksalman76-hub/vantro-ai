@@ -280,7 +280,7 @@ export function Hero() {
                 style={{ padding: '0.875rem 1.75rem', borderRadius: '0.5rem', fontSize: '1rem', fontWeight: 700, textDecoration: 'none', boxShadow: '0 0 40px rgba(255,107,53,0.35), 0 4px 20px rgba(255,107,53,0.40), inset 0 1px 0 rgba(255,255,255,0.20)' }}
               >
                 <Zap size={18} />
-                Deploy Now — It's Free
+                Deploy now
               </a>
               <a
                 href="#agents"

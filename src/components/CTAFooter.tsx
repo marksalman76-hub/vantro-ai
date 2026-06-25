@@ -85,7 +85,7 @@ export function CTAFooter() {
             }}
           >
             <Zap size={20} />
-            Deploy Now — It's Free
+            Deploy now
           </a>
           <a
             href="#agents"
