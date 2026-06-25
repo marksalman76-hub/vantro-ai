@@ -73,7 +73,7 @@ function QuoteCard({ quote, idx }: QuoteCardProps) {
         <span
           aria-hidden="true"
           className="text-4xl leading-none mr-1 select-none"
-          style={{ color: 'oklch(0.55 0 0)', fontFamily: 'Georgia, serif', verticalAlign: '-0.2em' }}
+          style={{ color: 'oklch(0.64 0.22 248)', fontFamily: 'Georgia, serif', verticalAlign: '-0.2em' }}
         >
           &ldquo;
         </span>
@@ -93,7 +93,7 @@ function QuoteCard({ quote, idx }: QuoteCardProps) {
 
 export function Testimonials() {
   return (
-    <section className="py-32 overflow-hidden" style={{ backgroundColor: 'oklch(0.33 0 0)' }}>
+    <section className="py-32 overflow-hidden" style={{ backgroundColor: 'oklch(0.14 0.008 248)' }}>
       <h2
         className="text-center mb-16 font-bold text-4xl md:text-5xl"
         style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}

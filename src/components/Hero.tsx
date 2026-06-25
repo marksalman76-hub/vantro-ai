@@ -37,7 +37,7 @@ export function Hero() {
         paddingBottom: '6rem',
         position: 'relative',
         overflow: 'hidden',
-        background: 'oklch(0.28 0 0)',
+        background: 'oklch(0.12 0.010 248)',
       }}
     >
       {/* Scanline texture */}
@@ -51,7 +51,7 @@ export function Hero() {
         style={{
           position: 'absolute', top: '10%', left: '-10%',
           width: '55vw', height: '55vw', borderRadius: '50%',
-          background: 'radial-gradient(circle, oklch(0.97 0 0 / 0.12) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(80,130,255,0.14) 0%, transparent 70%)',
           animation: 'drift1 22s ease-in-out infinite',
           pointerEvents: 'none',
         }}
@@ -60,7 +60,7 @@ export function Hero() {
         style={{
           position: 'absolute', top: '40%', right: '-15%',
           width: '45vw', height: '45vw', borderRadius: '50%',
-          background: 'radial-gradient(circle, oklch(0.97 0 0 / 0.10) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(80,130,255,0.10) 0%, transparent 70%)',
           animation: 'drift2 28s ease-in-out infinite',
           animationDelay: '-9s',
           pointerEvents: 'none',
@@ -70,7 +70,7 @@ export function Hero() {
         style={{
           position: 'absolute', bottom: '-5%', left: '30%',
           width: '40vw', height: '40vw', borderRadius: '50%',
-          background: 'radial-gradient(circle, oklch(0.97 0 0 / 0.08) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, rgba(80,130,255,0.08) 0%, transparent 70%)',
           animation: 'drift1 34s ease-in-out infinite',
           animationDelay: '-17s',
           pointerEvents: 'none',
@@ -87,7 +87,7 @@ export function Hero() {
             left: '55%',
             width: '180%',
             height: '2px',
-            background: `linear-gradient(90deg, transparent 0%, rgba(255,255,255,${ray.opacity}) 40%, rgba(255,255,255,${ray.opacity * 0.4}) 70%, transparent 100%)`,
+            background: `linear-gradient(90deg, transparent 0%, rgba(100,160,255,${ray.opacity}) 40%, rgba(100,160,255,${ray.opacity * 0.4}) 70%, transparent 100%)`,
             transform: `rotate(${ray.angle}deg)`,
             transformOrigin: '0% 50%',
             filter: 'blur(1.5px)',
@@ -183,8 +183,8 @@ export function Hero() {
             <a
               href="/#pricing"
               style={{
-                background: 'linear-gradient(180deg, #ffffff 0%, #d8d8d8 100%)',
-                color: 'oklch(0.14 0 0)',
+                background: 'linear-gradient(180deg, oklch(0.68 0.22 248) 0%, oklch(0.56 0.24 248) 100%)',
+                color: 'oklch(0.97 0 0)',
                 border: 'none',
                 cursor: 'pointer',
                 fontFamily: "'Inter', sans-serif",
@@ -192,7 +192,7 @@ export function Hero() {
                 fontWeight: 600,
                 padding: '0.75rem 1.5rem',
                 borderRadius: '9999px',
-                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.60), 0 4px 16px rgba(0,0,0,0.40)',
+                boxShadow: 'inset 0 1px 0 rgba(180,210,255,0.25), 0 4px 20px oklch(0.55 0.22 248 / 0.50)',
                 transition: 'opacity 0.2s ease, transform 0.15s ease',
                 textDecoration: 'none',
                 display: 'inline-block',
@@ -295,7 +295,7 @@ export function Hero() {
               position: 'absolute',
               width: '60%',
               height: '60%',
-              background: 'radial-gradient(circle, oklch(0.97 0 0 / 0.06) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(80,130,255,0.10) 0%, transparent 70%)',
               filter: 'blur(60px)',
               pointerEvents: 'none',
             }}

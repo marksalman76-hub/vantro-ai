@@ -111,13 +111,13 @@ function TierCard({ tier, index, onSelect, onSales }: TierCardProps) {
           borderRadius: '1.25rem',
           padding: '1.5rem',
           ...(tier.featured && {
-            border: '1px solid rgba(255,255,255,0.22)',
+            border: '1px solid rgba(100,160,255,0.40)',
             boxShadow: [
-              'inset 0 2px 0 rgba(255,255,255,0.30)',
-              'inset 0 -1px 0 rgba(255,255,255,0.05)',
-              '0 0 0 1px rgba(255,255,255,0.09)',
+              'inset 0 2px 0 rgba(140,190,255,0.20)',
+              'inset 0 -1px 0 rgba(80,140,255,0.08)',
+              '0 0 0 1px rgba(80,140,255,0.15)',
               '0 32px 80px rgba(0,0,0,0.65)',
-              '0 0 60px rgba(255,255,255,0.05)',
+              '0 0 60px rgba(80,140,255,0.18)',
             ].join(', '),
           }),
         }}
@@ -167,9 +167,10 @@ function TierCard({ tier, index, onSelect, onSales }: TierCardProps) {
           style={
             tier.featured
               ? {
-                  backgroundColor: 'oklch(0.97 0 0)',
-                  color: 'oklch(0.14 0 0)',
+                  background: 'linear-gradient(180deg, oklch(0.68 0.22 248) 0%, oklch(0.56 0.24 248) 100%)',
+                  color: 'oklch(0.97 0 0)',
                   border: 'none',
+                  boxShadow: 'inset 0 1px 0 rgba(180,210,255,0.25), 0 4px 16px oklch(0.55 0.22 248 / 0.45)',
                 }
               : {
                   border: '1px solid rgba(255,255,255,0.15)',
@@ -181,14 +182,14 @@ function TierCard({ tier, index, onSelect, onSales }: TierCardProps) {
             if (tier.featured) {
               (e.currentTarget as HTMLButtonElement).style.opacity = '0.90';
             } else {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.30)';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(100,160,255,0.45)';
             }
           }}
           onMouseLeave={(e) => {
             if (tier.featured) {
               (e.currentTarget as HTMLButtonElement).style.opacity = '1';
             } else {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.15)';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(100,160,255,0.20)';
             }
           }}
         >
@@ -205,7 +206,7 @@ export function Pricing() {
 
   return (
     <>
-      <section id="pricing" className="py-32" style={{ backgroundColor: 'oklch(0.28 0 0)' }}>
+      <section id="pricing" className="py-32" style={{ backgroundColor: 'oklch(0.12 0.010 248)' }}>
         <h2
           className="text-center mb-4 font-bold text-4xl md:text-5xl"
           style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}

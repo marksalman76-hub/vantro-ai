@@ -109,7 +109,7 @@ function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
 
         <div
           style={{
-            color: 'oklch(0.97 0 0 / 0.80)',
+            color: 'oklch(0.64 0.22 248)',
             marginBottom: '1rem',
             position: 'relative',
             zIndex: 1,
@@ -158,7 +158,7 @@ export function Features() {
       style={{
         paddingTop: '8rem',
         paddingBottom: '8rem',
-        background: 'oklch(0.33 0 0)',
+        background: 'oklch(0.14 0.008 248)',
       }}
     >
       <div style={{ maxWidth: '72rem', margin: '0 auto', padding: '0 1.5rem' }}>

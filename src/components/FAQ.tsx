@@ -35,7 +35,7 @@ export function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   return (
-    <section id="faq" className="py-32" style={{ backgroundColor: 'oklch(0.33 0 0)' }}>
+    <section id="faq" className="py-32" style={{ backgroundColor: 'oklch(0.14 0.008 248)' }}>
       <h2
         className="text-center mb-4 font-bold text-4xl md:text-5xl"
         style={{ fontFamily: 'Space Grotesk, sans-serif', color: 'oklch(0.97 0 0)' }}

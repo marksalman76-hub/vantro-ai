@@ -84,7 +84,7 @@ function StatCard({ number, label, description, index }: StatCardProps) {
 export function WhyVantro() {
   const prefersReduced = useReducedMotion()
   return (
-    <section className="py-32" style={{ backgroundColor: 'oklch(0.28 0 0)' }}>
+    <section className="py-32" style={{ backgroundColor: 'oklch(0.12 0.010 248)' }}>
       <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
         {/* Left: orb */}
         <motion.div
@@ -97,7 +97,7 @@ export function WhyVantro() {
           {/* Glow behind orb */}
           <div
             className="absolute inset-0 blur-3xl rounded-full"
-            style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)' }}
+            style={{ background: 'radial-gradient(circle, rgba(80,130,255,0.10) 0%, transparent 70%)' }}
           />
           <motion.div
             initial={prefersReduced ? false : { scale: 0.86, opacity: 0 }}
