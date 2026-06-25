@@ -84,7 +84,7 @@ function StatCard({ number, label, description, index }: StatCardProps) {
 export function WhyVantro() {
   const prefersReduced = useReducedMotion()
   return (
-    <section className="py-32" style={{ backgroundColor: 'oklch(0.12 0.022 38)' }}>
+    <section className="py-32" style={{ backgroundColor: 'oklch(0.07 0.04 260)' }}>
       <div className="max-w-6xl mx-auto px-6 grid lg:grid-cols-2 gap-16 items-center">
         {/* Left: orb */}
         <motion.div
@@ -97,7 +97,7 @@ export function WhyVantro() {
           {/* Glow behind orb */}
           <div
             className="absolute inset-0 blur-3xl rounded-full"
-            style={{ background: 'radial-gradient(circle, rgba(190,138,55,0.12) 0%, transparent 70%)' }}
+            style={{ background: 'radial-gradient(circle, rgba(80,100,220,0.16) 0%, transparent 70%)' }}
           />
           <motion.div
             initial={prefersReduced ? false : { scale: 0.86, opacity: 0 }}
@@ -140,12 +140,12 @@ export function WhyVantro() {
                       x: [0, -16, 11, -9, 5, 0],
                       scale: [1, 1.06, 0.96, 1.08, 0.98, 1],
                       filter: [
-                        'brightness(1) drop-shadow(0 0 25px rgba(255,255,255,0.12))',
-                        'brightness(1.35) drop-shadow(0 0 70px rgba(255,255,255,0.40))',
-                        'brightness(0.90) drop-shadow(0 0 10px rgba(255,255,255,0.04))',
-                        'brightness(1.25) drop-shadow(0 0 60px rgba(255,255,255,0.28))',
-                        'brightness(1.04) drop-shadow(0 0 35px rgba(255,255,255,0.16))',
-                        'brightness(1) drop-shadow(0 0 25px rgba(255,255,255,0.12))',
+                        'brightness(1) drop-shadow(0 0 25px rgba(80,100,220,0.28))',
+                        'brightness(1.35) drop-shadow(0 0 70px rgba(80,100,220,0.55))',
+                        'brightness(0.90) drop-shadow(0 0 10px rgba(80,100,220,0.12))',
+                        'brightness(1.25) drop-shadow(0 0 60px rgba(80,100,220,0.42))',
+                        'brightness(1.04) drop-shadow(0 0 35px rgba(80,100,220,0.30))',
+                        'brightness(1) drop-shadow(0 0 25px rgba(80,100,220,0.28))',
                       ],
                     }
               }

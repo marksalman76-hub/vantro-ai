@@ -8,7 +8,7 @@ export function CTAFooter() {
   return (
     <section
       className="relative py-40 overflow-hidden"
-      style={{ backgroundColor: 'oklch(0.12 0.022 38)' }}
+      style={{ backgroundColor: 'oklch(0.07 0.04 260)' }}
     >
       {/* Radial glow behind orb */}
       <div
@@ -17,7 +17,7 @@ export function CTAFooter() {
       >
         <div
           className="w-[600px] h-[600px] rounded-full blur-3xl"
-          style={{ background: 'radial-gradient(circle, rgba(190,138,55,0.10) 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, rgba(80,100,220,0.14) 0%, transparent 70%)' }}
         />
       </div>
 
@@ -103,10 +103,10 @@ export function CTAFooter() {
             href="/#pricing"
             className="rounded-full px-8 py-4 font-semibold text-lg cursor-pointer"
             style={{
-              background: 'linear-gradient(180deg, oklch(0.74 0.16 58) 0%, oklch(0.62 0.18 55) 100%)',
-              color: 'oklch(0.10 0.02 38)',
+              background: 'linear-gradient(180deg, oklch(0.65 0.22 248) 0%, oklch(0.52 0.22 248) 100%)',
+              color: 'oklch(0.97 0 0)',
               border: 'none',
-              boxShadow: 'inset 0 1px 0 rgba(255,225,160,0.35), 0 4px 20px oklch(0.62 0.16 58 / 0.50)',
+              boxShadow: 'inset 0 1px 0 rgba(160,200,255,0.28), 0 4px 20px oklch(0.52 0.22 248 / 0.50)',
               transition: 'opacity 0.2s ease, transform 0.15s ease',
               textDecoration: 'none',
               display: 'inline-block',
