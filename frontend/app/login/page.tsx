@@ -71,7 +71,7 @@ function LoginForm() {
           </form>
           <div className="mt-6 text-center text-sm text-white/30">
             Don&apos;t have an account?{' '}
-            <Link href="/register" className="hover:opacity-80 transition-opacity" style={{ color: '#FF6B35' }}>Create account</Link>
+            <a href="https://vantro.ai/#pricing" className="hover:opacity-80 transition-opacity" style={{ color: '#FF6B35' }}>Get started</a>
           </div>
         </div>
       </div>

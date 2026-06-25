@@ -64,7 +64,7 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
 
   async function handleCheckout() {
     try {
-      const res = await fetch('/api/checkout', {
+      const res = await fetch('https://api.vantro.ai/api/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: plan.name, agents: selected }),
@@ -72,7 +72,8 @@ export function AgentSelectModal({ plan, onClose }: AgentSelectModalProps) {
       const data = await res.json();
       if (data.url) window.location.href = data.url;
     } catch {
-      window.location.href = `https://app.vantro.ai/register?plan=${plan.name.toLowerCase()}&agents=${encodeURIComponent(selected.join(','))}`;
+      // Stripe checkout unavailable — surface error rather than wrong redirect
+      alert('Checkout is temporarily unavailable. Please try again or contact support@vantro.ai.');
     }
   }
 
