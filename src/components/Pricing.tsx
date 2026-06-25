@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Check } from 'lucide-react';
 import { AgentSelectModal, type PlanConfig } from './AgentSelectModal';
@@ -199,6 +199,20 @@ function TierCard({ tier, index, onSelect }: TierCardProps) {
 
 export function Pricing() {
   const [activePlan, setActivePlan] = useState<PlanConfig | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const autoplan = params.get('autoplan');
+    if (autoplan) {
+      const tier = TIERS.find((t) => t.name.toLowerCase() === autoplan.toLowerCase());
+      if (tier && tier.name !== 'Enterprise') {
+        setActivePlan({ name: tier.name, price: tier.price, maxAgents: tier.maxAgents });
+        params.delete('autoplan');
+        const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}${window.location.hash}`;
+        window.history.replaceState(null, '', newUrl);
+      }
+    }
+  }, []);
 
   return (
     <>
