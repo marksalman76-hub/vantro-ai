@@ -17,7 +17,7 @@ export function LogoStrip() {
         paddingBottom: '3rem',
         borderTop: '1px solid oklch(0.97 0 0 / 0.08)',
         borderBottom: '1px solid oklch(0.97 0 0 / 0.08)',
-        background: 'oklch(0.14 0.008 248 / 0.50)',
+        background: 'oklch(0.15 0.018 38 / 0.60)',
         overflow: 'hidden',
       }}
     >

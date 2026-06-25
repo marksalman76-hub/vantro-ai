@@ -133,8 +133,8 @@ function StepCard({
           width: '2.5rem',
           height: '2.5rem',
           borderRadius: '50%',
-          background: 'oklch(0.14 0.010 248)',
-          border: '1px solid oklch(0.64 0.22 248 / 0.25)',
+          background: 'oklch(0.16 0.020 38)',
+          border: '1px solid oklch(0.72 0.16 58 / 0.28)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -229,7 +229,7 @@ export function HowItWorks() {
       style={{
         paddingTop: '8rem',
         paddingBottom: '8rem',
-        background: 'oklch(0.12 0.010 248)',
+        background: 'oklch(0.12 0.022 38)',
       }}
     >
       <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '0 1.5rem' }}>

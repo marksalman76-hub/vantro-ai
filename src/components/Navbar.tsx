@@ -49,7 +49,7 @@ export function Navbar() {
           zIndex: 100,
           transition: 'background 0.3s ease, border-color 0.3s ease, backdrop-filter 0.3s ease',
           background: scrolled
-            ? 'oklch(0.08 0.015 248 / 0.90)'
+            ? 'oklch(0.08 0.020 40 / 0.92)'
             : 'transparent',
           backdropFilter: scrolled ? 'blur(16px) saturate(1.4)' : 'none',
           WebkitBackdropFilter: scrolled ? 'blur(16px) saturate(1.4)' : 'none',
@@ -175,8 +175,8 @@ export function Navbar() {
             <a
               href="/#pricing"
               style={{
-                background: 'linear-gradient(180deg, oklch(0.68 0.22 248) 0%, oklch(0.56 0.24 248) 100%)',
-                color: 'oklch(0.97 0 0)',
+                background: 'linear-gradient(180deg, oklch(0.74 0.16 58) 0%, oklch(0.62 0.18 55) 100%)',
+                color: 'oklch(0.10 0.02 38)',
                 border: 'none',
                 cursor: 'pointer',
                 fontFamily: "'Inter', sans-serif",
@@ -184,7 +184,7 @@ export function Navbar() {
                 fontWeight: 600,
                 padding: '0.5rem 1.25rem',
                 borderRadius: '9999px',
-                boxShadow: 'inset 0 1px 0 rgba(180,210,255,0.25), 0 2px 10px oklch(0.55 0.22 248 / 0.45)',
+                boxShadow: 'inset 0 1px 0 rgba(255,225,160,0.30), 0 2px 10px oklch(0.62 0.16 58 / 0.45)',
                 transition: 'opacity 0.2s ease, transform 0.15s ease',
                 textDecoration: 'none',
                 display: 'inline-block',
@@ -229,7 +229,7 @@ export function Navbar() {
           position: 'fixed',
           inset: 0,
           zIndex: 99,
-          background: 'oklch(0.06 0.015 248 / 0.75)',
+          background: 'oklch(0.06 0.018 40 / 0.75)',
           opacity: mobileOpen ? 1 : 0,
           pointerEvents: mobileOpen ? 'auto' : 'none',
           transition: 'opacity 0.3s ease',
@@ -242,7 +242,7 @@ export function Navbar() {
             top: '4rem',
             left: 0,
             right: 0,
-            background: 'oklch(0.11 0.012 248 / 0.97)',
+            background: 'oklch(0.10 0.020 38 / 0.97)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             borderBottom: '1px solid oklch(0.97 0 0 / 0.08)',
@@ -314,8 +314,8 @@ export function Navbar() {
               href="/#pricing"
               onClick={() => setMobileOpen(false)}
               style={{
-                background: 'linear-gradient(180deg, oklch(0.68 0.22 248) 0%, oklch(0.56 0.24 248) 100%)',
-                color: 'oklch(0.97 0 0)',
+                background: 'linear-gradient(180deg, oklch(0.74 0.16 58) 0%, oklch(0.62 0.18 55) 100%)',
+                color: 'oklch(0.10 0.02 38)',
                 border: 'none',
                 cursor: 'pointer',
                 fontFamily: "'Inter', sans-serif",

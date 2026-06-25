@@ -34,7 +34,7 @@ export function Footer() {
     <footer
       className="pt-20 pb-10"
       style={{
-        backgroundColor: 'oklch(0.09 0.015 248)',
+        backgroundColor: 'oklch(0.09 0.022 40)',
         borderTop: '1px solid rgba(255,255,255,0.08)',
       }}
     >
