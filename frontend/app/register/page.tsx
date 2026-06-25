@@ -30,8 +30,10 @@ export default function RegisterPage() {
       }
       if (data.access_token) {
         localStorage.setItem('token', data.access_token)
+        router.push('/onboarding')
+      } else {
+        router.push('/login?registered=1')
       }
-      router.push('/onboarding')
     } catch {
       setError('Something went wrong. Please try again.')
     } finally {

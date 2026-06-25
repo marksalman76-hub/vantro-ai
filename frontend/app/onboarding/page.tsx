@@ -19,6 +19,8 @@ const USE_CASES = [
   { id: 'other', label: 'Something else' },
 ]
 
+function getToken() { return typeof window !== 'undefined' ? localStorage.getItem('token') : null }
+
 export default function OnboardingPage() {
   const router = useRouter()
   const [step, setStep] = useState(0)
@@ -35,7 +37,7 @@ export default function OnboardingPage() {
     setLaunching(true)
     localStorage.setItem('onboarding_complete', '1')
     if (workspace) localStorage.setItem('workspace_name', workspace)
-    router.push('/dashboard')
+    router.push(getToken() ? '/dashboard' : '/login')
   }
 
   const current = STEPS[step]
