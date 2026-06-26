@@ -19,12 +19,14 @@ export default function Navigation() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [activeLink, setActiveLink] = useState('')
+  const [hoveredLink, setHoveredLink] = useState<string | null>(null)
+  const [ctaPressed, setCtaPressed] = useState(false)
 
   const navRef = useRef<HTMLElement>(null)
 
-  // Scroll listener for background state
+  // Scroll listener for background state — threshold 20px
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 30)
+    const onScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', onScroll, { passive: true })
     onScroll()
     return () => window.removeEventListener('scroll', onScroll)
@@ -111,7 +113,7 @@ export default function Navigation() {
           padding: '0 24px',
           display: 'flex',
           alignItems: 'center',
-          transition: 'all 0.4s cubic-bezier(0.23,1,0.32,1)',
+          transition: 'background 0.3s ease, backdrop-filter 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
           ...(scrolled ? scrolledStyles : notScrolledStyles),
         }}
       >
@@ -137,57 +139,8 @@ export default function Navigation() {
               flexShrink: 0,
             }}
           >
-            {/* "V" italic letter */}
-            <span
-              style={{
-                fontSize: 26,
-                fontWeight: 900,
-                color: '#FF6B35',
-                fontStyle: 'italic',
-                lineHeight: 1,
-              }}
-            >
-              V
-            </span>
-            {/* Dot mark */}
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: 99,
-                background: '#FF6B35',
-                marginLeft: 1,
-                marginBottom: 4,
-                flexShrink: 0,
-                display: 'inline-block',
-              }}
-            />
-            {/* "antro" */}
-            <span
-              style={{
-                fontSize: 22,
-                fontWeight: 700,
-                color: '#fff',
-                letterSpacing: '-0.02em',
-                lineHeight: 1,
-              }}
-            >
-              antro
-            </span>
-            {/* ".ai" suffix */}
-            <span
-              style={{
-                fontSize: 13,
-                color: 'rgba(0,217,255,0.8)',
-                fontWeight: 600,
-                marginLeft: 1,
-                lineHeight: 1,
-                alignSelf: 'flex-end',
-                paddingBottom: 2,
-              }}
-            >
-              .ai
-            </span>
+            <span style={{ color: '#FF6B35', fontWeight: 700, fontSize: 26, lineHeight: 1 }}>V</span>
+            <span style={{ color: '#ffffff', fontWeight: 700, fontSize: 26, lineHeight: 1 }}>antro</span>
           </a>
 
           {/* ── Desktop Nav Links ── */}
@@ -201,48 +154,69 @@ export default function Navigation() {
               alignItems: 'center',
             }}
           >
-            {NAV_LINKS.map((link) => (
-              <motion.a
-                key={link.label}
-                href={link.href}
-                className="nav-link"
-                onClick={() => setActiveLink(link.href)}
-                whileHover={{
-                  color: '#ffffff',
-                  backgroundColor: 'rgba(255,255,255,0.06)',
-                }}
-                style={{
-                  padding: '8px 16px',
-                  borderRadius: 10,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: activeLink === link.href ? '#fff' : 'rgba(255,255,255,0.65)',
-                  textDecoration: 'none',
-                  position: 'relative',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  transition: 'color 150ms ease, background 150ms ease',
-                  cursor: 'pointer',
-                }}
-              >
-                {link.label}
-                {activeLink === link.href && (
-                  <motion.span
-                    layoutId="nav-active-line"
-                    style={{
-                      position: 'absolute',
-                      bottom: 2,
-                      left: '20%',
-                      right: '20%',
-                      height: 2,
-                      borderRadius: 2,
-                      background: '#FF6B35',
-                      boxShadow: '0 0 8px #FF6B3588',
-                    }}
-                  />
-                )}
-              </motion.a>
-            ))}
+            {NAV_LINKS.map((link) => {
+              const isActive = activeLink === link.href
+              const isHovered = hoveredLink === link.href
+              return (
+                <motion.a
+                  key={link.label}
+                  href={link.href}
+                  className="nav-link"
+                  onClick={() => setActiveLink(link.href)}
+                  onMouseEnter={() => setHoveredLink(link.href)}
+                  onMouseLeave={() => setHoveredLink(null)}
+                  whileHover={{
+                    color: '#ffffff',
+                    backgroundColor: 'rgba(255,255,255,0.06)',
+                  }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 10,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: isActive ? '#fff' : 'rgba(255,255,255,0.65)',
+                    textDecoration: 'none',
+                    position: 'relative',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    transition: 'color 150ms ease, background-color 150ms ease',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {link.label}
+                  {/* Underline slide-in on hover (when not already the active link) */}
+                  {!isActive && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        bottom: 4,
+                        left: '16px',
+                        height: 1.5,
+                        borderRadius: 2,
+                        background: 'rgba(0,217,255,0.7)',
+                        width: isHovered ? 'calc(100% - 32px)' : '0%',
+                        transition: 'width 200ms ease-out',
+                      }}
+                    />
+                  )}
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-active-line"
+                      style={{
+                        position: 'absolute',
+                        bottom: 2,
+                        left: '20%',
+                        right: '20%',
+                        height: 2,
+                        borderRadius: 2,
+                        background: '#FF6B35',
+                        boxShadow: '0 0 8px #FF6B3588',
+                      }}
+                    />
+                  )}
+                </motion.a>
+              )
+            })}
           </div>
 
           {/* ── Right Side: Login + CTA + Hamburger ── */}
@@ -283,9 +257,13 @@ export default function Navigation() {
               href="#pricing"
               className="desktop-only"
               whileHover={{
-                scale: 1.05,
+                scale: 1.04,
                 boxShadow: '0 0 36px rgba(255,107,53,0.65)',
               }}
+              whileTap={{ scale: 0.97 }}
+              onMouseDown={() => setCtaPressed(true)}
+              onMouseUp={() => setCtaPressed(false)}
+              onMouseLeave={() => setCtaPressed(false)}
               style={{
                 background: 'linear-gradient(135deg, #FF6B35 0%, #E8521A 100%)',
                 color: '#fff',
@@ -293,9 +271,11 @@ export default function Navigation() {
                 fontSize: 14,
                 padding: '10px 24px',
                 borderRadius: 10,
-                boxShadow: '0 0 24px rgba(255,107,53,0.45)',
+                boxShadow: ctaPressed
+                  ? '0 0 16px rgba(255,107,53,0.3)'
+                  : '0 0 24px rgba(255,107,53,0.45)',
                 textDecoration: 'none',
-                transition: 'all 200ms cubic-bezier(0.23,1,0.32,1)',
+                transition: 'transform 150ms ease-out, box-shadow 150ms ease-out',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 display: 'inline-block',

@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { AGENTS, CATEGORY_COLORS } from '@/lib/agents';
 
 // ─── Plan definitions ────────────────────────────────────────────────────────
 
@@ -91,230 +93,374 @@ const ENTERPRISE_FEATURES = [
   'Invoiced billing',
 ];
 
-// ─── Agent catalogue (matches billing.py AGENT_DISPLAY_NAMES) ────────────────
+// ─── Plan limits (how many agents each plan can select) ──────────────────────
 
-const PLAN_SLOTS: Record<string, number> = { starter: 2, growth: 5, business: 11 };
+const PLAN_LIMITS: Record<string, number> = { starter: 3, growth: 8, business: 22 };
 
-interface AgentMeta {
-  id: string;
-  name: string;
-  category: string;
-  desc: string;
-}
+// ─── Category ordering ────────────────────────────────────────────────────────
 
-const ALL_AGENTS: AgentMeta[] = [
-  { id: 'intake_trial_agent',       name: 'Intake & Onboarding',      category: 'Core',        desc: 'Qualify inbound leads, book demos, activate trials' },
-  { id: 'brand_voice_agent',        name: 'Brand Voice',              category: 'Core',        desc: 'Define & enforce consistent brand tone across all output' },
-  { id: 'seo_agent',                name: 'SEO Optimizer',            category: 'Core',        desc: 'Keyword strategy, on-page SEO, content gap analysis' },
-  { id: 'content_strategy_agent',   name: 'Content Strategy',         category: 'Content',     desc: 'Content calendars, topic clusters, editorial planning' },
-  { id: 'social_media_agent',       name: 'Social Media',             category: 'Content',     desc: 'Platform-native posts, scheduling, engagement copy' },
-  { id: 'video_script_agent',       name: 'Video Script',             category: 'Content',     desc: 'YouTube, Reels, TikTok, and long-form video scripts' },
-  { id: 'copywriting_agent',        name: 'Copywriting',              category: 'Content',     desc: 'High-converting landing pages, ads, and sales copy' },
-  { id: 'paid_ads_agent',           name: 'Paid Advertising',         category: 'Growth',      desc: 'Google Ads, Meta, LinkedIn — campaigns and creative' },
-  { id: 'conversion_optimizer_agent', name: 'Conversion Optimizer',  category: 'Growth',      desc: 'CRO audits, A/B test briefs, funnel friction analysis' },
-  { id: 'growth_hacking_agent',     name: 'Growth Hacking',           category: 'Growth',      desc: 'Viral loops, referral programs, PLG experiment design' },
-  { id: 'market_expansion_agent',   name: 'Market Expansion',         category: 'Growth',      desc: 'New market entry strategy, geo-expansion playbooks' },
-  { id: 'email_marketing_agent',    name: 'Email Marketing',          category: 'Revenue',     desc: 'Sequences, deliverability, list hygiene, A/B cadences' },
-  { id: 'lead_generation_agent',    name: 'Lead Generation',          category: 'Revenue',     desc: 'Lead magnets, prospecting workflows, ICP targeting' },
-  { id: 'retention_agent',          name: 'Retention',                category: 'Revenue',     desc: 'Churn prevention, win-back flows, NRR optimisation' },
-  { id: 'affiliate_partnership_agent', name: 'Affiliate & Partnerships', category: 'Revenue', desc: 'Commission structures, recruit criteria, payout tiers' },
-  { id: 'research_analytics_agent', name: 'Research & Analytics',     category: 'Intelligence', desc: 'Market research, KPI analysis, competitive intelligence' },
-  { id: 'competitor_analyst_agent', name: 'Competitor Analysis',      category: 'Intelligence', desc: 'Competitor monitoring, gap analysis, positioning briefs' },
-  { id: 'campaign_orchestrator_agent', name: 'Campaign Orchestrator', category: 'Intelligence', desc: 'Multi-channel campaign coordination and performance review' },
-  { id: 'customer_success_agent',   name: 'Customer Success',         category: 'Business',    desc: 'Onboarding flows, health scores, escalation playbooks' },
-  { id: 'product_launch_agent',     name: 'Product Launch',           category: 'Business',    desc: 'Launch checklists, GTM sequencing, post-launch amplification' },
-  { id: 'influencer_outreach_agent', name: 'Influencer Outreach',     category: 'Business',    desc: 'Creator outreach scripts, rate negotiation, campaign briefs' },
-  { id: 'pr_media_agent',           name: 'PR & Media',               category: 'Business',    desc: 'Media pitches, press releases, journalist targeting' },
-];
-
-const CATEGORY_ORDER = ['Core', 'Content', 'Growth', 'Revenue', 'Intelligence', 'Business'];
-
-const CATEGORY_COLORS: Record<string, string> = {
-  Core:        'bg-violet-500/20 text-violet-300 border-violet-500/30',
-  Content:     'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  Growth:      'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-  Revenue:     'bg-amber-500/20 text-amber-300 border-amber-500/30',
-  Intelligence:'bg-pink-500/20 text-pink-300 border-pink-500/30',
-  Business:    'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
-};
+const CATEGORY_ORDER = ['Sales', 'Operations', 'Engineering', 'Support', 'Executive'] as const;
 
 // ─── Agent Selection Modal ────────────────────────────────────────────────────
 
 function AgentSelectionModal({
   plan,
+  selectedAgentIds,
+  onToggle,
   onClose,
-  onConfirm,
+  onContinue,
 }: {
   plan: string;
+  selectedAgentIds: number[];
+  onToggle: (id: number) => void;
   onClose: () => void;
-  onConfirm: (agentIds: string[]) => void;
+  onContinue: () => void;
 }) {
-  const slots = PLAN_SLOTS[plan] ?? 2;
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  const toggle = (id: string) => {
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else if (next.size < slots) {
-        next.add(id);
-      }
-      return next;
-    });
+  const limit = PLAN_LIMITS[plan] ?? 3;
+  const planLabel: Record<string, string> = {
+    starter: 'Starter', growth: 'Growth', business: 'Business',
   };
 
-  const planLabel: Record<string, string> = { starter: 'Starter', growth: 'Growth', business: 'Business', enterprise: 'Enterprise' };
   const grouped = CATEGORY_ORDER.map(cat => ({
     cat,
-    agents: ALL_AGENTS.filter(a => a.category === cat),
+    color: CATEGORY_COLORS[cat],
+    agents: AGENTS.filter(a => a.category === cat),
   }));
 
-  const isEnterprise = plan === 'enterprise';
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+      }}
+    >
+      {/* Backdrop */}
       <div
-        className={`relative w-full flex flex-col rounded-2xl shadow-2xl overflow-hidden ${isEnterprise ? 'max-w-lg' : 'max-w-4xl max-h-[90vh]'}`}
-        style={{ background: 'rgba(8,12,28,0.97)', border: '1px solid rgba(255,255,255,0.1)' }}
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(0,0,0,0.75)',
+          backdropFilter: 'blur(6px)',
+        }}
+      />
+
+      {/* Card */}
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: '760px',
+          maxHeight: '85vh',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: '20px',
+          background: 'rgba(10,14,30,0.97)',
+          border: '1px solid rgba(255,255,255,0.10)',
+          backdropFilter: 'blur(24px)',
+          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+          overflow: 'hidden',
+        }}
       >
         {/* Header */}
-        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-white/[0.08] flex-shrink-0">
+        <div
+          style={{
+            flexShrink: 0,
+            padding: '24px 28px 20px',
+            borderBottom: '1px solid rgba(255,255,255,0.07)',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: '16px',
+          }}
+        >
           <div>
-            <h2 className="text-xl font-bold text-white mb-0.5">
-              {isEnterprise ? 'Enterprise plan' : 'Choose your agents'}
+            <h2
+              style={{
+                margin: 0,
+                fontSize: '20px',
+                fontWeight: 700,
+                color: '#fff',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Select Your AI Team
             </h2>
-            <p className="text-gray-400 text-sm">
-              {isEnterprise
-                ? 'Custom agent allocation · Tailored to your business'
-                : `${planLabel[plan]} plan · Select up to `}
-              {!isEnterprise && <span className="text-white font-semibold">{slots}</span>}
-              {!isEnterprise && ` agents · `}
-              {!isEnterprise && (
-                <span className={selected.size === slots ? 'text-violet-400 font-semibold' : 'text-gray-400'}>
-                  {selected.size}/{slots} selected
-                </span>
-              )}
+            <p
+              style={{
+                margin: '4px 0 0',
+                fontSize: '14px',
+                color: 'rgba(255,255,255,0.45)',
+              }}
+            >
+              {planLabel[plan]} plan &mdash; Choose up to{' '}
+              <span style={{ color: '#fff', fontWeight: 600 }}>{limit}</span> agents
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors ml-4">
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+            {/* Counter pill */}
+            <div
+              style={{
+                padding: '4px 12px',
+                borderRadius: '999px',
+                background: 'rgba(255,107,53,0.15)',
+                border: '1px solid rgba(255,107,53,0.35)',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#FF6B35',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {selectedAgentIds.length}/{limit} selected
+            </div>
+
+            {/* Close button */}
+            <button
+              onClick={onClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: 'rgba(255,255,255,0.35)',
+                padding: '2px',
+                display: 'flex',
+                alignItems: 'center',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.35)')}
+            >
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        {isEnterprise ? (
-          /* Enterprise — no agent picker, redirect to enquiry */
-          <div className="px-6 py-8 text-center">
-            <div className="w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg,rgba(245,158,11,0.25),rgba(234,88,12,0.25))', border: '1px solid rgba(245,158,11,0.3)' }}>
-              <svg className="w-7 h-7 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-2 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-bold text-white mb-2">Fully custom agent setup</h3>
-            <p className="text-gray-400 text-sm mb-1">Enterprise plans include all 22 agents plus custom configuration,</p>
-            <p className="text-gray-400 text-sm mb-6">dedicated support, and volume pricing.</p>
-            <div className="space-y-2 text-sm text-left bg-white/[0.04] rounded-xl p-4 mb-6">
-              {['All 22 agents unlocked', 'Custom credit allocation', 'Dedicated account manager', 'White-label option', 'SLA & uptime guarantee', 'Invoiced billing'].map(f => (
-                <div key={f} className="flex items-center gap-2.5 text-gray-300">
-                  <svg className="w-4 h-4 text-amber-400 flex-shrink-0" fill="none" viewBox="0 0 12 12">
-                    <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  {f}
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-3">
-              <button onClick={onClose} className="flex-1 px-5 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white border border-white/10 hover:border-white/20 transition-all">
-                Back
-              </button>
-              <button
-                onClick={() => onConfirm([])}
-                className="flex-1 px-6 py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
-                style={{ background: 'linear-gradient(135deg,#f59e0b,#ea580c)' }}
-              >
-                Contact us →
-              </button>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Agent grid */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-              {grouped.map(({ cat, agents }) => (
-                <div key={cat}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${CATEGORY_COLORS[cat]}`}>
-                      {cat}
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-                    {agents.map(agent => {
-                      const isSelected = selected.has(agent.id);
-                      const isDisabled = !isSelected && selected.size >= slots;
-                      return (
-                        <button
-                          key={agent.id}
-                          onClick={() => toggle(agent.id)}
-                          disabled={isDisabled}
-                          className={`relative text-left p-3.5 rounded-xl border transition-all ${
-                            isSelected
-                              ? 'bg-violet-600/20 border-violet-500/60 shadow-[0_0_12px_rgba(124,58,237,0.2)]'
-                              : isDisabled
-                              ? 'bg-white/[0.02] border-white/[0.05] opacity-40 cursor-not-allowed'
-                              : 'bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07] hover:border-white/[0.15]'
-                          }`}
-                        >
-                          {isSelected && (
-                            <div className="absolute top-2.5 right-2.5 w-4 h-4 bg-violet-500 rounded-full flex items-center justify-center">
-                              <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                            </div>
-                          )}
-                          <p className={`text-sm font-semibold mb-0.5 pr-6 ${isSelected ? 'text-white' : 'text-gray-200'}`}>
-                            {agent.name}
-                          </p>
-                          <p className="text-xs text-gray-500 leading-relaxed">{agent.desc}</p>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
+        {/* Scrollable agent list */}
+        <div
+          style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '20px 28px',
+          }}
+        >
+          {grouped.map(({ cat, color, agents }) => (
+            <div key={cat} style={{ marginBottom: '28px' }}>
+              {/* Category label */}
+              <div style={{ marginBottom: '12px' }}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    padding: '3px 10px',
+                    borderRadius: '6px',
+                    fontSize: '11px',
+                    fontWeight: 700,
+                    letterSpacing: '0.06em',
+                    textTransform: 'uppercase',
+                    color: color,
+                    background: `${color}18`,
+                    border: `1px solid ${color}40`,
+                  }}
+                >
+                  {cat}
+                </span>
+              </div>
 
-            {/* Footer */}
-            <div className="flex items-center justify-between px-6 py-4 border-t border-white/[0.08] flex-shrink-0 gap-4">
-              <p className="text-xs text-gray-500">
-                {selected.size === 0
-                  ? 'Select at least one agent to continue'
-                  : selected.size < slots
-                  ? `${slots - selected.size} more slot${slots - selected.size !== 1 ? 's' : ''} available`
-                  : 'Selection complete — agents locked after payment'}
-              </p>
-              <div className="flex gap-3 flex-shrink-0">
-                <button
-                  onClick={onClose}
-                  className="px-5 py-2.5 rounded-xl text-sm font-medium text-gray-400 hover:text-white border border-white/10 hover:border-white/20 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => onConfirm(Array.from(selected))}
-                  disabled={selected.size === 0}
-                  className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:cursor-not-allowed text-white transition-all"
-                >
-                  Confirm selection →
-                </button>
+              {/* 2-col agent grid */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '10px',
+                }}
+              >
+                {agents.map(agent => {
+                  const isSelected = selectedAgentIds.includes(agent.id);
+                  const atLimit = selectedAgentIds.length >= limit;
+                  const isDisabled = !isSelected && atLimit;
+
+                  return (
+                    <button
+                      key={agent.id}
+                      onClick={() => !isDisabled && onToggle(agent.id)}
+                      disabled={isDisabled}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px 14px',
+                        borderRadius: '12px',
+                        border: isSelected
+                          ? '1px solid rgba(255,107,53,0.5)'
+                          : '1px solid rgba(255,255,255,0.08)',
+                        background: isSelected
+                          ? 'rgba(255,107,53,0.08)'
+                          : 'rgba(255,255,255,0.04)',
+                        cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        opacity: isDisabled ? 0.4 : 1,
+                        textAlign: 'left',
+                        transition: 'border-color 0.15s, background 0.15s',
+                        width: '100%',
+                      }}
+                      onMouseEnter={e => {
+                        if (!isDisabled && !isSelected) {
+                          e.currentTarget.style.background = 'rgba(255,255,255,0.07)';
+                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+                        }
+                      }}
+                      onMouseLeave={e => {
+                        if (!isDisabled && !isSelected) {
+                          e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
+                          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                        }
+                      }}
+                    >
+                      {/* Avatar */}
+                      <img
+                        src={agent.avatar}
+                        alt={agent.name}
+                        style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '50%',
+                          objectFit: 'cover',
+                          flexShrink: 0,
+                          border: isSelected
+                            ? '2px solid rgba(255,107,53,0.6)'
+                            : '2px solid rgba(255,255,255,0.08)',
+                        }}
+                      />
+
+                      {/* Text */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: '13px',
+                            fontWeight: 600,
+                            color: isSelected ? '#fff' : 'rgba(255,255,255,0.85)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {agent.name}
+                        </p>
+                        <p
+                          style={{
+                            margin: '1px 0 0',
+                            fontSize: '11px',
+                            color: 'rgba(255,255,255,0.40)',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {agent.role}
+                        </p>
+                      </div>
+
+                      {/* Checkbox */}
+                      <div
+                        style={{
+                          flexShrink: 0,
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '5px',
+                          border: isSelected
+                            ? '2px solid #FF6B35'
+                            : '2px solid rgba(255,255,255,0.20)',
+                          background: isSelected ? '#FF6B35' : 'transparent',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          transition: 'background 0.15s, border-color 0.15s',
+                        }}
+                      >
+                        {isSelected && (
+                          <svg width="10" height="10" viewBox="0 0 12 12" fill="none">
+                            <path
+                              d="M2 6l3 3 5-5"
+                              stroke="#fff"
+                              strokeWidth="1.8"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-          </>
-        )}
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div
+          style={{
+            flexShrink: 0,
+            padding: '16px 28px 20px',
+            borderTop: '1px solid rgba(255,255,255,0.07)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+          }}
+        >
+          {/* Back link */}
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '14px',
+              color: 'rgba(255,255,255,0.40)',
+              padding: 0,
+              textDecoration: 'underline',
+              textUnderlineOffset: '3px',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.70)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.40)')}
+          >
+            Back
+          </button>
+
+          {/* Continue button */}
+          <button
+            onClick={onContinue}
+            disabled={selectedAgentIds.length === 0}
+            style={{
+              padding: '11px 28px',
+              borderRadius: '12px',
+              fontSize: '14px',
+              fontWeight: 600,
+              color: '#fff',
+              border: 'none',
+              cursor: selectedAgentIds.length === 0 ? 'not-allowed' : 'pointer',
+              opacity: selectedAgentIds.length === 0 ? 0.4 : 1,
+              background:
+                selectedAgentIds.length === 0
+                  ? 'rgba(255,255,255,0.08)'
+                  : 'linear-gradient(135deg, #FF6B35, #e85520)',
+              boxShadow:
+                selectedAgentIds.length === 0
+                  ? 'none'
+                  : '0 4px 20px rgba(255,107,53,0.35)',
+              transition: 'opacity 0.15s, box-shadow 0.15s',
+            }}
+          >
+            Continue to Create Account →
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -520,7 +666,7 @@ function TopUpSection() {
   const handleTopUp = async (credits: number) => {
     const token = localStorage.getItem('token');
     // TODO: replace with internal /login route once that page is created
-    if (!token) { window.location.href = 'https://app.vantro.ai/login?redirect=/pricing'; return; }
+    if (!token) { window.location.href = 'https://vantro.ai/login?redirect=/pricing'; return; }
     setLoadingPack(credits);
     try {
       const res = await fetch('/api/stripe/create-topup-checkout', {
@@ -602,32 +748,60 @@ function TopUpSection() {
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function PricingPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [showEnquiry, setShowEnquiry] = useState(false);
   const [agentModalPlan, setAgentModalPlan] = useState<string | null>(null);
+  const [selectedAgentIds, setSelectedAgentIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const plan = params.get('plan');
+    if (plan && ['starter', 'growth', 'business'].includes(plan)) {
+      setAgentModalPlan(plan);
+      setSelectedAgentIds([]);
+    }
+  }, []);
 
   const handlePlanCTA = (planId: string) => {
-    const token = localStorage.getItem('auth_token') || localStorage.getItem('token');
-    if (!token) {
-      // TODO: replace with internal /login route once that page is created
-      window.location.href = `https://app.vantro.ai/login?redirect=/pricing`;
-      return;
-    }
-    setError('');
-    setAgentModalPlan(planId);
-  };
-
-  const handleAgentConfirm = (agentIds: string[]) => {
-    if (!agentModalPlan) return;
-    setAgentModalPlan(null);
-    if (agentModalPlan === 'enterprise') {
+    if (planId === 'enterprise') {
       setShowEnquiry(true);
       return;
     }
-    const agentsParam = agentIds.join(',');
-    // TODO: replace with internal /checkout route once that page is created
-    window.location.href = `https://app.vantro.ai/checkout?plan=${agentModalPlan}&agents=${encodeURIComponent(agentsParam)}`;
+    // For non-enterprise: open agent selection modal (unauthenticated path)
+    const token = localStorage.getItem('token');
+    if (token) {
+      // Authenticated: go straight to checkout / dashboard
+      setError('');
+      setAgentModalPlan(planId);
+      setSelectedAgentIds([]);
+    } else {
+      // Unauthenticated: open agent modal first so they can pick their team
+      setError('');
+      setAgentModalPlan(planId);
+      setSelectedAgentIds([]);
+    }
+  };
+
+  const handleToggleAgent = (id: number) => {
+    if (!agentModalPlan) return;
+    const limit = PLAN_LIMITS[agentModalPlan] ?? 3;
+    setSelectedAgentIds(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(a => a !== id);
+      }
+      if (prev.length >= limit) return prev;
+      return [...prev, id];
+    });
+  };
+
+  const handleAgentContinue = () => {
+    if (!agentModalPlan || selectedAgentIds.length === 0) return;
+    const agentsParam = selectedAgentIds.join(',');
+    setAgentModalPlan(null);
+    setSelectedAgentIds([]);
+    router.push(`/checkout?plan=${agentModalPlan}&agents=${agentsParam}`);
   };
 
   return (
@@ -654,8 +828,10 @@ export default function PricingPage() {
       {agentModalPlan && (
         <AgentSelectionModal
           plan={agentModalPlan}
-          onClose={() => setAgentModalPlan(null)}
-          onConfirm={handleAgentConfirm}
+          selectedAgentIds={selectedAgentIds}
+          onToggle={handleToggleAgent}
+          onClose={() => { setAgentModalPlan(null); setSelectedAgentIds([]); }}
+          onContinue={handleAgentContinue}
         />
       )}
 
@@ -668,8 +844,8 @@ export default function PricingPage() {
           <span className="text-lg font-bold tracking-tight">Vantro<span className="text-violet-400">.ai</span></span>
         </Link>
         <div className="flex gap-3 items-center">
-          <Link href="https://app.vantro.ai/login" className="text-white/50 hover:text-white text-sm transition-colors">Log in</Link>
-          <Link href="https://app.vantro.ai/register" className="btn-primary text-sm px-5 py-2">Get started free</Link>
+          <Link href="https://vantro.ai/login" className="text-white/50 hover:text-white text-sm transition-colors">Log in</Link>
+          <Link href="https://vantro.ai/register" className="btn-primary text-sm px-5 py-2">Get started free</Link>
         </div>
       </nav>
 
@@ -832,6 +1008,13 @@ export default function PricingPage() {
             Talk to sales →
           </button>
         </p>
+        <div className="flex items-center justify-center gap-4 mt-4 text-xs text-white/20">
+          <Link href="/privacy" className="hover:text-white/50 transition-colors">Privacy Policy</Link>
+          <span>·</span>
+          <Link href="/terms" className="hover:text-white/50 transition-colors">Terms of Service</Link>
+          <span>·</span>
+          <span>GDPR & CCPA Compliant</span>
+        </div>
       </div>
     </div>
   );

@@ -1,12 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  --color-bg:      #0F1419;
+  --color-bg:      #0A0D14;
   --color-surface: #111720;
   --color-orange:  #FF6B35;
   --color-cyan:    #00D9FF;
   --color-teal:    #1FFFD6;
   --color-gold:    #FFD700;
+
+  /* Design tokens */
+  --color-purple:       #B084FF;
+  --color-error:        #f87171;
+  --color-error-bg:     rgba(248, 113, 113, 0.08);
+  --color-error-border: rgba(248, 113, 113, 0.20);
+  --card-bg:            rgba(255, 255, 255, 0.04);
+  --card-border:        rgba(255, 255, 255, 0.08);
+  --card-radius:        1rem;
+  --card-padding:       1.25rem;
 }
 
 html {
@@ -15,9 +25,9 @@ html {
 }
 
 body {
-  background: var(--color-bg);
+  background-color: var(--color-bg, #0A0D14);
   color: #fff;
-  font-family: var(--font-inter), system-ui, sans-serif;
+  font-family: var(--font-space-grotesk, 'Space Grotesk', system-ui, sans-serif);
 }
 
 .glass {
@@ -41,6 +51,17 @@ body {
   cursor: pointer;
 }
 .btn-secondary:hover { background: rgba(255,255,255,0.10); }
+
+/* WCAG 2.4.7 — visible focus for keyboard navigation */
+/* Imported by: app/layout.tsx (global CSS). No API or schema impact. User instruction: "WCAG fixes: focus rings" */
+*:focus-visible {
+  outline: 2px solid #00D9FF;
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+*:focus:not(:focus-visible) {
+  outline: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

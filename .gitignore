@@ -9,3 +9,7 @@ dist/
 .vercel
 pnpm-lock.yaml
 pnpm-workspace.yaml
+
+.env*
+*.key
+tsconfig.tsbuildinfo

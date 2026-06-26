@@ -1,0 +1,136 @@
+{
+  "agents": [
+    {
+      "id": "sarah-mitchell",
+      "name": "Sarah Mitchell",
+      "role": "Customer Success Specialist",
+      "avatar": "/agents/sarah-mitchell.png"
+    },
+    {
+      "id": "marcus-johnson",
+      "name": "Marcus Johnson",
+      "role": "Sales Specialist",
+      "avatar": "/agents/marcus-johnson.png"
+    },
+    {
+      "id": "priya-sharma",
+      "name": "Priya Sharma",
+      "role": "Product Expert",
+      "avatar": "/agents/priya-sharma.png"
+    },
+    {
+      "id": "carlos-rivera",
+      "name": "Carlos Rivera",
+      "role": "Operations Manager",
+      "avatar": "/agents/carlos-rivera.png"
+    },
+    {
+      "id": "lisa-chen",
+      "name": "Lisa Chen",
+      "role": "Analytics Specialist",
+      "avatar": "/agents/lisa-chen.png"
+    },
+    {
+      "id": "james-thompson",
+      "name": "James Thompson",
+      "role": "Enterprise Advisor",
+      "avatar": "/agents/james-thompson.png"
+    },
+    {
+      "id": "aisha-williams",
+      "name": "Aisha Williams",
+      "role": "Support Lead",
+      "avatar": "/agents/aisha-williams.png"
+    },
+    {
+      "id": "david-kim",
+      "name": "David Kim",
+      "role": "Technology Specialist",
+      "avatar": "/agents/david-kim.png"
+    },
+    {
+      "id": "sofia-gonzalez",
+      "name": "Sofia Gonzalez",
+      "role": "Marketing Specialist",
+      "avatar": "/agents/sofia-gonzalez.png"
+    },
+    {
+      "id": "michael-obrien",
+      "name": "Michael O'Brien",
+      "role": "Growth Specialist",
+      "avatar": "/agents/michael-obrien.png"
+    },
+    {
+      "id": "yuki-tanaka",
+      "name": "Yuki Tanaka",
+      "role": "UX Consultant",
+      "avatar": "/agents/yuki-tanaka.png"
+    },
+    {
+      "id": "omar-hassan",
+      "name": "Omar Hassan",
+      "role": "Strategy Consultant",
+      "avatar": "/agents/omar-hassan.png"
+    },
+    {
+      "id": "emma-rodriguez",
+      "name": "Emma Rodriguez",
+      "role": "Onboarding Specialist",
+      "avatar": "/agents/emma-rodriguez.png"
+    },
+    {
+      "id": "raj-patel",
+      "name": "Raj Patel",
+      "role": "Finance Specialist",
+      "avatar": "/agents/raj-patel.png"
+    },
+    {
+      "id": "natasha-brown",
+      "name": "Natasha Brown",
+      "role": "Executive Coach",
+      "avatar": "/agents/natasha-brown.png"
+    },
+    {
+      "id": "tyler-anderson",
+      "name": "Tyler Anderson",
+      "role": "Logistics Specialist",
+      "avatar": "/agents/tyler-anderson.png"
+    },
+    {
+      "id": "mei-lin",
+      "name": "Mei Lin",
+      "role": "Compliance Specialist",
+      "avatar": "/agents/mei-lin.png"
+    },
+    {
+      "id": "ahmed-al-rashid",
+      "name": "Ahmed Al-Rashid",
+      "role": "Enterprise Director",
+      "avatar": "/agents/ahmed-al-rashid.png"
+    },
+    {
+      "id": "jessica-taylor",
+      "name": "Jessica Taylor",
+      "role": "Retail Specialist",
+      "avatar": "/agents/jessica-taylor.png"
+    },
+    {
+      "id": "kwame-mensah",
+      "name": "Kwame Mensah",
+      "role": "Partnerships Manager",
+      "avatar": "/agents/kwame-mensah.png"
+    },
+    {
+      "id": "isabella-santos",
+      "name": "Isabella Santos",
+      "role": "Brand Strategist",
+      "avatar": "/agents/isabella-santos.png"
+    },
+    {
+      "id": "ryan-park",
+      "name": "Ryan Park",
+      "role": "Developer Advocate",
+      "avatar": "/agents/ryan-park.png"
+    }
+  ]
+}

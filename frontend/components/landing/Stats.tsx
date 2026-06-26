@@ -1,256 +1,199 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { useInView } from 'framer-motion'
+import { useRef, useEffect } from 'react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useReducedMotion } from 'framer-motion'
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger)
 }
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────────
 
-const STATS = [
+interface HeroStat {
+  display: string
+  label: string
+  color: string
+  // For counter animation: provide targetVal + formatter. null = no count.
+  targetVal: number | null
+  formatter: ((val: number) => string) | null
+}
+
+interface SmallStat {
+  display: string
+  label: string
+  color: string
+  targetVal: number | null
+  formatter: ((val: number) => string) | null
+}
+
+// ─── Data ──────────────────────────────────────────────────────────────────────
+
+const HERO: HeroStat = {
+  display: '$2.4M',
+  label: 'Saved in operational costs by customers in their first year',
+  color: '#FFD700',
+  targetVal: 2.4,
+  formatter: (v: number) => `$${v.toFixed(1)}M`,
+}
+
+const SMALL_STATS: SmallStat[] = [
   {
-    value: 500,
-    suffix: '+',
-    label: 'Companies Deployed',
-    sublabel: 'and growing every day',
+    display: '22',
+    label: 'Specialized AI agents, each with a dedicated function',
     color: '#FF6B35',
+    targetVal: 22,
+    formatter: (v: number) => `${Math.round(v)}`,
   },
   {
-    value: 50000,
-    suffix: '+',
-    label: 'AI Agent Tasks Run',
-    sublabel: 'in the last 30 days',
+    display: '99.7%',
+    label: 'Uptime SLA across all agents, all integrations',
     color: '#00D9FF',
+    targetVal: 99.7,
+    formatter: (v: number) => `${v.toFixed(1)}%`,
   },
   {
-    value: 99.9,
-    suffix: '%',
-    label: 'Uptime SLA',
-    sublabel: 'guaranteed reliability',
+    display: '5 min',
+    label: 'Average time from signup to first agent running',
     color: '#1FFFD6',
-  },
-  {
-    value: 200,
-    suffix: '+',
-    label: 'Integrations',
-    sublabel: 'and adding more weekly',
-    color: '#FFD700',
+    targetVal: null,
+    formatter: null,
   },
 ]
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function easeOutCubic(t: number): number {
-  return 1 - Math.pow(1 - t, 3)
-}
-
-function formatValue(raw: number, targetValue: number): string {
-  if (targetValue === 50000) {
-    const k = raw / 1000
-    return k >= 50 ? '50K' : `${k.toFixed(1).replace(/\.0$/, '')}K`
-  }
-  if (targetValue === 99.9) {
-    return raw.toFixed(1)
-  }
-  return Math.round(raw).toString()
-}
-
-// ─── Stat card ────────────────────────────────────────────────────────────────
-
-interface StatCardProps {
-  value: number
-  suffix: string
-  label: string
-  sublabel: string
-  color: string
-  animate: boolean
-}
-
-function StatCard({ value, suffix, label, sublabel, color, animate }: StatCardProps) {
-  const [displayed, setDisplayed] = useState(0)
-  const [counting, setCounting] = useState(false)
-  const rafRef = useRef<number | null>(null)
-  const startTimeRef = useRef<number | null>(null)
-  const duration = 2500
-
-  useEffect(() => {
-    if (!animate) return
-
-    setCounting(true)
-    startTimeRef.current = null
-
-    const tick = (now: number) => {
-      if (startTimeRef.current === null) startTimeRef.current = now
-      const elapsed = now - startTimeRef.current
-      const progress = Math.min(elapsed / duration, 1)
-      const eased = easeOutCubic(progress)
-      setDisplayed(eased * value)
-
-      if (progress < 1) {
-        rafRef.current = requestAnimationFrame(tick)
-      } else {
-        setDisplayed(value)
-        setCounting(false)
-      }
-    }
-
-    rafRef.current = requestAnimationFrame(tick)
-    return () => {
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
-    }
-  }, [animate, value])
-
-  return (
-    <div
-      className="stat-card"
-      style={{
-        position: 'relative',
-        background: 'rgba(255,255,255,0.04)',
-        border: `1px solid ${counting ? `${color}44` : 'rgba(255,255,255,0.08)'}`,
-        borderRadius: 24,
-        padding: '40px 32px',
-        backdropFilter: 'blur(12px)',
-        overflow: 'hidden',
-        textAlign: 'center',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        transition: 'border-color 0.4s ease',
-        opacity: 0, // GSAP will animate this
-      }}
-    >
-      {/* Top border accent line */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 3,
-          background: `linear-gradient(90deg, transparent, ${color}99, transparent)`,
-          borderRadius: '3px 3px 0 0',
-        }}
-      />
-
-      {/* Subtle animated ring */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          inset: 0,
-          borderRadius: 24,
-          border: `1px solid ${counting ? `${color}22` : 'transparent'}`,
-          transition: 'border-color 0.4s ease',
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* Animated number */}
-      <div style={{ position: 'relative' }}>
-        {/* Glow halo */}
-        <span
-          aria-hidden="true"
-          style={{
-            position: 'absolute',
-            inset: 0,
-            display: 'block',
-            borderRadius: '50%',
-            boxShadow: counting ? `0 0 80px ${color}55` : `0 0 40px ${color}22`,
-            opacity: counting ? 0.9 : 0.4,
-            transition: 'opacity 0.4s ease, box-shadow 0.4s ease',
-            pointerEvents: 'none',
-            filter: 'blur(8px)',
-          }}
-        />
-
-        <span
-          style={{
-            display: 'block',
-            fontSize: 68,
-            fontWeight: 800,
-            lineHeight: 1,
-            color: '#ffffff',
-            fontVariantNumeric: 'tabular-nums',
-            textShadow: counting
-              ? `0 0 40px ${color}, 0 0 80px ${color}55`
-              : `0 0 16px ${color}44`,
-            transition: 'text-shadow 0.3s ease',
-          }}
-        >
-          {formatValue(displayed, value)}{suffix}
-        </span>
-      </div>
-
-      {/* Label */}
-      <p
-        style={{
-          color: color,
-          fontSize: 13,
-          fontWeight: 600,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          marginTop: 8,
-          marginBottom: 0,
-        }}
-      >
-        {label}
-      </p>
-
-      {/* Sublabel */}
-      <p
-        style={{
-          color: 'rgba(255,255,255,0.35)',
-          fontSize: 12,
-          marginTop: 4,
-          marginBottom: 0,
-        }}
-      >
-        {sublabel}
-      </p>
-    </div>
-  )
-}
-
-// ─── Section ──────────────────────────────────────────────────────────────────
+// ─── Component ─────────────────────────────────────────────────────────────────
 
 export default function Stats() {
   const sectionRef = useRef<HTMLElement>(null)
-  const gridRef = useRef<HTMLDivElement>(null)
-  const isInView = useInView(sectionRef, { once: true, margin: '-80px' })
+  const heroNumRef = useRef<HTMLSpanElement>(null)
+  const heroRowRef = useRef<HTMLDivElement>(null)
+  const smallRowRef = useRef<HTMLDivElement>(null)
+  const smallNumRefs = useRef<(HTMLSpanElement | null)[]>([])
+  const reducedMotion = useReducedMotion()
 
-  // GSAP stagger fade-in for cards
+  // ── Counter animation helper ──────────────────────────────────────────────
+  function animateCounter(
+    el: HTMLSpanElement,
+    targetVal: number,
+    formatter: (v: number) => string,
+    trigger: Element,
+    delay = 0
+  ) {
+    const obj = { val: 0 }
+    gsap.to(obj, {
+      val: targetVal,
+      duration: 1.5,
+      ease: 'power2.out',
+      delay,
+      scrollTrigger: {
+        trigger,
+        start: 'top 80%',
+        once: true,
+      },
+      onUpdate() {
+        el.textContent = formatter(obj.val)
+      },
+      onComplete() {
+        el.textContent = formatter(targetVal)
+      },
+    })
+  }
+
+  // ── Entrance + counter animations ────────────────────────────────────────
   useEffect(() => {
-    if (!gridRef.current) return
-
-    const cards = gridRef.current.querySelectorAll<HTMLElement>('.stat-card')
-    if (!cards.length) return
+    if (!sectionRef.current) return
 
     const ctx = gsap.context(() => {
-      gsap.fromTo(
-        cards,
-        { opacity: 0, y: 32 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.65,
-          ease: 'power3.out',
-          stagger: 0.1,
-          scrollTrigger: {
-            trigger: gridRef.current,
-            start: 'top 82%',
-            once: true,
-          },
+      // Hero row entrance
+      if (heroRowRef.current) {
+        const heroEls = heroRowRef.current.querySelectorAll<HTMLElement>('[data-animate]')
+        if (!reducedMotion) {
+          gsap.fromTo(
+            heroEls,
+            { opacity: 0, y: 32 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.75,
+              ease: 'power3.out',
+              stagger: 0.12,
+              scrollTrigger: {
+                trigger: heroRowRef.current,
+                start: 'top 82%',
+                once: true,
+              },
+            }
+          )
+        } else {
+          gsap.set(heroEls, { opacity: 1, y: 0 })
         }
-      )
-    }, gridRef)
+      }
+
+      // Small stats row entrance
+      if (smallRowRef.current) {
+        const smallEls = smallRowRef.current.querySelectorAll<HTMLElement>('[data-animate]')
+        if (!reducedMotion) {
+          gsap.fromTo(
+            smallEls,
+            { opacity: 0, y: 32 },
+            {
+              opacity: 1,
+              y: 0,
+              duration: 0.75,
+              ease: 'power3.out',
+              stagger: 0.12,
+              scrollTrigger: {
+                trigger: smallRowRef.current,
+                start: 'top 82%',
+                once: true,
+              },
+            }
+          )
+        } else {
+          gsap.set(smallEls, { opacity: 1, y: 0 })
+        }
+      }
+
+      // Hero counter
+      if (
+        heroNumRef.current &&
+        HERO.targetVal !== null &&
+        HERO.formatter !== null
+      ) {
+        if (!reducedMotion) {
+          animateCounter(
+            heroNumRef.current,
+            HERO.targetVal,
+            HERO.formatter,
+            heroRowRef.current ?? sectionRef.current!
+          )
+        } else {
+          heroNumRef.current.textContent = HERO.display
+        }
+      }
+
+      // Small stat counters
+      SMALL_STATS.forEach((stat, i) => {
+        const el = smallNumRefs.current[i]
+        if (!el || stat.targetVal === null || stat.formatter === null) return
+        if (!reducedMotion) {
+          animateCounter(
+            el,
+            stat.targetVal,
+            stat.formatter,
+            smallRowRef.current ?? sectionRef.current!,
+            i * 0.12
+          )
+        } else {
+          el.textContent = stat.display
+        }
+      })
+    }, sectionRef)
 
     return () => ctx.revert()
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reducedMotion])
 
   return (
     <section
@@ -258,59 +201,189 @@ export default function Stats() {
       ref={sectionRef}
       style={{
         background: '#0F1419',
-        paddingTop: 96,
-        paddingBottom: 96,
+        paddingTop: 120,
+        paddingBottom: 120,
         paddingLeft: 24,
         paddingRight: 24,
-        position: 'relative',
-        overflow: 'hidden',
       }}
     >
-      {/* Background glow */}
       <div
-        aria-hidden="true"
         style={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 900,
-          height: 700,
-          background:
-            'radial-gradient(ellipse at center, rgba(0,217,255,0.04) 0%, rgba(255,107,53,0.03) 50%, transparent 70%)',
-          pointerEvents: 'none',
-        }}
-      />
-
-      <div
-        ref={gridRef}
-        style={{
-          position: 'relative',
-          maxWidth: 1100,
+          maxWidth: 1280,
           margin: '0 auto',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 24,
         }}
-        className="stats-grid"
       >
-        {STATS.map((stat) => (
-          <StatCard
-            key={stat.label}
-            value={stat.value}
-            suffix={stat.suffix}
-            label={stat.label}
-            sublabel={stat.sublabel}
-            color={stat.color}
-            animate={isInView}
+        {/* ── Row 1: Hero stat ─────────────────────────────────────────────── */}
+        <div
+          ref={heroRowRef}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0,
+          }}
+          className="stats-hero-row"
+        >
+          {/* Large number */}
+          <div data-animate style={{ opacity: 0, flexShrink: 0 }}>
+            <span
+              ref={heroNumRef}
+              aria-label={HERO.display}
+              style={{
+                display: 'block',
+                fontSize: 'clamp(4rem, 8vw, 7rem)',
+                fontWeight: 900,
+                lineHeight: 1,
+                letterSpacing: '-0.04em',
+                color: HERO.color,
+                fontVariantNumeric: 'tabular-nums',
+              }}
+            >
+              {HERO.display}
+            </span>
+          </div>
+
+          {/* Divider line */}
+          <div
+            data-animate
+            aria-hidden="true"
+            style={{
+              flexGrow: 1,
+              height: 1,
+              background: 'rgba(255,255,255,0.08)',
+              marginLeft: 48,
+              marginRight: 48,
+              opacity: 0,
+            }}
+            className="stats-hero-divider"
           />
-        ))}
+
+          {/* Label */}
+          <p
+            data-animate
+            style={{
+              maxWidth: 360,
+              fontSize: 18,
+              lineHeight: 1.6,
+              color: 'rgba(255,255,255,0.55)',
+              margin: 0,
+              flexShrink: 0,
+              alignSelf: 'center',
+              opacity: 0,
+            }}
+          >
+            {HERO.label}
+          </p>
+        </div>
+
+        {/* ── Row 2: 3 smaller stats ───────────────────────────────────────── */}
+        <div
+          ref={smallRowRef}
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            marginTop: 64,
+          }}
+          className="stats-small-row"
+        >
+          {SMALL_STATS.map((stat, i) => (
+            <div
+              key={stat.label}
+              style={{
+                display: 'flex',
+                alignItems: 'stretch',
+                flex: 1,
+              }}
+            >
+              {/* Stat block */}
+              <div
+                data-animate
+                style={{
+                  flex: 1,
+                  opacity: 0,
+                }}
+                className="stats-small-item"
+              >
+                {/* Number */}
+                <span
+                  ref={(el) => { smallNumRefs.current[i] = el }}
+                  aria-label={stat.display}
+                  style={{
+                    display: 'block',
+                    fontSize: 64,
+                    fontWeight: 900,
+                    lineHeight: 1,
+                    letterSpacing: '-0.04em',
+                    color: stat.color,
+                    fontVariantNumeric: 'tabular-nums',
+                  }}
+                >
+                  {stat.display}
+                </span>
+
+                {/* Label */}
+                <p
+                  style={{
+                    margin: '8px 0 0',
+                    fontSize: 15,
+                    lineHeight: 1.5,
+                    color: 'rgba(255,255,255,0.5)',
+                    maxWidth: 200,
+                  }}
+                >
+                  {stat.label}
+                </p>
+              </div>
+
+              {/* Vertical divider between stats (not after last) */}
+              {i < SMALL_STATS.length - 1 && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    width: 1,
+                    background: 'rgba(255,255,255,0.08)',
+                    alignSelf: 'stretch',
+                    marginLeft: 48,
+                    marginRight: 48,
+                    minHeight: 80,
+                  }}
+                  className="stats-small-divider"
+                />
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
+      {/* ── Responsive styles ──────────────────────────────────────────────── */}
       <style>{`
-        @media (max-width: 768px) {
-          .stats-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
+        @media (max-width: 767px) {
+          .stats-hero-row {
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 24px !important;
+          }
+          .stats-hero-divider {
+            display: none !important;
+          }
+          .stats-hero-row p {
+            max-width: 100% !important;
+          }
+          .stats-small-row {
+            flex-direction: column !important;
+            gap: 0 !important;
+          }
+          .stats-small-item {
+            padding-bottom: 40px !important;
+            margin-bottom: 40px !important;
+            border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+          }
+          .stats-small-row > div:last-child .stats-small-item {
+            border-bottom: none !important;
+            padding-bottom: 0 !important;
+            margin-bottom: 0 !important;
+          }
+          .stats-small-divider {
+            display: none !important;
           }
         }
       `}</style>

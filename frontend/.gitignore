@@ -1,1 +1,20 @@
+# dependencies
+node_modules/
+
+# build output
+.next/
+out/
+
+# Vercel
 .vercel
+
+# TypeScript build artifacts
+tsconfig.tsbuildinfo
+
+# env
+.env.local
+.env*.local
+
+# OS
+.DS_Store
+Thumbs.db

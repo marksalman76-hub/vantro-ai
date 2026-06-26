@@ -122,6 +122,12 @@ export async function OPTIONS() {
 }
 
 export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get('Authorization')
+  const token = authHeader?.replace('Bearer ', '').trim()
+  if (!token) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   try {
     const body = await request.json();
     const { agentId, prompt } = body;

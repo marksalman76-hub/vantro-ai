@@ -1,83 +1,146 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { motion } from 'framer-motion'
+import { useReducedMotion } from 'framer-motion'
 import { useGSAP } from '@gsap/react'
-import gsap from 'gsap'
+import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import AgentCarousel from './AgentCarousel'
-import CinematicLighting from './CinematicLighting'
-import ParticleBackground from './ParticleBackground'
+import { SplitText } from 'gsap/SplitText'
 import { AGENTS } from '@/lib/agents'
+import AgentDashboard from './AgentDashboard'
 
-gsap.registerPlugin(ScrollTrigger)
+gsap.registerPlugin(ScrollTrigger, SplitText)
 
-// ─── Types ──────────────────────────────────────────────────────────────────
+// ─── Data ─────────────────────────────────────────────────────────────────────
 
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 28 },
-  animate: { opacity: 1, y: 0 },
-  transition: {
-    duration: 0.65,
-    ease: [0.23, 1, 0.36, 1] as [number, number, number, number],
-    delay,
-  },
-})
-
-// ─── Benefit rows ────────────────────────────────────────────────────────────
-
-const BENEFITS = [
-  { icon: '◈', color: '#00D9FF', label: '22 Specialized Agents' },
-  { icon: '◆', color: '#1FFFD6', label: '200+ Integrations' },
-  { icon: '◉', color: '#FFD700', label: 'Deploy in 5 Minutes' },
+const PILLS = [
+  '22 Specialized Agents',
+  '200+ Integrations',
+  'Deploy in 5 Minutes',
 ]
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Hero() {
   const sectionRef = useRef<HTMLElement>(null)
-  const leftColRef = useRef<HTMLDivElement>(null)
-  const gradientRef = useRef<HTMLSpanElement>(null)
+  const eyebrowRef = useRef<HTMLParagraphElement>(null)
+  const h1Line1Ref = useRef<HTMLSpanElement>(null)
+  const h1Line2Ref = useRef<HTMLDivElement>(null)
+  const subheadRef = useRef<HTMLParagraphElement>(null)
+  const pillsRef = useRef<HTMLDivElement>(null)
+  const ctasRef = useRef<HTMLDivElement>(null)
+  const rightColRef = useRef<HTMLDivElement>(null)
 
   const [cycleIdx, setCycleIdx] = useState(0)
+  const [primaryPressed, setPrimaryPressed] = useState(false)
+  const [secondaryPressed, setSecondaryPressed] = useState(false)
+  const [hoveredPill, setHoveredPill] = useState<string | null>(null)
+  const prefersReducedMotion = useReducedMotion()
 
   // Avatar cycling every 3 s
   useEffect(() => {
-    const id = setInterval(() => setCycleIdx(i => (i + 1) % 5), 3000)
+    const id = setInterval(() => setCycleIdx(i => (i + 1) % AGENTS.length), 3000)
     return () => clearInterval(id)
   }, [])
 
-  // GSAP: gradient shimmer + parallax
-  useGSAP(() => {
-    // H1 gradient shimmer animation
-    if (gradientRef.current) {
-      gsap.to(gradientRef.current, {
-        backgroundPosition: '200% 50%',
-        duration: 3,
-        repeat: -1,
-        yoyo: true,
-        ease: 'sine.inOut',
-      })
-    }
+  useGSAP(
+    () => {
+      const eyebrow = eyebrowRef.current
+      const line1 = h1Line1Ref.current
+      const line2 = h1Line2Ref.current
+      const subhead = subheadRef.current
+      const pillsContainer = pillsRef.current
+      const ctas = ctasRef.current
+      const rightCol = rightColRef.current
 
-    // Parallax on left column
-    if (leftColRef.current && sectionRef.current) {
-      gsap.fromTo(
-        leftColRef.current,
-        { y: 0 },
+      if (!eyebrow || !line1 || !line2 || !subhead || !pillsContainer || !ctas || !rightCol) return
+
+      if (prefersReducedMotion) {
+        gsap.set(
+          [eyebrow, line1, line2, subhead, pillsContainer, ctas, rightCol],
+          { opacity: 1, y: 0, x: 0, scale: 1 }
+        )
+        if (pillsContainer.children) {
+          gsap.set(Array.from(pillsContainer.children), { opacity: 1, x: 0 })
+        }
+        if (ctas.children) {
+          gsap.set(Array.from(ctas.children), { opacity: 1, scale: 1 })
+        }
+        return
+      }
+
+      // Set initial hidden states
+      gsap.set(eyebrow, { opacity: 0, y: 20 })
+      gsap.set(line2, { opacity: 0, y: 24 })
+      gsap.set(subhead, { opacity: 0, y: 24 })
+      gsap.set(pillsContainer, { opacity: 1 })
+      gsap.set(Array.from(pillsContainer.children), { opacity: 0, x: -20 })
+      gsap.set(Array.from(ctas.children), { opacity: 0, scale: 0.9 })
+      gsap.set(rightCol, { opacity: 0, x: 80 })
+
+      // SplitText on line 1 ("Deploy Your")
+      const split = new SplitText(line1, { type: 'words,chars' })
+      gsap.set(split.chars, { opacity: 0, y: 60 })
+
+      const tl = gsap.timeline()
+
+      // t=0.0: eyebrow
+      tl.to(eyebrow, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 0.0)
+
+      // t=0.3: H1 line 1 chars stagger
+      tl.to(
+        split.chars,
         {
-          y: -40,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: 'top top',
-            end: 'bottom top',
-            scrub: true,
-          },
+          opacity: 1,
+          y: 0,
+          duration: 0.7,
+          ease: 'power4.out',
+          stagger: 0.02,
         },
+        0.3
       )
-    }
-  }, { scope: sectionRef })
+
+      // t=0.9: H1 line 2 (avatar + "AI Workforce") — animate as single unit
+      tl.to(line2, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' }, 0.9)
+
+      // t=1.0: subheading
+      tl.to(subhead, { opacity: 1, y: 0, duration: 0.7, ease: 'power3.out' }, 1.0)
+
+      // t=1.3: benefit pills stagger
+      tl.to(
+        Array.from(pillsContainer.children),
+        {
+          opacity: 1,
+          x: 0,
+          duration: 0.5,
+          ease: 'power3.out',
+          stagger: 0.08,
+        },
+        1.3
+      )
+
+      // t=1.6: CTA buttons + fine print
+      tl.to(
+        Array.from(ctas.children),
+        {
+          opacity: 1,
+          scale: 1,
+          duration: 0.5,
+          ease: 'power3.out',
+          stagger: 0.1,
+        },
+        1.6
+      )
+      // t=1.6: right column carousel
+      tl.to(rightCol, { opacity: 1, x: 0, duration: 1.0, ease: 'power3.out' }, 1.6)
+
+      return () => {
+        tl.kill()
+        split.revert()
+      }
+    },
+    { scope: sectionRef, dependencies: [prefersReducedMotion] }
+  )
 
   return (
     <section
@@ -89,32 +152,51 @@ export default function Hero() {
         background: '#0F1419',
         overflow: 'hidden',
         display: 'grid',
-        gridTemplateColumns: '55fr 45fr',
+        gridTemplateColumns: '35fr 65fr',
         alignItems: 'center',
       }}
     >
-      {/* ── Background layers (z 0) ── */}
-      <CinematicLighting followMouse goldSpotlight showGrain />
-      <ParticleBackground count={14} />
-
-      {/* Extra ambient glow */}
+      {/* ── Ambient orb depth layers (z-0) ── */}
       <div
         aria-hidden="true"
         style={{
           position: 'absolute',
-          top: -200,
-          left: -150,
-          width: 650,
-          height: 650,
-          background:
-            'radial-gradient(circle, rgba(255,215,0,0.06) 0%, transparent 70%)',
+          inset: 0,
           pointerEvents: 'none',
+          zIndex: 0,
         }}
-      />
+      >
+        {/* Orb 1 — orange at top-left */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background:
+              'radial-gradient(circle 600px at 15% 30%, rgba(255,107,53,0.08) 0%, transparent 100%)',
+          }}
+        />
+        {/* Orb 2 — cyan at right-center */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background:
+              'radial-gradient(circle 500px at 80% 60%, rgba(0,217,255,0.06) 0%, transparent 100%)',
+          }}
+        />
+        {/* Orb 3 — teal at bottom-center */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background:
+              'radial-gradient(circle 400px at 50% 90%, rgba(31,255,214,0.04) 0%, transparent 100%)',
+          }}
+        />
+      </div>
 
       {/* ── LEFT COLUMN ── */}
       <div
-        ref={leftColRef}
         style={{
           position: 'relative',
           zIndex: 2,
@@ -125,219 +207,248 @@ export default function Hero() {
         }}
       >
         {/* Eyebrow */}
-        <motion.p
-          {...fadeUp(0.1)}
+        <p
+          ref={eyebrowRef}
           style={{
             color: '#00D9FF',
             fontSize: 11,
-            letterSpacing: '0.2em',
+            letterSpacing: '0.18em',
             fontWeight: 700,
             textTransform: 'uppercase',
             margin: '0 0 28px',
+            opacity: 0,
           }}
         >
-          Autonomous AI Workforce Platform
-        </motion.p>
+          Your AI Workforce, Always On
+        </p>
 
         {/* H1 */}
-        <motion.h1
-          {...fadeUp(0.2)}
+        <h1
           style={{
-            fontSize: 'clamp(2.8rem, 4.5vw, 5.4rem)',
+            fontSize: 'clamp(2.8rem, 4.5vw, 4.2rem)',
             fontWeight: 800,
-            lineHeight: 1.05,
+            lineHeight: 1.08,
             letterSpacing: '-0.03em',
             color: '#ffffff',
-            maxWidth: '15ch',
+            maxWidth: '16ch',
             margin: '0 0 24px',
             textWrap: 'balance' as React.CSSProperties['textWrap'],
           }}
         >
-          {/* Line 1 */}
-          <span style={{ display: 'block' }}>
-            Deploy Your{' '}
+          {/* Line 1: "Deploy Your" — SplitText target */}
+          <span
+            ref={h1Line1Ref}
+            style={{ display: 'block' }}
+          >
+            Deploy Your
+          </span>
+
+          {/* Line 2: avatar + "AI Workforce" — animated as a single unit */}
+          <div
+            ref={h1Line2Ref}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              opacity: 0,
+              marginTop: 4,
+            }}
+          >
             <img
               src={AGENTS[cycleIdx]?.avatar ?? ''}
               alt={AGENTS[cycleIdx]?.name ?? 'AI Agent'}
-              width={56}
-              height={56}
+              width={52}
+              height={52}
               style={{
                 display: 'inline-block',
-                verticalAlign: 'middle',
                 borderRadius: '50%',
                 objectFit: 'cover',
                 border: '2px solid #FF6B35',
                 boxShadow: '0 0 20px rgba(255,107,53,0.5)',
                 transition: 'opacity 400ms ease',
-                marginLeft: 8,
+                flexShrink: 0,
               }}
             />
-          </span>
-
-          {/* Line 2 — gradient shimmer via GSAP */}
-          <span
-            ref={gradientRef}
-            style={{
-              display: 'block',
-              background:
-                'linear-gradient(135deg, #FF6B35 0%, #FFD700 60%, #FF6B35 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundSize: '200% 100%',
-              backgroundPosition: '0% 50%',
-            }}
-          >
-            AI Workforce
-          </span>
-        </motion.h1>
+            <span
+              style={{
+                background:
+                  'linear-gradient(135deg, #FF6B35 0%, #FFD700 60%, #FF6B35 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              AI Workforce
+            </span>
+          </div>
+        </h1>
 
         {/* Subheading */}
-        <motion.p
-          {...fadeUp(0.3)}
+        <p
+          ref={subheadRef}
           style={{
             fontSize: 18,
             lineHeight: 1.58,
             color: 'rgba(255,255,255,0.62)',
             maxWidth: 440,
-            margin: '0 0 36px',
+            margin: '0 0 32px',
+            opacity: 0,
           }}
         >
-          22 specialized agents running 24/7 across sales, ops, support, and
-          engineering — so your team can focus on what only humans can do.
-        </motion.p>
+          Deploy specialized AI agents across sales, ops, support, and engineering — running 24/7 so your team focuses on what matters.
+        </p>
 
-        {/* Benefits list — icon + label rows, no pill badges */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 40 }}
+        {/* Benefit pills */}
+        <div
+          ref={pillsRef}
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 10,
+            marginBottom: 36,
+          }}
         >
-          {BENEFITS.map(({ icon, color, label }) => (
-            <div
-              key={label}
-              style={{ display: 'flex', alignItems: 'center', gap: 10 }}
-            >
+          {PILLS.map(label => {
+            const isHovered = hoveredPill === label
+            return (
               <span
+                key={label}
+                onMouseEnter={() => setHoveredPill(label)}
+                onMouseLeave={() => setHoveredPill(null)}
                 style={{
-                  color,
-                  fontSize: 14,
-                  flexShrink: 0,
-                  lineHeight: 1,
-                }}
-              >
-                {icon}
-              </span>
-              <span
-                style={{
-                  fontSize: 14,
-                  fontWeight: 500,
-                  color: 'rgba(255,255,255,0.72)',
+                  background: isHovered ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.06)',
+                  border: isHovered
+                    ? '1px solid rgba(255,255,255,0.22)'
+                    : '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 99,
+                  padding: '6px 14px',
+                  fontSize: 13,
+                  color: isHovered ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.7)',
+                  whiteSpace: 'nowrap',
+                  fontVariantNumeric: 'tabular-nums',
+                  opacity: 0,
+                  transform: isHovered ? 'scale(1.02)' : 'scale(1)',
+                  transition: 'background 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease',
+                  cursor: 'default',
                 }}
               >
                 {label}
               </span>
-            </div>
-          ))}
-        </motion.div>
+            )
+          })}
+        </div>
 
         {/* CTAs */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
-          style={{ display: 'flex', flexDirection: 'row', gap: 14, flexWrap: 'wrap', marginBottom: 20 }}
+        <div
+          ref={ctasRef}
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            gap: 14,
+            flexWrap: 'wrap',
+            marginBottom: 16,
+          }}
         >
-          {/* Primary CTA */}
+          {/* Primary */}
           <a
             href="/register"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              padding: '15px 40px',
-              background: 'linear-gradient(135deg, #FF6B35, #E8521A)',
-              color: '#ffffff',
+              padding: '14px 28px',
+              background: '#FF6B35',
+              color: '#fff',
               fontWeight: 700,
               fontSize: 15,
               borderRadius: 12,
               textDecoration: 'none',
-              boxShadow: '0 0 40px rgba(255,107,53,0.55), 0 4px 20px rgba(255,107,53,0.3)',
-              transition: 'all 200ms cubic-bezier(0.23,1,0.32,1)',
-              letterSpacing: '-0.01em',
               border: 'none',
+              boxShadow: '0 0 24px rgba(255,107,53,0.4)',
+              transition: 'transform 180ms ease-out, box-shadow 200ms ease-out',
+              opacity: 0,
             }}
             onMouseEnter={e => {
+              if (primaryPressed) return
               const el = e.currentTarget as HTMLAnchorElement
-              el.style.transform = 'translateY(-3px) scale(1.04)'
-              el.style.boxShadow = '0 0 60px rgba(255,107,53,0.75), 0 8px 24px rgba(255,107,53,0.4)'
+              el.style.transform = 'translateY(-2px) scale(1.04)'
+              el.style.boxShadow = '0 0 40px rgba(255,107,53,0.65)'
             }}
             onMouseLeave={e => {
+              setPrimaryPressed(false)
               const el = e.currentTarget as HTMLAnchorElement
               el.style.transform = 'translateY(0) scale(1)'
-              el.style.boxShadow = '0 0 40px rgba(255,107,53,0.55), 0 4px 20px rgba(255,107,53,0.3)'
+              el.style.boxShadow = '0 0 24px rgba(255,107,53,0.4)'
+            }}
+            onMouseDown={e => {
+              setPrimaryPressed(true)
+              const el = e.currentTarget as HTMLAnchorElement
+              el.style.transform = 'translateY(0) scale(0.97)'
+              el.style.boxShadow = '0 0 16px rgba(255,107,53,0.3)'
+            }}
+            onMouseUp={e => {
+              setPrimaryPressed(false)
+              const el = e.currentTarget as HTMLAnchorElement
+              el.style.transform = 'translateY(-2px) scale(1.04)'
+              el.style.boxShadow = '0 0 40px rgba(255,107,53,0.65)'
             }}
           >
-            Start Free Trial →
+            Deploy Now
           </a>
 
-          {/* Secondary CTA */}
+          {/* Secondary */}
           <a
             href="#how-it-works"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: 8,
-              padding: '15px 32px',
+              padding: '14px 28px',
               background: 'transparent',
-              color: '#ffffff',
+              color: 'rgba(255,255,255,0.8)',
               fontWeight: 600,
               fontSize: 15,
               borderRadius: 12,
               textDecoration: 'none',
-              border: '1px solid rgba(255,255,255,0.18)',
-              transition: 'all 200ms cubic-bezier(0.23,1,0.32,1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              transition: 'border-color 180ms ease, background-color 180ms ease, color 180ms ease, transform 150ms ease-out',
+              opacity: 0,
             }}
             onMouseEnter={e => {
+              if (secondaryPressed) return
               const el = e.currentTarget as HTMLAnchorElement
               el.style.borderColor = 'rgba(0,217,255,0.5)'
-              el.style.background = 'rgba(0,217,255,0.07)'
+              el.style.background = 'rgba(0,217,255,0.08)'
               el.style.color = '#00D9FF'
             }}
             onMouseLeave={e => {
+              setSecondaryPressed(false)
               const el = e.currentTarget as HTMLAnchorElement
-              el.style.borderColor = 'rgba(255,255,255,0.18)'
+              el.style.borderColor = 'rgba(255,255,255,0.2)'
               el.style.background = 'transparent'
-              el.style.color = '#ffffff'
+              el.style.color = 'rgba(255,255,255,0.8)'
+              el.style.transform = 'scale(1)'
+            }}
+            onMouseDown={e => {
+              setSecondaryPressed(true)
+              const el = e.currentTarget as HTMLAnchorElement
+              el.style.transform = 'scale(0.97)'
+            }}
+            onMouseUp={e => {
+              setSecondaryPressed(false)
+              const el = e.currentTarget as HTMLAnchorElement
+              el.style.transform = 'scale(1)'
             }}
           >
-            ▷ Watch Demo
+            Book Demo
           </a>
-        </motion.div>
+        </div>
 
-        {/* Fine print */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.6 }}
-          style={{
-            fontSize: 12,
-            color: 'rgba(255,255,255,0.50)',
-            margin: 0,
-            letterSpacing: '0.01em',
-          }}
-        >
-          14-day free trial · No credit card · Cancel anytime
-        </motion.p>
       </div>
 
       {/* ── RIGHT COLUMN ── */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.94 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.9, ease: [0.23, 1, 0.36, 1], delay: 0.25 }}
+      <div
+        ref={rightColRef}
         className="hero-right-col"
         style={{
           position: 'relative',
@@ -349,10 +460,11 @@ export default function Hero() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          opacity: 0,
         }}
       >
-        <AgentCarousel agents={AGENTS} />
-      </motion.div>
+        <AgentDashboard />
+      </div>
 
       {/* Bottom fade overlay */}
       <div
@@ -363,20 +475,26 @@ export default function Hero() {
           left: 0,
           right: 0,
           height: 140,
-          background: 'linear-gradient(to bottom, transparent, rgba(15,20,25,0.88))',
+          background:
+            'linear-gradient(to bottom, transparent, rgba(15,20,25,0.88))',
           pointerEvents: 'none',
+          zIndex: 1,
           gridColumn: '1 / -1',
         }}
       />
 
       {/* Responsive styles */}
       <style>{`
-        @media (max-width: 900px) {
+        @media (max-width: 768px) {
           section#home {
             grid-template-columns: 1fr !important;
           }
           .hero-right-col {
             display: none !important;
+          }
+          section#home h1 {
+            font-size: clamp(2.2rem, 7vw, 3.5rem) !important;
+            max-width: 100% !important;
           }
         }
       `}</style>

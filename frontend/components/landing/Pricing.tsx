@@ -9,6 +9,7 @@ const PLANS = [
   {
     name: 'Starter',
     price: { monthly: 99, annual: 79 },
+    contactUs: false,
     description: '5 agents running 24/7 — without hiring.',
     features: [
       '5 AI Agents',
@@ -18,13 +19,15 @@ const PLANS = [
       'Basic analytics',
       '1 workspace',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Deploy Now',
+    href: '/pricing?plan=starter',
     recommended: false,
     color: '#00D9FF',
   },
   {
     name: 'Growth',
     price: { monthly: 279, annual: 223 },
+    contactUs: false,
     description: 'Your ops, sales, and support on autopilot.',
     features: [
       '15 AI Agents',
@@ -36,13 +39,15 @@ const PLANS = [
       'Custom workflows',
       'API access',
     ],
-    cta: 'Start Free Trial',
+    cta: 'Deploy Now',
+    href: '/pricing?plan=growth',
     recommended: true,
     color: '#FF6B35',
   },
   {
     name: 'Business',
     price: { monthly: 399, annual: 319 },
+    contactUs: false,
     description: 'Full 22-agent workforce. Unlimited scale.',
     features: [
       '22 AI Agents (all)',
@@ -56,9 +61,32 @@ const PLANS = [
       'SLA guarantee',
       'Custom training',
     ],
-    cta: 'Talk to Sales',
+    cta: 'Deploy Now',
+    href: '/pricing?plan=business',
     recommended: false,
     color: '#FFD700',
+  },
+  {
+    name: 'Enterprise',
+    price: { monthly: 0, annual: 0 },
+    contactUs: true,
+    description: 'Custom AI workforce built around your entire stack.',
+    features: [
+      'Unlimited AI Agents',
+      'Custom integrations',
+      'Dedicated success team',
+      'Unlimited tasks',
+      'Enterprise analytics',
+      'Multi-org workspaces',
+      'Custom SLA & uptime',
+      'On-premise option',
+      'SSO & SAML',
+      'Custom onboarding',
+    ],
+    cta: 'Contact Sales',
+    href: 'mailto:hello@vantro.ai',
+    recommended: false,
+    color: '#B084FF',
   },
 ] as const
 
@@ -97,11 +125,22 @@ function PriceDisplay({
   monthly,
   annual,
   isAnnual,
+  contactUs,
 }: {
   monthly: number
   annual: number
   isAnnual: boolean
+  contactUs?: boolean
 }) {
+  if (contactUs) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', margin: '24px 0 16px' }}>
+        <span style={{ color: '#ffffff', fontSize: 36, fontWeight: 800, lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+          Contact Us
+        </span>
+      </div>
+    )
+  }
   const price = isAnnual ? annual : monthly
 
   return (
@@ -118,6 +157,7 @@ function PriceDisplay({
             fontSize: 64,
             fontWeight: 800,
             lineHeight: 1,
+            fontVariantNumeric: 'tabular-nums',
           }}
         >
           ${price}
@@ -125,6 +165,70 @@ function PriceDisplay({
       </AnimatePresence>
       <span style={{ color: '#9ca3af', fontSize: 18, marginBottom: 6 }}>/mo</span>
     </div>
+  )
+}
+
+// ─── CTA Button ───────────────────────────────────────────────────────────────
+
+function CTAButton({
+  recommended,
+  color,
+  cta,
+  href = '/register',
+}: {
+  recommended: boolean
+  color: string
+  cta: string
+  href?: string
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <motion.a
+      href={href}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      whileTap={{ scale: 0.97 }}
+      style={
+        recommended
+          ? {
+              display: 'block',
+              width: '100%',
+              marginTop: 32,
+              paddingTop: 14,
+              paddingBottom: 14,
+              borderRadius: 14,
+              textAlign: 'center',
+              fontWeight: 700,
+              fontSize: 15,
+              color: '#fff',
+              background: 'linear-gradient(135deg, #FF6B35 0%, #E84D1C 100%)',
+              boxShadow: hovered
+                ? '0 0 50px rgba(255,107,53,0.75), 0 20px 40px rgba(255,107,53,0.4), inset 0 1px 0 rgba(255,255,255,0.25)'
+                : '0 0 30px rgba(255,107,53,0.5), 0 8px 20px rgba(255,107,53,0.25), inset 0 1px 0 rgba(255,255,255,0.20)',
+              transition: 'box-shadow 0.25s ease',
+              textDecoration: 'none',
+            }
+          : {
+              display: 'block',
+              width: '100%',
+              marginTop: 32,
+              paddingTop: 14,
+              paddingBottom: 14,
+              borderRadius: 14,
+              textAlign: 'center',
+              fontWeight: 700,
+              fontSize: 15,
+              color: color,
+              background: hovered ? `${color}11` : 'transparent',
+              border: `1px solid ${hovered ? `${color}88` : `${color}44`}`,
+              transition: 'background 0.2s ease, border-color 0.2s ease',
+              textDecoration: 'none',
+            }
+      }
+    >
+      {cta}
+    </motion.a>
   )
 }
 
@@ -144,10 +248,20 @@ function PlanCard({
   const [hovered, setHovered] = useState(false)
   const { recommended, color } = plan
 
+  // Parse color into rgb components for the whileHover glow
+  const hexToRgb = (hex: string) => {
+    const h = hex.replace('#', '')
+    const r = parseInt(h.substring(0, 2), 16)
+    const g = parseInt(h.substring(2, 4), 16)
+    const b = parseInt(h.substring(4, 6), 16)
+    return `${r},${g},${b}`
+  }
+  const cardRgb = hexToRgb(color)
+
   const baseStyle: React.CSSProperties = recommended
     ? {
         background: 'rgba(255,107,53,0.06)',
-        border: '1px solid rgba(255,107,53,0.35)',
+        border: hovered ? '2px solid rgba(255,107,53,1)' : '2px solid rgba(255,107,53,0.75)',
         borderRadius: 24,
         padding: '40px 32px',
         backdropFilter: 'blur(16px)',
@@ -155,12 +269,16 @@ function PlanCard({
         flexDirection: 'column',
         position: 'relative',
         overflow: 'hidden',
-        boxShadow: '0 0 60px rgba(255,107,53,0.12), 0 40px 80px rgba(0,0,0,0.3)',
-        transform: 'scale(1.04)',
+        zIndex: hovered ? 20 : 1,
+        boxShadow: hovered
+          ? '0 0 120px rgba(255,107,53,0.5), 0 60px 120px rgba(0,0,0,0.6), 0 0 0 2px rgba(255,107,53,0.6)'
+          : '0 0 60px rgba(255,107,53,0.2), 0 40px 80px rgba(0,0,0,0.3)',
+        transform: 'scale(1.02)',
+        transition: 'box-shadow 0.25s ease, border-color 0.2s ease',
       }
     : {
-        background: hovered ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)',
-        border: `1px solid ${hovered ? `${color}33` : 'rgba(255,255,255,0.09)'}`,
+        background: hovered ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.04)',
+        border: `2px solid ${hovered ? `${color}CC` : `${color}44`}`,
         borderRadius: 24,
         padding: '40px 32px',
         backdropFilter: 'blur(16px)',
@@ -168,7 +286,8 @@ function PlanCard({
         flexDirection: 'column',
         position: 'relative',
         overflow: 'hidden',
-        boxShadow: hovered ? `0 0 32px ${color}11` : 'none',
+        zIndex: hovered ? 20 : 1,
+        boxShadow: hovered ? `0 0 80px ${color}44, 0 40px 80px rgba(0,0,0,0.5)` : 'none',
         transition: 'background 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease',
       }
 
@@ -180,15 +299,33 @@ function PlanCard({
       transition={{ duration: 0.55, ease: EASE, delay: index * 0.1 }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      whileHover={recommended ? { scale: 1.06 } : { scale: 1.02 }}
+      whileHover={{
+        scale: 1.09,
+        y: -20,
+        zIndex: 20,
+        boxShadow: `0 0 40px rgba(${cardRgb}, 0.15), 0 20px 60px rgba(0,0,0,0.4)`,
+      }}
     >
+      {/* Top highlight strip */}
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: '10%',
+          right: '10%',
+          height: 2,
+          background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
+          borderRadius: 99,
+        }}
+      />
+
       {/* Most Popular badge */}
       {recommended && (
         <div
           style={{
             position: 'absolute',
-            top: -14,
-            right: 28,
+            top: 16,
+            right: 24,
             background: 'linear-gradient(135deg, #FF6B35, #FFD700)',
             padding: '6px 20px',
             borderRadius: 99,
@@ -212,7 +349,8 @@ function PlanCard({
           fontWeight: 700,
           letterSpacing: '0.16em',
           textTransform: 'uppercase',
-        }}
+          textWrap: 'pretty',
+        } as React.CSSProperties}
       >
         {plan.name}
       </p>
@@ -222,27 +360,30 @@ function PlanCard({
         monthly={plan.price.monthly}
         annual={plan.price.annual}
         isAnnual={isAnnual}
+        contactUs={'contactUs' in plan ? plan.contactUs : false}
       />
 
       {/* Annual original price */}
-      <AnimatePresence>
-        {isAnnual && (
-          <motion.p
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            style={{
-              color: '#6b7280',
-              fontSize: 13,
-              marginTop: -8,
-              marginBottom: 8,
-              textDecoration: 'line-through',
-            }}
-          >
-            ${plan.price.monthly}/mo billed monthly
-          </motion.p>
-        )}
-      </AnimatePresence>
+      {!('contactUs' in plan && plan.contactUs) && (
+        <AnimatePresence>
+          {isAnnual && (
+            <motion.p
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              style={{
+                color: '#6b7280',
+                fontSize: 13,
+                marginTop: -8,
+                marginBottom: 8,
+                textDecoration: 'line-through',
+              }}
+            >
+              ${plan.price.monthly}/mo billed monthly
+            </motion.p>
+          )}
+        </AnimatePresence>
+      )}
 
       {/* Description */}
       <p
@@ -280,76 +421,19 @@ function PlanCard({
             }}
           >
             <CheckIcon color={color} />
-            <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14 }}>{feature}</span>
+            <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: 14, textWrap: 'pretty' } as React.CSSProperties}>{feature}</span>
           </li>
         ))}
       </ul>
 
       {/* CTA button */}
-      <CTAButton recommended={recommended} color={color} cta={plan.cta} />
+      <CTAButton
+        recommended={recommended}
+        color={color}
+        cta={plan.cta}
+        href={plan.href}
+      />
     </motion.div>
-  )
-}
-
-// ─── CTA Button ───────────────────────────────────────────────────────────────
-
-function CTAButton({
-  recommended,
-  color,
-  cta,
-}: {
-  recommended: boolean
-  color: string
-  cta: string
-}) {
-  const [hovered, setHovered] = useState(false)
-
-  return (
-    <a
-      href="/register"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={
-        recommended
-          ? {
-              display: 'block',
-              width: '100%',
-              marginTop: 32,
-              paddingTop: 14,
-              paddingBottom: 14,
-              borderRadius: 14,
-              textAlign: 'center',
-              fontWeight: 700,
-              fontSize: 15,
-              color: '#fff',
-              background: 'linear-gradient(135deg, #FF6B35 0%, #E84D1C 100%)',
-              boxShadow: hovered
-                ? '0 0 50px rgba(255,107,53,0.75), 0 20px 40px rgba(255,107,53,0.4), inset 0 1px 0 rgba(255,255,255,0.25)'
-                : '0 0 30px rgba(255,107,53,0.5), 0 8px 20px rgba(255,107,53,0.25), inset 0 1px 0 rgba(255,255,255,0.20)',
-              transition: 'box-shadow 0.25s ease, transform 0.15s ease',
-              transform: hovered ? 'translateY(-1px)' : 'none',
-              textDecoration: 'none',
-            }
-          : {
-              display: 'block',
-              width: '100%',
-              marginTop: 32,
-              paddingTop: 14,
-              paddingBottom: 14,
-              borderRadius: 14,
-              textAlign: 'center',
-              fontWeight: 700,
-              fontSize: 15,
-              color: color,
-              background: hovered ? `${color}11` : 'transparent',
-              border: `1px solid ${hovered ? `${color}88` : `${color}44`}`,
-              transition: 'background 0.2s ease, border-color 0.2s ease',
-              textDecoration: 'none',
-            }
-      }
-    >
-      {cta}
-    </a>
   )
 }
 
@@ -373,7 +457,7 @@ export default function Pricing() {
         width: '100%',
       }}
     >
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+      <div style={{ maxWidth: 1400, margin: '0 auto' }}>
 
         {/* Header */}
         <motion.div
@@ -401,7 +485,8 @@ export default function Pricing() {
               fontWeight: 800,
               lineHeight: 1.1,
               marginBottom: 16,
-            }}
+              textWrap: 'balance',
+            } as React.CSSProperties}
           >
             Choose Your Plan
           </h2>
@@ -503,8 +588,8 @@ export default function Pricing() {
           className="pricing-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: 24,
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: 20,
             alignItems: 'center',
           }}
         >
@@ -520,25 +605,17 @@ export default function Pricing() {
         </div>
 
         {/* Footer note */}
-        <motion.p
-          style={{
-            textAlign: 'center',
-            color: '#6b7280',
-            fontSize: 14,
-            marginTop: 48,
-          }}
-          initial={{ opacity: 0 }}
-          animate={isInView ? { opacity: 1 } : {}}
-          transition={{ duration: 0.5, delay: 0.5 }}
-        >
-          All plans include 14-day free trial · No credit card required
-        </motion.p>
 
       </div>
 
       {/* Responsive grid fallback */}
       <style>{`
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
+          #pricing .pricing-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+        }
+        @media (max-width: 600px) {
           #pricing .pricing-grid {
             grid-template-columns: 1fr !important;
           }

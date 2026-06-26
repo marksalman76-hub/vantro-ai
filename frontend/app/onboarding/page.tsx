@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import { AGENTS, CATEGORY_COLORS } from '@/lib/agents'
 
 const STEPS = [
   { title: 'Name your workspace', subtitle: 'This is how your team will identify your account.' },
@@ -21,12 +22,29 @@ const USE_CASES = [
 
 function getToken() { return typeof window !== 'undefined' ? localStorage.getItem('token') : null }
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const plan = searchParams.get('plan')
+
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+    if (!token) router.push('/login')
+  }, [router])
+
   const [step, setStep] = useState(0)
   const [workspace, setWorkspace] = useState('')
   const [useCase, setUseCase] = useState('')
   const [launching, setLaunching] = useState(false)
+  const [lockedAgentIds, setLockedAgentIds] = useState<number[]>([])
+
+  useEffect(() => {
+    const stored = localStorage.getItem('locked_agents') ?? ''
+    const ids = stored ? stored.split(',').map(Number).filter(Boolean) : []
+    setLockedAgentIds(ids)
+  }, [])
+
+  const lockedAgents = AGENTS.filter(a => lockedAgentIds.includes(a.id))
 
   function handleUseCaseSelect(id: string) {
     setUseCase(id)
@@ -37,7 +55,8 @@ export default function OnboardingPage() {
     setLaunching(true)
     localStorage.setItem('onboarding_complete', '1')
     if (workspace) localStorage.setItem('workspace_name', workspace)
-    router.push(getToken() ? '/dashboard' : '/login')
+    if (plan) localStorage.setItem('plan', plan)
+    router.push('/dashboard')
   }
 
   const current = STEPS[step]
@@ -127,16 +146,78 @@ export default function OnboardingPage() {
 
           {step === 2 && (
             <div className="space-y-6">
-              <div className="rounded-xl p-5 space-y-3" style={{ background: 'rgba(255,107,53,0.08)', border: '1px solid rgba(255,107,53,0.20)' }}>
-                {['22 AI agents pre-configured', 'Multi-channel integrations ready', 'Analytics dashboard live'].map(item => (
-                  <div key={item} className="flex items-center gap-3">
-                    <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,107,53,0.20)', border: '1px solid rgba(255,107,53,0.40)' }}>
-                      <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5L9 1" stroke="#FF6B35" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    </div>
-                    <span className="text-white/70 text-sm">{item}</span>
+              {plan && (
+                <p className="text-sm" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                  Plan: <span className="text-white/70 font-medium capitalize">{plan}</span> · <span style={{ color: '#FF6B35' }}>Active</span>
+                </p>
+              )}
+
+              {lockedAgents.length > 0 ? (
+                <div className="space-y-4">
+                  <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    Your AI Team
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {lockedAgents.map(agent => {
+                      const color = CATEGORY_COLORS[agent.category]
+                      return (
+                        <div
+                          key={agent.id}
+                          className="rounded-xl p-3 flex items-center gap-3"
+                          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+                        >
+                          <img
+                            src={agent.avatar}
+                            alt={agent.name}
+                            width={40}
+                            height={40}
+                            className="rounded-full flex-shrink-0 object-cover"
+                            style={{ border: `1.5px solid ${color}`, width: 40, height: 40 }}
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <div
+                                className="rounded-full flex-shrink-0"
+                                style={{ width: 6, height: 6, background: color }}
+                              />
+                              <span className="text-white font-bold truncate" style={{ fontSize: 13 }}>
+                                {agent.name}
+                              </span>
+                            </div>
+                            <p className="truncate" style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>
+                              {agent.role}
+                            </p>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
-                ))}
-              </div>
+                  <div className="flex justify-center">
+                    <span
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
+                      style={{ background: 'rgba(255,107,53,0.12)', border: '1px solid rgba(255,107,53,0.25)', color: '#FF6B35' }}
+                    >
+                      <svg width="10" height="12" viewBox="0 0 10 12" fill="none" aria-hidden="true">
+                        <rect x="1" y="5" width="8" height="7" rx="1.5" stroke="#FF6B35" strokeWidth="1.2"/>
+                        <path d="M3 5V3.5a2 2 0 0 1 4 0V5" stroke="#FF6B35" strokeWidth="1.2" strokeLinecap="round"/>
+                      </svg>
+                      Locked · Cannot be changed
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-xl p-5 space-y-3" style={{ background: 'rgba(255,107,53,0.08)', border: '1px solid rgba(255,107,53,0.20)' }}>
+                  {['22 AI agents pre-configured', 'Multi-channel integrations ready', 'Analytics dashboard live'].map(item => (
+                    <div key={item} className="flex items-center gap-3">
+                      <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(255,107,53,0.20)', border: '1px solid rgba(255,107,53,0.40)' }}>
+                        <svg width="10" height="8" viewBox="0 0 10 8" fill="none"><path d="M1 4l2.5 2.5L9 1" stroke="#FF6B35" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </div>
+                      <span className="text-white/70 text-sm">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <button
                 onClick={handleFinish}
                 disabled={launching}
@@ -152,5 +233,13 @@ export default function OnboardingPage() {
         <p className="text-center text-white/20 text-xs mt-6">Step {step + 1} of {STEPS.length}</p>
       </div>
     </div>
+  )
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense>
+      <OnboardingContent />
+    </Suspense>
   )
 }

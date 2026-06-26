@@ -8,6 +8,7 @@ function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const justRegistered = searchParams.get('registered') === '1'
+  const justVerified = searchParams.get('verified') === '1'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -66,12 +67,18 @@ function LoginForm() {
               <input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" className="w-full bg-white/[0.05] border border-white/[0.10] rounded-xl px-4 py-3 text-white text-sm placeholder-white/25 focus:outline-none transition-all" onFocus={e => e.currentTarget.style.borderColor = 'rgba(255,107,53,0.60)'} onBlur={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.10)'} />
             </div>
             {justRegistered && <p className="text-green-400 text-sm bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2.5">Account created! Sign in below.</p>}
+            {justVerified && <p className="text-green-400 text-sm bg-green-500/10 border border-green-500/20 rounded-lg px-4 py-2.5">Email verified! Sign in to continue.</p>}
             {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-2.5">{error}</p>}
             <button type="submit" disabled={loading} className="w-full py-3 text-sm font-semibold text-white rounded-xl transition-opacity disabled:opacity-60" style={{ background: 'linear-gradient(135deg,#FF6B35,#CC4A18)', boxShadow: '0 0 20px rgba(255,107,53,0.30)' }}>{loading ? 'Signing in…' : 'Sign in'}</button>
           </form>
           <div className="mt-6 text-center text-sm text-white/30">
             Don&apos;t have an account?{' '}
             <a href="https://vantro.ai/#pricing" className="hover:opacity-80 transition-opacity" style={{ color: '#FF6B35' }}>Get started</a>
+          </div>
+          <div className="mt-4 flex items-center justify-center gap-3 text-xs text-white/20">
+            <Link href="/privacy" className="hover:text-white/40 transition-colors">Privacy Policy</Link>
+            <span>·</span>
+            <Link href="/terms" className="hover:text-white/40 transition-colors">Terms</Link>
           </div>
         </div>
       </div>

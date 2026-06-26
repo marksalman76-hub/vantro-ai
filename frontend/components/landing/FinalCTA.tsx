@@ -1,47 +1,64 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
-import { motion, useInView } from 'framer-motion'
+import { useRef, useEffect } from 'react'
 import gsap from 'gsap'
 import { useGSAP } from '@gsap/react'
 import ScrollTrigger from 'gsap/ScrollTrigger'
 
 gsap.registerPlugin(ScrollTrigger)
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+// ─── Reduced-motion hook ──────────────────────────────────────────────────────
 
-const EASE = [0.23, 1, 0.32, 1] as const
+function useReducedMotion(): boolean {
+  const ref = useRef(
+    typeof window !== 'undefined'
+      ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      : false
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const handler = () => { ref.current = mq.matches }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+  return ref.current
+}
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function FinalCTA() {
-  const sectionRef = useRef<HTMLElement>(null)
+  const sectionRef  = useRef<HTMLElement>(null)
   const headlineRef = useRef<HTMLHeadingElement>(null)
-  const subRef = useRef<HTMLParagraphElement>(null)
+  const subRef      = useRef<HTMLParagraphElement>(null)
   const benefitsRef = useRef<HTMLDivElement>(null)
-  const buttonRef = useRef<HTMLAnchorElement>(null)
-  const buttonPulseRef = useRef<gsap.core.Tween | null>(null)
-  const isInView = useInView(sectionRef, { once: true, margin: '-80px' })
+  const btnRef      = useRef<HTMLAnchorElement>(null)
+  const pulseTween  = useRef<gsap.core.Tween | null>(null)
+  const reduce      = useReducedMotion()
 
-  // Mouse-following spotlight
-  const [mousePos, setMousePos] = useState({ x: 50, y: 60 })
-
+  // ── DOM-only mouse spotlight (zero React re-renders) ──────────────────────
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!sectionRef.current) return
-      const rect = sectionRef.current.getBoundingClientRect()
-      const x = ((e.clientX - rect.left) / rect.width) * 100
-      const y = ((e.clientY - rect.top) / rect.height) * 100
-      setMousePos({ x, y })
-    }
-    const section = sectionRef.current
-    section?.addEventListener('mousemove', handleMouseMove)
-    return () => section?.removeEventListener('mousemove', handleMouseMove)
-  }, [])
+    const el = sectionRef.current
+    if (!el || reduce) return
 
-  // GSAP ScrollTrigger entrance timeline
+    const onMove = (e: MouseEvent) => {
+      const rect = el.getBoundingClientRect()
+      const x = e.clientX - rect.left
+      const y = e.clientY - rect.top
+      el.style.background = `radial-gradient(circle 600px at ${x}px ${y}px, rgba(255,107,53,0.06) 0%, transparent 70%), linear-gradient(180deg, #111720 0%, #0F1419 100%)`
+    }
+
+    el.addEventListener('mousemove', onMove, { passive: true })
+    return () => el.removeEventListener('mousemove', onMove)
+  }, [reduce])
+
+  // ── GSAP entrance timeline ─────────────────────────────────────────────────
   useGSAP(() => {
-    if (!headlineRef.current || !subRef.current || !benefitsRef.current || !buttonRef.current) return
+    if (
+      !headlineRef.current ||
+      !subRef.current ||
+      !benefitsRef.current ||
+      !btnRef.current
+    ) return
 
     const tl = gsap.timeline({
       scrollTrigger: {
@@ -69,35 +86,64 @@ export default function FinalCTA() {
         '-=0.6'
       )
       .fromTo(
-        buttonRef.current,
-        { scale: 0.9, opacity: 0 },
-        { scale: 1, opacity: 1, duration: 0.55, ease: 'back.out(1.4)' },
+        btnRef.current,
+        { scale: 0.88, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.6, ease: 'back.out(1.6)' },
         '-=0.5'
       )
   }, { scope: sectionRef })
 
-  // GSAP breathing pulse on button box-shadow
+  // ── GSAP scale pulse (GPU-safe transform — no box-shadow animation) ────────
   useGSAP(() => {
-    if (!buttonRef.current) return
-    buttonPulseRef.current = gsap.to(buttonRef.current, {
-      boxShadow:
-        '0 0 80px rgba(255,107,53,0.85), 0 20px 40px rgba(255,107,53,0.4), inset 0 1px 0 rgba(255,255,255,0.25)',
+    if (!btnRef.current || reduce) return
+
+    pulseTween.current = gsap.to(btnRef.current, {
+      scale: 1.04,
       duration: 1.8,
-      repeat: -1,
-      yoyo: true,
       ease: 'sine.inOut',
+      yoyo: true,
+      repeat: -1,
     })
+
     return () => {
-      buttonPulseRef.current?.kill()
+      pulseTween.current?.kill()
     }
   }, { scope: sectionRef })
+
+  // ── Button hover handlers ──────────────────────────────────────────────────
+  const handleBtnMouseEnter = () => {
+    pulseTween.current?.pause()
+    if (btnRef.current) {
+      btnRef.current.style.boxShadow = '0 0 48px rgba(255,107,53,0.6)'
+    }
+  }
+
+  const handleBtnMouseLeave = () => {
+    if (!reduce) pulseTween.current?.resume()
+    if (btnRef.current) {
+      btnRef.current.style.boxShadow = '0 0 0 rgba(255,107,53,0.4)'
+      btnRef.current.style.transform = ''
+    }
+  }
+
+  const handleBtnMouseDown = () => {
+    if (btnRef.current) {
+      btnRef.current.style.transform = 'scale(0.96)'
+    }
+  }
+
+  const handleBtnMouseUp = () => {
+    if (btnRef.current) {
+      btnRef.current.style.transform = 'scale(1.0)'
+    }
+  }
 
   return (
     <section
       id="cta"
       ref={sectionRef}
       style={{
-        background: '#0F1419',
+        background: 'linear-gradient(180deg, #111720 0%, #0F1419 100%)',
         paddingTop: 160,
         paddingBottom: 160,
         paddingLeft: 24,
@@ -107,7 +153,7 @@ export default function FinalCTA() {
         width: '100%',
       }}
     >
-      {/* Cinematic grid */}
+      {/* Cinematic grid overlay */}
       <div
         aria-hidden="true"
         style={{
@@ -115,138 +161,49 @@ export default function FinalCTA() {
           inset: 0,
           backgroundImage:
             'repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0px 1px, transparent 1px 80px), repeating-linear-gradient(90deg, rgba(255,255,255,0.025) 0px 1px, transparent 1px 80px)',
-          opacity: 0.04,
+          opacity: 0.035,
           pointerEvents: 'none',
         }}
       />
 
-      {/* Orange bloom */}
+      {/* Orange bloom — lower canvas warmth */}
       <div
         aria-hidden="true"
         style={{
           position: 'absolute',
           inset: 0,
           background:
-            'radial-gradient(ellipse 70% 50% at 50% 70%, rgba(255,107,53,0.09) 0%, transparent 65%)',
+            'radial-gradient(ellipse 70% 50% at 50% 80%, rgba(255,107,53,0.07) 0%, transparent 65%)',
           pointerEvents: 'none',
         }}
       />
 
-      {/* Mouse-following gold spotlight */}
+      {/* Depth gradient overlay */}
       <div
         aria-hidden="true"
         style={{
           position: 'absolute',
           inset: 0,
-          background: `radial-gradient(ellipse 50% 40% at ${mousePos.x}% ${mousePos.y}%, rgba(255,215,0,0.06) 0%, transparent 60%)`,
-          pointerEvents: 'none',
-          transition: 'background 0.12s ease',
-        }}
-      />
-
-      {/* Corner accent lines */}
-      {/* Top-left */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: 120,
-          height: 1,
-          background: 'linear-gradient(90deg, rgba(0,217,255,0.4) 0%, transparent 100%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: 1,
-          height: 120,
-          background: 'linear-gradient(180deg, rgba(0,217,255,0.4) 0%, transparent 100%)',
-          pointerEvents: 'none',
-        }}
-      />
-      {/* Top-right */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          width: 120,
-          height: 1,
-          background: 'linear-gradient(270deg, rgba(0,217,255,0.4) 0%, transparent 100%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          width: 1,
-          height: 120,
-          background: 'linear-gradient(180deg, rgba(0,217,255,0.4) 0%, transparent 100%)',
-          pointerEvents: 'none',
-        }}
-      />
-      {/* Bottom-left */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          width: 120,
-          height: 1,
-          background: 'linear-gradient(90deg, rgba(255,107,53,0.35) 0%, transparent 100%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          width: 1,
-          height: 120,
-          background: 'linear-gradient(0deg, rgba(255,107,53,0.35) 0%, transparent 100%)',
-          pointerEvents: 'none',
-        }}
-      />
-      {/* Bottom-right */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          right: 0,
-          width: 120,
-          height: 1,
-          background: 'linear-gradient(270deg, rgba(255,107,53,0.35) 0%, transparent 100%)',
-          pointerEvents: 'none',
-        }}
-      />
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          right: 0,
-          width: 1,
-          height: 120,
-          background: 'linear-gradient(0deg, rgba(255,107,53,0.35) 0%, transparent 100%)',
+          background:
+            'radial-gradient(ellipse 80% 50% at 50% 100%, rgba(255,107,53,0.05) 0%, transparent 70%)',
           pointerEvents: 'none',
         }}
       />
 
-      {/* Center content */}
+      {/* Corner accent lines — top-left */}
+      <div aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, width: 120, height: 1, background: 'linear-gradient(90deg, rgba(0,217,255,0.4) 0%, transparent 100%)', pointerEvents: 'none' }} />
+      <div aria-hidden="true" style={{ position: 'absolute', top: 0, left: 0, width: 1, height: 120, background: 'linear-gradient(180deg, rgba(0,217,255,0.4) 0%, transparent 100%)', pointerEvents: 'none' }} />
+      {/* top-right */}
+      <div aria-hidden="true" style={{ position: 'absolute', top: 0, right: 0, width: 120, height: 1, background: 'linear-gradient(270deg, rgba(0,217,255,0.4) 0%, transparent 100%)', pointerEvents: 'none' }} />
+      <div aria-hidden="true" style={{ position: 'absolute', top: 0, right: 0, width: 1, height: 120, background: 'linear-gradient(180deg, rgba(0,217,255,0.4) 0%, transparent 100%)', pointerEvents: 'none' }} />
+      {/* bottom-left */}
+      <div aria-hidden="true" style={{ position: 'absolute', bottom: 0, left: 0, width: 120, height: 1, background: 'linear-gradient(90deg, rgba(255,107,53,0.35) 0%, transparent 100%)', pointerEvents: 'none' }} />
+      <div aria-hidden="true" style={{ position: 'absolute', bottom: 0, left: 0, width: 1, height: 120, background: 'linear-gradient(0deg, rgba(255,107,53,0.35) 0%, transparent 100%)', pointerEvents: 'none' }} />
+      {/* bottom-right */}
+      <div aria-hidden="true" style={{ position: 'absolute', bottom: 0, right: 0, width: 120, height: 1, background: 'linear-gradient(270deg, rgba(255,107,53,0.35) 0%, transparent 100%)', pointerEvents: 'none' }} />
+      <div aria-hidden="true" style={{ position: 'absolute', bottom: 0, right: 0, width: 1, height: 120, background: 'linear-gradient(0deg, rgba(255,107,53,0.35) 0%, transparent 100%)', pointerEvents: 'none' }} />
+
+      {/* ── Center content ── */}
       <div
         style={{
           position: 'relative',
@@ -256,7 +213,6 @@ export default function FinalCTA() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: 40,
           textAlign: 'center',
         }}
       >
@@ -264,40 +220,34 @@ export default function FinalCTA() {
         <h2
           ref={headlineRef}
           style={{
-            fontSize: 'clamp(2.2rem, 4vw, 3.6rem)',
+            fontSize: 'clamp(2.4rem, 4.5vw, 4rem)',
             fontWeight: 800,
             color: '#ffffff',
             textAlign: 'center',
-            lineHeight: 1.15,
+            lineHeight: 1.1,
+            letterSpacing: '-0.03em',
+            margin: 0,
             opacity: 0,
-          }}
+            textWrap: 'balance',
+          } as React.CSSProperties}
         >
-          Your AI Workforce{' '}
-          <span
-            style={{
-              background: 'linear-gradient(135deg, #FF6B35 0%, #FFD700 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            Starts Today.
-          </span>
+          Your AI Workforce Starts Today.
         </h2>
 
         {/* Subheading */}
         <p
           ref={subRef}
           style={{
-            color: '#9ca3af',
+            color: 'rgba(255,255,255,0.55)',
             fontSize: 20,
+            marginTop: 16,
             textAlign: 'center',
             maxWidth: 520,
-            lineHeight: 1.65,
+            lineHeight: 1.6,
             opacity: 0,
           }}
         >
-          Join 500+ companies already running on Vantro.
+          22 agents. 200+ integrations. Zero headcount added.
         </p>
 
         {/* Benefits row */}
@@ -310,6 +260,7 @@ export default function FinalCTA() {
             alignItems: 'center',
             justifyContent: 'center',
             flexWrap: 'wrap',
+            marginTop: 32,
             opacity: 0,
           }}
         >
@@ -325,50 +276,42 @@ export default function FinalCTA() {
             }}
           />
           <span style={{ color: 'rgba(255,255,255,0.72)', fontSize: 15, fontWeight: 600 }}>
-            ✓ Live in 5 min. Cancel anytime.
+            ✓ Live in 5 min.
           </span>
         </div>
 
-        {/* Giant CTA button */}
-        <motion.a
-          ref={buttonRef}
+        {/* CTA button */}
+        <a
+          ref={btnRef}
           href="/register"
-          whileHover={{
-            scale: 1.06,
-          }}
-          whileTap={{ scale: 0.97 }}
+          onMouseEnter={handleBtnMouseEnter}
+          onMouseLeave={handleBtnMouseLeave}
+          onMouseDown={handleBtnMouseDown}
+          onMouseUp={handleBtnMouseUp}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            height: 68,
-            paddingLeft: 56,
-            paddingRight: 56,
-            borderRadius: 16,
-            background: 'linear-gradient(135deg, #FF6B35 0%, #E84D1C 100%)',
+            marginTop: 40,
+            padding: '18px 48px',
+            borderRadius: 14,
+            background: '#FF6B35',
             color: '#ffffff',
-            fontWeight: 800,
+            fontWeight: 700,
             fontSize: 18,
-            boxShadow:
-              '0 0 50px rgba(255,107,53,0.6), 0 20px 40px rgba(255,107,53,0.3), inset 0 1px 0 rgba(255,255,255,0.25)',
             textDecoration: 'none',
-            opacity: 0,
             whiteSpace: 'nowrap',
+            boxShadow: '0 0 0 rgba(255,107,53,0.4)',
+            // CSS-only transitions; GSAP drives the idle scale pulse
+            transition: 'box-shadow 0.3s ease, transform 150ms ease-out',
+            opacity: 0,
+            // will-change keeps the element on its own compositor layer
+            willChange: 'transform',
           }}
         >
-          Deploy Your AI Workforce →
-        </motion.a>
+          Deploy Now
+        </a>
 
-        {/* Fine print */}
-        <p
-          style={{
-            color: '#6b7280',
-            fontSize: 13,
-            marginTop: -20,
-          }}
-        >
-          No credit card required · Cancel anytime
-        </p>
       </div>
     </section>
   )

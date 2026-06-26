@@ -16,7 +16,7 @@ const PLAN_PRICE_IDS: Record<string, string> = {
   business: process.env.STRIPE_PRICE_BUSINESS_MONTHLY || '',
 }
 
-const SUCCESS_URL = 'https://app.vantro.ai/onboarding?session_id={CHECKOUT_SESSION_ID}'
+const SUCCESS_BASE = 'https://vantro.ai/register'
 const CANCEL_URL  = 'https://vantro.ai/#pricing'
 
 const CORS_HEADERS = {
@@ -46,15 +46,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ detail: `Plan "${planKey}" not configured.` }, { status: 400, headers: CORS_HEADERS })
   }
 
+  const agentsStr = Array.isArray(body.agents) ? body.agents.join(',') : ''
+  const successUrl = `${SUCCESS_BASE}?session_id={CHECKOUT_SESSION_ID}&plan=${planKey}&agents=${encodeURIComponent(agentsStr)}`
+  const cancelUrl  = `https://vantro.ai/checkout?plan=${planKey}&agents=${encodeURIComponent(agentsStr)}`
+
   const params = new URLSearchParams()
   params.append('mode', 'subscription')
-  params.append('success_url', SUCCESS_URL)
-  params.append('cancel_url', CANCEL_URL)
+  params.append('success_url', successUrl)
+  params.append('cancel_url', cancelUrl)
   params.append('line_items[0][price]', priceId)
   params.append('line_items[0][quantity]', '1')
   if (body.email) params.append('customer_email', body.email)
-  if (body.agents?.length) {
-    params.append('metadata[agents]', body.agents.join(','))
+  if (agentsStr) {
+    params.append('metadata[agents]', agentsStr)
     params.append('metadata[plan]', planKey)
   }
 
@@ -70,6 +74,9 @@ export async function POST(request: NextRequest) {
     const data = await res.json()
     if (!res.ok) {
       return NextResponse.json({ detail: data.error?.message || 'Stripe error.' }, { status: 502, headers: CORS_HEADERS })
+    }
+    if (!data?.url) {
+      return NextResponse.json({ error: 'Checkout session unavailable' }, { status: 502, headers: CORS_HEADERS })
     }
     return NextResponse.json({ url: data.url }, { headers: CORS_HEADERS })
   } catch {

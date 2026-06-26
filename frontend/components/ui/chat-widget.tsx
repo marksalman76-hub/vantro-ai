@@ -69,8 +69,8 @@ export function ChatWidget() {
         style={{
           position: 'fixed', bottom: '1.5rem', right: '1.5rem', zIndex: 9998,
           width: 52, height: 52, borderRadius: '50%', border: 'none', cursor: 'pointer',
-          background: 'linear-gradient(160deg, oklch(0.78 0.13 250) 0%, oklch(0.60 0.18 250) 100%)',
-          boxShadow: '0 4px 20px oklch(0.60 0.18 250 / 0.50)',
+          background: 'linear-gradient(160deg, #FF8050 0%, #FF6B35 100%)',
+          boxShadow: '0 4px 20px rgba(255,107,53,0.50)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
@@ -116,16 +116,16 @@ export function ChatWidget() {
                     color: 'oklch(0.75 0 0)', fontSize: '0.825rem', lineHeight: 1.5,
                   }}>
                     <p style={{ margin: '0 0 0.5rem' }}>Sign in to chat with your AI workforce.</p>
-                    <Link href="https://app.vantro.ai/login" style={{
+                    <Link href="/login" style={{
                       display: 'inline-block',
-                      background: 'linear-gradient(160deg, oklch(0.78 0.13 250) 0%, oklch(0.60 0.18 250) 100%)',
+                      background: 'linear-gradient(160deg, #FF8050 0%, #FF6B35 100%)',
                       color: 'oklch(0.98 0 0)', borderRadius: '9999px', padding: '0.4rem 1rem',
                       fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none',
                     }}>Sign in &rarr;</Link>
                   </div>
                 ) : (
                   <div style={{
-                    background: m.role === 'user' ? 'oklch(0.60 0.18 250)' : 'oklch(1 0 0 / 0.06)',
+                    background: m.role === 'user' ? '#FF6B35' : 'oklch(1 0 0 / 0.06)',
                     color: m.role === 'user' ? 'oklch(0.98 0 0)' : 'oklch(0.88 0 0)',
                     border: m.role === 'assistant' ? '1px solid oklch(1 0 0 / 0.09)' : 'none',
                     borderRadius: m.role === 'user' ? '1rem 1rem 0.25rem 1rem' : '1rem 1rem 1rem 0.25rem',
@@ -142,7 +142,7 @@ export function ChatWidget() {
               }}>
                 {[0,1,2].map(d => (
                   <span key={d} style={{
-                    width: 6, height: 6, borderRadius: '50%', background: 'oklch(0.60 0.18 250)',
+                    width: 6, height: 6, borderRadius: '50%', background: '#FF6B35',
                     animation: `vantro-pulse 1.2s ease-in-out ${d * 0.2}s infinite`,
                   }} />
                 ))}
@@ -171,7 +171,7 @@ export function ChatWidget() {
               onClick={send}
               disabled={!input.trim() || loading}
               style={{
-                background: input.trim() && !loading ? 'oklch(0.60 0.18 250)' : 'oklch(1 0 0 / 0.06)',
+                background: input.trim() && !loading ? '#FF6B35' : 'oklch(1 0 0 / 0.06)',
                 border: 'none', borderRadius: '0.625rem', width: 38, height: 38,
                 cursor: input.trim() && !loading ? 'pointer' : 'not-allowed',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
