@@ -17,12 +17,12 @@ const QUALITIES      = ['720p', '1080p', '4k'] as const
 type VideoQuality    = typeof QUALITIES[number]
 
 const IMAGE_MODELS = [
-  { value: 'seedream_v4_5',         label: 'Seedream 4.5' },
-  { value: 'gpt_image_2',           label: 'GPT Image 2' },
-  { value: 'dtc_ads',               label: 'DTC Ads' },
-  { value: 'recraft_v4_1',          label: 'Recraft V4.1' },
-  { value: 'soul_cinematic',        label: 'Soul Cinematic' },
-  { value: 'marketing_studio_image', label: 'Marketing Studio' },
+  { value: 'seedream_v4_5',          label: 'Photorealistic' },
+  { value: 'gpt_image_2',            label: 'Vivid & Creative' },
+  { value: 'dtc_ads',                label: 'Product Ads' },
+  { value: 'recraft_v4_1',           label: 'Vector & Design' },
+  { value: 'soul_cinematic',         label: 'Cinematic' },
+  { value: 'marketing_studio_image', label: 'Marketing' },
 ]
 const IMAGE_RATIOS = ['16:9', '1:1', '9:16', '4:3', '3:4']
 
@@ -500,7 +500,7 @@ export default function AdminCreativePage() {
 
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 2 }}>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Model</label>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Style</label>
                   <select
                     value={iModel}
                     onChange={e => setIModel(e.target.value)}
