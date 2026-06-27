@@ -26,8 +26,8 @@ export function videoCreditCost(quality: VideoQuality, duration: VideoDuration):
   return VIDEO_CREDIT_COSTS[quality][duration] ?? VIDEO_CREDIT_COSTS['720p'][5]
 }
 
-// Plans that can access 4K
-export const PLANS_WITH_4K = new Set(['business', 'enterprise'])
+// All plans can access 4K
+export const PLANS_WITH_4K = new Set(['starter', 'growth', 'business', 'agency', 'enterprise'])
 
 // Provider raw costs (USD) — for reference/reporting
 export const PROVIDER_COSTS = {
