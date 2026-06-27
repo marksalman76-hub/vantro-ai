@@ -15,7 +15,7 @@ const NAV = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--t-bg)' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#0A0D14' }}>
       <aside style={{
         width: 220,
         background: 'var(--t-sidebar)',
@@ -56,7 +56,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <ThemeToggle style={{ width: '100%', justifyContent: 'center' }} />
         </div>
       </aside>
-      <main style={{ marginLeft: 220, flex: 1, minHeight: '100vh', background: 'var(--t-bg)' }}>
+      <main style={{ marginLeft: 220, flex: 1, minHeight: '100vh', background: '#0A0D14' }}>
         {children}
       </main>
     </div>
