@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto, { randomInt } from 'crypto'
 import { Resend } from 'resend'
 
+function escHtml(s: string): string {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
 function signOtp(payload: object, secret: string): string {
   const data = Buffer.from(JSON.stringify(payload)).toString('base64url')
   const sig = crypto.createHmac('sha256', secret).update(data).digest('base64url')
@@ -20,6 +24,9 @@ export async function POST(request: NextRequest) {
 
     if (!name || !email || !password) {
       return NextResponse.json({ detail: 'All fields are required.' }, { status: 400 })
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return NextResponse.json({ error: 'Invalid email address' }, { status: 400 })
     }
     if (password.length < 8) {
       return NextResponse.json({ detail: 'Password must be at least 8 characters.' }, { status: 400 })
@@ -44,7 +51,7 @@ export async function POST(request: NextRequest) {
               <div style="display:inline-block;width:40px;height:40px;background:linear-gradient(135deg,#FF6B35,#00D9FF);border-radius:10px;line-height:40px;color:#fff;font-weight:900;font-size:18px">V</div>
               <h2 style="color:#fff;margin:12px 0 4px;font-size:20px">Vantro.ai</h2>
             </div>
-            <p style="color:rgba(255,255,255,0.60);font-size:15px;margin:0 0 8px">Hi ${name},</p>
+            <p style="color:rgba(255,255,255,0.60);font-size:15px;margin:0 0 8px">Hi ${escHtml(name)},</p>
             <p style="color:rgba(255,255,255,0.60);font-size:15px;margin:0 0 32px">Enter this code to verify your account:</p>
             <div style="text-align:center;background:rgba(255,107,53,0.10);border:1px solid rgba(255,107,53,0.30);border-radius:12px;padding:28px;margin-bottom:32px">
               <span style="font-size:42px;font-weight:900;letter-spacing:12px;color:#FF6B35">${otp}</span>

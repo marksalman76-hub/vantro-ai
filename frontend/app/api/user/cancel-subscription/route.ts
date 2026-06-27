@@ -8,17 +8,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Stripe cancellation (cancel_at_period_end keeps access until period ends)
-    if (process.env.STRIPE_SECRET_KEY) {
-      // In production: look up customer's subscription ID from your DB by token/user
-      // Then: await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true })
-      // For now: mock success — wire real lookup when DB is live
-    }
-
-    return NextResponse.json({
-      message: 'subscription_cancelled',
-      cancel_at_period_end: true,
-    })
+    return NextResponse.json({ error: 'Subscription cancellation is not yet implemented. Contact support.' }, { status: 501 })
   } catch {
     return NextResponse.json(
       { detail: 'Cancellation failed. Please contact support at billing@vantro.ai.' },

@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     const session = await res.json()
 
     if (!session?.url) {
-      console.error('[topup-checkout] No session URL:', session)
+      console.error('[topup-checkout] No session URL. session.id:', session?.id)
       return NextResponse.json({ error: 'Checkout unavailable' }, { status: 502 })
     }
 

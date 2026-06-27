@@ -10,6 +10,18 @@ gsap.registerPlugin()
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface LibraryItem {
+  id: string
+  agentId: string
+  agentName: string
+  category: string
+  prompt: string
+  output: string
+  savedAt: string
+  quality?: 'approved' | 'rejected'
+}
+
+// Keep OutputItem for backward-compat with vantro_outputs reads
 interface OutputItem {
   id: string
   agentName: string
@@ -60,9 +72,28 @@ function agentColor(name: string) {
   return AGENT_COLORS[Math.abs(hash) % AGENT_COLORS.length]
 }
 
-// ─── OutputCard ───────────────────────────────────────────────────────────────
+/** Convert legacy OutputItem → LibraryItem so we can display both sources */
+function outputToLibrary(o: OutputItem): LibraryItem {
+  return {
+    id: o.id,
+    agentId: o.id,
+    agentName: o.agentName,
+    category: '',
+    prompt: o.prompt,
+    output: o.output,
+    savedAt: o.timestamp,
+  }
+}
 
-function OutputCard({ item }: { item: OutputItem }) {
+// ─── LibraryCard ──────────────────────────────────────────────────────────────
+
+function LibraryCard({
+  item,
+  onRate,
+}: {
+  item: LibraryItem
+  onRate: (item: LibraryItem, vote: 'approved' | 'rejected') => void
+}) {
   const cardRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
   const color = agentColor(item.agentName)
@@ -102,26 +133,43 @@ function OutputCard({ item }: { item: OutputItem }) {
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
-      {/* Agent name badge */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
-        <span style={{
-          fontSize: '0.72rem',
-          fontWeight: 700,
-          letterSpacing: '0.06em',
-          textTransform: 'uppercase',
-          color,
-          background: `${color}18`,
-          border: `1px solid ${color}35`,
-          borderRadius: 999,
-          padding: '0.2rem 0.65rem',
-          fontFamily: "'Space Grotesk', sans-serif",
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          maxWidth: '60%',
-        }}>
-          {item.agentName}
-        </span>
+      {/* Agent name badge + quality badge + copy */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', minWidth: 0 }}>
+          <span style={{
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            letterSpacing: '0.06em',
+            textTransform: 'uppercase',
+            color,
+            background: `${color}18`,
+            border: `1px solid ${color}35`,
+            borderRadius: 999,
+            padding: '0.2rem 0.65rem',
+            fontFamily: "'Space Grotesk', sans-serif",
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            maxWidth: '60%',
+          }}>
+            {item.agentName}
+          </span>
+          {item.quality && (
+            <span style={{
+              fontSize: 10,
+              fontWeight: 700,
+              padding: '2px 8px',
+              borderRadius: 99,
+              background: item.quality === 'approved' ? 'rgba(31,255,214,0.12)' : 'rgba(248,113,113,0.10)',
+              color: item.quality === 'approved' ? '#1FFFD6' : '#f87171',
+              border: `1px solid ${item.quality === 'approved' ? 'rgba(31,255,214,0.3)' : 'rgba(248,113,113,0.25)'}`,
+              fontFamily: "'Space Grotesk', sans-serif",
+              whiteSpace: 'nowrap',
+            }}>
+              {item.quality === 'approved' ? '✓ Approved' : '✗ Rejected'}
+            </span>
+          )}
+        </div>
         <button
           onClick={handleCopy}
           style={{
@@ -164,7 +212,41 @@ function OutputCard({ item }: { item: OutputItem }) {
 
       {/* Timestamp */}
       <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.22)', fontFamily: "'Space Grotesk', sans-serif", marginTop: 'auto', paddingTop: '0.25rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-        {formatTimestamp(item.timestamp)}
+        {formatTimestamp(item.savedAt)}
+      </div>
+
+      {/* Approve / Reject row */}
+      <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); onRate(item, 'approved') }}
+          style={{
+            background: item.quality === 'approved' ? 'rgba(31,255,214,0.12)' : 'rgba(255,255,255,0.05)',
+            border: item.quality === 'approved' ? '1px solid rgba(31,255,214,0.3)' : '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 6,
+            padding: '3px 10px',
+            cursor: 'pointer',
+            color: item.quality === 'approved' ? '#1FFFD6' : 'rgba(255,255,255,0.45)',
+            fontSize: 11,
+            fontFamily: "'Space Grotesk', sans-serif",
+          }}
+        >
+          👍 Approve
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onRate(item, 'rejected') }}
+          style={{
+            background: item.quality === 'rejected' ? 'rgba(248,113,113,0.10)' : 'rgba(255,255,255,0.05)',
+            border: item.quality === 'rejected' ? '1px solid rgba(248,113,113,0.3)' : '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 6,
+            padding: '3px 10px',
+            cursor: 'pointer',
+            color: item.quality === 'rejected' ? '#f87171' : 'rgba(255,255,255,0.45)',
+            fontSize: 11,
+            fontFamily: "'Space Grotesk', sans-serif",
+          }}
+        >
+          👎 Reject
+        </button>
       </div>
     </div>
   )
@@ -174,8 +256,9 @@ function OutputCard({ item }: { item: OutputItem }) {
 
 export default function LibraryPage() {
   const router = useRouter()
-  const [outputs, setOutputs] = useState<OutputItem[]>([])
+  const [items, setItems] = useState<LibraryItem[]>([])
   const [loaded, setLoaded] = useState(false)
+  const [qualityFilter, setQualityFilter] = useState<'all' | 'approved' | 'rejected'>('all')
 
   const pageRef   = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
@@ -185,14 +268,69 @@ export default function LibraryPage() {
   useEffect(() => {
     if (!getToken()) { router.replace('/login'); return }
     try {
-      const raw = localStorage.getItem('vantro_outputs') || '[]'
-      const parsed: OutputItem[] = JSON.parse(raw)
-      setOutputs(Array.isArray(parsed) ? parsed : [])
+      // Primary source: vantro_library
+      const libraryRaw = localStorage.getItem('vantro_library') || '[]'
+      const libraryParsed: LibraryItem[] = JSON.parse(libraryRaw)
+      const libraryItems: LibraryItem[] = Array.isArray(libraryParsed) ? libraryParsed : []
+
+      // Fallback/legacy source: vantro_outputs
+      const outputsRaw = localStorage.getItem('vantro_outputs') || '[]'
+      const outputsParsed: OutputItem[] = JSON.parse(outputsRaw)
+      const outputItems: LibraryItem[] = Array.isArray(outputsParsed)
+        ? outputsParsed.map(outputToLibrary)
+        : []
+
+      // Merge: library items first, then legacy outputs not already present
+      const libraryIds = new Set(libraryItems.map(i => i.id))
+      const merged = [...libraryItems, ...outputItems.filter(o => !libraryIds.has(o.id))]
+      setItems(merged)
     } catch {
-      setOutputs([])
+      setItems([])
     }
     setLoaded(true)
   }, [router])
+
+  // ── Approve / reject handler ────────────────────────────────────────────────
+  function rateItem(item: LibraryItem, vote: 'approved' | 'rejected') {
+    const updated = items.map(i => i.id === item.id ? { ...i, quality: vote } : i)
+    setItems(updated)
+
+    // Persist only the LibraryItem entries (not the legacy OutputItem ones)
+    const libraryOnly = updated.filter(i => i.category !== undefined && i.agentId !== i.id || true)
+    localStorage.setItem('vantro_library', JSON.stringify(libraryOnly))
+
+    // Manage approved_examples index
+    try {
+      const approvedRaw = localStorage.getItem('vantro_approved_examples')
+      const allApproved: Record<string, Array<{ prompt: string; output: string }>> =
+        approvedRaw ? JSON.parse(approvedRaw) : {}
+      const agentExamples = allApproved[item.agentId] || []
+
+      if (vote === 'approved') {
+        const already = agentExamples.some(ex => ex.prompt === item.prompt)
+        if (!already) {
+          const newExamples = [...agentExamples, { prompt: item.prompt, output: item.output }].slice(-5)
+          localStorage.setItem('vantro_approved_examples', JSON.stringify({
+            ...allApproved,
+            [item.agentId]: newExamples,
+          }))
+        }
+      } else {
+        const filtered = agentExamples.filter(ex => ex.prompt !== item.prompt)
+        localStorage.setItem('vantro_approved_examples', JSON.stringify({
+          ...allApproved,
+          [item.agentId]: filtered,
+        }))
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  // ── Filtered view ───────────────────────────────────────────────────────────
+  const displayed = items.filter(item =>
+    qualityFilter === 'all' || item.quality === qualityFilter
+  )
 
   // ── Page entry animation ────────────────────────────────────────────────────
   useGSAP(() => {
@@ -221,11 +359,11 @@ export default function LibraryPage() {
         { scale: 1, opacity: 1, y: 0, duration: 0.4, stagger: 0.07, ease: 'back.out(1.4)' }
       )
     }
-  }, { scope: pageRef, dependencies: [loaded, outputs.length] })
+  }, { scope: pageRef, dependencies: [loaded, displayed.length] })
 
   // ── Empty state pulse ───────────────────────────────────────────────────────
   useGSAP(() => {
-    if (!loaded || outputs.length > 0 || !emptyRef.current) return
+    if (!loaded || displayed.length > 0 || !emptyRef.current) return
     gsap.to(emptyRef.current, {
       boxShadow: '0 0 28px rgba(0,217,255,0.10)',
       borderColor: 'rgba(0,217,255,0.18)',
@@ -234,7 +372,7 @@ export default function LibraryPage() {
       duration: 2.2,
       ease: 'sine.inOut',
     })
-  }, { scope: pageRef, dependencies: [loaded, outputs.length] })
+  }, { scope: pageRef, dependencies: [loaded, displayed.length] })
 
   return (
     <div ref={pageRef} style={{ flex: 1, minWidth: 0, padding: '2.5rem', background: '#0A0D14', minHeight: '100%' }}>
@@ -250,6 +388,44 @@ export default function LibraryPage() {
         </p>
       </div>
 
+      {/* ── Quality filter tabs ── */}
+      {loaded && items.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+          {(['all', 'approved', 'rejected'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setQualityFilter(f)}
+              style={{
+                padding: '4px 14px',
+                borderRadius: 99,
+                cursor: 'pointer',
+                fontSize: 11,
+                fontWeight: 600,
+                textTransform: 'capitalize',
+                fontFamily: "'Space Grotesk', sans-serif",
+                background: qualityFilter === f
+                  ? f === 'approved' ? 'rgba(31,255,214,0.15)'
+                  : f === 'rejected' ? 'rgba(248,113,113,0.12)'
+                  : 'rgba(255,255,255,0.12)'
+                  : 'rgba(255,255,255,0.06)',
+                color: qualityFilter === f
+                  ? f === 'approved' ? '#1FFFD6'
+                  : f === 'rejected' ? '#f87171'
+                  : '#fff'
+                  : 'rgba(255,255,255,0.4)',
+                border: qualityFilter === f
+                  ? f === 'approved' ? '1px solid rgba(31,255,214,0.3)'
+                  : f === 'rejected' ? '1px solid rgba(248,113,113,0.3)'
+                  : '1px solid rgba(255,255,255,0.15)'
+                  : '1px solid transparent',
+              }}
+            >
+              {f === 'all' ? 'All' : f === 'approved' ? '✓ Approved' : '✗ Rejected'}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* ── Grid ── */}
       <div ref={gridRef}>
         {!loaded ? (
@@ -259,7 +435,7 @@ export default function LibraryPage() {
               <div key={i} style={{ ...CARD, height: 200, background: 'rgba(255,255,255,0.03)', animation: 'pulse 1.5s ease-in-out infinite' }} />
             ))}
           </div>
-        ) : outputs.length === 0 ? (
+        ) : displayed.length === 0 ? (
           // Empty state
           <div
             ref={emptyRef}
@@ -273,35 +449,39 @@ export default function LibraryPage() {
             </svg>
             <div>
               <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'rgba(255,255,255,0.45)', fontSize: '0.95rem', margin: '0 0 0.5rem', fontWeight: 500 }}>
-                No saved outputs yet
+                {qualityFilter === 'all' ? 'No saved outputs yet' : `No ${qualityFilter} outputs`}
               </p>
               <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'rgba(255,255,255,0.25)', fontSize: '0.82rem', margin: 0 }}>
-                Run an agent and your outputs will appear here
+                {qualityFilter === 'all'
+                  ? 'Run an agent and your outputs will appear here'
+                  : `Approve or reject outputs to see them here`}
               </p>
             </div>
-            <Link href="/dashboard/agents" style={{ textDecoration: 'none' }}>
-              <button style={{
-                marginTop: '0.5rem',
-                padding: '0.6rem 1.4rem',
-                background: 'linear-gradient(135deg,#FF6B35,#FF8C42)',
-                border: 'none',
-                borderRadius: '0.625rem',
-                color: '#fff',
-                fontWeight: 600,
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-                fontFamily: "'Space Grotesk', sans-serif",
-                letterSpacing: '0.02em',
-              }}>
-                Run your first agent →
-              </button>
-            </Link>
+            {qualityFilter === 'all' && (
+              <Link href="/dashboard/agents" style={{ textDecoration: 'none' }}>
+                <button style={{
+                  marginTop: '0.5rem',
+                  padding: '0.6rem 1.4rem',
+                  background: 'linear-gradient(135deg,#FF6B35,#FF8C42)',
+                  border: 'none',
+                  borderRadius: '0.625rem',
+                  color: '#fff',
+                  fontWeight: 600,
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  letterSpacing: '0.02em',
+                }}>
+                  Run your first agent →
+                </button>
+              </Link>
+            )}
           </div>
         ) : (
-          // Outputs grid
+          // Items grid
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
-            {outputs.map(item => (
-              <OutputCard key={item.id} item={item} />
+            {displayed.map(item => (
+              <LibraryCard key={item.id} item={item} onRate={rateItem} />
             ))}
           </div>
         )}

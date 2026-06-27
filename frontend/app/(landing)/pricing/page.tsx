@@ -12,70 +12,93 @@ const PLANS = [
     id: 'starter',
     name: 'Starter',
     price: 99,
-    credits: 50,
-    description: 'For individuals and small teams getting started with AI agents.',
+    annualPrice: 79,
+    credits: 100,
+    agents: 2,
+    badge: null,
     features: [
-      '50 credits / month',
-      'Videos up to 30 seconds (720p)',
-      '1 credit per 15s of video',
-      'Agent tasks: 1–5 credits each',
-      '10 avatar styles',
-      'Email support',
-      'Refund T&Cs apply',
+      '100 credits / month',
+      '2 AI agents',
+      '720p & 1080p video generation',
+      'Up to 30s video clips',
+      'ElevenLabs audio narration',
+      'Content library & brand profile',
     ],
-    cta: 'Get Starter',
-    style: 'default' as const,
+    cta: 'Start free trial',
+    highlighted: false,
   },
   {
     id: 'growth',
     name: 'Growth',
-    price: 279,
-    credits: 150,
-    description: 'For growing teams that need volume, quality, and longer videos.',
+    price: 249,
+    annualPrice: 199,
+    credits: 300,
+    agents: 5,
+    badge: 'Most Popular',
     features: [
-      '150 credits / month',
-      'Videos up to 90 seconds (1080p)',
-      '1 credit per 15s of video',
-      'Agent tasks: 1–5 credits each',
-      '50 avatar styles',
-      'Priority support',
-      'Custom branding',
-      'Refund T&Cs apply',
+      '300 credits / month',
+      '5 AI agents',
+      '720p & 1080p video generation',
+      'Up to 30s video clips',
+      'ElevenLabs audio narration',
+      'Agent ratings & few-shot memory',
+      'Priority generation queue',
     ],
-    cta: 'Get Growth',
-    style: 'popular' as const,
+    cta: 'Start free trial',
+    highlighted: true,
   },
   {
     id: 'business',
     name: 'Business',
     price: 399,
-    credits: 300,
-    description: 'Full power for high-volume teams and studios.',
+    annualPrice: 319,
+    credits: 700,
+    agents: 8,
+    badge: '4K Unlocked',
     features: [
-      '300 credits / month',
-      'Videos up to 90 seconds (4K)',
-      '1 credit per 15s of video',
-      'Agent tasks: 1–5 credits each',
-      'All avatar styles',
-      'Dedicated account manager',
-      'Custom avatars',
-      'API access',
+      '700 credits / month',
+      '8 AI agents',
+      '720p, 1080p & 4K video generation',
+      'Up to 30s video clips',
+      'ElevenLabs audio narration',
+      'Agent ratings & few-shot memory',
+      'Priority generation queue',
+      'Advanced analytics',
     ],
-    cta: 'Get Business',
-    style: 'default' as const,
+    cta: 'Start free trial',
+    highlighted: false,
+  },
+  {
+    id: 'agency',
+    name: 'Agency',
+    price: 799,
+    annualPrice: 639,
+    credits: 2000,
+    agents: 0,
+    badge: null,
+    features: [
+      '2,000 credits / month',
+      'Unlimited AI agents',
+      '720p, 1080p & 4K video generation',
+      'Up to 30s video clips',
+      'White-label outputs',
+      'Multi-workspace support',
+      'Priority support & SLA',
+      'Custom credit top-ups',
+    ],
+    cta: 'Contact sales',
+    highlighted: false,
   },
 ];
 
 // ─── Top-up packs (same packs available on all paid plans) ───────────────────
 // Priced above effective monthly rate to incentivise staying subscribed.
-// Margins: 10-pack 50% | 25-pack 46% | 50-pack 42% (all ≥ 40%)
 
-// Top-up packs — priced above effective monthly rate to incentivise subscription
-// 1 credit = 15s video or 1 standard agent task
+// Top-up packs — one-time purchases, no subscription change required
 const TOPUP_PACKS = [
-  { credits: 10, price: 18,  label: '10 credits',  perCredit: '$1.80/credit' },
-  { credits: 25, price: 40,  label: '25 credits',  perCredit: '$1.60/credit' },
-  { credits: 50, price: 70,  label: '50 credits',  perCredit: '$1.40/credit' },
+  { credits: 25,  price: 18,  label: '25 credits',  perCredit: '$0.72/credit' },
+  { credits: 60,  price: 40,  label: '60 credits',  perCredit: '$0.67/credit' },
+  { credits: 130, price: 70,  label: '130 credits', perCredit: '$0.54/credit' },
 ];
 
 // ─── Enterprise features ─────────────────────────────────────────────────────
@@ -95,7 +118,7 @@ const ENTERPRISE_FEATURES = [
 
 // ─── Plan limits (how many agents each plan can select) ──────────────────────
 
-const PLAN_LIMITS: Record<string, number> = { starter: 3, growth: 8, business: 22 };
+const PLAN_LIMITS: Record<string, number> = { starter: 2, growth: 5, business: 8, agency: 22 };
 
 // ─── Category ordering ────────────────────────────────────────────────────────
 
@@ -754,18 +777,19 @@ export default function PricingPage() {
   const [showEnquiry, setShowEnquiry] = useState(false);
   const [agentModalPlan, setAgentModalPlan] = useState<string | null>(null);
   const [selectedAgentIds, setSelectedAgentIds] = useState<number[]>([]);
+  const [annualMode, setAnnualMode] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const plan = params.get('plan');
-    if (plan && ['starter', 'growth', 'business'].includes(plan)) {
+    if (plan && ['starter', 'growth', 'business', 'agency'].includes(plan)) {
       setAgentModalPlan(plan);
       setSelectedAgentIds([]);
     }
   }, []);
 
   const handlePlanCTA = (planId: string) => {
-    if (planId === 'enterprise') {
+    if (planId === 'enterprise' || planId === 'agency') {
       setShowEnquiry(true);
       return;
     }
@@ -861,6 +885,42 @@ export default function PricingPage() {
             <span className="gradient-text">honest pricing</span>
           </h1>
           <p className="text-white/50 text-lg max-w-xl mx-auto">Start free. Scale as you grow. No hidden fees, no surprises.</p>
+
+          {/* Annual / Monthly toggle */}
+          <div className="mt-8 inline-flex items-center gap-3">
+            <span className={`text-sm font-medium transition-colors ${!annualMode ? 'text-white' : 'text-white/40'}`}>Monthly</span>
+            <button
+              onClick={() => setAnnualMode(v => !v)}
+              style={{
+                position: 'relative',
+                width: 44,
+                height: 24,
+                borderRadius: 999,
+                background: annualMode ? 'linear-gradient(135deg,#7C3AED,#3B82F6)' : 'rgba(255,255,255,0.12)',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'background 0.2s',
+                flexShrink: 0,
+              }}
+              aria-label="Toggle annual billing"
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: 3,
+                  left: annualMode ? 23 : 3,
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  background: '#fff',
+                  transition: 'left 0.2s',
+                }}
+              />
+            </button>
+            <span className={`text-sm font-medium transition-colors ${annualMode ? 'text-white' : 'text-white/40'}`}>
+              Annual <span className="text-emerald-400 font-semibold">save ~20%</span>
+            </span>
+          </div>
         </div>
 
         {error && (
@@ -877,15 +937,19 @@ export default function PricingPage() {
             <div
               key={plan.id}
               className={`relative rounded-2xl p-7 flex flex-col transition-all duration-300 ${
-                plan.style === 'popular'
+                plan.highlighted
                   ? 'glass-iridescent shadow-[0_0_40px_rgba(124,58,237,0.20)]'
                   : 'glass border border-white/[0.08]'
               }`}
             >
-              {plan.style === 'popular' && (
+              {plan.badge && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <span className="aurora text-white text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap shadow-[0_4px_16px_rgba(124,58,237,0.5)]">
-                    Most popular
+                  <span className={`text-white text-xs font-semibold px-4 py-1.5 rounded-full whitespace-nowrap ${
+                    plan.badge === 'Most Popular'
+                      ? 'aurora shadow-[0_4px_16px_rgba(124,58,237,0.5)]'
+                      : 'bg-gradient-to-r from-teal-500 to-cyan-500 shadow-[0_4px_16px_rgba(20,184,166,0.4)]'
+                  }`}>
+                    {plan.badge}
                   </span>
                 </div>
               )}
@@ -893,12 +957,30 @@ export default function PricingPage() {
               {/* Plan header */}
               <div className="mb-5">
                 <h2 className="text-lg font-bold mb-1 text-white">{plan.name}</h2>
-                <p className="text-white/40 text-xs mb-4 leading-relaxed">{plan.description}</p>
-                <div className="flex items-end gap-1">
-                  <span className="text-4xl font-bold text-white">${plan.price}</span>
-                  <span className="text-white/40 mb-1 text-sm">/mo</span>
-                </div>
-                <p className="text-xs text-white/30 mt-1">{plan.credits} credits included</p>
+                {plan.cta === 'Contact sales' ? (
+                  <div className="mt-4">
+                    <div style={{ fontSize: 28, fontWeight: 700, color: '#fff', fontFamily: "'Space Grotesk', sans-serif" }}>Custom pricing</div>
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 4, fontFamily: "'Space Grotesk', sans-serif" }}>Tailored to your team</div>
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontFamily: "'Space Grotesk', sans-serif", marginTop: 6 }}>
+                      <span style={{ color: '#1FFFD6', fontWeight: 700 }}>{plan.credits.toLocaleString()} credits</span> / month (base)
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-end gap-1 mt-4">
+                      <span className="text-4xl font-bold text-white">
+                        ${annualMode ? plan.annualPrice : plan.price}
+                      </span>
+                      <span className="text-white/40 mb-1 text-sm">/mo</span>
+                    </div>
+                    {annualMode && (
+                      <p className="text-xs text-emerald-400 mt-1">billed annually</p>
+                    )}
+                    <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.5)', fontFamily: "'Space Grotesk', sans-serif", marginTop: 4 }}>
+                      <span style={{ color: '#1FFFD6', fontWeight: 700 }}>{plan.credits} credits</span> / month
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Features */}
@@ -920,7 +1002,7 @@ export default function PricingPage() {
                 onClick={() => handlePlanCTA(plan.id)}
                 disabled={loading === plan.id}
                 className={`w-full py-3 rounded-xl font-semibold text-sm transition-all disabled:opacity-60 ${
-                  plan.style === 'popular'
+                  plan.highlighted
                     ? 'btn-primary'
                     : 'btn-secondary'
                 }`}
@@ -976,6 +1058,73 @@ export default function PricingPage() {
 
             <p className="text-center text-xs text-white/25 mt-4">Response within 1 business day</p>
           </div>
+        </div>
+
+        {/* Credit breakdown table */}
+        <div style={{ maxWidth: 760, margin: '60px auto 0', padding: '0 20px' }}>
+          <h3 style={{ fontSize: 20, fontWeight: 700, color: '#fff', marginBottom: 8, fontFamily: "'Space Grotesk', sans-serif" }}>
+            What do credits cover?
+          </h3>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 24, fontFamily: "'Space Grotesk', sans-serif" }}>
+            All video pricing includes 30% margin over Higgsfield provider costs.
+          </p>
+
+          {/* Video quality table */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.5)', marginBottom: 10, fontFamily: "'Space Grotesk', sans-serif", textTransform: 'uppercase', letterSpacing: '0.08em' }}>Video generation</div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
+              {/* Header row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(6, 1fr)', padding: '10px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', gap: 8 }}>
+                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'Space Grotesk', sans-serif" }}>Quality</div>
+                {['5s','10s','15s','20s','25s','30s'].map(d => (
+                  <div key={d} style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'Space Grotesk', sans-serif", textAlign: 'center' }}>{d}</div>
+                ))}
+              </div>
+              {/* 720p */}
+              <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(6, 1fr)', padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', gap: 8, alignItems: 'center' }}>
+                <div style={{ fontSize: 13, color: '#fff', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 500 }}>720p <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>All plans</span></div>
+                {[3,5,8,10,12,15].map((cr,i) => (
+                  <div key={i} style={{ fontSize: 14, fontWeight: 700, color: '#1FFFD6', textAlign: 'center', fontFamily: "'Space Grotesk', sans-serif" }}>{cr}</div>
+                ))}
+              </div>
+              {/* 1080p */}
+              <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(6, 1fr)', padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', gap: 8, alignItems: 'center' }}>
+                <div style={{ fontSize: 13, color: '#fff', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 500 }}>1080p <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>All plans</span></div>
+                {[12,20,28,36,45,55].map((cr,i) => (
+                  <div key={i} style={{ fontSize: 14, fontWeight: 700, color: '#FFB347', textAlign: 'center', fontFamily: "'Space Grotesk', sans-serif" }}>{cr}</div>
+                ))}
+              </div>
+              {/* 4K */}
+              <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(6, 1fr)', padding: '12px 20px', gap: 8, alignItems: 'center' }}>
+                <div style={{ fontSize: 13, color: '#fff', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 500 }}>4K <span style={{ fontSize: 10, color: '#FF6B35' }}>Business & Agency</span></div>
+                {[20,40,60,80,100,120].map((cr,i) => (
+                  <div key={i} style={{ fontSize: 14, fontWeight: 700, color: '#FF6B35', textAlign: 'center', fontFamily: "'Space Grotesk', sans-serif" }}>{cr}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Other operations */}
+          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, overflow: 'hidden' }}>
+            {[
+              { op: 'AI Agent run — Haiku (fast)', credits: 1, note: 'Echo, Atlas, Relay, Bolt…', color: '#1FFFD6' },
+              { op: 'AI Agent run — Sonnet (deep)', credits: 2, note: 'Quill, Pulse, Nova, Cipher…', color: '#1FFFD6' },
+              { op: 'Audio narration (ElevenLabs)', credits: 1, note: 'Any length, any voice', color: '#1FFFD6' },
+            ].map((row, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 20px', borderBottom: i < 2 ? '1px solid rgba(255,255,255,0.05)' : 'none' }}>
+                <div>
+                  <div style={{ fontSize: 14, color: '#fff', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 500 }}>{row.op}</div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontFamily: "'Space Grotesk', sans-serif", marginTop: 2 }}>{row.note}</div>
+                </div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: row.color, fontFamily: "'Space Grotesk', sans-serif", whiteSpace: 'nowrap', marginLeft: 20 }}>
+                  {row.credits} cr
+                </div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 10, fontFamily: "'Space Grotesk', sans-serif" }}>
+            Credits reset monthly. Do not roll over. 4K video requires Business plan or higher.
+          </p>
         </div>
 
         {/* How credits work */}

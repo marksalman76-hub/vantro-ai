@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+function escHtml(s: string): string {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
@@ -12,7 +16,7 @@ export async function POST(request: NextRequest) {
     const RESEND_API_KEY = process.env.RESEND_API_KEY
     if (!RESEND_API_KEY) {
       // Log inquiry server-side if no Resend key configured
-      console.log('[enterprise-contact]', { name, email, company, plan, message })
+      console.log('[enterprise-contact] inquiry received', { company, plan })
       return NextResponse.json({ success: true })
     }
 
@@ -25,15 +29,15 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         from: 'Enterprise Inquiry <noreply@vantro.ai>',
         to: ['mark.salman76@gmail.com'],
-        subject: `Enterprise Inquiry from ${company}`,
+        subject: `Enterprise Inquiry from ${escHtml(company)}`,
         html: `
           <h2>New Enterprise Inquiry</h2>
-          <p><strong>Name:</strong> ${name}</p>
-          <p><strong>Email:</strong> ${email}</p>
-          <p><strong>Company:</strong> ${company}</p>
-          <p><strong>Plan Interest:</strong> ${plan || 'Not specified'}</p>
+          <p><strong>Name:</strong> ${escHtml(name)}</p>
+          <p><strong>Email:</strong> ${escHtml(email)}</p>
+          <p><strong>Company:</strong> ${escHtml(company)}</p>
+          <p><strong>Plan Interest:</strong> ${escHtml(plan || 'Not specified')}</p>
           <p><strong>Message:</strong></p>
-          <p>${message}</p>
+          <p>${escHtml(message)}</p>
         `,
       }),
     })

@@ -25,6 +25,12 @@ function signPayload(payload: OtpPayload, secret: string): string {
   return `${data}.${sig}`
 }
 
+function signAccessToken(email: string, secret: string): string {
+  const payload = Buffer.from(email).toString('base64url')
+  const sig = crypto.createHmac('sha256', secret).update(payload).digest('base64url')
+  return `${payload}.${sig}`
+}
+
 export async function POST(request: NextRequest) {
   const OTP_SECRET = process.env.OTP_SECRET
   if (!OTP_SECRET) {
@@ -82,7 +88,7 @@ export async function POST(request: NextRequest) {
     const successResponse = NextResponse.json({ message: 'verified', email })
     successResponse.cookies.set('vantro_otp', '', { maxAge: 0, path: '/' })
     // Set httpOnly session cookie (30 day expiry)
-    successResponse.cookies.set('access_token', email, {
+    successResponse.cookies.set('access_token', signAccessToken(email, OTP_SECRET), {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',

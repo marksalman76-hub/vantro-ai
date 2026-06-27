@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useGSAP } from '@gsap/react'
@@ -19,6 +19,28 @@ interface Job {
   completed_at?: string | null
   output?: string
   credits_used?: number
+}
+
+interface LibraryItem {
+  id: string
+  agentId: string
+  agentName: string
+  category: string
+  prompt: string
+  output: string
+  savedAt: string
+  quality?: 'approved' | 'rejected'
+}
+
+interface JobRun {
+  id: string
+  agentId: string
+  agentName: string
+  prompt: string
+  status: string
+  createdAt?: string
+  savedAt?: string
+  quality?: 'approved' | 'rejected'
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -82,6 +104,36 @@ function statusColor(s: string) {
   if (n === 'failed') return '#f87171'
   if (n === 'queued') return '#00D9FF'
   return 'rgba(255,255,255,0.35)'
+}
+
+// ─── Quality helpers ──────────────────────────────────────────────────────────
+
+function computeAgentStats(libraryItems: LibraryItem[]) {
+  const stats: Record<string, { total: number; approved: number; rejected: number; rate: number }> = {}
+  for (const item of libraryItems) {
+    if (!stats[item.agentId]) {
+      stats[item.agentId] = { total: 0, approved: 0, rejected: 0, rate: 0 }
+    }
+    stats[item.agentId].total++
+    if (item.quality === 'approved') stats[item.agentId].approved++
+    if (item.quality === 'rejected') stats[item.agentId].rejected++
+  }
+  for (const key of Object.keys(stats)) {
+    const s = stats[key]
+    const rated = s.approved + s.rejected
+    s.rate = rated > 0 ? Math.round((s.approved / rated) * 100) : -1
+  }
+  return stats
+}
+
+function getJobQuality(job: Job, libraryItems: LibraryItem[]): 'approved' | 'rejected' | null {
+  const agentId = job.agent_id || ''
+  const match = libraryItems.find(
+    item =>
+      item.agentId === agentId &&
+      item.prompt.slice(0, 100) === (job.output || '').slice(0, 100)
+  )
+  return match?.quality ?? null
 }
 
 // ─── StatusBadge ──────────────────────────────────────────────────────────────
@@ -221,11 +273,20 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState<string | null>(null)
   const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  const [libraryItems, setLibraryItems] = useState<LibraryItem[]>([])
 
   const pageRef    = useRef<HTMLDivElement>(null)
   const headerRef  = useRef<HTMLDivElement>(null)
   const tableRef   = useRef<HTMLDivElement>(null)
   const emptyRef   = useRef<HTMLDivElement>(null)
+
+  // Load library items for quality cross-referencing
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('vantro_library')
+      if (raw) setLibraryItems(JSON.parse(raw) as LibraryItem[])
+    } catch {}
+  }, [])
 
   useEffect(() => {
     const token = getToken()
@@ -238,15 +299,52 @@ export default function JobsPage() {
     })
       .then(r => r.json())
       .then((data: { jobs?: Job[] }) => {
-        setJobs(data.jobs || [])
+        const apiJobs = data.jobs || []
+        if (apiJobs.length > 0) {
+          setJobs(apiJobs)
+        } else {
+          // Fallback: load from localStorage
+          try {
+            const raw = localStorage.getItem('vantro_jobs')
+            if (raw) {
+              const localJobs = JSON.parse(raw) as Job[]
+              setJobs(localJobs)
+            }
+          } catch {}
+        }
       })
       .catch((e: Error) => {
-        if (e.name !== 'AbortError') setError('Failed to load jobs')
+        if (e.name !== 'AbortError') {
+          // On API error, try localStorage fallback
+          try {
+            const raw = localStorage.getItem('vantro_jobs')
+            if (raw) {
+              setJobs(JSON.parse(raw) as Job[])
+            } else {
+              setError('Failed to load jobs')
+            }
+          } catch {
+            setError('Failed to load jobs')
+          }
+        }
       })
       .finally(() => setLoading(false))
 
     return () => ac.abort()
   }, [router])
+
+  // Compute per-agent quality stats from library
+  const agentStats = useMemo(() => computeAgentStats(libraryItems), [libraryItems])
+
+  // Top agents with rated items
+  const topAgents = useMemo(
+    () =>
+      Object.entries(agentStats)
+        .filter(([, s]) => s.approved + s.rejected > 0)
+        .sort((a, b) => b[1].total - a[1].total)
+        .slice(0, 5),
+    [agentStats]
+  )
 
   // ── Page entry animation ──────────────────────────────────────────────────
   useGSAP(() => {
@@ -307,6 +405,43 @@ export default function JobsPage() {
           All past agent runs
         </p>
       </div>
+
+      {/* ── Agent Performance Summary ── */}
+      {topAgents.length > 0 && (
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+          {topAgents.map(([agentId, s]) => (
+            <div key={agentId} style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 10,
+              padding: '10px 14px',
+              minWidth: 130,
+            }}>
+              <div style={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: '#fff',
+                marginBottom: 4,
+                fontFamily: "'Space Grotesk', sans-serif",
+                textTransform: 'capitalize',
+              }}>
+                {agentId}
+              </div>
+              <div style={{
+                fontSize: 20,
+                fontWeight: 700,
+                color: s.rate >= 80 ? '#1FFFD6' : s.rate >= 50 ? '#FF6B35' : '#f87171',
+                fontFamily: "'Space Grotesk', sans-serif",
+              }}>
+                {s.rate >= 0 ? `${s.rate}%` : '—'}
+              </div>
+              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'Space Grotesk', sans-serif" }}>
+                {s.total} run{s.total !== 1 ? 's' : ''} · {s.approved}✓ {s.rejected}✗
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ── Table / States ── */}
       <div ref={tableRef}>
@@ -386,6 +521,7 @@ export default function JobsPage() {
                   isLast={i === jobs.length - 1}
                   isSelected={selectedJob?.id === job.id}
                   onView={() => handleViewJob(job)}
+                  libraryItems={libraryItems}
                 />
               ))}
             </div>
@@ -408,11 +544,13 @@ function JobRow({
   isLast,
   isSelected,
   onView,
+  libraryItems,
 }: {
   job: Job
   isLast: boolean
   isSelected: boolean
   onView: () => void
+  libraryItems: LibraryItem[]
 }) {
   const rowRef = useRef<HTMLDivElement>(null)
 
@@ -431,6 +569,8 @@ function JobRow({
       ease: 'power3.out',
     })
   }
+
+  const quality = getJobQuality(job, libraryItems)
 
   return (
     <div
@@ -451,16 +591,33 @@ function JobRow({
     >
       {/* Agent name */}
       <div>
-        <div style={{
-          fontWeight: 600,
-          fontSize: '0.875rem',
-          color: 'rgba(255,255,255,0.90)',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          fontFamily: "'Space Grotesk', sans-serif",
-        }}>
-          {job.agent_name || job.agent_id || 'Unknown'}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{
+            fontWeight: 600,
+            fontSize: '0.875rem',
+            color: 'rgba(255,255,255,0.90)',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            fontFamily: "'Space Grotesk', sans-serif",
+          }}>
+            {job.agent_name || job.agent_id || 'Unknown'}
+          </div>
+          {quality && (
+            <span style={{
+              fontSize: 10,
+              fontWeight: 700,
+              padding: '2px 8px',
+              borderRadius: 99,
+              background: quality === 'approved' ? 'rgba(31,255,214,0.12)' : 'rgba(248,113,113,0.10)',
+              color: quality === 'approved' ? '#1FFFD6' : '#f87171',
+              fontFamily: "'Space Grotesk', sans-serif",
+              border: `1px solid ${quality === 'approved' ? 'rgba(31,255,214,0.3)' : 'rgba(248,113,113,0.25)'}`,
+              flexShrink: 0,
+            }}>
+              {quality === 'approved' ? '✓' : '✗'}
+            </span>
+          )}
         </div>
         {job.credits_used != null && (
           <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.22)', marginTop: '0.15rem', fontFamily: "'Space Grotesk', sans-serif" }}>

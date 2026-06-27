@@ -57,7 +57,6 @@ function RegisterForm() {
         return
       }
       if (data.access_token) {
-        localStorage.setItem('token', data.access_token)
         router.push(`/onboarding?plan=${plan ?? ''}&agents=${agentsParam}`)
       } else {
         setOtpSent(true)

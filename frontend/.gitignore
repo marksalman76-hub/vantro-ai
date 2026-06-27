@@ -12,6 +12,7 @@ out/
 tsconfig.tsbuildinfo
 
 # env
+.env
 .env.local
 .env*.local
 

@@ -3,8 +3,20 @@
 import { useState, useRef, useEffect } from 'react'
 import gsap from 'gsap'
 import { AGENTS, CATEGORY_COLORS, Agent } from '@/lib/agents'
+import { CREDIT_COSTS, deductCredits, hasCredits } from '@/lib/credits'
 
 const CATEGORIES = ['All', 'Sales', 'Operations', 'Engineering', 'Support', 'Executive'] as const
+
+interface LibraryItem {
+  id: string
+  agentId: string
+  agentName: string
+  category: string
+  prompt: string
+  output: string
+  savedAt: string
+  quality?: 'approved' | 'rejected'
+}
 
 export default function AgentsPage() {
   const [selected, setSelected]       = useState<Agent | null>(null)
@@ -14,15 +26,23 @@ export default function AgentsPage() {
   const [error, setError]             = useState('')
   const [activeCategory, setActiveCategory] = useState<string>('All')
   const [search, setSearch]           = useState('')
+  const [rating, setRating]           = useState<'approved' | 'rejected' | null>(null)
+  const [credits, setCredits]         = useState<number>(0)
   const outputRef = useRef<HTMLDivElement>(null)
   // R1: AbortController ref for streaming cleanup
   const agentAbortRef = useRef<AbortController | null>(null)
+  const lastSavedIdRef = useRef<string | null>(null)
 
   // R1: Cleanup on unmount — abort any in-flight stream
   useEffect(() => {
     return () => {
       agentAbortRef.current?.abort()
     }
+  }, [])
+
+  // Read initial credits from localStorage
+  useEffect(() => {
+    setCredits(parseFloat(localStorage.getItem('vantro_credits') || '0'))
   }, [])
 
   // R2: Scroll output container whenever output changes (side-effect moved out of setState)
@@ -41,22 +61,76 @@ export default function AgentsPage() {
 
   const accent = selected ? (CATEGORY_COLORS[selected.category] || '#00D9FF') : '#00D9FF'
 
+  const SONNET_IDS = new Set(['quill','pulse','nova','cipher','lumen','scout','vector','pixel','forge','sentinel','mosaic','ledger','tempo','sage'])
+
+  function creditCostFor(agentId: string): number {
+    return SONNET_IDS.has(agentId) ? CREDIT_COSTS.agent_sonnet : CREDIT_COSTS.agent_haiku
+  }
+
   async function runAgent() {
     if (!selected || !prompt.trim()) return
+
+    const cost = creditCostFor(String(selected.id))
+    if (!hasCredits(cost)) {
+      setError('Insufficient credits. Top up your plan to continue.')
+      return
+    }
     setRunning(true)
     setOutput('')
     setError('')
+    setRating(null)
+
+    // Read context from localStorage — brand profile, library, recent jobs
+    let context: Record<string, unknown> = {}
+    try {
+      const bp  = localStorage.getItem('vantro_brand_profile')
+      const lib = localStorage.getItem('vantro_library')
+      const jbs = localStorage.getItem('vantro_jobs')
+      if (bp) context.brandProfile = JSON.parse(bp)
+      if (lib) {
+        const items = JSON.parse(lib) as Array<{ output?: string; [k: string]: unknown }>
+        context.libraryItems = items.slice(-5).map(item => ({
+          ...item,
+          output: typeof item.output === 'string' ? item.output.slice(0, 500) : item.output,
+        }))
+      }
+      if (jbs) {
+        const parsed = JSON.parse(jbs)
+        context.recentJobs = Array.isArray(parsed) ? parsed.slice(-5) : []
+      }
+    } catch {
+      context = {}
+    }
+
+    // Read approved examples for the selected agent
+    try {
+      const approvedRaw = localStorage.getItem('vantro_approved_examples')
+      if (approvedRaw && selected) {
+        const allApproved = JSON.parse(approvedRaw) as Record<string, Array<{ prompt: string; output: string }>>
+        const agentApproved = allApproved[selected.id] || []
+        if (agentApproved.length > 0) {
+          context.approvedExamples = agentApproved.slice(-2).map(ex => ({
+            prompt: ex.prompt.slice(0, 150),
+            output: ex.output.slice(0, 800),
+          }))
+        }
+      }
+    } catch {
+      // ignore
+    }
 
     // R1: Abort any previous stream and create a fresh controller
     agentAbortRef.current?.abort()
     const ac = new AbortController()
     agentAbortRef.current = ac
 
+    let finalOutput = ''
+
     try {
       const res = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: selected.id, prompt: prompt.trim() }),
+        body: JSON.stringify({ agentId: selected.id, prompt: prompt.trim(), context }),
         signal: ac.signal,
       })
 
@@ -73,15 +147,75 @@ export default function AgentsPage() {
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
-        // R2: No setTimeout side-effect inside setState — just update output
-        setOutput(prev => prev + dec.decode(value, { stream: true }))
+        const chunk = dec.decode(value, { stream: true })
+        finalOutput += chunk
+        // R2: No setTimeout side-effect inside setState
+        setOutput(prev => prev + chunk)
       }
+
+      // Auto-save completed output to library
+      if (finalOutput.trim() && selected) {
+        try {
+          const existing = JSON.parse(localStorage.getItem('vantro_library') || '[]')
+          const newItem: LibraryItem = {
+            id: crypto.randomUUID(),
+            agentId: String(selected.id),
+            agentName: selected.name,
+            category: selected.category,
+            prompt: prompt.trim().slice(0, 200),
+            output: finalOutput,
+            savedAt: new Date().toISOString(),
+          }
+          lastSavedIdRef.current = newItem.id
+          localStorage.setItem('vantro_library', JSON.stringify([...existing, newItem]))
+        } catch {
+          // ignore storage errors
+        }
+      }
+
+      // Deduct credits for this agent run
+      const newBalance = deductCredits(cost)
+      setCredits(newBalance)
     } catch (e) {
       // R1: Ignore AbortError (unmount / re-run cancellation)
       if ((e as Error)?.name === 'AbortError') return
       setError('Agent unavailable. Please try again.')
     } finally {
       setRunning(false)
+    }
+  }
+
+  function handleRating(vote: 'approved' | 'rejected') {
+    if (!selected || !lastSavedIdRef.current) return
+    setRating(vote)
+
+    // Update the library item quality
+    try {
+      const lib = JSON.parse(localStorage.getItem('vantro_library') || '[]') as LibraryItem[]
+      const updated = lib.map(item =>
+        item.id === lastSavedIdRef.current ? { ...item, quality: vote } : item
+      )
+      localStorage.setItem('vantro_library', JSON.stringify(updated))
+
+      // If approved, add to approved examples index for few-shot injection
+      if (vote === 'approved') {
+        const approvedRaw = localStorage.getItem('vantro_approved_examples')
+        const allApproved = approvedRaw ? JSON.parse(approvedRaw) as Record<string, Array<{ prompt: string; output: string }>> : {}
+        const agentExamples = allApproved[selected.id] || []
+        const thisItem = lib.find(i => i.id === lastSavedIdRef.current)
+        if (thisItem) {
+          const newExamples = [
+            ...agentExamples,
+            { prompt: thisItem.prompt, output: thisItem.output }
+          ].slice(-5)
+          localStorage.setItem('vantro_approved_examples', JSON.stringify({
+            ...allApproved,
+            [selected.id]: newExamples,
+          }))
+        }
+      }
+    } catch {
+      // ignore
     }
   }
 
@@ -243,6 +377,49 @@ export default function AgentsPage() {
               {output && (
                 <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: 13.5, lineHeight: 1.75, whiteSpace: 'pre-wrap', fontFamily: "'Space Grotesk', sans-serif" }}>{output}</div>
               )}
+              {output && !running && !error && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 10, marginTop: 16,
+                  paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)',
+                }}>
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'Space Grotesk', sans-serif" }}>
+                    Rate this output:
+                  </span>
+                  <button
+                    onClick={() => handleRating('approved')}
+                    disabled={rating !== null}
+                    style={{
+                      background: rating === 'approved' ? 'rgba(31,255,214,0.15)' : 'rgba(255,255,255,0.06)',
+                      border: rating === 'approved' ? '1px solid rgba(31,255,214,0.4)' : '1px solid rgba(255,255,255,0.09)',
+                      borderRadius: 8, padding: '5px 14px', cursor: rating !== null ? 'default' : 'pointer',
+                      color: rating === 'approved' ? '#1FFFD6' : 'rgba(255,255,255,0.5)',
+                      fontSize: 13, fontFamily: "'Space Grotesk', sans-serif", display: 'flex', alignItems: 'center', gap: 5,
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    👍 {rating === 'approved' ? 'Approved' : 'Approve'}
+                  </button>
+                  <button
+                    onClick={() => handleRating('rejected')}
+                    disabled={rating !== null}
+                    style={{
+                      background: rating === 'rejected' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.06)',
+                      border: rating === 'rejected' ? '1px solid rgba(248,113,113,0.35)' : '1px solid rgba(255,255,255,0.09)',
+                      borderRadius: 8, padding: '5px 14px', cursor: rating !== null ? 'default' : 'pointer',
+                      color: rating === 'rejected' ? '#f87171' : 'rgba(255,255,255,0.5)',
+                      fontSize: 13, fontFamily: "'Space Grotesk', sans-serif", display: 'flex', alignItems: 'center', gap: 5,
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    👎 {rating === 'rejected' ? 'Rejected' : 'Reject'}
+                  </button>
+                  {rating && (
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'Space Grotesk', sans-serif", marginLeft: 4 }}>
+                      {rating === 'approved' ? '✓ Saved as example for future runs' : '✓ Logged'}
+                    </span>
+                  )}
+                </div>
+              )}
               {running && !output && (
                 <style>{`@keyframes dot{0%,80%,100%{opacity:.25;transform:scale(.7)}40%{opacity:1;transform:scale(1)}}`}</style>
               )}
@@ -257,6 +434,19 @@ export default function AgentsPage() {
 
             {/* Input */}
             <div style={{ padding: '14px 24px 20px', borderTop: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+              {selected && (
+                <div style={{
+                  fontSize: 11, color: 'rgba(255,255,255,0.4)',
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8,
+                }}>
+                  <span style={{ color: '#1FFFD6', fontWeight: 700 }}>{credits}</span>
+                  <span>credits ·</span>
+                  <span style={{ opacity: 0.7 }}>
+                    this run costs {creditCostFor(String(selected.id))} credit{creditCostFor(String(selected.id)) !== 1 ? 's' : ''}
+                  </span>
+                </div>
+              )}
               <textarea
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
