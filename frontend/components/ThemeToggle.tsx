@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-export default function ThemeToggle({ style }: { style?: React.CSSProperties }) {
+export default function ThemeToggle({ style, iconOnly }: { style?: React.CSSProperties; iconOnly?: boolean }) {
   const [dark, setDark] = useState(true)
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export default function ThemeToggle({ style }: { style?: React.CSSProperties }) 
       }}
     >
       <span style={{ fontSize: 14, lineHeight: 1 }}>{dark ? '☀' : '☾'}</span>
-      {dark ? 'Light' : 'Dark'}
+      {!iconOnly && (dark ? 'Light' : 'Dark')}
     </button>
   )
 }

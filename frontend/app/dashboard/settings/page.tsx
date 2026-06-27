@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useEffect, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -6,8 +6,8 @@ import Link from 'next/link'
 
 // ─── Shared card styles ───────────────────────────────────────────────────────
 const CARD: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.08)',
+  background: 'var(--t-surface)',
+  border: '1px solid var(--t-border)',
   borderRadius: '1rem',
   padding: '1.25rem',
 }
@@ -57,7 +57,7 @@ function getUserInitial(): string {
 }
 
 // ─── Section divider component ────────────────────────────────────────────────
-function SectionLabel({ label, color = 'rgba(255,255,255,0.38)' }: { label: string; color?: string }) {
+function SectionLabel({ label, color = 'var(--t-text-3)' }: { label: string; color?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.875rem' }}>
       <span
@@ -73,7 +73,7 @@ function SectionLabel({ label, color = 'rgba(255,255,255,0.38)' }: { label: stri
       >
         {label}
       </span>
-      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }} />
+      <div style={{ flex: 1, height: 1, background: 'var(--t-surface-2)' }} />
     </div>
   )
 }
@@ -92,7 +92,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
         border: 'none',
         background: checked
           ? 'linear-gradient(135deg,#FF6B35,#e85d00)'
-          : 'rgba(255,255,255,0.12)',
+          : 'var(--t-border)',
         cursor: 'pointer',
         position: 'relative',
         flexShrink: 0,
@@ -131,7 +131,7 @@ const SHIMMER_STYLES = `
     font-weight: 500;
     padding: 0.22rem 0.6rem;
     border-radius: 99px;
-    border: 1px solid rgba(255,255,255,0.10);
+    border: 1px solid var(--t-border);
     background: linear-gradient(
       90deg,
       rgba(255,255,255,0.06) 0%,
@@ -157,12 +157,12 @@ function CreditBar({ used, total }: { used: number; total: number }) {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.4rem' }}>
-        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)' }}>Credits used</span>
-        <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.65)', fontVariantNumeric: 'tabular-nums' }}>
+        <span style={{ fontSize: '0.78rem', color: 'var(--t-text-2)' }}>Credits used</span>
+        <span style={{ fontSize: '0.78rem', color: 'var(--t-text-2)', fontVariantNumeric: 'tabular-nums' }}>
           {remaining} / {total} remaining
         </span>
       </div>
-      <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+      <div style={{ height: 6, borderRadius: 99, background: 'var(--t-surface-2)', overflow: 'hidden' }}>
         <div
           style={{
             height: '100%',
@@ -357,7 +357,7 @@ function SettingsPageInner() {
           <h1 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '1.75rem', margin: 0, lineHeight: 1.1 }}>
             Settings
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.35)', marginTop: '0.25rem', fontSize: '0.875rem', margin: 0 }}>
+          <p style={{ color: 'var(--t-text-3)', marginTop: '0.25rem', fontSize: '0.875rem', margin: 0 }}>
             Manage your account and preferences
           </p>
         </div>
@@ -383,7 +383,7 @@ function SettingsPageInner() {
                   fontFamily: "'Space Grotesk',sans-serif",
                   fontWeight: 700,
                   fontSize: '1.1rem',
-                  color: 'rgba(255,255,255,0.92)',
+                  color: 'var(--t-text-1)',
                 }}
               >
                 {plan.charAt(0).toUpperCase() + plan.slice(1)} Plan
@@ -404,7 +404,7 @@ function SettingsPageInner() {
                 Active
               </span>
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.35)' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--t-text-3)' }}>
               Monthly billing &nbsp;·&nbsp; Renews {renewalDate}
             </div>
           </div>
@@ -441,7 +441,7 @@ function SettingsPageInner() {
             gap: '1.5rem',
             marginTop: '1.1rem',
             paddingTop: '1.1rem',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
+            borderTop: '1px solid var(--t-border)',
             flexWrap: 'wrap',
           }}
         >
@@ -451,8 +451,8 @@ function SettingsPageInner() {
             { label: 'Next charge', value: `$${planPrice} on ${renewalDate}` },
           ].map(({ label, value }) => (
             <div key={label}>
-              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.30)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.2rem' }}>{label}</div>
-              <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.75)', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.2rem' }}>{label}</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--t-text-1)', fontVariantNumeric: 'tabular-nums' }}>{value}</div>
             </div>
           ))}
         </div>
@@ -471,9 +471,9 @@ function SettingsPageInner() {
                 <circle cx="8" cy="5.5" r="2.5" stroke="#fff" strokeWidth="1.4"/>
                 <path d="M2 13c0-2.76 2.69-5 6-5s6 2.24 6 5" stroke="#fff" strokeWidth="1.4" strokeLinecap="round"/>
               </svg>
-              <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)' }}>Profile &amp; workspace</span>
+              <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--t-text-1)' }}>Profile &amp; workspace</span>
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.30)' }}>Name, workspace settings and notifications</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--t-text-3)' }}>Name, workspace settings and notifications</div>
           </div>
           <ComingSoonBadge />
         </div>
@@ -486,7 +486,7 @@ function SettingsPageInner() {
             <path d="M8 1a5 5 0 0 1 5 5v2.5l1.5 2H1.5L3 8.5V6a5 5 0 0 1 5-5Z" stroke="#fff" strokeWidth="1.4"/>
             <path d="M6.5 13.5a1.5 1.5 0 0 0 3 0" stroke="#fff" strokeWidth="1.4" strokeLinecap="round"/>
           </svg>
-          <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)' }}>Notification preferences</span>
+          <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--t-text-1)' }}>Notification preferences</span>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -518,12 +518,12 @@ function SettingsPageInner() {
                 justifyContent: 'space-between',
                 gap: '1rem',
                 paddingBottom: '0.85rem',
-                borderBottom: '1px solid rgba(255,255,255,0.05)',
+                borderBottom: '1px solid var(--t-border)',
               }}
             >
               <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 500, color: 'rgba(255,255,255,0.78)', marginBottom: '0.1rem' }}>{label}</div>
-                <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.28)' }}>{desc}</div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--t-text-2)', marginBottom: '0.1rem' }}>{label}</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--t-text-3)' }}>{desc}</div>
               </div>
               <Toggle checked={value} onChange={setter} />
             </div>
@@ -544,9 +544,9 @@ function SettingsPageInner() {
                 <rect x="9.5" y="4" width="5" height="8" rx="1" stroke="#fff" strokeWidth="1.4"/>
                 <path d="M6.5 8h3" stroke="#fff" strokeWidth="1.4" strokeLinecap="round"/>
               </svg>
-              <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'rgba(255,255,255,0.85)' }}>API keys &amp; webhooks</span>
+              <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--t-text-1)' }}>API keys &amp; webhooks</span>
             </div>
-            <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.30)' }}>Manage programmatic access to Vantro</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--t-text-3)' }}>Manage programmatic access to Vantro</div>
           </div>
           <ComingSoonBadge />
         </div>
@@ -558,15 +558,15 @@ function SettingsPageInner() {
       <div style={{ ...WARN_CARD, marginBottom: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1.5rem', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 240 }}>
-            <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'rgba(255,255,255,0.9)', marginBottom: '0.4rem' }}>
+            <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--t-text-1)', marginBottom: '0.4rem' }}>
               Cancel subscription
             </div>
-            <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.55, marginBottom: '0.6rem' }}>
+            <div style={{ fontSize: '0.82rem', color: 'var(--t-text-3)', lineHeight: 1.55, marginBottom: '0.6rem' }}>
               Your access continues until the end of the current billing period. You may be eligible for a refund under our{' '}
               <Link href="/refund" style={{ color: '#FF6B35', textDecoration: 'none' }}>30-day money-back guarantee</Link>.
             </div>
-            <div style={{ fontSize: '0.77rem', color: 'rgba(255,255,255,0.25)' }}>
-              Next charge: <span style={{ color: 'rgba(255,255,255,0.45)', fontVariantNumeric: 'tabular-nums' }}>${planPrice} on {renewalDate}</span>
+            <div style={{ fontSize: '0.77rem', color: 'var(--t-text-3)' }}>
+              Next charge: <span style={{ color: 'var(--t-text-2)', fontVariantNumeric: 'tabular-nums' }}>${planPrice} on {renewalDate}</span>
             </div>
           </div>
           <button
@@ -585,19 +585,19 @@ function SettingsPageInner() {
       {/* ── Cancel subscription modal ─────────────────────────────────────────── */}
       {showCancelModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title" style={{ background: 'oklch(0.16 0 0)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '1.25rem', padding: '2rem', maxWidth: 440, width: '100%', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="cancel-modal-title" style={{ background: 'oklch(0.16 0 0)', border: '1px solid var(--t-border)', borderRadius: '1.25rem', padding: '2rem', maxWidth: 440, width: '100%', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
             {cancelDone ? (
               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
                 <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(31,255,214,0.12)', border: '1px solid rgba(31,255,214,0.30)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
                   <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 10l4 4 8-8" stroke="#1FFFD6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.9)', marginBottom: '0.5rem' }}>Subscription cancelled</div>
-                <div style={{ fontSize: '0.83rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+                <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--t-text-1)', marginBottom: '0.5rem' }}>Subscription cancelled</div>
+                <div style={{ fontSize: '0.83rem', color: 'var(--t-text-3)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
                   Your access continues until the end of the billing period. No further charges will be made.
                 </div>
                 <button
                   onClick={() => setShowCancelModal(false)}
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 500, color: 'rgba(255,255,255,0.6)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', fontFamily: 'inherit' }}
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 500, color: 'var(--t-text-2)', background: 'var(--t-surface)', border: '1px solid var(--t-border)', cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   Close
                 </button>
@@ -608,13 +608,13 @@ function SettingsPageInner() {
                   <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(255,107,53,0.12)', border: '1px solid rgba(255,107,53,0.30)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 5v4M8 11h.01" stroke="#FF6B35" strokeWidth="1.5" strokeLinecap="round"/><circle cx="8" cy="8" r="6.5" stroke="#FF6B35" strokeWidth="1.2"/></svg>
                   </div>
-                  <h3 id="cancel-modal-title" style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.95)', margin: 0 }}>
+                  <h3 id="cancel-modal-title" style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '1.05rem', color: 'var(--t-text-1)', margin: 0 }}>
                     Cancel your subscription?
                   </h3>
                 </div>
 
-                <div style={{ fontSize: '0.84rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.65, marginBottom: '1.25rem' }}>
-                  You&apos;re currently on the <strong style={{ color: 'rgba(255,255,255,0.80)' }}>{plan.charAt(0).toUpperCase() + plan.slice(1)} plan</strong>. Cancelling will:
+                <div style={{ fontSize: '0.84rem', color: 'var(--t-text-2)', lineHeight: 1.65, marginBottom: '1.25rem' }}>
+                  You&apos;re currently on the <strong style={{ color: 'var(--t-text-1)' }}>{plan.charAt(0).toUpperCase() + plan.slice(1)} plan</strong>. Cancelling will:
                 </div>
 
                 <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
@@ -624,14 +624,14 @@ function SettingsPageInner() {
                     'Lock your agents after expiry',
                     'Preserve your data for 30 days',
                   ].map(item => (
-                    <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: 'rgba(255,255,255,0.55)' }}>
+                    <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: 'var(--t-text-2)' }}>
                       <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#FF6B35', flexShrink: 0 }} />
                       {item}
                     </li>
                   ))}
                 </ul>
 
-                <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.30)', marginBottom: '1.25rem' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--t-text-3)', marginBottom: '1.25rem' }}>
                   Within 30 days of your first payment? You may be eligible for a full refund —{' '}
                   <Link href="/refund" style={{ color: '#FF6B35', textDecoration: 'none' }} onClick={() => setShowCancelModal(false)}>see our refund policy</Link>.
                 </div>
@@ -653,7 +653,7 @@ function SettingsPageInner() {
                   <button
                     onClick={handleCancelSubscription}
                     disabled={cancelLoading}
-                    style={{ flex: 1, padding: '0.6rem', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 500, color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', cursor: cancelLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: cancelLoading ? 0.6 : 1 }}
+                    style={{ flex: 1, padding: '0.6rem', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 500, color: 'var(--t-text-2)', background: 'var(--t-surface)', border: '1px solid var(--t-border)', cursor: cancelLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: cancelLoading ? 0.6 : 1 }}
                   >
                     {cancelLoading ? 'Cancelling…' : 'Yes, cancel'}
                   </button>
@@ -669,10 +669,10 @@ function SettingsPageInner() {
       <div style={DANGER_CARD}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1.5rem', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 240 }}>
-            <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'rgba(255,255,255,0.9)', marginBottom: '0.4rem' }}>
+            <div style={{ fontWeight: 600, fontSize: '0.95rem', color: 'var(--t-text-1)', marginBottom: '0.4rem' }}>
               Delete my data
             </div>
-            <div style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.55 }}>
+            <div style={{ fontSize: '0.82rem', color: 'var(--t-text-3)', lineHeight: 1.55 }}>
               Permanently delete your account and all associated data from our systems.
               This action cannot be undone.
             </div>
@@ -691,13 +691,13 @@ function SettingsPageInner() {
       {/* ── Delete confirmation modal ─────────────────────────────────────────── */}
       {showModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '1rem' }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="delete-modal-title" style={{ background: 'oklch(0.16 0 0)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: '1.25rem', padding: '2rem', maxWidth: 460, width: '100%', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
+          <div role="dialog" aria-modal="true" aria-labelledby="delete-modal-title" style={{ background: 'oklch(0.16 0 0)', border: '1px solid var(--t-border)', borderRadius: '1.25rem', padding: '2rem', maxWidth: 460, width: '100%', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}>
 
             {done ? (
               <div style={{ textAlign: 'center', padding: '1rem 0' }}>
                 <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>✓</div>
-                <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'rgba(255,255,255,0.9)', marginBottom: '0.5rem' }}>Data deleted</div>
-                <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.4)' }}>All your data has been permanently removed. Redirecting…</div>
+                <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--t-text-1)', marginBottom: '0.5rem' }}>Data deleted</div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--t-text-3)' }}>All your data has been permanently removed. Redirecting…</div>
               </div>
             ) : (
               <>
@@ -705,18 +705,18 @@ function SettingsPageInner() {
                   <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'oklch(0.65 0.18 25 / 0.15)', border: '1px solid oklch(0.65 0.18 25 / 0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <span style={{ color: 'oklch(0.65 0.18 25)', fontSize: '1rem' }}>⚠</span>
                   </div>
-                  <h3 id="delete-modal-title" style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '1.05rem', color: 'rgba(255,255,255,0.95)', margin: 0 }}>
+                  <h3 id="delete-modal-title" style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 700, fontSize: '1.05rem', color: 'var(--t-text-1)', margin: 0 }}>
                     Delete your data permanently?
                   </h3>
                 </div>
 
-                <p style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.45)', marginBottom: '1rem', lineHeight: 1.6 }}>
+                <p style={{ fontSize: '0.85rem', color: 'var(--t-text-2)', marginBottom: '1rem', lineHeight: 1.6 }}>
                   This will immediately and irreversibly delete:
                 </p>
 
                 <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                   {ITEMS_DELETED.map(item => (
-                    <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: 'rgba(255,255,255,0.55)' }}>
+                    <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', color: 'var(--t-text-2)' }}>
                       <span style={{ color: 'oklch(0.65 0.18 25)', fontSize: '0.7rem' }}>✕</span>
                       {item}
                     </li>
@@ -724,7 +724,7 @@ function SettingsPageInner() {
                 </ul>
 
                 <div style={{ marginBottom: '1.25rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', marginBottom: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--t-text-2)', marginBottom: '0.5rem' }}>
                     Type <strong style={{ color: 'oklch(0.65 0.18 25)' }}>DELETE</strong> to confirm
                   </label>
                   <input
@@ -733,7 +733,7 @@ function SettingsPageInner() {
                     onChange={e => setConfirmText(e.target.value)}
                     placeholder="DELETE"
                     autoFocus
-                    style={{ width: '100%', padding: '0.6rem 0.85rem', background: 'rgba(255,255,255,0.04)', border: `1px solid ${confirmText === 'DELETE' ? 'oklch(0.65 0.18 25 / 0.5)' : 'rgba(255,255,255,0.12)'}`, borderRadius: '0.625rem', color: '#fff', fontSize: '0.9rem', outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box', transition: 'border-color 0.15s' }}
+                    style={{ width: '100%', padding: '0.6rem 0.85rem', background: 'var(--t-surface)', border: `1px solid ${confirmText === 'DELETE' ? 'oklch(0.65 0.18 25 / 0.5)' : 'var(--t-border)'}`, borderRadius: '0.625rem', color: '#fff', fontSize: '0.9rem', outline: 'none', fontFamily: 'monospace', boxSizing: 'border-box', transition: 'border-color 0.15s' }}
                   />
                 </div>
 
@@ -747,14 +747,14 @@ function SettingsPageInner() {
                   <button
                     onClick={() => { setShowModal(false); setConfirmText(''); setError('') }}
                     disabled={loading}
-                    style={{ flex: 1, padding: '0.6rem', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 500, color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', fontFamily: 'inherit' }}
+                    style={{ flex: 1, padding: '0.6rem', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 500, color: 'var(--t-text-2)', background: 'var(--t-surface)', border: '1px solid var(--t-border)', cursor: 'pointer', fontFamily: 'inherit' }}
                   >
                     Cancel
                   </button>
                   <button
                     onClick={handleDelete}
                     disabled={confirmText !== 'DELETE' || loading}
-                    style={{ flex: 1, padding: '0.6rem', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 600, color: confirmText === 'DELETE' && !loading ? '#fff' : 'rgba(255,255,255,0.25)', background: confirmText === 'DELETE' && !loading ? 'oklch(0.55 0.20 25)' : 'rgba(255,255,255,0.04)', border: '1px solid transparent', cursor: confirmText === 'DELETE' && !loading ? 'pointer' : 'not-allowed', transition: 'all 0.15s', fontFamily: 'inherit' }}
+                    style={{ flex: 1, padding: '0.6rem', borderRadius: '0.625rem', fontSize: '0.875rem', fontWeight: 600, color: confirmText === 'DELETE' && !loading ? '#fff' : 'var(--t-text-3)', background: confirmText === 'DELETE' && !loading ? 'oklch(0.55 0.20 25)' : 'var(--t-surface)', border: '1px solid transparent', cursor: confirmText === 'DELETE' && !loading ? 'pointer' : 'not-allowed', transition: 'all 0.15s', fontFamily: 'inherit' }}
                   >
                     {loading ? 'Deleting…' : 'Delete everything'}
                   </button>

@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -33,8 +33,8 @@ interface OutputItem {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CARD: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.08)',
+  background: 'var(--t-surface)',
+  border: '1px solid var(--t-border)',
   borderRadius: '1rem',
   padding: '1.25rem',
 }
@@ -112,7 +112,7 @@ function LibraryCard({
     gsap.to(cardRef.current, {
       y: 0,
       boxShadow: '0 0px 0px rgba(0,0,0,0)',
-      borderColor: 'rgba(255,255,255,0.08)',
+      borderColor: 'var(--t-border)',
       duration: 0.32,
       ease: 'power3.out',
     })
@@ -175,9 +175,9 @@ function LibraryCard({
           style={{
             fontSize: '0.72rem',
             fontWeight: 600,
-            color: copied ? '#1FFFD6' : 'rgba(255,255,255,0.35)',
-            background: copied ? 'rgba(31,255,214,0.08)' : 'rgba(255,255,255,0.05)',
-            border: `1px solid ${copied ? 'rgba(31,255,214,0.3)' : 'rgba(255,255,255,0.10)'}`,
+            color: copied ? '#1FFFD6' : 'var(--t-text-3)',
+            background: copied ? 'rgba(31,255,214,0.08)' : 'var(--t-surface)',
+            border: `1px solid ${copied ? 'rgba(31,255,214,0.3)' : 'var(--t-border)'}`,
             borderRadius: '0.4rem',
             padding: '0.25rem 0.6rem',
             cursor: 'pointer',
@@ -192,40 +192,40 @@ function LibraryCard({
 
       {/* Prompt */}
       <div>
-        <div style={{ fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', marginBottom: '0.3rem', fontFamily: "'Space Grotesk', sans-serif" }}>
+        <div style={{ fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--t-text-3)', marginBottom: '0.3rem', fontFamily: "'Space Grotesk', sans-serif" }}>
           Prompt
         </div>
-        <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.75)', lineHeight: 1.5, margin: 0, fontFamily: "'Space Grotesk', sans-serif" }}>
+        <p style={{ fontSize: '0.82rem', color: 'var(--t-text-1)', lineHeight: 1.5, margin: 0, fontFamily: "'Space Grotesk', sans-serif" }}>
           {truncate(item.prompt, 80)}
         </p>
       </div>
 
       {/* Output preview */}
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', marginBottom: '0.3rem', fontFamily: "'Space Grotesk', sans-serif" }}>
+        <div style={{ fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--t-text-3)', marginBottom: '0.3rem', fontFamily: "'Space Grotesk', sans-serif" }}>
           Output
         </div>
-        <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', lineHeight: 1.55, margin: 0, fontFamily: "'Space Grotesk', sans-serif" }}>
+        <p style={{ fontSize: '0.8rem', color: 'var(--t-text-2)', lineHeight: 1.55, margin: 0, fontFamily: "'Space Grotesk', sans-serif" }}>
           {truncate(item.output, 120)}
         </p>
       </div>
 
       {/* Timestamp */}
-      <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.22)', fontFamily: "'Space Grotesk', sans-serif", marginTop: 'auto', paddingTop: '0.25rem', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <div style={{ fontSize: '0.72rem', color: 'var(--t-text-3)', fontFamily: "'Space Grotesk', sans-serif", marginTop: 'auto', paddingTop: '0.25rem', borderTop: '1px solid var(--t-border)' }}>
         {formatTimestamp(item.savedAt)}
       </div>
 
       {/* Approve / Reject row */}
-      <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      <div style={{ display: 'flex', gap: 6, marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--t-border)' }}>
         <button
           onClick={(e) => { e.stopPropagation(); onRate(item, 'approved') }}
           style={{
-            background: item.quality === 'approved' ? 'rgba(31,255,214,0.12)' : 'rgba(255,255,255,0.05)',
+            background: item.quality === 'approved' ? 'rgba(31,255,214,0.12)' : 'var(--t-surface)',
             border: item.quality === 'approved' ? '1px solid rgba(31,255,214,0.3)' : '1px solid rgba(255,255,255,0.08)',
             borderRadius: 6,
             padding: '3px 10px',
             cursor: 'pointer',
-            color: item.quality === 'approved' ? '#1FFFD6' : 'rgba(255,255,255,0.45)',
+            color: item.quality === 'approved' ? '#1FFFD6' : 'var(--t-text-2)',
             fontSize: 11,
             fontFamily: "'Space Grotesk', sans-serif",
           }}
@@ -235,12 +235,12 @@ function LibraryCard({
         <button
           onClick={(e) => { e.stopPropagation(); onRate(item, 'rejected') }}
           style={{
-            background: item.quality === 'rejected' ? 'rgba(248,113,113,0.10)' : 'rgba(255,255,255,0.05)',
+            background: item.quality === 'rejected' ? 'rgba(248,113,113,0.10)' : 'var(--t-surface)',
             border: item.quality === 'rejected' ? '1px solid rgba(248,113,113,0.3)' : '1px solid rgba(255,255,255,0.08)',
             borderRadius: 6,
             padding: '3px 10px',
             cursor: 'pointer',
-            color: item.quality === 'rejected' ? '#f87171' : 'rgba(255,255,255,0.45)',
+            color: item.quality === 'rejected' ? '#f87171' : 'var(--t-text-2)',
             fontSize: 11,
             fontFamily: "'Space Grotesk', sans-serif",
           }}
@@ -375,7 +375,7 @@ export default function LibraryPage() {
   }, { scope: pageRef, dependencies: [loaded, displayed.length] })
 
   return (
-    <div ref={pageRef} style={{ flex: 1, minWidth: 0, padding: '2.5rem', background: '#0A0D14', minHeight: '100%' }}>
+    <div ref={pageRef} style={{ flex: 1, minWidth: 0, padding: '2.5rem', background: 'var(--t-bg)', minHeight: '100%' }}>
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
 
       {/* ── Header ── */}
@@ -383,7 +383,7 @@ export default function LibraryPage() {
         <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '1.75rem', margin: 0, color: '#fff' }}>
           Library
         </h1>
-        <p style={{ color: 'rgba(255,255,255,0.35)', marginTop: '0.375rem', fontSize: '0.9rem', fontFamily: "'Space Grotesk', sans-serif" }}>
+        <p style={{ color: 'var(--t-text-3)', marginTop: '0.375rem', fontSize: '0.9rem', fontFamily: "'Space Grotesk', sans-serif" }}>
           Saved agent outputs
         </p>
       </div>
@@ -406,17 +406,17 @@ export default function LibraryPage() {
                 background: qualityFilter === f
                   ? f === 'approved' ? 'rgba(31,255,214,0.15)'
                   : f === 'rejected' ? 'rgba(248,113,113,0.12)'
-                  : 'rgba(255,255,255,0.12)'
-                  : 'rgba(255,255,255,0.06)',
+                  : 'var(--t-border)'
+                  : 'var(--t-surface)',
                 color: qualityFilter === f
                   ? f === 'approved' ? '#1FFFD6'
                   : f === 'rejected' ? '#f87171'
                   : '#fff'
-                  : 'rgba(255,255,255,0.4)',
+                  : 'var(--t-text-3)',
                 border: qualityFilter === f
                   ? f === 'approved' ? '1px solid rgba(31,255,214,0.3)'
                   : f === 'rejected' ? '1px solid rgba(248,113,113,0.3)'
-                  : '1px solid rgba(255,255,255,0.15)'
+                  : '1px solid var(--t-border)'
                   : '1px solid transparent',
               }}
             >
@@ -432,7 +432,7 @@ export default function LibraryPage() {
           // Loading skeletons
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
             {[1, 2, 3].map(i => (
-              <div key={i} style={{ ...CARD, height: 200, background: 'rgba(255,255,255,0.03)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+              <div key={i} style={{ ...CARD, height: 200, background: 'var(--t-surface)', animation: 'pulse 1.5s ease-in-out infinite' }} />
             ))}
           </div>
         ) : displayed.length === 0 ? (
@@ -448,10 +448,10 @@ export default function LibraryPage() {
               <path d="M18 21h10M18 26h6" stroke="rgba(255,255,255,0.18)" strokeWidth="1.4" strokeLinecap="round"/>
             </svg>
             <div>
-              <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'rgba(255,255,255,0.45)', fontSize: '0.95rem', margin: '0 0 0.5rem', fontWeight: 500 }}>
+              <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'var(--t-text-2)', fontSize: '0.95rem', margin: '0 0 0.5rem', fontWeight: 500 }}>
                 {qualityFilter === 'all' ? 'No saved outputs yet' : `No ${qualityFilter} outputs`}
               </p>
-              <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'rgba(255,255,255,0.25)', fontSize: '0.82rem', margin: 0 }}>
+              <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'var(--t-text-3)', fontSize: '0.82rem', margin: 0 }}>
                 {qualityFilter === 'all'
                   ? 'Run an agent and your outputs will appear here'
                   : `Approve or reject outputs to see them here`}

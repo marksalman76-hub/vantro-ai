@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -30,16 +30,16 @@ const DEFAULT_FORM: BrandForm = {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CARD: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.08)',
+  background: 'var(--t-surface)',
+  border: '1px solid var(--t-border)',
   borderRadius: '1rem',
   padding: '1.25rem',
 }
 
 const INPUT_STYLE: React.CSSProperties = {
   width: '100%',
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.12)',
+  background: 'var(--t-surface)',
+  border: '1px solid var(--t-border)',
   borderRadius: '0.5rem',
   padding: '0.75rem 1rem',
   color: '#fff',
@@ -54,7 +54,7 @@ const LABEL_STYLE: React.CSSProperties = {
   display: 'block',
   fontSize: '0.78rem',
   fontWeight: 600,
-  color: 'rgba(255,255,255,0.55)',
+  color: 'var(--t-text-2)',
   marginBottom: '0.45rem',
   fontFamily: "'Space Grotesk', sans-serif",
   letterSpacing: '0.04em',
@@ -97,7 +97,7 @@ function InputField({
         onBlur={() => setFocused(false)}
         style={{
           ...INPUT_STYLE,
-          borderColor: focused ? 'rgba(0,217,255,0.40)' : 'rgba(255,255,255,0.12)',
+          borderColor: focused ? 'rgba(0,217,255,0.40)' : 'var(--t-border)',
           boxShadow: focused ? '0 0 0 3px rgba(0,217,255,0.07)' : 'none',
         }}
       />
@@ -132,16 +132,16 @@ function SelectField({
           ...INPUT_STYLE,
           cursor: 'pointer',
           appearance: 'none' as const,
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='rgba(255,255,255,0.4)' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='var(--t-text-3)' d='M6 8L1 3h10z'/%3E%3C/svg%3E")`,
           backgroundRepeat: 'no-repeat',
           backgroundPosition: 'right 0.875rem center',
           paddingRight: '2.5rem',
-          borderColor: focused ? 'rgba(0,217,255,0.40)' : 'rgba(255,255,255,0.12)',
+          borderColor: focused ? 'rgba(0,217,255,0.40)' : 'var(--t-border)',
           boxShadow: focused ? '0 0 0 3px rgba(0,217,255,0.07)' : 'none',
         }}
       >
         {options.map(opt => (
-          <option key={opt} value={opt} style={{ background: '#0A0D14', color: '#fff' }}>
+          <option key={opt} value={opt} style={{ background: 'var(--t-bg)', color: '#fff' }}>
             {opt}
           </option>
         ))}
@@ -181,7 +181,7 @@ function TextareaField({
           ...INPUT_STYLE,
           resize: 'vertical',
           lineHeight: 1.6,
-          borderColor: focused ? 'rgba(0,217,255,0.40)' : 'rgba(255,255,255,0.12)',
+          borderColor: focused ? 'rgba(0,217,255,0.40)' : 'var(--t-border)',
           boxShadow: focused ? '0 0 0 3px rgba(0,217,255,0.07)' : 'none',
         }}
       />
@@ -263,7 +263,7 @@ export default function BrandPage() {
   }
 
   return (
-    <div ref={pageRef} style={{ flex: 1, minWidth: 0, padding: '2.5rem', background: '#0A0D14', minHeight: '100%' }}>
+    <div ref={pageRef} style={{ flex: 1, minWidth: 0, padding: '2.5rem', background: 'var(--t-bg)', minHeight: '100%' }}>
 
       {/* ── Header ── */}
       <div ref={headerRef} style={{ marginBottom: '2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
@@ -271,7 +271,7 @@ export default function BrandPage() {
           <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '1.75rem', margin: 0, color: '#fff' }}>
             Brand Profile
           </h1>
-          <p style={{ color: 'rgba(255,255,255,0.35)', marginTop: '0.375rem', fontSize: '0.9rem', fontFamily: "'Space Grotesk', sans-serif" }}>
+          <p style={{ color: 'var(--t-text-3)', marginTop: '0.375rem', fontSize: '0.9rem', fontFamily: "'Space Grotesk', sans-serif" }}>
             Define your brand identity for all agents
           </p>
         </div>

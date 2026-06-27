@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 // Ported from src/pages/DashboardPage.tsx (master branch) — adapted for Next.js App Router
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -71,11 +71,11 @@ function formatDate(iso: string) {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-const CARD: React.CSSProperties = { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '1rem', padding: '1.25rem' }
+const CARD: React.CSSProperties = { background: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: '1rem', padding: '1.25rem' }
 
 const PANEL: React.CSSProperties = {
   width: 300, flexShrink: 0, padding: '2.5rem 1.5rem',
-  borderLeft: '1px solid rgba(255,255,255,0.06)'
+  borderLeft: '1px solid var(--t-border)'
 }
 
 // ─── Checklist & quick links data ─────────────────────────────────────────────
@@ -102,24 +102,24 @@ function RightPanel() {
 
       {/* Credit usage */}
       <div style={{ marginBottom: '1.75rem' }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: '0.6rem' }}>
+        <div style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--t-text-3)', marginBottom: '0.6rem' }}>
           Credit Usage
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <span style={{ fontSize: '1.4rem', fontWeight: 700, color: '#fff' }}>500</span>
-          <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)' }}>/ 500 used</span>
+          <span style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--t-text-1)' }}>500</span>
+          <span style={{ fontSize: '0.78rem', color: 'var(--t-text-3)' }}>/ 500 used</span>
         </div>
-        <div style={{ height: 6, borderRadius: 99, background: 'rgba(255,255,255,0.08)', marginTop: 8 }}>
+        <div style={{ height: 6, borderRadius: 99, background: 'var(--t-border)', marginTop: 8 }}>
           <div style={{ height: '100%', borderRadius: 99, width: '100%', background: 'linear-gradient(90deg,#FF6B35,#00D9FF)' }} />
         </div>
-        <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.25)', marginTop: '0.4rem' }}>Resets on July 1</div>
+        <div style={{ fontSize: '0.72rem', color: 'var(--t-text-3)', marginTop: '0.4rem' }}>Resets on July 1</div>
       </div>
 
       {/* Plan card */}
       <div style={{ background: 'linear-gradient(135deg,rgba(255,107,53,0.12),rgba(0,217,255,0.08))', border: '1px solid rgba(255,107,53,0.25)', borderRadius: '0.875rem', padding: '1rem', marginBottom: '1.75rem' }}>
         <div style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'rgba(255,107,53,0.75)', marginBottom: '0.3rem' }}>Current Plan</div>
-        <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff', marginBottom: '0.2rem' }}>Starter Plan</div>
-        <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', marginBottom: '0.9rem' }}>500 credits / month</div>
+        <div style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--t-text-1)', marginBottom: '0.2rem' }}>Starter Plan</div>
+        <div style={{ fontSize: '0.78rem', color: 'var(--t-text-3)', marginBottom: '0.9rem' }}>500 credits / month</div>
         <Link href="/dashboard/settings?tab=billing" style={{ textDecoration: 'none' }}>
           <button style={{ width: '100%', padding: '0.5rem 0.75rem', background: 'linear-gradient(135deg,#FF6B35,#FF8C42)', border: 'none', borderRadius: '0.625rem', color: '#fff', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', letterSpacing: '0.02em' }}>
             Upgrade to Growth →
@@ -129,7 +129,7 @@ function RightPanel() {
 
       {/* Getting started checklist */}
       <div style={{ marginBottom: '1.75rem' }}>
-        <div style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: '0.75rem' }}>
+        <div style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--t-text-3)', marginBottom: '0.75rem' }}>
           Getting Started
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -138,7 +138,7 @@ function RightPanel() {
               <div style={{
                 width: 16, height: 16, borderRadius: 4, flexShrink: 0,
                 background: done ? 'linear-gradient(135deg,#FF6B35,#00D9FF)' : 'transparent',
-                border: done ? 'none' : '1.5px solid rgba(255,255,255,0.18)',
+                border: done ? 'none' : '1.5px solid var(--t-border)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 {done && (
@@ -147,7 +147,7 @@ function RightPanel() {
                   </svg>
                 )}
               </div>
-              <span style={{ fontSize: '0.8rem', color: done ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.82)', textDecoration: done ? 'line-through' : 'none' }}>
+              <span style={{ fontSize: '0.8rem', color: done ? 'var(--t-text-2)' : 'var(--t-text-1)', textDecoration: done ? 'line-through' : 'none' }}>
                 {label}
               </span>
             </div>
@@ -157,15 +157,15 @@ function RightPanel() {
 
       {/* Quick links */}
       <div>
-        <div style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: '0.6rem' }}>
+        <div style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--t-text-3)', marginBottom: '0.6rem' }}>
           Quick Links
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
           {QUICK_LINKS.map(({ label, href }) => (
             <a key={label} href={href} target="_blank" rel="noopener noreferrer"
-              style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.45)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'color 0.15s' }}
+              style={{ fontSize: '0.82rem', color: 'var(--t-text-2)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.35rem', transition: 'color 0.15s' }}
               onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = '#00D9FF' }}
-              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.45)' }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--t-text-2)' }}
             >
               <span style={{ opacity: 0.5, fontSize: '0.65rem' }}>↗</span>
               {label}
@@ -179,7 +179,7 @@ function RightPanel() {
 }
 
 function Skeleton() {
-  return <div style={{ ...CARD, height: 96, background: 'rgba(255,255,255,0.03)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+  return <div style={{ ...CARD, height: 96, background: 'var(--t-surface)', animation: 'pulse 1.5s ease-in-out infinite' }} />
 }
 
 // ─── Counter hook ─────────────────────────────────────────────────────────────
@@ -228,7 +228,7 @@ function MetricCard({ children, className }: { children: React.ReactNode; classN
     gsap.to(cardRef.current, {
       y: 0,
       boxShadow: '0 0px 0px rgba(0,0,0,0)',
-      borderColor: 'rgba(255,255,255,0.08)',
+      borderColor: 'var(--t-border)',
       duration: 0.35,
       ease: 'power3.out',
       onComplete() { if (cardRef.current) cardRef.current.style.willChange = 'auto' },
@@ -430,7 +430,7 @@ export default function DashboardPage() {
             </span>
           )}
         </div>
-        <p style={{ color: 'rgba(255,255,255,0.35)', marginTop: '0.375rem', fontSize: '0.9rem' }}>Your AI agent workspace</p>
+        <p style={{ color: 'var(--t-text-3)', marginTop: '0.375rem', fontSize: '0.9rem' }}>Your AI agent workspace</p>
       </div>
 
       {/* ── Error banner ── */}
@@ -454,38 +454,38 @@ export default function DashboardPage() {
           {/* Credits remaining — number ticker */}
           <MetricCard>
             <div data-metric-card style={{ height: '100%' }}>
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '0.4rem', fontWeight: 500 }}>Credits remaining</div>
-              <div style={{ fontSize: '1.9rem', fontWeight: 700, lineHeight: 1, color: credits ? creditColor(credits.remaining_credits, credits.total_credits) : 'rgba(255,255,255,0.35)', fontVariantNumeric: 'tabular-nums' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--t-text-3)', marginBottom: '0.4rem', fontWeight: 500 }}>Credits remaining</div>
+              <div style={{ fontSize: '1.9rem', fontWeight: 700, lineHeight: 1, color: credits ? creditColor(credits.remaining_credits, credits.total_credits) : 'var(--t-text-3)', fontVariantNumeric: 'tabular-nums' }}>
                 {creditsDisplay}
               </div>
-              {credits && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.25)', marginTop: '0.35rem' }}>of {credits.total_credits.toLocaleString()} total</div>}
+              {credits && <div style={{ fontSize: '0.75rem', color: 'var(--t-text-3)', marginTop: '0.35rem' }}>of {credits.total_credits.toLocaleString()} total</div>}
             </div>
           </MetricCard>
 
           {/* Jobs completed — number ticker */}
           <MetricCard>
             <div data-metric-card style={{ height: '100%' }}>
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '0.4rem', fontWeight: 500 }}>Jobs completed</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--t-text-3)', marginBottom: '0.4rem', fontWeight: 500 }}>Jobs completed</div>
               <div style={{ fontSize: '1.9rem', fontWeight: 700, lineHeight: 1, color: '#00D9FF', fontVariantNumeric: 'tabular-nums' }}>
                 {completedDisplay}
               </div>
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.25)', marginTop: '0.35rem' }}>all time</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--t-text-3)', marginTop: '0.35rem' }}>all time</div>
             </div>
           </MetricCard>
 
           {/* Top agent */}
           <MetricCard>
             <div data-metric-card style={{ height: '100%' }}>
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '0.4rem', fontWeight: 500 }}>Top agent</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--t-text-3)', marginBottom: '0.4rem', fontWeight: 500 }}>Top agent</div>
               <div style={{ fontSize: best.name.length > 16 ? '1rem' : '1.2rem', fontWeight: 700, lineHeight: 1.2, color: '#fff', wordBreak: 'break-word' }}>{best.name}</div>
-              {best.count > 0 && <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.25)', marginTop: '0.35rem' }}>{best.count} run{best.count !== 1 ? 's' : ''}</div>}
+              {best.count > 0 && <div style={{ fontSize: '0.75rem', color: 'var(--t-text-3)', marginTop: '0.35rem' }}>{best.count} run{best.count !== 1 ? 's' : ''}</div>}
             </div>
           </MetricCard>
         </>)}
       </div>
 
       {/* ── Quick actions ── */}
-      <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: '1rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.75rem', marginTop: 0 }}>Quick actions</h2>
+      <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: '1rem', color: 'var(--t-text-2)', marginBottom: '0.75rem', marginTop: 0 }}>Quick actions</h2>
       <div ref={actionsRef} style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '1rem', marginBottom: '2rem' }}>
         {QUICK.map(({ href, icon, label, desc }) => (
           <QuickActionCard key={href} href={href} icon={icon} label={label} desc={desc} />
@@ -496,7 +496,7 @@ export default function DashboardPage() {
       {lockedAgents.length > 0 && (
         <>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', marginTop: 0 }}>
-            <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: '1rem', color: 'rgba(255,255,255,0.5)', margin: 0 }}>
+            <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: '1rem', color: 'var(--t-text-2)', margin: 0 }}>
               Your AI Workforce
             </h2>
             <span style={{ fontSize: '0.7rem', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,107,53,0.7)', background: 'rgba(255,107,53,0.08)', border: '1px solid rgba(255,107,53,0.2)', borderRadius: 999, padding: '0.15rem 0.55rem' }}>
@@ -512,29 +512,29 @@ export default function DashboardPage() {
       )}
 
       {/* ── Recent activity ── */}
-      <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: '1rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.75rem', marginTop: 0 }}>Recent activity</h2>
+      <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: '1rem', color: 'var(--t-text-2)', marginBottom: '0.75rem', marginTop: 0 }}>Recent activity</h2>
       <div ref={activityRef}>
         {loading ? (
-          <div style={{ ...CARD, height: 120, background: 'rgba(255,255,255,0.03)', animation: 'pulse 1.5s ease-in-out infinite' }} />
+          <div style={{ ...CARD, height: 120, background: 'var(--t-surface)', animation: 'pulse 1.5s ease-in-out infinite' }} />
         ) : recent.length === 0 ? (
           <div
             ref={emptyRef}
-            style={{ ...CARD, textAlign: 'center', padding: '2.5rem 1.25rem', color: 'rgba(255,255,255,0.3)', fontSize: '0.9rem' }}
+            style={{ ...CARD, textAlign: 'center', padding: '2.5rem 1.25rem', color: 'var(--t-text-3)', fontSize: '0.9rem' }}
           >
             No jobs run yet.{' '}
             <Link href="/dashboard/agents" style={{ color: '#00D9FF', textDecoration: 'none', fontWeight: 500 }}>Run your first agent →</Link>
           </div>
         ) : (
-          <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '1rem', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: '1rem', overflow: 'hidden' }}>
             {recent.map((job, i) => (
               <div
                 key={job.id}
                 data-activity-row
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1.25rem', borderBottom: i < recent.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', gap: '1rem' }}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.85rem 1.25rem', borderBottom: i < recent.length - 1 ? '1px solid var(--t-border)' : 'none', gap: '1rem' }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'rgba(255,255,255,0.92)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{job.agent_name || job.agent_id}</div>
-                  <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.25)', marginTop: '0.15rem' }}>{formatDate(job.created_at)}</div>
+                  <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'var(--t-text-1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{job.agent_name || job.agent_id}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--t-text-3)', marginTop: '0.15rem' }}>{formatDate(job.created_at)}</div>
                 </div>
                 <span style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.04em', color: statusColor(job.status), background: `${statusColor(job.status)}1a`, border: `1px solid ${statusColor(job.status)}40`, borderRadius: 999, padding: '0.2rem 0.6rem', whiteSpace: 'nowrap', flexShrink: 0 }}>
                   {humanStatus(job.status)}
@@ -548,7 +548,7 @@ export default function DashboardPage() {
       {/* ── Weekly activity chart ── */}
       {!loading && (
         <div style={{ marginTop: '2rem' }}>
-          <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: '1rem', color: 'rgba(255,255,255,0.5)', marginBottom: '0.75rem', marginTop: 0 }}>
+          <h2 style={{ fontFamily: "'Space Grotesk',sans-serif", fontWeight: 600, fontSize: '1rem', color: 'var(--t-text-2)', marginBottom: '0.75rem', marginTop: 0 }}>
             Weekly activity
           </h2>
           <div style={{ ...CARD }}>
@@ -588,8 +588,8 @@ function QuickActionCard({ href, icon, label, desc }: { href: string; icon: Reac
     gsap.killTweensOf(ref.current)
     gsap.to(ref.current, {
       y: 0,
-      borderColor: 'rgba(255,255,255,0.08)',
-      background: 'rgba(255,255,255,0.04)',
+      borderColor: 'var(--t-border)',
+      background: 'var(--t-surface)',
       boxShadow: '0 0px 0px rgba(0,0,0,0)',
       duration: 0.32,
       ease: 'power3.out',
@@ -606,8 +606,8 @@ function QuickActionCard({ href, icon, label, desc }: { href: string; icon: Reac
         onMouseLeave={handleLeave}
       >
         <div style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: '#00D9FF' }}>{icon}</div>
-        <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'rgba(255,255,255,0.92)', marginBottom: '0.25rem' }}>{label}</div>
-        <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', lineHeight: 1.45 }}>{desc}</div>
+        <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--t-text-1)', marginBottom: '0.25rem' }}>{label}</div>
+        <div style={{ fontSize: '0.78rem', color: 'var(--t-text-3)', lineHeight: 1.45 }}>{desc}</div>
       </div>
     </Link>
   )
@@ -646,7 +646,7 @@ function AgentCard({ agent }: { agent: Agent }) {
   return (
     <div
       ref={ref}
-      style={{ background: 'rgba(255,255,255,0.03)', border: `1px solid ${color}28`, borderRadius: '0.875rem', padding: '1rem', position: 'relative' }}
+      style={{ background: 'var(--t-surface)', border: `1px solid ${color}28`, borderRadius: '0.875rem', padding: '1rem', position: 'relative' }}
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
     >
@@ -654,7 +654,7 @@ function AgentCard({ agent }: { agent: Agent }) {
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       </div>
       <img src={agent.avatar} alt={agent.name} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover', border: `1.5px solid ${color}`, marginBottom: '0.6rem' }} />
-      <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'rgba(255,255,255,0.9)', lineHeight: 1.3, marginBottom: '0.2rem' }}>{agent.name}</div>
+      <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--t-text-1)', lineHeight: 1.3, marginBottom: '0.2rem' }}>{agent.name}</div>
       <div style={{ fontSize: '0.7rem', color: color, opacity: 0.8, lineHeight: 1.3 }}>{agent.role}</div>
     </div>
   )
@@ -680,7 +680,7 @@ function WeeklyChart() {
           const pct = max > 0 ? (jobs / max) * 100 : 0
           return (
             <div key={day} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, height: '100%', justifyContent: 'flex-end' }}>
-              <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontVariantNumeric: 'tabular-nums' }}>{jobs}</span>
+              <span style={{ fontSize: '0.65rem', color: 'var(--t-text-3)', fontVariantNumeric: 'tabular-nums' }}>{jobs}</span>
               <div
                 style={{
                   width: '100%',
@@ -699,7 +699,7 @@ function WeeklyChart() {
       </div>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
         {WEEK_DATA.map(({ day }) => (
-          <div key={day} style={{ flex: 1, textAlign: 'center', fontSize: '0.65rem', color: 'rgba(255,255,255,0.25)' }}>{day}</div>
+          <div key={day} style={{ flex: 1, textAlign: 'center', fontSize: '0.65rem', color: 'var(--t-text-3)' }}>{day}</div>
         ))}
       </div>
     </div>

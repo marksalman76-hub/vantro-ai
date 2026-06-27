@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useRef, useEffect } from 'react'
 import gsap from 'gsap'
@@ -223,9 +223,9 @@ export default function AgentsPage() {
     <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
 
       {/* Left panel — agent list */}
-      <div style={{ width: 260, minWidth: 260, borderRight: '1px solid rgba(255,255,255,0.07)', overflowY: 'auto', padding: '16px 8px' }}>
+      <div style={{ width: 260, minWidth: 260, borderRight: '1px solid var(--t-border)', overflowY: 'auto', padding: '16px 8px' }}>
         {/* D2: fontFamily added */}
-        <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 8px 10px', fontFamily: "'Space Grotesk', sans-serif" }}>22 Agents</p>
+        <p style={{ color: 'var(--t-text-3)', fontSize: 10, fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase', margin: '0 8px 10px', fontFamily: "'Space Grotesk', sans-serif" }}>22 Agents</p>
 
         {/* Search */}
         <input
@@ -235,10 +235,10 @@ export default function AgentsPage() {
           placeholder="Search agents…"
           style={{
             width: '100%', boxSizing: 'border-box',
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.09)',
+            background: 'var(--t-surface)',
+            border: '1px solid var(--t-border)',
             borderRadius: 8, padding: '6px 10px',
-            color: '#fff', fontSize: 12, fontFamily: "'Space Grotesk', sans-serif",
+            color: 'var(--t-text-1)', fontSize: 12, fontFamily: "'Space Grotesk', sans-serif",
             outline: 'none', marginBottom: 10,
           }}
         />
@@ -252,8 +252,8 @@ export default function AgentsPage() {
               style={{
                 padding: '3px 10px', borderRadius: 99, border: 'none', cursor: 'pointer',
                 fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap', fontFamily: "'Space Grotesk', sans-serif",
-                background: activeCategory === cat ? '#FF6B35' : 'rgba(255,255,255,0.07)',
-                color: activeCategory === cat ? '#fff' : 'rgba(255,255,255,0.45)',
+                background: activeCategory === cat ? '#FF6B35' : 'var(--t-surface-2)',
+                color: activeCategory === cat ? '#fff' : 'var(--t-text-2)',
               }}
             >
               {cat}
@@ -273,7 +273,7 @@ export default function AgentsPage() {
               onMouseEnter={(e) => {
                 if (!active) {
                   gsap.killTweensOf(e.currentTarget)
-                  gsap.to(e.currentTarget, { background: 'rgba(255,255,255,0.08)', duration: 0.15, ease: 'power2.out' })
+                  gsap.to(e.currentTarget, { background: 'var(--t-border)', duration: 0.15, ease: 'power2.out' })
                 }
               }}
               onMouseLeave={(e) => {
@@ -297,15 +297,15 @@ export default function AgentsPage() {
               />
               <div style={{ minWidth: 0 }}>
                 {/* D2: fontFamily added */}
-                <p style={{ color: active ? '#fff' : 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: 600, margin: 0, fontFamily: "'Space Grotesk', sans-serif" }}>{a.name}</p>
-                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'Space Grotesk', sans-serif" }}>{a.role}</p>
+                <p style={{ color: active ? 'var(--t-text-1)' : 'var(--t-text-2)', fontSize: 12, fontWeight: 600, margin: 0, fontFamily: "'Space Grotesk', sans-serif" }}>{a.name}</p>
+                <p style={{ color: 'var(--t-text-3)', fontSize: 10, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'Space Grotesk', sans-serif" }}>{a.role}</p>
               </div>
             </button>
           )
         })}
 
         {filtered.length === 0 && (
-          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', padding: '10px 8px', fontFamily: "'Space Grotesk', sans-serif" }}>No agents match.</p>
+          <p style={{ fontSize: 12, color: 'var(--t-text-3)', padding: '10px 8px', fontFamily: "'Space Grotesk', sans-serif" }}>No agents match.</p>
         )}
       </div>
 
@@ -318,12 +318,12 @@ export default function AgentsPage() {
               <path d="M6 27c0-5.523 4.477-10 10-10s10 4.477 10 10" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
             {/* D2: fontFamily added */}
-            <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 13, fontFamily: "'Space Grotesk', sans-serif" }}>Select an agent to get started</p>
+            <p style={{ color: 'var(--t-text-3)', fontSize: 13, fontFamily: "'Space Grotesk', sans-serif" }}>Select an agent to get started</p>
           </div>
         ) : (
           <>
             {/* Header */}
-            <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
+            <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid var(--t-border)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
               <img
                 src={selected.avatar}
                 alt={selected.name}
@@ -331,8 +331,8 @@ export default function AgentsPage() {
               />
               <div>
                 {/* D2: fontFamily added */}
-                <p style={{ color: '#fff', fontSize: 15, fontWeight: 700, margin: 0, fontFamily: "'Space Grotesk', sans-serif" }}>{selected.name}</p>
-                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, margin: '2px 0 4px', fontFamily: "'Space Grotesk', sans-serif" }}>{selected.role}</p>
+                <p style={{ color: 'var(--t-text-1)', fontSize: 15, fontWeight: 700, margin: 0, fontFamily: "'Space Grotesk', sans-serif" }}>{selected.name}</p>
+                <p style={{ color: 'var(--t-text-3)', fontSize: 11, margin: '2px 0 4px', fontFamily: "'Space Grotesk', sans-serif" }}>{selected.role}</p>
                 <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: `${accent}18`, color: accent, border: `1px solid ${accent}40`, fontWeight: 600, letterSpacing: '0.04em', fontFamily: "'Space Grotesk', sans-serif" }}>
                   {selected.category}
                 </span>
@@ -344,7 +344,7 @@ export default function AgentsPage() {
             </div>
 
             {/* Stats strip */}
-            <div style={{ padding: '10px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: 24, flexShrink: 0 }}>
+            <div style={{ padding: '10px 24px', borderBottom: '1px solid var(--t-border)', display: 'flex', gap: 24, flexShrink: 0 }}>
               {[
                 { label: 'Success rate', value: `${selected.stats.successRate}%` },
                 { label: 'Response',     value: selected.stats.responseTime },
@@ -352,7 +352,7 @@ export default function AgentsPage() {
               ].map(({ label, value }) => (
                 <div key={label}>
                   {/* D2: fontFamily added */}
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2, fontFamily: "'Space Grotesk', sans-serif" }}>{label}</div>
+                  <div style={{ fontSize: 10, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2, fontFamily: "'Space Grotesk', sans-serif" }}>{label}</div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: accent, fontFamily: "'Space Grotesk', sans-serif" }}>{value}</div>
                 </div>
               ))}
@@ -363,10 +363,10 @@ export default function AgentsPage() {
               {!output && !running && !error && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {/* D2: fontFamily added */}
-                  <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, lineHeight: 1.65, margin: 0, fontFamily: "'Space Grotesk', sans-serif" }}>
+                  <p style={{ color: 'var(--t-text-2)', fontSize: 13, lineHeight: 1.65, margin: 0, fontFamily: "'Space Grotesk', sans-serif" }}>
                     {selected.bio}
                   </p>
-                  <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12, margin: 0, fontFamily: "'Space Grotesk', sans-serif" }}>
+                  <p style={{ color: 'var(--t-text-3)', fontSize: 12, margin: 0, fontFamily: "'Space Grotesk', sans-serif" }}>
                     Describe your task below and press Run.
                   </p>
                 </div>
@@ -375,24 +375,24 @@ export default function AgentsPage() {
                 <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.20)', borderRadius: 10, padding: '12px 16px', color: '#f87171', fontSize: 13, fontFamily: "'Space Grotesk', sans-serif" }}>{error}</div>
               )}
               {output && (
-                <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: 13.5, lineHeight: 1.75, whiteSpace: 'pre-wrap', fontFamily: "'Space Grotesk', sans-serif" }}>{output}</div>
+                <div style={{ color: 'var(--t-text-1)', fontSize: 13.5, lineHeight: 1.75, whiteSpace: 'pre-wrap', fontFamily: "'Space Grotesk', sans-serif" }}>{output}</div>
               )}
               {output && !running && !error && (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: 10, marginTop: 16,
-                  paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.07)',
+                  paddingTop: 14, borderTop: '1px solid var(--t-border)',
                 }}>
-                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'Space Grotesk', sans-serif" }}>
+                  <span style={{ fontSize: 11, color: 'var(--t-text-3)', fontFamily: "'Space Grotesk', sans-serif" }}>
                     Rate this output:
                   </span>
                   <button
                     onClick={() => handleRating('approved')}
                     disabled={rating !== null}
                     style={{
-                      background: rating === 'approved' ? 'rgba(31,255,214,0.15)' : 'rgba(255,255,255,0.06)',
+                      background: rating === 'approved' ? 'rgba(31,255,214,0.15)' : 'var(--t-surface)',
                       border: rating === 'approved' ? '1px solid rgba(31,255,214,0.4)' : '1px solid rgba(255,255,255,0.09)',
                       borderRadius: 8, padding: '5px 14px', cursor: rating !== null ? 'default' : 'pointer',
-                      color: rating === 'approved' ? '#1FFFD6' : 'rgba(255,255,255,0.5)',
+                      color: rating === 'approved' ? '#1FFFD6' : 'var(--t-text-2)',
                       fontSize: 13, fontFamily: "'Space Grotesk', sans-serif", display: 'flex', alignItems: 'center', gap: 5,
                       transition: 'all 0.15s',
                     }}
@@ -403,10 +403,10 @@ export default function AgentsPage() {
                     onClick={() => handleRating('rejected')}
                     disabled={rating !== null}
                     style={{
-                      background: rating === 'rejected' ? 'rgba(248,113,113,0.12)' : 'rgba(255,255,255,0.06)',
+                      background: rating === 'rejected' ? 'rgba(248,113,113,0.12)' : 'var(--t-surface)',
                       border: rating === 'rejected' ? '1px solid rgba(248,113,113,0.35)' : '1px solid rgba(255,255,255,0.09)',
                       borderRadius: 8, padding: '5px 14px', cursor: rating !== null ? 'default' : 'pointer',
-                      color: rating === 'rejected' ? '#f87171' : 'rgba(255,255,255,0.5)',
+                      color: rating === 'rejected' ? '#f87171' : 'var(--t-text-2)',
                       fontSize: 13, fontFamily: "'Space Grotesk', sans-serif", display: 'flex', alignItems: 'center', gap: 5,
                       transition: 'all 0.15s',
                     }}
@@ -414,7 +414,7 @@ export default function AgentsPage() {
                     👎 {rating === 'rejected' ? 'Rejected' : 'Reject'}
                   </button>
                   {rating && (
-                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: "'Space Grotesk', sans-serif", marginLeft: 4 }}>
+                    <span style={{ fontSize: 11, color: 'var(--t-text-3)', fontFamily: "'Space Grotesk', sans-serif", marginLeft: 4 }}>
                       {rating === 'approved' ? '✓ Saved as example for future runs' : '✓ Logged'}
                     </span>
                   )}
@@ -433,10 +433,10 @@ export default function AgentsPage() {
             </div>
 
             {/* Input */}
-            <div style={{ padding: '14px 24px 20px', borderTop: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
+            <div style={{ padding: '14px 24px 20px', borderTop: '1px solid var(--t-border)', flexShrink: 0 }}>
               {selected && (
                 <div style={{
-                  fontSize: 11, color: 'rgba(255,255,255,0.4)',
+                  fontSize: 11, color: 'var(--t-text-3)',
                   fontFamily: "'Space Grotesk', sans-serif",
                   display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8,
                 }}>
@@ -454,22 +454,22 @@ export default function AgentsPage() {
                 placeholder={`Tell ${selected.name} what to do…`}
                 rows={3}
                 style={{
-                  width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10,
-                  padding: '11px 14px', color: '#fff', fontSize: 13, fontFamily: "'Space Grotesk', sans-serif", resize: 'vertical',
+                  width: '100%', background: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: 10,
+                  padding: '11px 14px', color: 'var(--t-text-1)', fontSize: 13, fontFamily: "'Space Grotesk', sans-serif", resize: 'vertical',
                   outline: 'none', marginBottom: 10, boxSizing: 'border-box', transition: 'border-color 0.15s',
                 }}
                 onFocus={e => (e.currentTarget.style.borderColor = `${accent}60`)}
-                onBlur={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
+                onBlur={e => (e.currentTarget.style.borderColor = 'var(--t-border)')}
               />
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 {/* D2: fontFamily added */}
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)', fontFamily: "'Space Grotesk', sans-serif" }}>⌘ Enter to run</span>
+                <span style={{ fontSize: 11, color: 'var(--t-text-3)', fontFamily: "'Space Grotesk', sans-serif" }}>⌘ Enter to run</span>
                 <button
                   onClick={runAgent}
                   disabled={running || !prompt.trim()}
                   style={{
-                    background: running || !prompt.trim() ? 'rgba(255,255,255,0.06)' : `linear-gradient(135deg, ${accent}, ${accent}99)`,
-                    color: running || !prompt.trim() ? 'rgba(255,255,255,0.25)' : '#fff',
+                    background: running || !prompt.trim() ? 'var(--t-surface)' : `linear-gradient(135deg, ${accent}, ${accent}99)`,
+                    color: running || !prompt.trim() ? 'var(--t-text-3)' : '#fff',
                     border: 'none', borderRadius: 8, padding: '9px 22px', fontSize: 13, fontWeight: 600,
                     cursor: running || !prompt.trim() ? 'not-allowed' : 'pointer', fontFamily: "'Space Grotesk', sans-serif",
                     transition: 'all 0.15s',

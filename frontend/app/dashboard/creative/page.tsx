@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useState, useRef, useEffect } from 'react'
 import gsap from 'gsap'
@@ -448,14 +448,14 @@ export default function CreativeStudioPage() {
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
           <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', margin: 0 }}>Creative Studio</h1>
           <div style={{
-            fontSize: 11, color: 'rgba(255,255,255,0.4)', fontFamily: "'Space Grotesk', sans-serif",
+            fontSize: 11, color: 'var(--t-text-3)', fontFamily: "'Space Grotesk', sans-serif",
             display: 'flex', alignItems: 'center', gap: 6,
           }}>
             <span style={{ color: '#1FFFD6', fontWeight: 700 }}>{credits}</span> credits remaining
             <span style={{ opacity: 0.5 }}>· Video: 3–5 cr · Image: 2 cr · Audio: 1 cr</span>
           </div>
         </div>
-        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.875rem', margin: 0 }}>
+        <p style={{ color: 'var(--t-text-3)', fontSize: '0.875rem', margin: 0 }}>
           Generate video, images, and audio using your creative agents.
         </p>
       </div>
@@ -464,7 +464,7 @@ export default function CreativeStudioPage() {
 
         {/* Agent picker */}
         <div>
-          <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>Agent</p>
+          <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>Agent</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             {CREATIVE_AGENTS.map(a => (
               <button
@@ -480,15 +480,15 @@ export default function CreativeStudioPage() {
                 }}
                 style={{
                   textAlign: 'left', padding: '0.625rem 0.875rem', borderRadius: 10, fontFamily: 'inherit', cursor: 'pointer',
-                  background: agent.id === a.id ? `${a.color}18` : 'rgba(255,255,255,0.03)',
-                  border: `1px solid ${agent.id === a.id ? `${a.color}60` : 'rgba(255,255,255,0.07)'}`,
+                  background: agent.id === a.id ? `${a.color}18` : 'var(--t-surface)',
+                  border: `1px solid ${agent.id === a.id ? `${a.color}60` : 'var(--t-surface-2)'}`,
                 }}
               >
                 <div style={{ fontSize: '0.82rem', fontWeight: 600, color: agent.id === a.id ? a.color : '#fff' }}>{a.name}</div>
-                <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{a.role}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--t-text-3)', marginTop: 1 }}>{a.role}</div>
                 <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
                   {a.cap.map(c => (
-                    <span key={c} style={{ fontSize: '0.6rem', padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{c}</span>
+                    <span key={c} style={{ fontSize: '0.6rem', padding: '1px 5px', borderRadius: 4, background: 'var(--t-surface)', color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{c}</span>
                   ))}
                 </div>
               </button>
@@ -512,9 +512,9 @@ export default function CreativeStudioPage() {
                     padding: '0.4rem 1rem', borderRadius: 8, fontSize: '0.82rem', fontWeight: 500,
                     fontFamily: 'inherit', cursor: avail ? 'pointer' : 'not-allowed',
                     opacity: avail ? 1 : 0.35, textTransform: 'capitalize',
-                    background: mode === m && avail ? 'rgba(255,107,53,0.15)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${mode === m && avail ? 'rgba(255,107,53,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                    color: mode === m && avail ? '#FF6B35' : avail ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)',
+                    background: mode === m && avail ? 'rgba(255,107,53,0.15)' : 'var(--t-surface)',
+                    border: `1px solid ${mode === m && avail ? 'rgba(255,107,53,0.4)' : 'var(--t-border)'}`,
+                    color: mode === m && avail ? '#FF6B35' : avail ? 'var(--t-text-3)' : 'var(--t-text-3)',
                   }}
                 >
                   {label}
@@ -527,15 +527,15 @@ export default function CreativeStudioPage() {
           {mode === 'video' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Prompt</label>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Prompt</label>
                 <textarea
                   value={vPrompt}
                   onChange={e => setVPrompt(e.target.value)}
                   placeholder="A product hero shot of sneakers on a clean white surface, cinematic lighting, slow rotation…"
                   rows={3}
-                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.75rem 1rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'vertical' }}
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.75rem 1rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'vertical' }}
                   onFocus={e => { e.currentTarget.style.borderColor = 'rgba(255,107,53,0.5)' }}
-                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'var(--t-border)' }}
                 />
               </div>
 
@@ -561,7 +561,7 @@ export default function CreativeStudioPage() {
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 8, background: 'rgba(255,107,53,0.08)', border: '1px solid rgba(255,107,53,0.35)' }}>
                     <img src={vImageData} alt="ref" style={{ width: 32, height: 32, borderRadius: 4, objectFit: 'cover' }} />
                     <span style={{ fontSize: '0.72rem', color: '#FF6B35' }}>Image attached</span>
-                    <button type="button" onClick={() => setVImageData(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1, padding: 0 }}>×</button>
+                    <button type="button" onClick={() => setVImageData(null)} style={{ background: 'none', border: 'none', color: 'var(--t-text-3)', cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1, padding: 0 }}>×</button>
                   </div>
                 ) : (
                   <button
@@ -569,7 +569,7 @@ export default function CreativeStudioPage() {
                     onClick={() => imgInputRef.current?.click()}
                     onMouseEnter={e => { gsap.killTweensOf(e.currentTarget); gsap.to(e.currentTarget, { opacity: 0.8, duration: 0.15 }) }}
                     onMouseLeave={e => { gsap.killTweensOf(e.currentTarget); gsap.to(e.currentTarget, { opacity: 1, duration: 0.15 }) }}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem', fontFamily: 'inherit', cursor: 'pointer' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, background: 'var(--t-surface)', border: '1px solid var(--t-border)', color: 'var(--t-text-2)', fontSize: '0.75rem', fontFamily: 'inherit', cursor: 'pointer' }}
                   >
                     <span style={{ fontSize: '1rem', lineHeight: 1 }}>+</span> Add reference image
                   </button>
@@ -586,9 +586,9 @@ export default function CreativeStudioPage() {
                     style={{
                       padding: '4px 12px',
                       borderRadius: 99,
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      background: 'rgba(255,255,255,0.04)',
-                      color: 'rgba(255,255,255,0.45)',
+                      border: '1px solid var(--t-border)',
+                      background: 'var(--t-surface)',
+                      color: 'var(--t-text-2)',
                       fontSize: '0.72rem',
                       fontFamily: 'inherit',
                       cursor: 'pointer',
@@ -611,7 +611,7 @@ export default function CreativeStudioPage() {
 
               {/* Quality selector */}
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 6, fontFamily: "'Space Grotesk', sans-serif", textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <div style={{ fontSize: 11, color: 'var(--t-text-3)', marginBottom: 6, fontFamily: "'Space Grotesk', sans-serif", textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   Quality
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -625,13 +625,13 @@ export default function CreativeStudioPage() {
                         style={{
                           padding: '5px 14px', borderRadius: 8, cursor: locked ? 'not-allowed' : 'pointer',
                           fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontWeight: 600,
-                          background: quality === q ? (q === '4k' ? 'rgba(255,107,53,0.15)' : q === '1080p' ? 'rgba(255,179,71,0.12)' : 'rgba(31,255,214,0.12)') : 'rgba(255,255,255,0.05)',
+                          background: quality === q ? (q === '4k' ? 'rgba(255,107,53,0.15)' : q === '1080p' ? 'rgba(255,179,71,0.12)' : 'rgba(31,255,214,0.12)') : 'var(--t-surface)',
                           border: quality === q
                             ? `1px solid ${q === '4k' ? 'rgba(255,107,53,0.5)' : q === '1080p' ? 'rgba(255,179,71,0.4)' : 'rgba(31,255,214,0.4)'}`
-                            : '1px solid rgba(255,255,255,0.08)',
-                          color: locked ? 'rgba(255,255,255,0.2)' : quality === q
+                            : '1px solid var(--t-border)',
+                          color: locked ? 'var(--t-text-3)' : quality === q
                             ? (q === '4k' ? '#FF6B35' : q === '1080p' ? '#FFB347' : '#1FFFD6')
-                            : 'rgba(255,255,255,0.5)',
+                            : 'var(--t-text-2)',
                           opacity: locked ? 0.5 : 1,
                         }}
                       >
@@ -644,7 +644,7 @@ export default function CreativeStudioPage() {
 
               {/* Duration selector */}
               <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginBottom: 6, fontFamily: "'Space Grotesk', sans-serif", textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                <div style={{ fontSize: 11, color: 'var(--t-text-3)', marginBottom: 6, fontFamily: "'Space Grotesk', sans-serif", textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   Duration
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -655,9 +655,9 @@ export default function CreativeStudioPage() {
                       style={{
                         padding: '5px 12px', borderRadius: 8, cursor: 'pointer',
                         fontFamily: "'Space Grotesk', sans-serif", fontSize: 12, fontWeight: 600,
-                        background: duration === d ? 'rgba(31,255,214,0.12)' : 'rgba(255,255,255,0.05)',
+                        background: duration === d ? 'rgba(31,255,214,0.12)' : 'var(--t-surface)',
                         border: duration === d ? '1px solid rgba(31,255,214,0.4)' : '1px solid rgba(255,255,255,0.08)',
-                        color: duration === d ? '#1FFFD6' : 'rgba(255,255,255,0.5)',
+                        color: duration === d ? '#1FFFD6' : 'var(--t-text-2)',
                       }}
                     >
                       {d}s
@@ -667,15 +667,15 @@ export default function CreativeStudioPage() {
               </div>
 
               {/* Credit cost preview */}
-              <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', fontFamily: "'Space Grotesk', sans-serif", marginBottom: 12 }}>
+              <div style={{ fontSize: 12, color: 'var(--t-text-3)', fontFamily: "'Space Grotesk', sans-serif", marginBottom: 12 }}>
                 Cost: <span style={{ color: '#1FFFD6', fontWeight: 700 }}>{currentVideoCost} credits</span>
-                <span style={{ marginLeft: 8, color: 'rgba(255,255,255,0.2)' }}>· {credits} available</span>
+                <span style={{ marginLeft: 8, color: 'var(--t-text-3)' }}>· {credits} available</span>
               </div>
 
               {/* Style selector */}
               <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Style</label>
-                <select value={vStyle} onChange={e => setVStyle(e.target.value)} style={{ width: '100%', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.625rem 0.875rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'inherit', cursor: 'pointer' }}>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Style</label>
+                <select value={vStyle} onChange={e => setVStyle(e.target.value)} style={{ width: '100%', background: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.625rem 0.875rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'inherit', cursor: 'pointer' }}>
                   <option value="">Auto</option>
                   {VIDEO_STYLES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                 </select>
@@ -706,45 +706,45 @@ export default function CreativeStudioPage() {
           {mode === 'image' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Prompt</label>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Prompt</label>
                 <textarea
                   value={iPrompt}
                   onChange={e => setIPrompt(e.target.value)}
                   placeholder="A product hero shot of sneakers on a clean white surface, studio lighting, photorealistic…"
                   rows={3}
-                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.75rem 1rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'vertical' }}
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.75rem 1rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'vertical' }}
                   onFocus={e => { e.currentTarget.style.borderColor = 'rgba(255,107,53,0.5)' }}
-                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'var(--t-border)' }}
                 />
               </div>
 
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 2 }}>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Style</label>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Style</label>
                   <select
                     value={iModel}
                     onChange={e => setIModel(e.target.value)}
-                    style={{ width: '100%', background: '#0A0D14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.625rem 0.875rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'inherit', cursor: 'pointer' }}
+                    style={{ width: '100%', background: 'var(--t-bg)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.625rem 0.875rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'inherit', cursor: 'pointer' }}
                   >
                     {IMAGE_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                   </select>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Ratio</label>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Ratio</label>
                   <select
                     value={iRatio}
                     onChange={e => setIRatio(e.target.value)}
-                    style={{ width: '100%', background: '#0A0D14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.625rem 0.875rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'inherit', cursor: 'pointer' }}
+                    style={{ width: '100%', background: 'var(--t-bg)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.625rem 0.875rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'inherit', cursor: 'pointer' }}
                   >
                     {IMAGE_RATIOS.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Style</label>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Style</label>
                   <select
                     value={iStyle}
                     onChange={e => setIStyle(e.target.value)}
-                    style={{ width: '100%', background: '#0A0D14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.625rem 0.875rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'inherit', cursor: 'pointer' }}
+                    style={{ width: '100%', background: 'var(--t-bg)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.625rem 0.875rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'inherit', cursor: 'pointer' }}
                   >
                     <option value="">Auto</option>
                     {VIDEO_STYLES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
@@ -752,7 +752,7 @@ export default function CreativeStudioPage() {
                 </div>
               </div>
 
-              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)' }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--t-text-3)' }}>
                 Cost: <span style={{ color: '#FF6B35', fontWeight: 700 }}>2 credits</span>
               </div>
 
@@ -780,15 +780,15 @@ export default function CreativeStudioPage() {
           {mode === 'audio' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Script</label>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Script</label>
                 <textarea
                   value={aText}
                   onChange={e => setAText(e.target.value)}
                   placeholder="Welcome to Vantro — where AI agents handle the work so you can focus on growth."
                   rows={4}
-                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.75rem 1rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'vertical' }}
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.75rem 1rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'vertical' }}
                   onFocus={e => { e.currentTarget.style.borderColor = 'rgba(255,107,53,0.5)' }}
-                  onBlur={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)' }}
+                  onBlur={e => { e.currentTarget.style.borderColor = 'var(--t-border)' }}
                 />
               </div>
 
@@ -800,8 +800,8 @@ export default function CreativeStudioPage() {
                   { label: 'Language', val: aLanguage, set: setALanguage, opts: VOICE_LANGUAGES },
                 ] as { label: string; val: string; set: (v: string) => void; opts: { v: string; label: string }[] }[]).map(({ label, val, set, opts }) => (
                   <div key={label}>
-                    <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{label}</label>
-                    <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', background: '#0A0D14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 8, padding: '0.5rem 0.625rem', color: '#fff', fontSize: '0.8rem', fontFamily: 'inherit', cursor: 'pointer' }}>
+                    <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 600, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{label}</label>
+                    <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', background: 'var(--t-bg)', border: '1px solid var(--t-border)', borderRadius: 8, padding: '0.5rem 0.625rem', color: 'var(--t-text-1)', fontSize: '0.8rem', fontFamily: 'inherit', cursor: 'pointer' }}>
                       {opts.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}
                     </select>
                   </div>
@@ -816,8 +816,8 @@ export default function CreativeStudioPage() {
                   { label: 'Mannerism', val: aMannerism, set: setAMannerism, opts: VOICE_MANNERISMS },
                 ] as { label: string; val: string; set: (v: string) => void; opts: { v: string; label: string }[] }[]).map(({ label, val, set, opts }) => (
                   <div key={label}>
-                    <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{label}</label>
-                    <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', background: '#0A0D14', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 8, padding: '0.5rem 0.625rem', color: '#fff', fontSize: '0.8rem', fontFamily: 'inherit', cursor: 'pointer' }}>
+                    <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 600, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{label}</label>
+                    <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', background: 'var(--t-bg)', border: '1px solid var(--t-border)', borderRadius: 8, padding: '0.5rem 0.625rem', color: 'var(--t-text-1)', fontSize: '0.8rem', fontFamily: 'inherit', cursor: 'pointer' }}>
                       {opts.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}
                     </select>
                   </div>
@@ -856,7 +856,7 @@ export default function CreativeStudioPage() {
                 }
               `}</style>
               <div style={{
-                fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.4)',
+                fontSize: 11, fontWeight: 600, color: 'var(--t-text-3)',
                 fontFamily: "'Space Grotesk', sans-serif", textTransform: 'uppercase',
                 letterSpacing: '0.08em', marginBottom: 12,
               }}>
@@ -865,8 +865,8 @@ export default function CreativeStudioPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {[...queue].reverse().slice(0, 8).map(job => (
                   <div key={job.id} style={{
-                    background: 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${job.status === 'complete' ? 'rgba(31,255,214,0.2)' : job.status === 'failed' ? 'rgba(248,113,113,0.2)' : 'rgba(255,255,255,0.07)'}`,
+                    background: 'var(--t-surface)',
+                    border: `1px solid ${job.status === 'complete' ? 'rgba(31,255,214,0.2)' : job.status === 'failed' ? 'rgba(248,113,113,0.2)' : 'var(--t-surface-2)'}`,
                     borderRadius: 10, padding: '12px 14px',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
@@ -884,11 +884,11 @@ export default function CreativeStudioPage() {
                           {job.status === 'failed' && (
                             <span style={{ fontSize: 10, fontFamily: "'Space Grotesk', sans-serif", color: '#f87171', background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.25)', borderRadius: 4, padding: '1px 6px' }}>✗ Failed</span>
                           )}
-                          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', fontFamily: "'Space Grotesk', sans-serif" }}>
+                          <span style={{ fontSize: 10, color: 'var(--t-text-3)', fontFamily: "'Space Grotesk', sans-serif" }}>
                             {job.type === 'video' ? `${job.quality?.toUpperCase() || '720P'} · ${job.duration}s` : 'Audio'} · {job.credits_used} cr
                           </span>
                         </div>
-                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', fontFamily: "'Space Grotesk', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontSize: 12, color: 'var(--t-text-2)', fontFamily: "'Space Grotesk', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {job.prompt}
                         </div>
                       </div>
@@ -917,7 +917,7 @@ export default function CreativeStudioPage() {
                       )}
                     </div>
                     {(job.status === 'pending' || job.status === 'processing') && (
-                      <div style={{ marginTop: 8, height: 2, background: 'rgba(255,255,255,0.06)', borderRadius: 2, overflow: 'hidden' }}>
+                      <div style={{ marginTop: 8, height: 2, background: 'var(--t-surface)', borderRadius: 2, overflow: 'hidden' }}>
                         <div style={{
                           height: '100%', borderRadius: 2,
                           background: 'linear-gradient(90deg, #00D9FF, #1FFFD6)',
@@ -931,7 +931,7 @@ export default function CreativeStudioPage() {
                 ))}
               </div>
               {queue.length > 8 && (
-                <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 8, fontFamily: "'Space Grotesk', sans-serif" }}>
+                <div style={{ fontSize: 11, color: 'var(--t-text-3)', marginTop: 8, fontFamily: "'Space Grotesk', sans-serif" }}>
                   + {queue.length - 8} older jobs
                 </div>
               )}
@@ -941,14 +941,14 @@ export default function CreativeStudioPage() {
 
         {/* ── Preview Panel ── */}
         <div style={{ position: 'sticky', top: '2rem' }}>
-          <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.625rem' }}>Output Preview</p>
-          <div style={{ borderRadius: 14, overflow: 'hidden', background: '#0D1017', border: '1px solid rgba(255,255,255,0.07)', minHeight: 300, display: 'flex', flexDirection: 'column' }}>
+          <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.625rem' }}>Output Preview</p>
+          <div style={{ borderRadius: 14, overflow: 'hidden', background: 'var(--t-bg)', border: '1px solid var(--t-border)', minHeight: 300, display: 'flex', flexDirection: 'column' }}>
             <style>{`@keyframes dshCreDot{0%,80%,100%{opacity:.25;transform:scale(.7)}40%{opacity:1;transform:scale(1)}} @keyframes dshVidProg{0%{width:12%}100%{width:88%}}`}</style>
 
             {/* VIDEO states */}
             {mode === 'video' && !vResult && !loading && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '2.5rem 1.5rem', opacity: 0.28 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 10, border: '2px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', color: 'rgba(255,255,255,0.6)' }}>▶</div>
+                <div style={{ width: 44, height: 44, borderRadius: 10, border: '2px solid var(--t-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', color: 'var(--t-text-2)' }}>▶</div>
                 <span style={{ fontSize: '0.75rem', color: '#fff', textAlign: 'center', lineHeight: 1.4 }}>Video output appears here</span>
               </div>
             )}
@@ -957,7 +957,7 @@ export default function CreativeStudioPage() {
                 <div style={{ display: 'flex', gap: 5 }}>
                   {[0,1,2].map(i => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#FF6B35', display: 'inline-block', animation: `dshCreDot 1.4s ease-in-out ${i*0.22}s infinite` }} />)}
                 </div>
-                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)' }}>Generating…</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--t-text-2)' }}>Generating…</span>
               </div>
             )}
             {mode === 'video' && vResult && (
@@ -965,8 +965,8 @@ export default function CreativeStudioPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
                   <span style={{
                     fontSize: '0.65rem', padding: '2px 7px', borderRadius: 5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
-                    background: isDone ? 'rgba(255,107,53,0.15)' : vPolling ? 'rgba(255,215,0,0.12)' : 'rgba(255,255,255,0.06)',
-                    color: isDone ? '#FF6B35' : vPolling ? '#FFD700' : 'rgba(255,255,255,0.4)',
+                    background: isDone ? 'rgba(255,107,53,0.15)' : vPolling ? 'rgba(255,215,0,0.12)' : 'var(--t-surface)',
+                    color: isDone ? '#FF6B35' : vPolling ? '#FFD700' : 'var(--t-text-3)',
                   }}>
                     {isDone ? 'Done' : vPolling ? 'Processing…' : vResult.status}
                   </span>
@@ -981,13 +981,13 @@ export default function CreativeStudioPage() {
                     <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                       {[0,1,2].map(i => <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#FF6B35', display: 'inline-block', animation: `dshCreDot 1.4s ease-in-out ${i*0.22}s infinite` }} />)}
                     </div>
-                    <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>Processing video — this may take a few minutes</p>
-                    <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                    <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--t-text-3)', margin: 0 }}>Processing video — this may take a few minutes</p>
+                    <div style={{ height: 3, borderRadius: 99, background: 'var(--t-surface-2)', overflow: 'hidden' }}>
                       <div style={{ height: '100%', background: 'linear-gradient(90deg,#FF6B35,#CC4A18)', borderRadius: 99, animation: 'dshVidProg 3s ease-in-out infinite alternate' }} />
                     </div>
                   </div>
                 ) : (
-                  vResult.message && <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', margin: 0 }}>{vResult.message}</p>
+                  vResult.message && <p style={{ fontSize: '0.78rem', color: 'var(--t-text-3)', margin: 0 }}>{vResult.message}</p>
                 )}
               </div>
             )}
@@ -995,7 +995,7 @@ export default function CreativeStudioPage() {
             {/* AUDIO states */}
             {mode === 'audio' && !aResult && !loading && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '2.5rem 1.5rem', opacity: 0.28 }}>
-                <div style={{ fontSize: '2rem', color: 'rgba(255,255,255,0.5)' }}>♪</div>
+                <div style={{ fontSize: '2rem', color: 'var(--t-text-2)' }}>♪</div>
                 <span style={{ fontSize: '0.75rem', color: '#fff', textAlign: 'center', lineHeight: 1.4 }}>Audio output appears here</span>
               </div>
             )}
@@ -1004,7 +1004,7 @@ export default function CreativeStudioPage() {
                 <div style={{ display: 'flex', gap: 5 }}>
                   {[0,1,2].map(i => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#FF6B35', display: 'inline-block', animation: `dshCreDot 1.4s ease-in-out ${i*0.22}s infinite` }} />)}
                 </div>
-                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)' }}>Generating audio…</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--t-text-2)' }}>Generating audio…</span>
               </div>
             )}
             {mode === 'audio' && aResult && !loading && (
@@ -1026,7 +1026,7 @@ export default function CreativeStudioPage() {
             {/* IMAGE states */}
             {mode === 'image' && !iResult && !loading && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '2.5rem 1.5rem', opacity: 0.28 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 10, border: '2px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', color: 'rgba(255,255,255,0.6)' }}>⬡</div>
+                <div style={{ width: 44, height: 44, borderRadius: 10, border: '2px solid var(--t-border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', color: 'var(--t-text-2)' }}>⬡</div>
                 <span style={{ fontSize: '0.75rem', color: '#fff', textAlign: 'center', lineHeight: 1.4 }}>Image output appears here</span>
               </div>
             )}
@@ -1035,7 +1035,7 @@ export default function CreativeStudioPage() {
                 <div style={{ display: 'flex', gap: 5 }}>
                   {[0,1,2].map(i => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#FF6B35', display: 'inline-block', animation: `dshCreDot 1.4s ease-in-out ${i*0.22}s infinite` }} />)}
                 </div>
-                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)' }}>Generating image…</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--t-text-2)' }}>Generating image…</span>
               </div>
             )}
             {mode === 'image' && iResult && !loading && (
@@ -1044,7 +1044,7 @@ export default function CreativeStudioPage() {
                   <span style={{ fontSize: '0.65rem', padding: '2px 7px', borderRadius: 5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', background: iResult.image_url ? 'rgba(255,107,53,0.15)' : 'rgba(239,68,68,0.15)', color: iResult.image_url ? '#FF6B35' : '#ef4444' }}>
                     {iResult.image_url ? 'Done' : 'Failed'}
                   </span>
-                  {iResult.model && <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)' }}>{iResult.model}</span>}
+                  {iResult.model && <span style={{ fontSize: '0.6rem', color: 'var(--t-text-3)' }}>{iResult.model}</span>}
                 </div>
                 {iResult.image_url ? (
                   <div>

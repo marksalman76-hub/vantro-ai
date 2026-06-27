@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
@@ -46,8 +46,8 @@ interface JobRun {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const CARD: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.08)',
+  background: 'var(--t-surface)',
+  border: '1px solid var(--t-border)',
   borderRadius: '1rem',
   padding: '1.25rem',
 }
@@ -103,7 +103,7 @@ function statusColor(s: string) {
   if (n === 'running') return '#FF6B35'
   if (n === 'failed') return '#f87171'
   if (n === 'queued') return '#00D9FF'
-  return 'rgba(255,255,255,0.35)'
+  return 'var(--t-text-3)'
 }
 
 // ─── Quality helpers ──────────────────────────────────────────────────────────
@@ -162,7 +162,7 @@ function StatusBadge({ status }: { status: string }) {
 
 function SkeletonRows() {
   return (
-    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '1rem', overflow: 'hidden' }}>
+    <div style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: '1rem', overflow: 'hidden' }}>
       {[1, 2, 3, 4, 5].map((i, idx) => (
         <div
           key={i}
@@ -171,16 +171,16 @@ function SkeletonRows() {
             alignItems: 'center',
             gap: '1rem',
             padding: '0.85rem 1.25rem',
-            borderBottom: idx < 4 ? '1px solid rgba(255,255,255,0.05)' : 'none',
+            borderBottom: idx < 4 ? '1px solid var(--t-border)' : 'none',
             animation: 'pulse 1.5s ease-in-out infinite',
             animationDelay: `${idx * 0.08}s`,
           }}
         >
-          <div style={{ flex: 2, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.07)' }} />
-          <div style={{ flex: 1, height: 22, borderRadius: 999, background: 'rgba(255,255,255,0.05)' }} />
-          <div style={{ flex: 1.5, height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.05)' }} />
-          <div style={{ flex: 2, height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.04)' }} />
-          <div style={{ width: 48, height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.05)' }} />
+          <div style={{ flex: 2, height: 14, borderRadius: 4, background: 'var(--t-surface-2)' }} />
+          <div style={{ flex: 1, height: 22, borderRadius: 999, background: 'var(--t-surface)' }} />
+          <div style={{ flex: 1.5, height: 12, borderRadius: 4, background: 'var(--t-surface)' }} />
+          <div style={{ flex: 2, height: 12, borderRadius: 4, background: 'var(--t-surface)' }} />
+          <div style={{ width: 48, height: 28, borderRadius: 6, background: 'var(--t-surface)' }} />
         </div>
       ))}
     </div>
@@ -217,10 +217,10 @@ function DetailPanel({ job, onClose }: { job: Job; onClose: () => void }) {
           position: 'absolute',
           top: '1rem',
           right: '1rem',
-          background: 'rgba(255,255,255,0.07)',
-          border: '1px solid rgba(255,255,255,0.10)',
+          background: 'var(--t-surface-2)',
+          border: '1px solid var(--t-border)',
           borderRadius: '0.4rem',
-          color: 'rgba(255,255,255,0.5)',
+          color: 'var(--t-text-2)',
           fontSize: '0.75rem',
           fontWeight: 600,
           padding: '0.2rem 0.6rem',
@@ -238,21 +238,21 @@ function DetailPanel({ job, onClose }: { job: Job; onClose: () => void }) {
           </h3>
           <StatusBadge status={job.status} />
         </div>
-        <p style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', margin: '0.3rem 0 0' }}>
+        <p style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '0.78rem', color: 'var(--t-text-3)', margin: '0.3rem 0 0' }}>
           Started: {formatDate(job.created_at)}
           {job.completed_at ? ` · Completed: ${formatDate(job.completed_at)}` : ''}
           {job.credits_used != null ? ` · ${job.credits_used} credit${job.credits_used !== 1 ? 's' : ''}` : ''}
         </p>
       </div>
 
-      <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '0.625rem', padding: '1rem' }}>
-        <div style={{ fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', marginBottom: '0.6rem', fontFamily: "'Space Grotesk', sans-serif" }}>
+      <div style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: '0.625rem', padding: '1rem' }}>
+        <div style={{ fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--t-text-3)', marginBottom: '0.6rem', fontFamily: "'Space Grotesk', sans-serif" }}>
           Full Output
         </div>
         <pre style={{
           fontFamily: "'Space Grotesk', sans-serif",
           fontSize: '0.82rem',
-          color: 'rgba(255,255,255,0.75)',
+          color: 'var(--t-text-1)',
           lineHeight: 1.65,
           margin: 0,
           whiteSpace: 'pre-wrap',
@@ -393,7 +393,7 @@ export default function JobsPage() {
   }
 
   return (
-    <div ref={pageRef} style={{ flex: 1, minWidth: 0, padding: '2.5rem', background: '#0A0D14', minHeight: '100%' }}>
+    <div ref={pageRef} style={{ flex: 1, minWidth: 0, padding: '2.5rem', background: 'var(--t-bg)', minHeight: '100%' }}>
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
 
       {/* ── Header ── */}
@@ -401,7 +401,7 @@ export default function JobsPage() {
         <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '1.75rem', margin: 0, color: '#fff' }}>
           Activity
         </h1>
-        <p style={{ color: 'rgba(255,255,255,0.35)', marginTop: '0.375rem', fontSize: '0.9rem', fontFamily: "'Space Grotesk', sans-serif" }}>
+        <p style={{ color: 'var(--t-text-3)', marginTop: '0.375rem', fontSize: '0.9rem', fontFamily: "'Space Grotesk', sans-serif" }}>
           All past agent runs
         </p>
       </div>
@@ -411,8 +411,8 @@ export default function JobsPage() {
         <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
           {topAgents.map(([agentId, s]) => (
             <div key={agentId} style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'var(--t-surface)',
+              border: '1px solid var(--t-border)',
               borderRadius: 10,
               padding: '10px 14px',
               minWidth: 130,
@@ -435,7 +435,7 @@ export default function JobsPage() {
               }}>
                 {s.rate >= 0 ? `${s.rate}%` : '—'}
               </div>
-              <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'Space Grotesk', sans-serif" }}>
+              <div style={{ fontSize: 10, color: 'var(--t-text-3)', fontFamily: "'Space Grotesk', sans-serif" }}>
                 {s.total} run{s.total !== 1 ? 's' : ''} · {s.approved}✓ {s.rejected}✗
               </div>
             </div>
@@ -460,10 +460,10 @@ export default function JobsPage() {
               <polyline points="3,19 9,19 13,7 18,31 23,14 26,24 30,19 35,19" stroke="rgba(255,255,255,0.18)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             <div>
-              <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'rgba(255,255,255,0.45)', fontSize: '0.95rem', margin: '0 0 0.4rem', fontWeight: 500 }}>
+              <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'var(--t-text-2)', fontSize: '0.95rem', margin: '0 0 0.4rem', fontWeight: 500 }}>
                 No jobs yet
               </p>
-              <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'rgba(255,255,255,0.25)', fontSize: '0.82rem', margin: 0 }}>
+              <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'var(--t-text-3)', fontSize: '0.82rem', margin: 0 }}>
                 Run an agent and your activity will appear here
               </p>
             </div>
@@ -488,7 +488,7 @@ export default function JobsPage() {
         ) : (
           <>
             {/* Table */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '1rem', overflow: 'hidden' }}>
+            <div style={{ background: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: '1rem', overflow: 'hidden' }}>
 
               {/* Table header */}
               <div style={{
@@ -496,8 +496,8 @@ export default function JobsPage() {
                 gridTemplateColumns: '2fr 1fr 1.8fr 2.5fr auto',
                 gap: '0.75rem',
                 padding: '0.65rem 1.25rem',
-                borderBottom: '1px solid rgba(255,255,255,0.07)',
-                background: 'rgba(255,255,255,0.02)',
+                borderBottom: '1px solid var(--t-border)',
+                background: 'var(--t-surface)',
               }}>
                 {['Agent', 'Status', 'Started', 'Output Preview', ''].map((col, i) => (
                   <div key={i} style={{
@@ -505,7 +505,7 @@ export default function JobsPage() {
                     fontWeight: 700,
                     letterSpacing: '0.08em',
                     textTransform: 'uppercase',
-                    color: 'rgba(255,255,255,0.28)',
+                    color: 'var(--t-text-3)',
                     fontFamily: "'Space Grotesk', sans-serif",
                   }}>
                     {col}
@@ -556,7 +556,7 @@ function JobRow({
 
   function handleEnter() {
     gsap.to(rowRef.current, {
-      background: 'rgba(255,255,255,0.025)',
+      background: 'var(--t-surface)',
       duration: 0.15,
       ease: 'power2.out',
     })
@@ -582,7 +582,7 @@ function JobRow({
         gap: '0.75rem',
         alignItems: 'center',
         padding: '0.85rem 1.25rem',
-        borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.05)',
+        borderBottom: isLast ? 'none' : '1px solid var(--t-border)',
         background: isSelected ? 'rgba(0,217,255,0.04)' : 'transparent',
         transition: 'background 0.15s ease',
       }}
@@ -595,7 +595,7 @@ function JobRow({
           <div style={{
             fontWeight: 600,
             fontSize: '0.875rem',
-            color: 'rgba(255,255,255,0.90)',
+            color: 'var(--t-text-1)',
             whiteSpace: 'nowrap',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -620,7 +620,7 @@ function JobRow({
           )}
         </div>
         {job.credits_used != null && (
-          <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.22)', marginTop: '0.15rem', fontFamily: "'Space Grotesk', sans-serif" }}>
+          <div style={{ fontSize: '0.68rem', color: 'var(--t-text-3)', marginTop: '0.15rem', fontFamily: "'Space Grotesk', sans-serif" }}>
             {job.credits_used} credit{job.credits_used !== 1 ? 's' : ''}
           </div>
         )}
@@ -630,14 +630,14 @@ function JobRow({
       <div><StatusBadge status={job.status} /></div>
 
       {/* Started */}
-      <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.38)', fontFamily: "'Space Grotesk', sans-serif" }}>
+      <div style={{ fontSize: '0.78rem', color: 'var(--t-text-3)', fontFamily: "'Space Grotesk', sans-serif" }}>
         {formatDate(job.created_at)}
       </div>
 
       {/* Output preview */}
       <div style={{
         fontSize: '0.78rem',
-        color: 'rgba(255,255,255,0.35)',
+        color: 'var(--t-text-3)',
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
@@ -672,8 +672,8 @@ function ViewButton({ isSelected, onClick }: { isSelected: boolean; onClick: () 
   function handleLeave() {
     gsap.to(btnRef.current, {
       scale: 1,
-      borderColor: isSelected ? 'rgba(0,217,255,0.35)' : 'rgba(255,255,255,0.12)',
-      color: isSelected ? '#00D9FF' : 'rgba(255,255,255,0.45)',
+      borderColor: isSelected ? 'rgba(0,217,255,0.35)' : 'var(--t-border)',
+      color: isSelected ? '#00D9FF' : 'var(--t-text-2)',
       duration: 0.22,
       ease: 'power3.out',
     })
@@ -689,9 +689,9 @@ function ViewButton({ isSelected, onClick }: { isSelected: boolean; onClick: () 
       style={{
         fontSize: '0.72rem',
         fontWeight: 600,
-        color: isSelected ? '#00D9FF' : 'rgba(255,255,255,0.45)',
+        color: isSelected ? '#00D9FF' : 'var(--t-text-2)',
         background: isSelected ? 'rgba(0,217,255,0.08)' : 'transparent',
-        border: `1px solid ${isSelected ? 'rgba(0,217,255,0.35)' : 'rgba(255,255,255,0.12)'}`,
+        border: `1px solid ${isSelected ? 'rgba(0,217,255,0.35)' : 'var(--t-border)'}`,
         borderRadius: '0.4rem',
         padding: '0.3rem 0.65rem',
         cursor: 'pointer',

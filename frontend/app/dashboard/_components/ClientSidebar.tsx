@@ -95,6 +95,7 @@ function NavRow({
   iconColor,
   textColor,
   isDark,
+  collapsed,
   children,
 }: {
   active: boolean
@@ -102,6 +103,7 @@ function NavRow({
   iconColor: string
   textColor: string
   isDark: boolean
+  collapsed: boolean
   children: React.ReactNode
 }) {
   const rowRef = useRef<HTMLDivElement>(null)
@@ -109,7 +111,7 @@ function NavRow({
   function handleEnter() {
     if (active) return
     gsap.to(rowRef.current, {
-      x: 3,
+      x: collapsed ? 0 : 3,
       color: isDark ? 'rgba(255,255,255,0.80)' : 'rgba(10,13,20,0.85)',
       background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)',
       duration: 0.16,
@@ -148,18 +150,19 @@ function NavRow({
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: '0.625rem',
-        padding: '0.475rem 0.75rem',
+        gap: collapsed ? 0 : '0.625rem',
+        padding: collapsed ? '0.5rem' : '0.475rem 0.75rem',
+        justifyContent: collapsed ? 'center' : undefined,
         borderRadius: '0.5rem',
         fontSize: '0.84rem',
         fontWeight: active ? 500 : 400,
         cursor: 'pointer',
-        borderLeft: active ? `3px solid ${ORANGE}` : '3px solid transparent',
+        borderLeft: active && !collapsed ? `3px solid ${ORANGE}` : '3px solid transparent',
         background: active ? `${ORANGE}0F` : 'transparent',
         border: active ? `1px solid ${ORANGE}22` : '1px solid transparent',
         borderLeftWidth: 3,
         color: textColor,
-        paddingLeft: active ? 'calc(0.75rem - 2px)' : '0.75rem',
+        paddingLeft: active && !collapsed ? 'calc(0.75rem - 2px)' : collapsed ? '0.5rem' : '0.75rem',
         willChange: 'transform',
       }}
       onMouseEnter={handleEnter}
@@ -199,6 +202,8 @@ export default function ClientSidebar() {
   const [initial,   setInitial]   = useState('U')
   const [plan,      setPlan]      = useState('Starter')
   const [isDark,    setIsDark]    = useState(true)
+  // collapsed state — initialized false, loaded from localStorage in useEffect to avoid hydration mismatch
+  const [collapsed, setCollapsed] = useState(false)
 
   // ── Refs for GSAP scope ─────────────────────────────────────────────────────
   const sidebarRef  = useRef<HTMLElement>(null)
@@ -221,10 +226,23 @@ export default function ClientSidebar() {
     const saved = localStorage.getItem('vantro_theme')
     setIsDark(saved !== 'light')
 
+    // Load collapsed state from localStorage
+    const savedCollapsed = localStorage.getItem('vantro_sidebar_collapsed')
+    if (savedCollapsed === 'true') setCollapsed(true)
+
     const onTheme = (e: Event) => setIsDark((e as CustomEvent).detail.dark)
     window.addEventListener('vantro-theme', onTheme)
     return () => window.removeEventListener('vantro-theme', onTheme)
   }, [])
+
+  // Persist collapsed state
+  function toggleCollapsed() {
+    setCollapsed(prev => {
+      const next = !prev
+      localStorage.setItem('vantro_sidebar_collapsed', String(next))
+      return next
+    })
+  }
 
   // ── 1. Sidebar mount animation ─────────────────────────────────────────────
   // Slides the whole sidebar in from the left, then staggers nav items.
@@ -287,9 +305,11 @@ export default function ClientSidebar() {
         hoverText:   'rgba(10,13,20,0.85)',
       }
 
+  const sidebarWidth = collapsed ? 64 : 224
+
   const sidebarStyle: React.CSSProperties = {
-    width: 224,
-    minWidth: 224,
+    width: sidebarWidth,
+    minWidth: sidebarWidth,
     height: '100vh',
     position: 'sticky',
     top: 0,
@@ -301,6 +321,7 @@ export default function ClientSidebar() {
     flexShrink: 0,
     overflowY: 'auto',
     overflowX: 'hidden',
+    transition: 'width 0.22s ease, min-width 0.22s ease',
   }
 
   return (
@@ -311,7 +332,8 @@ export default function ClientSidebar() {
         display: 'flex',
         alignItems: 'center',
         gap: '0.5rem',
-        padding: '1.375rem 1.25rem 1.125rem',
+        padding: collapsed ? '1.375rem 0' : '1.375rem 1.25rem 1.125rem',
+        justifyContent: collapsed ? 'center' : undefined,
         borderBottom: `1px solid ${T.border}`,
         flexShrink: 0,
       }}>
@@ -328,48 +350,52 @@ export default function ClientSidebar() {
           color: '#fff',
           flexShrink: 0,
         }}>V</div>
-        <span style={{ fontWeight: 700, fontSize: '0.875rem', letterSpacing: '0.09em', color: T.navTextAct }}>
-          VANTRO<span style={{ color: CYAN, fontWeight: 400 }}>.ai</span>
-        </span>
+        {!collapsed && (
+          <span style={{ fontWeight: 700, fontSize: '0.875rem', letterSpacing: '0.09em', color: T.navTextAct }}>
+            VANTRO<span style={{ color: CYAN, fontWeight: 400 }}>.ai</span>
+          </span>
+        )}
       </div>
 
-      {/* ── Workspace + Plan badge ────────────────────────────────────────── */}
-      <div style={{
-        padding: '0.75rem 1.25rem 0.875rem',
-        borderBottom: `1px solid ${T.border}`,
-        flexShrink: 0,
-      }}>
-        <p style={{
-          fontSize: 9.5,
-          color: T.textMuted,
-          textTransform: 'uppercase',
-          letterSpacing: '0.09em',
-          marginBottom: 3,
-        }}>Workspace</p>
-        <p style={{
-          fontSize: 12.5,
-          color: T.textSub,
-          fontWeight: 600,
-          marginBottom: 8,
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }}>{workspace || 'My workspace'}</p>
+      {/* ── Workspace + Plan badge (hidden when collapsed) ────────────────── */}
+      {!collapsed && (
+        <div style={{
+          padding: '0.75rem 1.25rem 0.875rem',
+          borderBottom: `1px solid ${T.border}`,
+          flexShrink: 0,
+        }}>
+          <p style={{
+            fontSize: 9.5,
+            color: T.textMuted,
+            textTransform: 'uppercase',
+            letterSpacing: '0.09em',
+            marginBottom: 3,
+          }}>Workspace</p>
+          <p style={{
+            fontSize: 12.5,
+            color: T.textSub,
+            fontWeight: 600,
+            marginBottom: 8,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}>{workspace || 'My workspace'}</p>
 
-        {/* Plan badge */}
-        <span style={{
-          display: 'inline-block',
-          fontSize: 9,
-          fontWeight: 700,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          color: ORANGE,
-          background: `${ORANGE}1A`,
-          border: `1px solid ${ORANGE}40`,
-          borderRadius: 4,
-          padding: '2px 7px',
-        }}>{plan}</span>
-      </div>
+          {/* Plan badge */}
+          <span style={{
+            display: 'inline-block',
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color: ORANGE,
+            background: `${ORANGE}1A`,
+            border: `1px solid ${ORANGE}40`,
+            borderRadius: 4,
+            padding: '2px 7px',
+          }}>{plan}</span>
+        </div>
+      )}
 
       {/* ── Nav ──────────────────────────────────────────────────────────── */}
       <nav
@@ -377,7 +403,7 @@ export default function ClientSidebar() {
         aria-label="Main navigation"
         style={{
         flex: 1,
-        padding: '0.625rem 0.625rem',
+        padding: collapsed ? '0.625rem 0.375rem' : '0.625rem 0.625rem',
         display: 'flex',
         flexDirection: 'column',
         gap: 2,
@@ -389,112 +415,167 @@ export default function ClientSidebar() {
 
           return (
             // data-nav-item is the stagger selector target in useGSAP above
-            <Link key={href} href={href} style={{ textDecoration: 'none' }} data-nav-item aria-current={isActive(href, exact) ? 'page' : undefined}>
-              <NavRow active={active} ORANGE={ORANGE} iconColor={iconColor} textColor={textColor} isDark={isDark}>
+            <Link key={href} href={href} style={{ textDecoration: 'none' }} data-nav-item aria-current={isActive(href, exact) ? 'page' : undefined} title={collapsed ? label : undefined}>
+              <NavRow active={active} ORANGE={ORANGE} iconColor={iconColor} textColor={textColor} isDark={isDark} collapsed={collapsed}>
                 <Icon color={iconColor} />
-                <span>{label}</span>
+                {!collapsed && <span>{label}</span>}
               </NavRow>
             </Link>
           )
         })}
+
+        {/* ── Collapse toggle button ──────────────────────────────────────── */}
+        <div style={{ marginTop: 'auto', paddingTop: '0.5rem', display: 'flex', justifyContent: 'center' }}>
+          <button
+            type="button"
+            onClick={toggleCollapsed}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              borderRadius: '999px',
+              background: 'var(--t-surface-2, rgba(255,255,255,0.07))',
+              border: '1px solid rgba(255,255,255,0.08)',
+              color: 'var(--t-text-2, rgba(255,255,255,0.40))',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              lineHeight: 1,
+              fontFamily: 'inherit',
+              flexShrink: 0,
+              transition: 'background 0.15s ease, color 0.15s ease',
+            }}
+            onMouseEnter={e => {
+              const el = e.currentTarget
+              el.style.background = 'var(--t-surface-2, rgba(255,255,255,0.12))'
+              el.style.color = 'var(--t-text-2, rgba(255,255,255,0.70))'
+            }}
+            onMouseLeave={e => {
+              const el = e.currentTarget
+              el.style.background = 'var(--t-surface-2, rgba(255,255,255,0.07))'
+              el.style.color = 'var(--t-text-2, rgba(255,255,255,0.40))'
+            }}
+          >
+            {collapsed ? '›' : '‹'}
+          </button>
+        </div>
       </nav>
 
-      {/* ── User footer ──────────────────────────────────────────────────── */}
-      <div style={{
-        borderTop: `1px solid ${T.border}`,
-        padding: '0.75rem 0.875rem',
-        flexShrink: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.5rem',
-      }}>
-
-        {/* Avatar + email row */}
+      {/* ── User footer (hidden when collapsed) ──────────────────────────── */}
+      {!collapsed && (
         <div style={{
+          borderTop: `1px solid ${T.border}`,
+          padding: '0.75rem 0.875rem',
+          flexShrink: 0,
           display: 'flex',
-          alignItems: 'center',
-          gap: '0.625rem',
-          padding: '0.375rem 0.375rem',
-          borderRadius: '0.5rem',
+          flexDirection: 'column',
+          gap: '0.5rem',
         }}>
-          {/* Avatar circle */}
+
+          {/* Avatar + email row */}
           <div style={{
-            width: 30,
-            height: 30,
-            borderRadius: '50%',
-            background: `linear-gradient(135deg, ${ORANGE}CC, ${ORANGE}66)`,
-            border: `1.5px solid ${ORANGE}55`,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 700,
-            fontSize: 13,
-            color: '#fff',
-            flexShrink: 0,
-            lineHeight: 1,
-          }}>{initial}</div>
-
-          {/* Email text */}
-          <div style={{ overflow: 'hidden', flex: 1 }}>
-            <p style={{
-              fontSize: 11,
-              color: T.textEmail,
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              lineHeight: 1.3,
-            }}>{email || 'Your workspace'}</p>
-          </div>
-        </div>
-
-        {/* Theme toggle */}
-        <ThemeToggle style={{ width: '100%', justifyContent: 'center' }} />
-
-        {/* Sign out button — GSAP hover */}
-        <button
-          ref={signOutRef}
-          type="button"
-          onClick={signOut}
-          style={{
-            width: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.42rem 0.75rem',
+            gap: '0.625rem',
+            padding: '0.375rem 0.375rem',
             borderRadius: '0.5rem',
-            fontSize: '0.8rem',
-            fontWeight: 400,
-            color: T.signOutClr,
-            background: 'transparent',
-            border: '1px solid transparent',
-            cursor: 'pointer',
-            textAlign: 'left',
-            fontFamily: 'inherit',
-            willChange: 'transform',
-          }}
-          onMouseEnter={() => {
-            gsap.to(signOutRef.current, {
-              x: 2,
-              color: '#FF6B35',
-              background: 'rgba(255,107,53,0.08)',
-              duration: 0.16,
-              ease: 'power2.out',
-            })
-          }}
-          onMouseLeave={() => {
-            gsap.to(signOutRef.current, {
-              x: 0,
-              color: 'rgba(255,255,255,0.32)',
+          }}>
+            {/* Avatar circle */}
+            <div style={{
+              width: 30,
+              height: 30,
+              borderRadius: '50%',
+              background: `linear-gradient(135deg, ${ORANGE}CC, ${ORANGE}66)`,
+              border: `1.5px solid ${ORANGE}55`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 700,
+              fontSize: 13,
+              color: '#fff',
+              flexShrink: 0,
+              lineHeight: 1,
+            }}>{initial}</div>
+
+            {/* Email text */}
+            <div style={{ overflow: 'hidden', flex: 1 }}>
+              <p style={{
+                fontSize: 11,
+                color: T.textEmail,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                lineHeight: 1.3,
+              }}>{email || 'Your workspace'}</p>
+            </div>
+          </div>
+
+          {/* Theme toggle */}
+          <ThemeToggle style={{ width: '100%', justifyContent: 'center' }} />
+
+          {/* Sign out button — GSAP hover */}
+          <button
+            ref={signOutRef}
+            type="button"
+            onClick={signOut}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.42rem 0.75rem',
+              borderRadius: '0.5rem',
+              fontSize: '0.8rem',
+              fontWeight: 400,
+              color: T.signOutClr,
               background: 'transparent',
-              duration: 0.22,
-              ease: 'power3.out',
-            })
-          }}
-        >
-          <IconSignOut />
-          Sign out
-        </button>
-      </div>
+              border: '1px solid transparent',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontFamily: 'inherit',
+              willChange: 'transform',
+            }}
+            onMouseEnter={() => {
+              gsap.to(signOutRef.current, {
+                x: 2,
+                color: '#FF6B35',
+                background: 'rgba(255,107,53,0.08)',
+                duration: 0.16,
+                ease: 'power2.out',
+              })
+            }}
+            onMouseLeave={() => {
+              gsap.to(signOutRef.current, {
+                x: 0,
+                color: 'rgba(255,255,255,0.32)',
+                background: 'transparent',
+                duration: 0.22,
+                ease: 'power3.out',
+              })
+            }}
+          >
+            <IconSignOut />
+            Sign out
+          </button>
+        </div>
+      )}
+
+      {/* ── Collapsed footer: ThemeToggle icon-only ───────────────────────── */}
+      {collapsed && (
+        <div style={{
+          borderTop: `1px solid ${T.border}`,
+          padding: '0.625rem 0',
+          flexShrink: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '0.5rem',
+        }}>
+          <ThemeToggle iconOnly style={{ justifyContent: 'center' }} />
+        </div>
+      )}
 
     </aside>
   )
