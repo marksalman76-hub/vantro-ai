@@ -83,11 +83,8 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Admin API routes: verify admin_token before allowing through
+  // /api/admin/* routes handle their own auth (verifyAdminToken inside route handler)
   if (pathname.startsWith('/api/admin/')) {
-    const token = request.cookies.get('admin_token')?.value
-    const valid = token ? await verifyAdminToken(token) : false
-    if (!valid) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     return NextResponse.next()
   }
 
