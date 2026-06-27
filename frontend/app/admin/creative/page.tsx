@@ -313,11 +313,11 @@ export default function AdminCreativePage() {
                 onMouseEnter={e => { e.currentTarget.style.opacity = '0.85' }}
                 onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
               >
-                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: agent.id === a.id ? a.color : '#fff' }}>{a.name}</div>
-                <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginTop: 1 }}>{a.role}</div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: agent.id === a.id ? a.color : 'var(--t-text-1)' }}>{a.name}</div>
+                <div style={{ fontSize: '0.7rem', color: 'var(--t-text-3)', marginTop: 1 }}>{a.role}</div>
                 <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
                   {a.cap.map(c => (
-                    <span key={c} style={{ fontSize: '0.6rem', padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{c}</span>
+                    <span key={c} style={{ fontSize: '0.6rem', padding: '1px 5px', borderRadius: 4, background: 'var(--t-surface)', color: 'var(--t-text-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{c}</span>
                   ))}
                 </div>
               </button>
@@ -341,9 +341,9 @@ export default function AdminCreativePage() {
                     padding: '0.4rem 1rem', borderRadius: 8, fontSize: '0.82rem', fontWeight: 500,
                     fontFamily: 'system-ui, sans-serif', cursor: avail ? 'pointer' : 'not-allowed',
                     opacity: avail ? 1 : 0.35, textTransform: 'capitalize',
-                    background: mode === m && avail ? 'rgba(31,255,214,0.12)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${mode === m && avail ? 'rgba(31,255,214,0.4)' : 'rgba(255,255,255,0.08)'}`,
-                    color: mode === m && avail ? '#1FFFD6' : avail ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)',
+                    background: mode === m && avail ? 'rgba(31,255,214,0.12)' : 'var(--t-surface)',
+                    border: `1px solid ${mode === m && avail ? 'rgba(31,255,214,0.4)' : 'var(--t-border)'}`,
+                    color: mode === m && avail ? '#1FFFD6' : avail ? 'var(--t-text-2)' : 'var(--t-text-3)',
                   }}
                 >
                   {label}
@@ -356,15 +356,15 @@ export default function AdminCreativePage() {
           {mode === 'video' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Prompt</label>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Prompt</label>
                 <textarea
                   value={vPrompt}
                   onChange={e => setVPrompt(e.target.value)}
                   placeholder="A product hero shot of sneakers on a clean white surface, cinematic lighting, slow rotation…"
                   rows={3}
-                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.75rem 1rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', resize: 'vertical', outline: 'none' }}
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.75rem 1rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', resize: 'vertical', outline: 'none' }}
                   onFocus={e => { e.currentTarget.style.borderColor = 'rgba(31,255,214,0.45)' }}
-                  onBlur={e =>  { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)' }}
+                  onBlur={e =>  { e.currentTarget.style.borderColor = 'var(--t-border)' }}
                 />
               </div>
 
@@ -390,13 +390,13 @@ export default function AdminCreativePage() {
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 8, background: 'rgba(31,255,214,0.08)', border: '1px solid rgba(31,255,214,0.3)' }}>
                     <img src={vImageData} alt="ref" style={{ width: 32, height: 32, borderRadius: 4, objectFit: 'cover' }} />
                     <span style={{ fontSize: '0.72rem', color: '#1FFFD6' }}>Image attached</span>
-                    <button type="button" onClick={() => setVImageData(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1, padding: 0 }}>×</button>
+                    <button type="button" onClick={() => setVImageData(null)} style={{ background: 'none', border: 'none', color: 'var(--t-text-2)', cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1, padding: 0 }}>×</button>
                   </div>
                 ) : (
                   <button
                     type="button"
                     onClick={() => imgInputRef.current?.click()}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)', fontSize: '0.75rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '4px 10px', borderRadius: 8, background: 'var(--t-surface)', border: '1px solid var(--t-border)', color: 'var(--t-text-2)', fontSize: '0.75rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
                   >
                     <span style={{ fontSize: '1rem', lineHeight: 1 }}>+</span> Add reference image
                   </button>
@@ -412,9 +412,9 @@ export default function AdminCreativePage() {
                     onClick={() => setVPrompt(chip)}
                     style={{
                       padding: '4px 12px', borderRadius: 99,
-                      border: '1px solid rgba(255,255,255,0.12)',
-                      background: 'rgba(255,255,255,0.04)',
-                      color: 'rgba(255,255,255,0.45)',
+                      border: '1px solid var(--t-border)',
+                      background: 'var(--t-surface)',
+                      color: 'var(--t-text-2)',
                       fontSize: '0.72rem', fontFamily: 'system-ui, sans-serif',
                       cursor: 'pointer', textAlign: 'left', lineHeight: 1.3,
                       transition: 'opacity 0.15s',
@@ -429,31 +429,31 @@ export default function AdminCreativePage() {
 
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Quality</label>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Quality</label>
                   <select
                     value={vQuality}
                     onChange={e => setVQuality(e.target.value as VideoQuality)}
-                    style={{ width: '100%', background: '#12151E', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.625rem 0.875rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
+                    style={{ width: '100%', background: 'var(--t-bg)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.625rem 0.875rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
                   >
                     {QUALITIES.map(q => <option key={q} value={q}>{q.toUpperCase()}</option>)}
                   </select>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Duration</label>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Duration</label>
                   <select
                     value={vDuration}
                     onChange={e => setVDuration(Number(e.target.value))}
-                    style={{ width: '100%', background: '#12151E', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.625rem 0.875rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
+                    style={{ width: '100%', background: 'var(--t-bg)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.625rem 0.875rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
                   >
                     {DURATIONS.map(d => <option key={d} value={d}>{d}s</option>)}
                   </select>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Style</label>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Style</label>
                   <select
                     value={vStyle}
                     onChange={e => setVStyle(e.target.value)}
-                    style={{ width: '100%', background: '#12151E', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.625rem 0.875rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
+                    style={{ width: '100%', background: 'var(--t-bg)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.625rem 0.875rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
                   >
                     <option value="">Auto</option>
                     {VIDEO_STYLES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
@@ -466,11 +466,11 @@ export default function AdminCreativePage() {
                 disabled={loading || !vPrompt.trim()}
                 style={{
                   alignSelf: 'flex-start', padding: '0.75rem 1.5rem', borderRadius: 10,
-                  fontSize: '0.875rem', fontWeight: 700, color: loading || !vPrompt.trim() ? 'rgba(255,255,255,0.3)' : '#0A0D14',
+                  fontSize: '0.875rem', fontWeight: 700, color: loading || !vPrompt.trim() ? 'var(--t-text-3)' : 'var(--t-bg)',
                   fontFamily: 'system-ui, sans-serif',
                   cursor: loading || !vPrompt.trim() ? 'not-allowed' : 'pointer',
                   opacity: loading || !vPrompt.trim() ? 0.5 : 1,
-                  background: loading || !vPrompt.trim() ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#1FFFD6,#00B8A0)',
+                  background: loading || !vPrompt.trim() ? 'var(--t-surface)' : 'linear-gradient(135deg,#1FFFD6,#00B8A0)',
                   border: 'none', transition: 'opacity 0.15s',
                 }}
                 onMouseEnter={e => { if (!loading && vPrompt.trim()) e.currentTarget.style.opacity = '0.85' }}
@@ -486,45 +486,45 @@ export default function AdminCreativePage() {
           {mode === 'image' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Prompt</label>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Prompt</label>
                 <textarea
                   value={iPrompt}
                   onChange={e => setIPrompt(e.target.value)}
                   placeholder="A product hero shot of sneakers on a clean white surface, studio lighting, photorealistic…"
                   rows={3}
-                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.75rem 1rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', resize: 'vertical', outline: 'none' }}
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.75rem 1rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', resize: 'vertical', outline: 'none' }}
                   onFocus={e => { e.currentTarget.style.borderColor = 'rgba(31,255,214,0.45)' }}
-                  onBlur={e =>  { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)' }}
+                  onBlur={e =>  { e.currentTarget.style.borderColor = 'var(--t-border)' }}
                 />
               </div>
 
               <div style={{ display: 'flex', gap: '1rem' }}>
                 <div style={{ flex: 2 }}>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Style</label>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Style</label>
                   <select
                     value={iModel}
                     onChange={e => setIModel(e.target.value)}
-                    style={{ width: '100%', background: '#12151E', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.625rem 0.875rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
+                    style={{ width: '100%', background: 'var(--t-bg)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.625rem 0.875rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
                   >
                     {IMAGE_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                   </select>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Ratio</label>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Ratio</label>
                   <select
                     value={iRatio}
                     onChange={e => setIRatio(e.target.value)}
-                    style={{ width: '100%', background: '#12151E', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.625rem 0.875rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
+                    style={{ width: '100%', background: 'var(--t-bg)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.625rem 0.875rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
                   >
                     {IMAGE_RATIOS.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
                 <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Style</label>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Style</label>
                   <select
                     value={iStyle}
                     onChange={e => setIStyle(e.target.value)}
-                    style={{ width: '100%', background: '#12151E', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.625rem 0.875rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
+                    style={{ width: '100%', background: 'var(--t-bg)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.625rem 0.875rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}
                   >
                     <option value="">Auto</option>
                     {VIDEO_STYLES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
@@ -537,11 +537,11 @@ export default function AdminCreativePage() {
                 disabled={loading || !iPrompt.trim()}
                 style={{
                   alignSelf: 'flex-start', padding: '0.75rem 1.5rem', borderRadius: 10,
-                  fontSize: '0.875rem', fontWeight: 700, color: loading || !iPrompt.trim() ? 'rgba(255,255,255,0.3)' : '#0A0D14',
+                  fontSize: '0.875rem', fontWeight: 700, color: loading || !iPrompt.trim() ? 'var(--t-text-3)' : 'var(--t-bg)',
                   fontFamily: 'system-ui, sans-serif',
                   cursor: loading || !iPrompt.trim() ? 'not-allowed' : 'pointer',
                   opacity: loading || !iPrompt.trim() ? 0.5 : 1,
-                  background: loading || !iPrompt.trim() ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#1FFFD6,#00B8A0)',
+                  background: loading || !iPrompt.trim() ? 'var(--t-surface)' : 'linear-gradient(135deg,#1FFFD6,#00B8A0)',
                   border: 'none', transition: 'opacity 0.15s',
                 }}
                 onMouseEnter={e => { if (!loading && iPrompt.trim()) e.currentTarget.style.opacity = '0.85' }}
@@ -556,15 +556,15 @@ export default function AdminCreativePage() {
           {mode === 'audio' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Script</label>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 600, color: 'var(--t-text-2)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 6 }}>Script</label>
                 <textarea
                   value={aText}
                   onChange={e => setAText(e.target.value)}
                   placeholder="Welcome to Vantro — where AI agents handle the work so you can focus on growth."
                   rows={4}
-                  style={{ width: '100%', boxSizing: 'border-box', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 10, padding: '0.75rem 1rem', color: '#fff', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', resize: 'vertical', outline: 'none' }}
+                  style={{ width: '100%', boxSizing: 'border-box', background: 'var(--t-surface)', border: '1px solid var(--t-border)', borderRadius: 10, padding: '0.75rem 1rem', color: 'var(--t-text-1)', fontSize: '0.875rem', fontFamily: 'system-ui, sans-serif', resize: 'vertical', outline: 'none' }}
                   onFocus={e => { e.currentTarget.style.borderColor = 'rgba(31,255,214,0.45)' }}
-                  onBlur={e =>  { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.09)' }}
+                  onBlur={e =>  { e.currentTarget.style.borderColor = 'var(--t-border)' }}
                 />
               </div>
 
@@ -576,8 +576,8 @@ export default function AdminCreativePage() {
                   { label: 'Language', val: aLanguage, set: setALanguage, opts: VOICE_LANGUAGES },
                 ] as { label: string; val: string; set: (v: string) => void; opts: { v: string; label: string }[] }[]).map(({ label, val, set, opts }) => (
                   <div key={label}>
-                    <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{label}</label>
-                    <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', background: '#12151E', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 8, padding: '0.5rem 0.625rem', color: '#fff', fontSize: '0.8rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}>
+                    <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 600, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{label}</label>
+                    <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', background: 'var(--t-bg)', border: '1px solid var(--t-border)', borderRadius: 8, padding: '0.5rem 0.625rem', color: 'var(--t-text-1)', fontSize: '0.8rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}>
                       {opts.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}
                     </select>
                   </div>
@@ -592,8 +592,8 @@ export default function AdminCreativePage() {
                   { label: 'Mannerism', val: aMannerism, set: setAMannerism, opts: VOICE_MANNERISMS },
                 ] as { label: string; val: string; set: (v: string) => void; opts: { v: string; label: string }[] }[]).map(({ label, val, set, opts }) => (
                   <div key={label}>
-                    <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 600, color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{label}</label>
-                    <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', background: '#12151E', border: '1px solid rgba(255,255,255,0.09)', borderRadius: 8, padding: '0.5rem 0.625rem', color: '#fff', fontSize: '0.8rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}>
+                    <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 600, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>{label}</label>
+                    <select value={val} onChange={e => set(e.target.value)} style={{ width: '100%', background: 'var(--t-bg)', border: '1px solid var(--t-border)', borderRadius: 8, padding: '0.5rem 0.625rem', color: 'var(--t-text-1)', fontSize: '0.8rem', fontFamily: 'system-ui, sans-serif', cursor: 'pointer' }}>
                       {opts.map(o => <option key={o.v} value={o.v}>{o.label}</option>)}
                     </select>
                   </div>
@@ -606,11 +606,11 @@ export default function AdminCreativePage() {
                 style={{
                   alignSelf: 'flex-start', padding: '0.75rem 1.5rem', borderRadius: 10,
                   fontSize: '0.875rem', fontWeight: 700,
-                  color: loading || !aText.trim() ? 'rgba(255,255,255,0.3)' : '#0A0D14',
+                  color: loading || !aText.trim() ? 'var(--t-text-3)' : 'var(--t-bg)',
                   fontFamily: 'system-ui, sans-serif',
                   cursor: loading || !aText.trim() ? 'not-allowed' : 'pointer',
                   opacity: loading || !aText.trim() ? 0.5 : 1,
-                  background: loading || !aText.trim() ? 'rgba(255,255,255,0.06)' : 'linear-gradient(135deg,#1FFFD6,#00B8A0)',
+                  background: loading || !aText.trim() ? 'var(--t-surface)' : 'linear-gradient(135deg,#1FFFD6,#00B8A0)',
                   border: 'none', transition: 'opacity 0.15s',
                 }}
                 onMouseEnter={e => { if (!loading && aText.trim()) e.currentTarget.style.opacity = '0.85' }}
@@ -625,15 +625,15 @@ export default function AdminCreativePage() {
 
         {/* ── Preview Panel ── */}
         <div style={{ position: 'sticky', top: '2rem' }}>
-          <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.625rem', fontFamily: 'system-ui, sans-serif' }}>Output Preview</p>
-          <div style={{ borderRadius: 14, overflow: 'hidden', background: '#0D1017', border: '1px solid rgba(255,255,255,0.07)', minHeight: 300, display: 'flex', flexDirection: 'column' }}>
+          <p style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--t-text-3)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.625rem', fontFamily: 'system-ui, sans-serif' }}>Output Preview</p>
+          <div style={{ borderRadius: 14, overflow: 'hidden', background: 'var(--t-bg)', border: '1px solid var(--t-border)', minHeight: 300, display: 'flex', flexDirection: 'column' }}>
             <style>{`@keyframes admCreDot{0%,80%,100%{opacity:.25;transform:scale(.7)}40%{opacity:1;transform:scale(1)}} @keyframes admVidProg{0%{width:12%}100%{width:88%}}`}</style>
 
             {/* VIDEO states */}
             {mode === 'video' && !vResult && !loading && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '2.5rem 1.5rem', opacity: 0.28 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 10, border: '2px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', color: 'rgba(255,255,255,0.6)' }}>▶</div>
-                <span style={{ fontSize: '0.75rem', color: '#fff', textAlign: 'center', fontFamily: 'system-ui, sans-serif', lineHeight: 1.4 }}>Video output appears here</span>
+                <div style={{ width: 44, height: 44, borderRadius: 10, border: '2px solid var(--t-text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', color: 'var(--t-text-2)' }}>▶</div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--t-text-1)', textAlign: 'center', fontFamily: 'system-ui, sans-serif', lineHeight: 1.4 }}>Video output appears here</span>
               </div>
             )}
             {mode === 'video' && loading && !vResult && (
@@ -641,7 +641,7 @@ export default function AdminCreativePage() {
                 <div style={{ display: 'flex', gap: 5 }}>
                   {[0,1,2].map(i => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#1FFFD6', display: 'inline-block', animation: `admCreDot 1.4s ease-in-out ${i*0.22}s infinite` }} />)}
                 </div>
-                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', fontFamily: 'system-ui, sans-serif' }}>Generating…</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--t-text-2)', fontFamily: 'system-ui, sans-serif' }}>Generating…</span>
               </div>
             )}
             {mode === 'video' && vResult && (
@@ -649,8 +649,8 @@ export default function AdminCreativePage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
                   <span style={{
                     fontSize: '0.65rem', padding: '2px 7px', borderRadius: 5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'system-ui, sans-serif',
-                    background: isDone ? 'rgba(31,255,214,0.15)' : vPolling ? 'rgba(255,215,0,0.12)' : 'rgba(255,255,255,0.06)',
-                    color: isDone ? '#1FFFD6' : vPolling ? '#FFD700' : 'rgba(255,255,255,0.4)',
+                    background: isDone ? 'rgba(31,255,214,0.15)' : vPolling ? 'rgba(255,215,0,0.12)' : 'var(--t-surface)',
+                    color: isDone ? '#1FFFD6' : vPolling ? '#FFD700' : 'var(--t-text-2)',
                   }}>
                     {isDone ? 'Done' : vPolling ? 'Processing…' : vResult.status}
                   </span>
@@ -665,13 +665,13 @@ export default function AdminCreativePage() {
                     <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                       {[0,1,2].map(i => <span key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#1FFFD6', display: 'inline-block', animation: `admCreDot 1.4s ease-in-out ${i*0.22}s infinite` }} />)}
                     </div>
-                    <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'rgba(255,255,255,0.35)', margin: 0, fontFamily: 'system-ui, sans-serif' }}>Processing video — this may take a few minutes</p>
-                    <div style={{ height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                    <p style={{ textAlign: 'center', fontSize: '0.75rem', color: 'var(--t-text-3)', margin: 0, fontFamily: 'system-ui, sans-serif' }}>Processing video — this may take a few minutes</p>
+                    <div style={{ height: 3, borderRadius: 99, background: 'var(--t-surface-2)', overflow: 'hidden' }}>
                       <div style={{ height: '100%', background: 'linear-gradient(90deg,#1FFFD6,#00D9FF)', borderRadius: 99, animation: 'admVidProg 3s ease-in-out infinite alternate' }} />
                     </div>
                   </div>
                 ) : (
-                  vResult.message && <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', margin: 0, fontFamily: 'system-ui, sans-serif' }}>{vResult.message}</p>
+                  vResult.message && <p style={{ fontSize: '0.78rem', color: 'var(--t-text-3)', margin: 0, fontFamily: 'system-ui, sans-serif' }}>{vResult.message}</p>
                 )}
               </div>
             )}
@@ -679,8 +679,8 @@ export default function AdminCreativePage() {
             {/* IMAGE states */}
             {mode === 'image' && !iResult && !loading && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '2.5rem 1.5rem', opacity: 0.28 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 10, border: '2px solid rgba(255,255,255,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', color: 'rgba(255,255,255,0.6)' }}>⬡</div>
-                <span style={{ fontSize: '0.75rem', color: '#fff', textAlign: 'center', fontFamily: 'system-ui, sans-serif', lineHeight: 1.4 }}>Image output appears here</span>
+                <div style={{ width: 44, height: 44, borderRadius: 10, border: '2px solid var(--t-text-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', color: 'var(--t-text-2)' }}>⬡</div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--t-text-1)', textAlign: 'center', fontFamily: 'system-ui, sans-serif', lineHeight: 1.4 }}>Image output appears here</span>
               </div>
             )}
             {mode === 'image' && loading && (
@@ -688,7 +688,7 @@ export default function AdminCreativePage() {
                 <div style={{ display: 'flex', gap: 5 }}>
                   {[0,1,2].map(i => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#1FFFD6', display: 'inline-block', animation: `admCreDot 1.4s ease-in-out ${i*0.22}s infinite` }} />)}
                 </div>
-                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', fontFamily: 'system-ui, sans-serif' }}>Generating image…</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--t-text-2)', fontFamily: 'system-ui, sans-serif' }}>Generating image…</span>
               </div>
             )}
             {mode === 'image' && iResult && !loading && (
@@ -697,7 +697,7 @@ export default function AdminCreativePage() {
                   <span style={{ fontSize: '0.65rem', padding: '2px 7px', borderRadius: 5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', fontFamily: 'system-ui, sans-serif', background: iResult.image_url ? 'rgba(31,255,214,0.15)' : 'rgba(239,68,68,0.15)', color: iResult.image_url ? '#1FFFD6' : '#ef4444' }}>
                     {iResult.image_url ? 'Done' : 'Failed'}
                   </span>
-                  {iResult.model && <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'system-ui, sans-serif' }}>{iResult.model}</span>}
+                  {iResult.model && <span style={{ fontSize: '0.6rem', color: 'var(--t-text-3)', fontFamily: 'system-ui, sans-serif' }}>{iResult.model}</span>}
                 </div>
                 {iResult.image_url ? (
                   <div>
@@ -713,8 +713,8 @@ export default function AdminCreativePage() {
             {/* AUDIO states */}
             {mode === 'audio' && !aResult && !loading && (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '2.5rem 1.5rem', opacity: 0.28 }}>
-                <div style={{ fontSize: '2rem', color: 'rgba(255,255,255,0.5)' }}>♪</div>
-                <span style={{ fontSize: '0.75rem', color: '#fff', textAlign: 'center', fontFamily: 'system-ui, sans-serif', lineHeight: 1.4 }}>Audio output appears here</span>
+                <div style={{ fontSize: '2rem', color: 'var(--t-text-2)' }}>♪</div>
+                <span style={{ fontSize: '0.75rem', color: 'var(--t-text-1)', textAlign: 'center', fontFamily: 'system-ui, sans-serif', lineHeight: 1.4 }}>Audio output appears here</span>
               </div>
             )}
             {mode === 'audio' && loading && (
@@ -722,7 +722,7 @@ export default function AdminCreativePage() {
                 <div style={{ display: 'flex', gap: 5 }}>
                   {[0,1,2].map(i => <span key={i} style={{ width: 8, height: 8, borderRadius: '50%', background: '#1FFFD6', display: 'inline-block', animation: `admCreDot 1.4s ease-in-out ${i*0.22}s infinite` }} />)}
                 </div>
-                <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.45)', fontFamily: 'system-ui, sans-serif' }}>Generating audio…</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--t-text-2)', fontFamily: 'system-ui, sans-serif' }}>Generating audio…</span>
               </div>
             )}
             {mode === 'audio' && aResult && !loading && (
