@@ -23,12 +23,12 @@ interface GenerationJob {
 }
 
 const CREATIVE_AGENTS = [
-  { id: 'pixel',  name: 'Pixel',  role: 'Design & Creative',    cap: ['video', 'image'] as string[],          color: '#FF6B35' },
-  { id: 'mosaic', name: 'Mosaic', role: 'Social Media Manager',  cap: ['video', 'image'] as string[],          color: '#FF6B35' },
-  { id: 'pulse',  name: 'Pulse',  role: 'Marketing Strategist',  cap: ['video', 'audio', 'image'] as string[], color: '#FFD700' },
-  { id: 'lumen',  name: 'Lumen',  role: 'Brand Strategist',      cap: ['video', 'audio', 'image'] as string[], color: '#FFD700' },
-  { id: 'quill',  name: 'Quill',  role: 'Content Writer',        cap: ['audio', 'image'] as string[],          color: '#B084FF' },
-  { id: 'aria',   name: 'Aria',   role: 'Voice & Telephony',     cap: ['audio', 'image'] as string[],          color: '#00D9FF' },
+  { id: 'pixel',  name: 'Pixel',  role: 'Design & Creative',   cap: ['video', 'image', 'audio'] as string[], color: '#FF6B35' },
+  { id: 'mosaic', name: 'Mosaic', role: 'Social Media Manager', cap: ['video', 'image', 'audio'] as string[], color: '#FF6B35' },
+  { id: 'pulse',  name: 'Pulse',  role: 'Marketing Strategist', cap: ['video', 'image', 'audio'] as string[], color: '#FFD700' },
+  { id: 'lumen',  name: 'Lumen',  role: 'Brand Strategist',     cap: ['video', 'image', 'audio'] as string[], color: '#FFD700' },
+  { id: 'quill',  name: 'Quill',  role: 'Content Writer',       cap: ['video', 'image', 'audio'] as string[], color: '#B084FF' },
+  { id: 'aria',   name: 'Aria',   role: 'Voice & Telephony',    cap: ['video', 'image', 'audio'] as string[], color: '#00D9FF' },
 ]
 
 const VIDEO_STYLES = ['cinematic', 'commercial', 'social', 'documentary']
