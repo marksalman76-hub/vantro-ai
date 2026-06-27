@@ -46,7 +46,7 @@ const IMAGE_RATIOS = ['16:9', '1:1', '9:16', '4:3', '3:4']
 
 const VOICE_AGES      = [{ v:'20',label:'18–25'},{ v:'30',label:'26–35'},{ v:'40',label:'36–45'},{ v:'50',label:'46–55'},{ v:'62',label:'56–65'}]
 const VOICE_GENDERS   = [{ v:'male',label:'Male'},{ v:'female',label:'Female'},{ v:'neutral',label:'Neutral'}]
-const VOICE_ETHNICITIES = [{ v:'western',label:'Western'},{ v:'hispanic',label:'Hispanic'},{ v:'south_asian',label:'South Asian'},{ v:'east_asian',label:'East Asian'},{ v:'african',label:'African'}]
+const VOICE_ETHNICITIES = [{ v:'western',label:'Western'},{ v:'hispanic',label:'Hispanic'},{ v:'south_asian',label:'South Asian'},{ v:'east_asian',label:'East Asian'},{ v:'african',label:'African'},{ v:'middle_eastern',label:'Middle Eastern'},{ v:'african_american',label:'African American'},{ v:'southeast_asian',label:'Southeast Asian'},{ v:'east_european',label:'East European'}]
 const VOICE_LANGUAGES = [{ v:'en',label:'English'},{ v:'es',label:'Spanish'},{ v:'fr',label:'French'},{ v:'de',label:'German'},{ v:'pt',label:'Portuguese'},{ v:'hi',label:'Hindi'},{ v:'ja',label:'Japanese'},{ v:'zh',label:'Chinese'},{ v:'ar',label:'Arabic'},{ v:'it',label:'Italian'},{ v:'ko',label:'Korean'},{ v:'ru',label:'Russian'},{ v:'tr',label:'Turkish'}]
 const VOICE_SPEECHES  = [{ v:'casual',label:'Casual'},{ v:'conversational',label:'Conversational'},{ v:'professional',label:'Professional'},{ v:'formal',label:'Formal'},{ v:'storytelling',label:'Storytelling'}]
 const VOICE_MANNERISMS = [{ v:'neutral',label:'Neutral'},{ v:'happy',label:'Happy'},{ v:'enthusiastic',label:'Enthusiastic'},{ v:'serious',label:'Serious'},{ v:'calm',label:'Calm'},{ v:'authoritative',label:'Authoritative'}]
