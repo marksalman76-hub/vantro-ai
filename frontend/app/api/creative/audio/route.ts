@@ -16,19 +16,19 @@ const AGENT_VOICES: Record<string, string> = {
 // Using publicly available ElevenLabs voices
 const VOICE_BANK: Record<string, Record<string, Record<string, string>>> = {
   male: {
-    young:  { western: 'TxGEqnHWrfWFTfGW9XjX', south_asian: 'pNInz6obpgDQGcFmaJgB', east_asian: 'pNInz6obpgDQGcFmaJgB', african: 'VR6AewLTigWG4xSOukaG',  latin: 'pNInz6obpgDQGcFmaJgB' },
-    middle: { western: 'VR6AewLTigWG4xSOukaG', south_asian: 'pNInz6obpgDQGcFmaJgB', east_asian: 'pNInz6obpgDQGcFmaJgB', african: 'VR6AewLTigWG4xSOukaG',  latin: 'pNInz6obpgDQGcFmaJgB' },
-    mature: { western: 'GBv7mTt0atIp3Br8iCZE', south_asian: 'pNInz6obpgDQGcFmaJgB', east_asian: 'pNInz6obpgDQGcFmaJgB', african: 'VR6AewLTigWG4xSOukaG',  latin: 'pNInz6obpgDQGcFmaJgB' },
+    young:  { western: 'TxGEqnHWrfWFTfGW9XjX', south_asian: 'pNInz6obpgDQGcFmaJgB', east_asian: 'pNInz6obpgDQGcFmaJgB', african: 'VR6AewLTigWG4xSOukaG', latin: 'pNInz6obpgDQGcFmaJgB', middle_eastern: 'pNInz6obpgDQGcFmaJgB' },
+    middle: { western: 'VR6AewLTigWG4xSOukaG', south_asian: 'pNInz6obpgDQGcFmaJgB', east_asian: 'pNInz6obpgDQGcFmaJgB', african: 'VR6AewLTigWG4xSOukaG', latin: 'pNInz6obpgDQGcFmaJgB', middle_eastern: 'VR6AewLTigWG4xSOukaG' },
+    mature: { western: 'GBv7mTt0atIp3Br8iCZE', south_asian: 'pNInz6obpgDQGcFmaJgB', east_asian: 'pNInz6obpgDQGcFmaJgB', african: 'VR6AewLTigWG4xSOukaG', latin: 'pNInz6obpgDQGcFmaJgB', middle_eastern: 'GBv7mTt0atIp3Br8iCZE' },
   },
   female: {
-    young:  { western: 'EXAVITQu4vr4xnSDxMaL', south_asian: '21m00Tcm4TlvDq8ikWAM', east_asian: '21m00Tcm4TlvDq8ikWAM', african: 'ThT5KcBeYPX3keUQqHPh', latin: 'EXAVITQu4vr4xnSDxMaL' },
-    middle: { western: '21m00Tcm4TlvDq8ikWAM', south_asian: '21m00Tcm4TlvDq8ikWAM', east_asian: '21m00Tcm4TlvDq8ikWAM', african: 'ThT5KcBeYPX3keUQqHPh', latin: '21m00Tcm4TlvDq8ikWAM' },
-    mature: { western: 'ThT5KcBeYPX3keUQqHPh', south_asian: '21m00Tcm4TlvDq8ikWAM', east_asian: '21m00Tcm4TlvDq8ikWAM', african: 'ThT5KcBeYPX3keUQqHPh', latin: '21m00Tcm4TlvDq8ikWAM' },
+    young:  { western: 'EXAVITQu4vr4xnSDxMaL', south_asian: '21m00Tcm4TlvDq8ikWAM', east_asian: '21m00Tcm4TlvDq8ikWAM', african: 'ThT5KcBeYPX3keUQqHPh', latin: 'EXAVITQu4vr4xnSDxMaL', middle_eastern: '21m00Tcm4TlvDq8ikWAM' },
+    middle: { western: '21m00Tcm4TlvDq8ikWAM', south_asian: '21m00Tcm4TlvDq8ikWAM', east_asian: '21m00Tcm4TlvDq8ikWAM', african: 'ThT5KcBeYPX3keUQqHPh', latin: '21m00Tcm4TlvDq8ikWAM', middle_eastern: '21m00Tcm4TlvDq8ikWAM' },
+    mature: { western: 'ThT5KcBeYPX3keUQqHPh', south_asian: '21m00Tcm4TlvDq8ikWAM', east_asian: '21m00Tcm4TlvDq8ikWAM', african: 'ThT5KcBeYPX3keUQqHPh', latin: '21m00Tcm4TlvDq8ikWAM', middle_eastern: 'ThT5KcBeYPX3keUQqHPh' },
   },
   neutral: {
-    young:  { western: 'pNInz6obpgDQGcFmaJgB', south_asian: 'pNInz6obpgDQGcFmaJgB', east_asian: 'pNInz6obpgDQGcFmaJgB', african: 'pNInz6obpgDQGcFmaJgB', latin: 'pNInz6obpgDQGcFmaJgB' },
-    middle: { western: 'pNInz6obpgDQGcFmaJgB', south_asian: 'pNInz6obpgDQGcFmaJgB', east_asian: 'pNInz6obpgDQGcFmaJgB', african: 'pNInz6obpgDQGcFmaJgB', latin: 'pNInz6obpgDQGcFmaJgB' },
-    mature: { western: 'GBv7mTt0atIp3Br8iCZE', south_asian: 'pNInz6obpgDQGcFmaJgB', east_asian: 'pNInz6obpgDQGcFmaJgB', african: 'pNInz6obpgDQGcFmaJgB', latin: 'pNInz6obpgDQGcFmaJgB' },
+    young:  { western: 'pNInz6obpgDQGcFmaJgB', south_asian: 'pNInz6obpgDQGcFmaJgB', east_asian: 'pNInz6obpgDQGcFmaJgB', african: 'pNInz6obpgDQGcFmaJgB', latin: 'pNInz6obpgDQGcFmaJgB', middle_eastern: 'pNInz6obpgDQGcFmaJgB' },
+    middle: { western: 'pNInz6obpgDQGcFmaJgB', south_asian: 'pNInz6obpgDQGcFmaJgB', east_asian: 'pNInz6obpgDQGcFmaJgB', african: 'pNInz6obpgDQGcFmaJgB', latin: 'pNInz6obpgDQGcFmaJgB', middle_eastern: 'pNInz6obpgDQGcFmaJgB' },
+    mature: { western: 'GBv7mTt0atIp3Br8iCZE', south_asian: 'pNInz6obpgDQGcFmaJgB', east_asian: 'pNInz6obpgDQGcFmaJgB', african: 'pNInz6obpgDQGcFmaJgB', latin: 'pNInz6obpgDQGcFmaJgB', middle_eastern: 'pNInz6obpgDQGcFmaJgB' },
   },
 }
 
@@ -66,10 +66,13 @@ function ageToGroup(age: number): 'young' | 'middle' | 'mature' {
 
 const ETHNICITY_GROUP: Record<string, string> = {
   western: 'western', british: 'western', australian: 'western', american: 'western',
+  east_european: 'western',
   hispanic: 'latin', latin: 'latin',
-  south_asian: 'south_asian', indian: 'south_asian', south_asian_: 'south_asian',
+  south_asian: 'south_asian', indian: 'south_asian',
   east_asian: 'east_asian', chinese: 'east_asian', japanese: 'east_asian', korean: 'east_asian',
-  african: 'african', black: 'african',
+  southeast_asian: 'east_asian',
+  african: 'african', black: 'african', african_american: 'african',
+  middle_eastern: 'middle_eastern',
 }
 
 export async function POST(request: NextRequest) {
