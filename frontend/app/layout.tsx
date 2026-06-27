@@ -38,6 +38,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={spaceGrotesk.variable}>
+      <head>
+        {/* Apply saved theme before first paint to prevent flash */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('vantro_theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();` }} />
+      </head>
       <body>{children}</body>
     </html>
   )

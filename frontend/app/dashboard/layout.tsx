@@ -4,12 +4,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div
       className="flex min-h-screen"
-      style={{ background: 'oklch(0.14 0 0)', color: 'oklch(0.97 0 0)' }}
+      style={{ background: 'var(--t-bg)', color: 'var(--t-text-1)' }}
     >
       <ClientSidebar />
       <main
         className="flex-1 overflow-y-auto"
-        style={{ background: 'oklch(0.14 0 0)', minHeight: '100vh' }}
+        style={{ background: 'var(--t-bg)', minHeight: '100vh' }}
       >
         {children}
       </main>

@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { useEffect, useRef, useState } from 'react'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
+import ThemeToggle from '@/components/ThemeToggle'
 
 // ─── SVG icon components ──────────────────────────────────────────────────────
 
@@ -93,12 +94,14 @@ function NavRow({
   ORANGE,
   iconColor,
   textColor,
+  isDark,
   children,
 }: {
   active: boolean
   ORANGE: string
   iconColor: string
   textColor: string
+  isDark: boolean
   children: React.ReactNode
 }) {
   const rowRef = useRef<HTMLDivElement>(null)
@@ -107,8 +110,8 @@ function NavRow({
     if (active) return
     gsap.to(rowRef.current, {
       x: 3,
-      color: 'rgba(255,255,255,0.80)',
-      background: 'rgba(255,255,255,0.04)',
+      color: isDark ? 'rgba(255,255,255,0.80)' : 'rgba(10,13,20,0.85)',
+      background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.05)',
       duration: 0.16,
       ease: 'power2.out',
     })
@@ -195,6 +198,7 @@ export default function ClientSidebar() {
   const [email,     setEmail]     = useState('')
   const [initial,   setInitial]   = useState('U')
   const [plan,      setPlan]      = useState('Starter')
+  const [isDark,    setIsDark]    = useState(true)
 
   // ── Refs for GSAP scope ─────────────────────────────────────────────────────
   const sidebarRef  = useRef<HTMLElement>(null)
@@ -212,6 +216,14 @@ export default function ClientSidebar() {
 
     const savedPlan = localStorage.getItem('plan')
     if (savedPlan) setPlan(savedPlan.charAt(0).toUpperCase() + savedPlan.slice(1))
+
+    // Sync initial theme
+    const saved = localStorage.getItem('vantro_theme')
+    setIsDark(saved !== 'light')
+
+    const onTheme = (e: Event) => setIsDark((e as CustomEvent).detail.dark)
+    window.addEventListener('vantro-theme', onTheme)
+    return () => window.removeEventListener('vantro-theme', onTheme)
   }, [])
 
   // ── 1. Sidebar mount animation ─────────────────────────────────────────────
@@ -249,6 +261,32 @@ export default function ClientSidebar() {
   const ORANGE = '#FF6B35'
   const CYAN   = '#00D9FF'
 
+  const T = isDark
+    ? {
+        sidebarBg:   'rgba(10,13,20,0.95)',
+        border:      'rgba(255,255,255,0.07)',
+        textMuted:   'rgba(255,255,255,0.22)',
+        textSub:     'rgba(255,255,255,0.80)',
+        textEmail:   'rgba(255,255,255,0.55)',
+        navText:     'rgba(255,255,255,0.42)',
+        navTextAct:  '#fff',
+        signOutClr:  'rgba(255,255,255,0.32)',
+        hoverBg:     'rgba(255,255,255,0.04)',
+        hoverText:   'rgba(255,255,255,0.80)',
+      }
+    : {
+        sidebarBg:   'rgba(255,255,255,0.98)',
+        border:      'rgba(0,0,0,0.09)',
+        textMuted:   'rgba(10,13,20,0.40)',
+        textSub:     'rgba(10,13,20,0.85)',
+        textEmail:   'rgba(10,13,20,0.55)',
+        navText:     'rgba(10,13,20,0.55)',
+        navTextAct:  '#0A0D14',
+        signOutClr:  'rgba(10,13,20,0.40)',
+        hoverBg:     'rgba(0,0,0,0.05)',
+        hoverText:   'rgba(10,13,20,0.85)',
+      }
+
   const sidebarStyle: React.CSSProperties = {
     width: 224,
     minWidth: 224,
@@ -257,8 +295,8 @@ export default function ClientSidebar() {
     top: 0,
     display: 'flex',
     flexDirection: 'column',
-    background: 'rgba(10,13,20,0.95)',
-    borderRight: '1px solid rgba(255,255,255,0.07)',
+    background: T.sidebarBg,
+    borderRight: `1px solid ${T.border}`,
     backdropFilter: 'blur(20px)',
     flexShrink: 0,
     overflowY: 'auto',
@@ -274,7 +312,7 @@ export default function ClientSidebar() {
         alignItems: 'center',
         gap: '0.5rem',
         padding: '1.375rem 1.25rem 1.125rem',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: `1px solid ${T.border}`,
         flexShrink: 0,
       }}>
         <div style={{
@@ -290,7 +328,7 @@ export default function ClientSidebar() {
           color: '#fff',
           flexShrink: 0,
         }}>V</div>
-        <span style={{ fontWeight: 700, fontSize: '0.875rem', letterSpacing: '0.09em', color: '#fff' }}>
+        <span style={{ fontWeight: 700, fontSize: '0.875rem', letterSpacing: '0.09em', color: T.navTextAct }}>
           VANTRO<span style={{ color: CYAN, fontWeight: 400 }}>.ai</span>
         </span>
       </div>
@@ -298,19 +336,19 @@ export default function ClientSidebar() {
       {/* ── Workspace + Plan badge ────────────────────────────────────────── */}
       <div style={{
         padding: '0.75rem 1.25rem 0.875rem',
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        borderBottom: `1px solid ${T.border}`,
         flexShrink: 0,
       }}>
         <p style={{
           fontSize: 9.5,
-          color: 'rgba(255,255,255,0.22)',
+          color: T.textMuted,
           textTransform: 'uppercase',
           letterSpacing: '0.09em',
           marginBottom: 3,
         }}>Workspace</p>
         <p style={{
           fontSize: 12.5,
-          color: 'rgba(255,255,255,0.8)',
+          color: T.textSub,
           fontWeight: 600,
           marginBottom: 8,
           whiteSpace: 'nowrap',
@@ -346,13 +384,13 @@ export default function ClientSidebar() {
       }}>
         {NAV.map(({ href, label, Icon, exact }) => {
           const active = isActive(href, exact)
-          const iconColor = active ? ORANGE : 'rgba(255,255,255,0.35)'
-          const textColor = active ? '#fff' : 'rgba(255,255,255,0.42)'
+          const iconColor = active ? ORANGE : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(10,13,20,0.40)')
+          const textColor = active ? T.navTextAct : T.navText
 
           return (
             // data-nav-item is the stagger selector target in useGSAP above
             <Link key={href} href={href} style={{ textDecoration: 'none' }} data-nav-item aria-current={isActive(href, exact) ? 'page' : undefined}>
-              <NavRow active={active} ORANGE={ORANGE} iconColor={iconColor} textColor={textColor}>
+              <NavRow active={active} ORANGE={ORANGE} iconColor={iconColor} textColor={textColor} isDark={isDark}>
                 <Icon color={iconColor} />
                 <span>{label}</span>
               </NavRow>
@@ -363,7 +401,7 @@ export default function ClientSidebar() {
 
       {/* ── User footer ──────────────────────────────────────────────────── */}
       <div style={{
-        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderTop: `1px solid ${T.border}`,
         padding: '0.75rem 0.875rem',
         flexShrink: 0,
         display: 'flex',
@@ -400,7 +438,7 @@ export default function ClientSidebar() {
           <div style={{ overflow: 'hidden', flex: 1 }}>
             <p style={{
               fontSize: 11,
-              color: 'rgba(255,255,255,0.55)',
+              color: T.textEmail,
               whiteSpace: 'nowrap',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
@@ -408,6 +446,9 @@ export default function ClientSidebar() {
             }}>{email || 'Your workspace'}</p>
           </div>
         </div>
+
+        {/* Theme toggle */}
+        <ThemeToggle style={{ width: '100%', justifyContent: 'center' }} />
 
         {/* Sign out button — GSAP hover */}
         <button
@@ -423,7 +464,7 @@ export default function ClientSidebar() {
             borderRadius: '0.5rem',
             fontSize: '0.8rem',
             fontWeight: 400,
-            color: 'rgba(255,255,255,0.32)',
+            color: T.signOutClr,
             background: 'transparent',
             border: '1px solid transparent',
             cursor: 'pointer',
