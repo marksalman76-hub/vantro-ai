@@ -209,19 +209,23 @@ async def run_agent(
     if not ws:
         raise HTTPException(status_code=400, detail="No workspace found for this account")
 
-    # Re-acquire with row-level lock to prevent concurrent overdraw (TOCTOU guard)
-    cred = db.query(CreditsAccount).filter(CreditsAccount.workspace_id == ws.id).with_for_update().first()
-
     meta = AGENT_CATALOGUE[norm_id]
     credit_cost = meta["credit_estimate"]
     hitl = meta["hitl_default"]
 
-    remaining = (cred.total_credits - cred.used_credits) if cred else 0
-    if remaining < credit_cost:
-        raise HTTPException(
-            status_code=402,
-            detail=f"Insufficient credits. Need {credit_cost}, have {remaining}.",
-        )
+    # Admins bypass credit checks entirely
+    if user.is_admin:
+        cred = None
+    else:
+        # Re-acquire with row-level lock to prevent concurrent overdraw (TOCTOU guard)
+        cred = db.query(CreditsAccount).filter(CreditsAccount.workspace_id == ws.id).with_for_update().first()
+
+        remaining = (cred.total_credits - cred.used_credits) if cred else 0
+        if remaining < credit_cost:
+            raise HTTPException(
+                status_code=402,
+                detail=f"Insufficient credits. Need {credit_cost}, have {remaining}.",
+            )
 
     # ── Financial governance: submission-time gate ───────────────────────────
     # Platform policy (AGENTS_MAY_NOT_SPEND = True):

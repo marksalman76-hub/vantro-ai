@@ -6,19 +6,21 @@ Adapters prepare auditable execution packets and route through the provider
 orchestrator before any future external provider connection.
 """
 
+import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from backend.app.integrations.provider_orchestrator import (
+from app.integrations.provider_orchestrator import (
     ProviderOrchestrator,
     ProviderRouteRequest,
     provider_route_summary,
 )
-from backend.app.integrations.shopify_draft_product_adapter import (
+from app.integrations.shopify_draft_product_adapter import (
     ShopifyDraftProductAdapter,
     ShopifyDraftProductRequest,
     shopify_draft_product_summary,
 )
+from app.providers.adapters.higgsfield import HiggsfieldProvider
 
 
 @dataclass
@@ -94,22 +96,34 @@ class ExecutionAdapters:
             task_type="ugc_video_brief",
         )
 
+        # Initialize Higgsfield provider
+        higgsfield = HiggsfieldProvider()
+        higgsfield_api_key = os.getenv("HIGGSFIELD_API_KEY", "")
+        provider_connected = False
+        provider_ready = False
+
+        if higgsfield_api_key:
+            higgsfield.set_api_key(higgsfield_api_key)
+            provider_ready = higgsfield.is_ready()
+            provider_connected = True
+
         return AdapterResult(
-            success=bool(provider_route["success"]),
+            success=bool(provider_route["success"]) and provider_ready,
             adapter_name="ugc_video_provider_adapter",
-            execution_mode="provider_orchestrated_safe_stub",
-            provider_ready=False,
-            message="UGC video provider adapter prepared through provider orchestrator.",
-            next_steps=[
-                "Select premium UGC/video provider.",
-                "Map creator profile, language, voice, and video quality parameters.",
-                "Add provider API credentials through secure environment variables.",
+            execution_mode="higgsfield_live" if provider_ready else "provider_orchestrated_safe_stub",
+            provider_ready=provider_ready,
+            message="UGC video generation routed to Higgsfield" if provider_ready else "UGC video provider adapter prepared through provider orchestrator.",
+            next_steps=[] if provider_ready else [
+                "Add HIGGSFIELD_API_KEY environment variable.",
+                "Set HIGGSFIELD_BASE_URL if using custom Higgsfield deployment.",
                 "Run safe test generation before enabling client delivery.",
             ],
             execution_payload={
                 "provider_route": provider_route,
                 "provider_category": "ugc_video_generation",
-                "provider_connected": False,
+                "provider": "higgsfield",
+                "provider_connected": provider_connected,
+                "provider_instance": higgsfield,
             },
         )
 

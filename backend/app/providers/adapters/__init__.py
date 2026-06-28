@@ -5,6 +5,7 @@ from .pika import PikaProvider
 from .runway import RunwayProvider
 from .mubert import MubertProvider
 from .assemblyai import AssemblyAIProvider
+from .higgsfield import HiggsfieldProvider
 
 __all__ = [
     "SynthesiaProvider",
@@ -13,4 +14,5 @@ __all__ = [
     "RunwayProvider",
     "MubertProvider",
     "AssemblyAIProvider",
+    "HiggsfieldProvider",
 ]

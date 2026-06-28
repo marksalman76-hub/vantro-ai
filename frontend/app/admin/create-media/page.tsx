@@ -21,6 +21,11 @@ const MEDIA_TYPES = [
 const PLATFORMS = ['Instagram', 'TikTok', 'YouTube', 'LinkedIn', 'Facebook', 'Email', 'Website', 'Other'];
 const ASPECT_RATIOS = ['9:16 (vertical)', '1:1 (square)', '16:9 (landscape)', '4:5 (portrait)'];
 const TONES = ['Professional', 'Friendly', 'Urgent', 'Inspirational', 'Playful', 'Authoritative'];
+const AGE_RANGES = ['18-24', '25-34', '35-44', '45-54', '55-64', '65+'];
+const GENDERS = ['Female', 'Male', 'Non-binary', 'Not specified'];
+const ETHNICITIES = ['Caucasian', 'African', 'Asian', 'Hispanic', 'Middle Eastern', 'Mixed', 'Other'];
+const LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Mandarin', 'Japanese', 'Arabic', 'Other'];
+const VIDEO_QUALITIES = ['720p', '1080p', '4K'];
 
 interface MediaRequest {
   type: string;
@@ -28,6 +33,11 @@ interface MediaRequest {
   platform: string;
   aspect_ratio: string;
   tone: string;
+  age_range: string;
+  gender: string;
+  ethnicity: string;
+  language: string;
+  video_quality: string;
   use_brand_profile: boolean;
 }
 
@@ -49,6 +59,11 @@ export default function AdminCreateMediaPage() {
     platform: '',
     aspect_ratio: '',
     tone: '',
+    age_range: '',
+    gender: '',
+    ethnicity: '',
+    language: '',
+    video_quality: '',
     use_brand_profile: true,
   });
   const [submitting, setSubmitting] = useState(false);
@@ -67,7 +82,7 @@ export default function AdminCreateMediaPage() {
   }
 
   async function submit() {
-    const token = localStorage.getItem('admin_token');
+    const token = localStorage.getItem('token') || localStorage.getItem('admin_token');
     if (!token) return;
     setSubmitting(true);
     setError('');
@@ -77,6 +92,11 @@ export default function AdminCreateMediaPage() {
       req.platform ? `Platform: ${req.platform}.` : '',
       req.aspect_ratio ? `Format: ${req.aspect_ratio}.` : '',
       req.tone ? `Tone: ${req.tone}.` : '',
+      req.age_range ? `Creator age: ${req.age_range}.` : '',
+      req.gender ? `Creator gender: ${req.gender}.` : '',
+      req.ethnicity ? `Creator ethnicity: ${req.ethnicity}.` : '',
+      req.language ? `Language: ${req.language}.` : '',
+      req.video_quality ? `Video quality: ${req.video_quality}.` : '',
       req.use_brand_profile ? 'Use my brand profile for voice, colours, and assets.' : '',
     ].filter(Boolean).join(' ');
 
@@ -97,12 +117,14 @@ export default function AdminCreateMediaPage() {
       const res = await fetch(`/api/agents/${mediaAgent.id}/run`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task }),
+        body: JSON.stringify({ prompt: task }),
       });
       const d = await res.json();
+      console.log('Agent response:', { status: res.status, ok: res.ok, data: d });
       if (res.ok && d.job_id) {
         router.push('/admin/assets');
       } else {
+        console.error('Agent submission failed:', { status: res.status, data: d });
         setError('Could not start this request. Please try again or contact support.');
       }
     } catch {
@@ -203,6 +225,56 @@ export default function AdminCreateMediaPage() {
           {req.brief.length > 0 && req.brief.length < 30 && (
             <p className="text-[9px] text-amber-400 mt-1">More detail = better results</p>
           )}
+
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4 mt-4">
+            <p className="text-xs font-medium text-white mb-0.5">Upload references</p>
+            <p className="text-[11px] text-gray-500 mb-2">Optional: provide reference images, scripts, or files for this task</p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-6 h-6 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 flex items-center justify-center text-violet-400 text-lg transition-colors"
+                type="button"
+              >
+                +
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setRefFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
+                    e.target.value = '';
+                  }
+                }}
+              />
+              <Link
+                href="/admin/assets"
+                className="text-[11px] text-violet-400 hover:text-violet-300 font-medium"
+              >
+                Manage brand assets →
+              </Link>
+            </div>
+            {refFiles.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {refFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-[10px] text-gray-400">
+                    <span>{file.name}</span>
+                    <button
+                      onClick={() => setRefFiles(prev => prev.filter((_, i) => i !== idx))}
+                      className="text-gray-600 hover:text-gray-400 transition-colors"
+                      type="button"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="mt-4 flex gap-2">
             <button onClick={back} className="px-3.5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-medium transition-colors">Back</button>
             <button
@@ -278,6 +350,101 @@ export default function AdminCreateMediaPage() {
             </div>
           </div>
 
+          <div className="mb-4">
+            <p className="text-[11px] text-gray-500 mb-1.5">Creator age <span className="text-gray-700">(optional)</span></p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {AGE_RANGES.map(ar => (
+                <button
+                  key={ar}
+                  onClick={() => setReq(r => ({ ...r, age_range: r.age_range === ar ? '' : ar }))}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                    req.age_range === ar
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {ar}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <p className="text-[11px] text-gray-500 mb-1.5">Creator gender <span className="text-gray-700">(optional)</span></p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {GENDERS.map(g => (
+                <button
+                  key={g}
+                  onClick={() => setReq(r => ({ ...r, gender: r.gender === g ? '' : g }))}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                    req.gender === g
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <p className="text-[11px] text-gray-500 mb-1.5">Creator ethnicity <span className="text-gray-700">(optional)</span></p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {ETHNICITIES.map(e => (
+                <button
+                  key={e}
+                  onClick={() => setReq(r => ({ ...r, ethnicity: r.ethnicity === e ? '' : e }))}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                    req.ethnicity === e
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <p className="text-[11px] text-gray-500 mb-1.5">Language <span className="text-gray-700">(optional)</span></p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {LANGUAGES.map(l => (
+                <button
+                  key={l}
+                  onClick={() => setReq(r => ({ ...r, language: r.language === l ? '' : l }))}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                    req.language === l
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <p className="text-[11px] text-gray-500 mb-1.5">Video quality <span className="text-gray-700">(optional)</span></p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {VIDEO_QUALITIES.map(vq => (
+                <button
+                  key={vq}
+                  onClick={() => setReq(r => ({ ...r, video_quality: r.video_quality === vq ? '' : vq }))}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                    req.video_quality === vq
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {vq}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <button onClick={back} className="px-3.5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-medium transition-colors">Back</button>
             <button onClick={next} className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-semibold transition-colors">
@@ -313,55 +480,6 @@ export default function AdminCreateMediaPage() {
             </div>
           </div>
 
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
-            <p className="text-xs font-medium text-white mb-0.5">Upload references</p>
-            <p className="text-[11px] text-gray-500 mb-2">Optional: provide reference images, scripts, or files for this task</p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-6 h-6 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 flex items-center justify-center text-violet-400 text-lg transition-colors"
-                type="button"
-              >
-                +
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*,video/*"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files) {
-                    setRefFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
-                    e.target.value = '';
-                  }
-                }}
-              />
-              <Link
-                href="/admin/assets"
-                className="text-[11px] text-violet-400 hover:text-violet-300 font-medium"
-              >
-                Manage brand assets →
-              </Link>
-            </div>
-            {refFiles.length > 0 && (
-              <div className="mt-2 space-y-1">
-                {refFiles.map((file, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-[10px] text-gray-400">
-                    <span>{file.name}</span>
-                    <button
-                      onClick={() => setRefFiles(prev => prev.filter((_, i) => i !== idx))}
-                      className="text-gray-600 hover:text-gray-400 transition-colors"
-                      type="button"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
           <div className="flex gap-2">
             <button onClick={back} className="px-3.5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-medium transition-colors">Back</button>
             <button onClick={next} className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-semibold transition-colors">
@@ -383,6 +501,11 @@ export default function AdminCreateMediaPage() {
               { label: 'Platform', value: req.platform || 'Not specified' },
               { label: 'Aspect ratio', value: req.aspect_ratio || 'Not specified' },
               { label: 'Tone', value: req.tone || 'Not specified' },
+              { label: 'Creator age', value: req.age_range || 'Not specified' },
+              { label: 'Creator gender', value: req.gender || 'Not specified' },
+              { label: 'Creator ethnicity', value: req.ethnicity || 'Not specified' },
+              { label: 'Language', value: req.language || 'Not specified' },
+              { label: 'Video quality', value: req.video_quality || 'Not specified' },
               { label: 'Brand profile', value: req.use_brand_profile ? 'Yes — using my brand profile' : 'No' },
             ].map(row => (
               <div key={row.label} className="px-4 py-2.5 flex gap-3">
