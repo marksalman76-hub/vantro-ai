@@ -141,6 +141,11 @@ async def list_available_agents(
     """Return only the agents unlocked for this workspace's tier."""
     user = _get_user(credentials, db)
     tier, ws, _ = _workspace_tier(user, db)
+
+    # Admins get full access
+    if user.is_admin:
+        tier = "enterprise"
+
     workspace_id = ws.id if ws else user.id
 
     cache_key = f"agents:catalogue:{workspace_id}"
