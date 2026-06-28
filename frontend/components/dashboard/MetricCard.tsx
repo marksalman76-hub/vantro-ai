@@ -49,7 +49,7 @@ export default function MetricCard({
         <div
           style={{
             fontSize: '0.75rem',
-            color: 'oklch(0.60 0 0)',
+            color: 'oklch(0.39 0.009 264.4)',
           }}
         >
           {sub}

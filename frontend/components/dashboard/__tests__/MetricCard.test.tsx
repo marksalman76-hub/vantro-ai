@@ -30,7 +30,7 @@ describe('MetricCard', () => {
   });
 
   it('applies color class to value when provided', () => {
-    const { container } = render(
+    render(
       <MetricCard
         label="Status"
         value="Active"
