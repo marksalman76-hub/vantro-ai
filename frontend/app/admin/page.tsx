@@ -12,7 +12,7 @@ import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import StatusStrip from '@/components/dashboard/StatusStrip';
 import AlertsSection from '@/components/dashboard/AlertsSection';
 import QuickLaunchSection from '@/components/dashboard/QuickLaunchSection';
-import RecentJobsTable from '@/components/dashboard/RecentJobsTable';
+import RecentJobsTable, { HistoryJob } from '@/components/dashboard/RecentJobsTable';
 import ThemeToggle from '@/components/dashboard/ThemeToggle';
 
 interface AdminCredits {
@@ -20,19 +20,6 @@ interface AdminCredits {
   used_credits?: number;
   remaining_credits?: number;
   tier?: string;
-}
-
-interface HistoryJob {
-  id: string;
-  agent_id?: string;
-  agent_name?: string;
-  status: string;
-  credits_used?: number;
-  created_at: string | null;
-  completed_at: string | null;
-  script?: string | null;
-  client_email?: string;
-  client_name?: string | null;
 }
 
 interface AgentUsage {
@@ -65,6 +52,16 @@ export default function AdminDashboard() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
+  interface RawJob {
+    id: string;
+    agent_id?: string;
+    agent_name?: string;
+    status: string;
+    credits_used?: number;
+    created_at: string | null;
+    completed_at: string | null;
+  }
+
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
     if (!token) { router.push('/admin-login'); return; }
@@ -83,7 +80,7 @@ export default function AdminDashboard() {
     ]).then(([c, j, ann]) => {
       if (c) setCredits(c as AdminCredits);
       if (j?.jobs) {
-        const mapped = (j.jobs as HistoryJob[]).map(job => ({
+        const mapped: HistoryJob[] = (j.jobs as RawJob[]).map(job => ({
           id: job.id,
           agent_id: job.agent_id || 'unknown',
           agent_name: job.agent_name || 'Unknown Agent',
