@@ -115,7 +115,7 @@ export default function CreateMediaPage() {
   const pct = Math.round(((stepIdx + 1) / STEPS.length) * 100);
 
   return (
-    <div className="p-6 max-w-2xl">
+    <div className="p-6" style={{ paddingTop: '5rem', maxWidth: '1000px', margin: '0 auto' }}>
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-3">
@@ -222,7 +222,7 @@ export default function CreateMediaPage() {
 
           <div className="mb-4">
             <p className="text-[11px] text-gray-500 mb-1.5">Platform <span className="text-gray-700">(optional)</span></p>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="grid grid-cols-4 gap-1.5">
               {PLATFORMS.map(p => (
                 <button
                   key={p}
@@ -241,7 +241,7 @@ export default function CreateMediaPage() {
 
           <div className="mb-4">
             <p className="text-[11px] text-gray-500 mb-1.5">Aspect ratio <span className="text-gray-700">(optional)</span></p>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="grid grid-cols-4 gap-1.5">
               {ASPECT_RATIOS.map(ar => (
                 <button
                   key={ar}
@@ -260,7 +260,7 @@ export default function CreateMediaPage() {
 
           <div className="mb-4">
             <p className="text-[11px] text-gray-500 mb-1.5">Tone <span className="text-gray-700">(optional)</span></p>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="grid grid-cols-6 gap-1.5">
               {TONES.map(t => (
                 <button
                   key={t}
