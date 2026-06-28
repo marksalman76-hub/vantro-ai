@@ -117,13 +117,13 @@ export default function StatusStrip({
     setCollapsed(newState);
 
     const stored = localStorage.getItem('collapsed_sections');
-    let sections = {};
+    let sections: Record<string, boolean> = {};
     try {
       sections = stored ? JSON.parse(stored) : {};
     } catch {
       sections = {};
     }
-    sections.status = newState;
+    sections.statusStrip = newState;
     localStorage.setItem('collapsed_sections', JSON.stringify(sections));
   };
 
