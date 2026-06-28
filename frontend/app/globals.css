@@ -8,6 +8,25 @@ html {
 
 /* ── Design system tokens ─────────────────────────────────────────── */
 :root {
+  /* oklch color palette */
+  --color-surface: oklch(1 0 0 / 0.04);
+  --color-border: oklch(1 0 0 / 0.08);
+  --color-text-primary: oklch(1 0 0);
+  --color-text-secondary: oklch(0.50 0 0);
+
+  /* status colors */
+  --color-status-pending: oklch(0.82 0.18 65);
+  --color-status-in-progress: oklch(0.60 0.18 250);
+  --color-status-approval: oklch(0.75 0.18 55);
+  --color-status-completed: oklch(0.75 0.22 145);
+  --color-status-failed: oklch(0.65 0.18 25);
+
+  /* layout */
+  --header-height-desktop: 70px;
+  --header-height-mobile: 60px;
+  --max-width-content: 1200px;
+
+  /* legacy tokens */
   --primary: 59, 130, 246;
   --primary-dark: 37, 99, 235;
   --secondary: 168, 85, 247;
@@ -23,6 +42,12 @@ html {
   --glass-bg: rgba(255, 255, 255, 0.06);
   --glass-border: rgba(255, 255, 255, 0.12);
   --shadow-glass: 0 8px 32px rgba(31, 38, 135, 0.25);
+}
+
+@media (max-width: 768px) {
+  :root {
+    --header-height-desktop: 60px;
+  }
 }
 
 body {
