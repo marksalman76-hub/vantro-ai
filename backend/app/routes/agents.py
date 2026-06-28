@@ -121,6 +121,13 @@ async def list_all_agents(
     """Return all 27 agents with unlocked=True/False based on workspace tier."""
     user = _get_user(credentials, db)
     tier, _, _ = _workspace_tier(user, db)
+
+    # Admins get full access (check both DB flag and env var bootstrap)
+    admin_email = os.getenv("ADMIN_EMAIL", "")
+    is_admin = user.is_admin or (admin_email and user.email.lower() == admin_email.lower())
+    if is_admin:
+        tier = "enterprise"
+
     available = set(agents_for_package(tier))
 
     return {
@@ -142,8 +149,10 @@ async def list_available_agents(
     user = _get_user(credentials, db)
     tier, ws, _ = _workspace_tier(user, db)
 
-    # Admins get full access
-    if user.is_admin:
+    # Admins get full access (check both DB flag and env var bootstrap)
+    admin_email = os.getenv("ADMIN_EMAIL", "")
+    is_admin = user.is_admin or (admin_email and user.email.lower() == admin_email.lower())
+    if is_admin:
         tier = "enterprise"
 
     workspace_id = ws.id if ws else user.id
@@ -195,6 +204,12 @@ async def run_agent(
     user = _get_user(credentials, db)
     tier, ws, cred = _workspace_tier(user, db)
 
+    # Admins get full access (check both DB flag and env var bootstrap)
+    admin_email = os.getenv("ADMIN_EMAIL", "")
+    is_admin = user.is_admin or (admin_email and user.email.lower() == admin_email.lower())
+    if is_admin:
+        tier = "enterprise"
+
     norm_id = normalize_agent_id(agent_id)
     if norm_id not in AGENT_CATALOGUE:
         raise HTTPException(status_code=404, detail=f"Agent '{agent_id}' not found")
@@ -214,7 +229,7 @@ async def run_agent(
     hitl = meta["hitl_default"]
 
     # Admins bypass credit checks entirely
-    if user.is_admin:
+    if is_admin:
         cred = None
     else:
         # Re-acquire with row-level lock to prevent concurrent overdraw (TOCTOU guard)
