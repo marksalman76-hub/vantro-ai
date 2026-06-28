@@ -12,6 +12,7 @@ const NAV = [
   { href: '/admin/packages',     label: 'Packages & Access',  icon: '▤' },
   { href: '/admin/billing',      label: 'Billing & Credits',  icon: '◇' },
   { href: '/admin/assets',       label: 'Assets & Outputs',   icon: '▣' },
+  { href: '/admin/create-media', label: 'Create Media',       icon: '▶' },
   { href: '/admin/reports',      label: 'Client Reports',     icon: '◈' },
   { href: '/admin/approvals',      label: 'Approvals',            icon: '◬' },
   { href: '/admin/announcements',  label: 'Announcements',        icon: '◎' },
