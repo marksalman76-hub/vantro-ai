@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
@@ -53,6 +53,8 @@ export default function AdminCreateMediaPage() {
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [refFiles, setRefFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function next() {
     const idx = STEPS.indexOf(step);
@@ -314,12 +316,50 @@ export default function AdminCreateMediaPage() {
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
             <p className="text-xs font-medium text-white mb-0.5">Upload references</p>
             <p className="text-[11px] text-gray-500 mb-2">Optional: provide reference images, scripts, or files for this task</p>
-            <Link
-              href="/admin/brand"
-              className="text-[11px] text-violet-400 hover:text-violet-300 font-medium"
-            >
-              Manage brand assets →
-            </Link>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-6 h-6 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 flex items-center justify-center text-violet-400 text-lg transition-colors"
+                type="button"
+              >
+                +
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setRefFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
+                    e.target.value = '';
+                  }
+                }}
+              />
+              <Link
+                href="/admin/brand"
+                className="text-[11px] text-violet-400 hover:text-violet-300 font-medium"
+              >
+                Manage brand assets →
+              </Link>
+            </div>
+            {refFiles.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {refFiles.map((file, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-[10px] text-gray-400">
+                    <span>{file.name}</span>
+                    <button
+                      onClick={() => setRefFiles(prev => prev.filter((_, i) => i !== idx))}
+                      className="text-gray-600 hover:text-gray-400 transition-colors"
+                      type="button"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex gap-2">
