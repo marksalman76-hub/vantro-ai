@@ -152,7 +152,7 @@ export default function CreateMediaPage() {
       {step === 'type' && (
         <div>
           <h2 className="font-semibold text-xs mb-3">What type of media do you need?</h2>
-          <div className="grid grid-cols-1 gap-1.5">
+          <div className="grid grid-cols-4 gap-1.5">
             {MEDIA_TYPES.map(t => (
               <button
                 key={t.id}
