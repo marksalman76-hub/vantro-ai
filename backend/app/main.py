@@ -79,7 +79,7 @@ class APIVersionMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-_CSRF_EXEMPT_PATHS = {"/health", "/health/ready", "/api/stripe/webhook", "/api/auth/login", "/api/auth/register", "/api/auth/forgot-password", "/api/auth/reset-password"}
+_CSRF_EXEMPT_PATHS = {"/health", "/health/ready", "/api/stripe/webhook", "/api/auth/login", "/api/auth/register", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/login/", "/api/auth/register/", "/api/auth/forgot-password/", "/api/auth/reset-password/"}
 _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 _IS_PROD_CSRF = os.getenv("ENVIRONMENT", "production") == "production"
 _CSRF_DISABLED = os.getenv("TESTING", "0") == "1"  # bypass in automated tests
@@ -104,6 +104,10 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         path = request.url.path
         method = request.method.upper()
+
+        # Bypass CSRF for all auth endpoints - they're unauthenticated
+        if "/auth/" in path:
+            return await call_next(request)
 
         # Exempt paths and safe methods
         if path in _CSRF_EXEMPT_PATHS or method in _CSRF_SAFE_METHODS:
