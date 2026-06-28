@@ -1,17 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ArrowRight, Calendar } from 'lucide-react'
 
 const SESSION_KEY = 'vantro_sticky_bar_dismissed'
 
 export default function StickyCtaBar() {
+  const pathname = usePathname()
   const [visible,    setVisible]    = useState(false)
   const [dismissed,  setDismissed]  = useState(false)
 
+  // Hide on admin and dashboard routes
+  const isAdminOrDashboard = pathname?.startsWith('/admin') || pathname?.startsWith('/dashboard')
+
   useEffect(() => {
     if (typeof window === 'undefined') return
+    if (isAdminOrDashboard) { setDismissed(true); return }
     if (sessionStorage.getItem(SESSION_KEY)) { setDismissed(true); return }
 
     const handleScroll = () => {
@@ -19,7 +25,7 @@ export default function StickyCtaBar() {
     }
     window.addEventListener('scroll', handleScroll, { passive: true })
     return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+  }, [isAdminOrDashboard])
 
   const dismiss = () => {
     setDismissed(true)
