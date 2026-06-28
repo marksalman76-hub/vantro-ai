@@ -1,0 +1,11 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [
+      "frontend/app/dashboard/agents/team/page.tsx",
+      "frontend/app/dashboard/reports/page.tsx",
+      "frontend/app/globals.css"
+    ],
+    "ignoreValues": []
+  }
+}
