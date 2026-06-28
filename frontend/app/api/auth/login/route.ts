@@ -3,6 +3,8 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 const IS_PROD = process.env.NODE_ENV === "production";
 
+export const config = { api: { bodyParser: { sizeLimit: "1mb" } } };
+
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();

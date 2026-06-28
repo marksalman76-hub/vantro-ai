@@ -318,7 +318,7 @@ async def _process_job(job_id: str) -> None:
         if job.agent_id == "ugc_media_agent":
             try:
                 from app.integrations.execution_adapters import ExecutionAdapters
-                adapters = ExecutionAdapters()
+                adapters = ExecutionAdapters(db=db)
                 adapter_result = adapters.execute(
                     adapter_name="ugc_video_provider_adapter",
                     payload={
@@ -339,13 +339,11 @@ async def _process_job(job_id: str) -> None:
                     higgsfield = adapter_result.execution_payload.get("provider_instance")
                     if higgsfield:
                         try:
-                            async def _call_higgsfield():
-                                return await higgsfield.execute(
-                                    prompt=output,
-                                    duration=30,
-                                    aspect_ratio="9:16",
-                                )
-                            media_task_result = await _call_higgsfield()
+                            media_task_result = await higgsfield.execute(
+                                prompt=output,
+                                duration=30,
+                                aspect_ratio="9:16",
+                            )
                             media_provider_output = json.dumps({
                                 "type": "media_generation",
                                 "script": output,

@@ -79,7 +79,7 @@ class APIVersionMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
-_CSRF_EXEMPT_PATHS = {"/health", "/health/ready", "/api/stripe/webhook"}
+_CSRF_EXEMPT_PATHS = {"/health", "/health/ready", "/api/stripe/webhook", "/api/auth/login", "/api/auth/register", "/api/auth/forgot-password", "/api/auth/reset-password"}
 _CSRF_SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
 _IS_PROD_CSRF = os.getenv("ENVIRONMENT", "production") == "production"
 _CSRF_DISABLED = os.getenv("TESTING", "0") == "1"  # bypass in automated tests

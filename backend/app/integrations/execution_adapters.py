@@ -6,9 +6,12 @@ Adapters prepare auditable execution packets and route through the provider
 orchestrator before any future external provider connection.
 """
 
+import logging
 import os
 from dataclasses import dataclass
 from typing import Dict, List, Optional
+
+from sqlalchemy.orm import Session
 
 from app.integrations.provider_orchestrator import (
     ProviderOrchestrator,
@@ -22,6 +25,8 @@ from app.integrations.shopify_draft_product_adapter import (
 )
 from app.providers.adapters.higgsfield import HiggsfieldProvider
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class AdapterResult:
@@ -34,10 +39,43 @@ class AdapterResult:
     execution_payload: Optional[Dict[str, object]] = None
 
 
+def _get_higgsfield_api_key(db: Session, workspace_id: str) -> Optional[str]:
+    """
+    Retrieve Higgsfield API key for workspace from encrypted storage.
+    Returns None if not configured.
+
+    Security: decryption happens only here, never logged or returned to caller.
+    """
+    if not db:
+        return None
+
+    try:
+        from app.models.agent_system import WorkspaceIntegration
+        from app.services.encryption_service import decrypt
+
+        row = (
+            db.query(WorkspaceIntegration)
+            .filter(
+                WorkspaceIntegration.workspace_id == workspace_id,
+                WorkspaceIntegration.integration_key == "HIGGSFIELD_API_KEY",
+                WorkspaceIntegration.is_active == True,
+            )
+            .first()
+        )
+        if not row:
+            return None
+
+        return decrypt(row.encrypted_value)
+    except Exception as e:
+        logger.exception("Failed to retrieve Higgsfield credentials for workspace %s", workspace_id)
+        return None
+
+
 class ExecutionAdapters:
-    def __init__(self) -> None:
+    def __init__(self, db: Optional[Session] = None) -> None:
         self.shopify_adapter_runtime = ShopifyDraftProductAdapter()
         self.provider_orchestrator = ProviderOrchestrator()
+        self.db = db
 
     def execute(self, adapter_name: str, payload: Dict[str, object]) -> AdapterResult:
         adapter_map = {
@@ -96,11 +134,23 @@ class ExecutionAdapters:
             task_type="ugc_video_brief",
         )
 
+        # Extract workspace_id from payload (tenant_id)
+        workflow = payload.get("workflow", {})
+        workspace_id = str(workflow.get("tenant_id", ""))
+
         # Initialize Higgsfield provider
         higgsfield = HiggsfieldProvider()
-        higgsfield_api_key = os.getenv("HIGGSFIELD_API_KEY", "")
+        higgsfield_api_key = None
         provider_connected = False
         provider_ready = False
+
+        # Attempt workspace-specific credential lookup first
+        if workspace_id and self.db:
+            higgsfield_api_key = _get_higgsfield_api_key(self.db, workspace_id)
+
+        # Fallback to global env var for backward compatibility (testing, legacy deployments)
+        if not higgsfield_api_key:
+            higgsfield_api_key = os.getenv("HIGGSFIELD_API_KEY", "")
 
         if higgsfield_api_key:
             higgsfield.set_api_key(higgsfield_api_key)
@@ -114,7 +164,8 @@ class ExecutionAdapters:
             provider_ready=provider_ready,
             message="UGC video generation routed to Higgsfield" if provider_ready else "UGC video provider adapter prepared through provider orchestrator.",
             next_steps=[] if provider_ready else [
-                "Add HIGGSFIELD_API_KEY environment variable.",
+                "Connect Higgsfield API key via /api/integrations/connect",
+                "Set HIGGSFIELD_API_KEY environment variable (fallback only).",
                 "Set HIGGSFIELD_BASE_URL if using custom Higgsfield deployment.",
                 "Run safe test generation before enabling client delivery.",
             ],
@@ -124,6 +175,7 @@ class ExecutionAdapters:
                 "provider": "higgsfield",
                 "provider_connected": provider_connected,
                 "provider_instance": higgsfield,
+                "workspace_id": workspace_id,
             },
         )
 

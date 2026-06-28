@@ -73,6 +73,7 @@ INTEGRATION_CATALOGUE = [
     {"key": "FAL_API_KEY",                 "name": "fal.ai (Kling)",  "category": "media",      "description": "Kling 3.0 and multi-model video generation", "test_method": "key_present"},
     {"key": "SUNO_API_KEY",                "name": "Suno",            "category": "media",      "description": "AI music generation", "test_method": "key_present"},
     {"key": "ASSEMBLYAI_API_KEY",          "name": "AssemblyAI",      "category": "media",      "description": "AI captions and audio transcription", "test_method": "http_get"},
+    {"key": "HIGGSFIELD_API_KEY",          "name": "Higgsfield",      "category": "media",      "description": "UGC video generation with AI actors", "test_method": "key_present"},
 ]
 
 _CATALOGUE_BY_KEY = {entry["key"]: entry for entry in INTEGRATION_CATALOGUE}

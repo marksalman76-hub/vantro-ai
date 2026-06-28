@@ -155,13 +155,13 @@ class ResetPasswordRequest(BaseModel):
 @limiter.limit("5/minute")
 async def register(request: Request, body: RegisterRequest, db: Session = Depends(get_db)):
     _validate_password(body.password)
-    existing = db.query(User).filter(User.email == body.email).first()
+    existing = db.query(User).filter(User.email == body.email.lower()).first()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     new_id = str(uuid.uuid4())
     user = User(
         id=new_id,
-        email=body.email,
+        email=body.email.lower(),
         password_hash=hash_password(body.password),
         name=body.name,
         created_at=datetime.utcnow(),
@@ -186,7 +186,7 @@ async def register(request: Request, body: RegisterRequest, db: Session = Depend
 @router.post("/login")
 @limiter.limit("10/minute")
 async def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == body.email).first()
+    user = db.query(User).filter(User.email == body.email.lower()).first()
     if not user or not verify_password(body.password, user.password_hash):
         _audit(db, request, "login_failed", extra={"email": body.email})
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -307,7 +307,7 @@ async def change_password(
 @router.post("/forgot-password")
 @limiter.limit("5/minute")
 async def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == body.email).first()
+    user = db.query(User).filter(User.email == body.email.lower()).first()
     # Always return 200 to avoid email enumeration
     if user:
         tok = secrets.token_urlsafe(32)
