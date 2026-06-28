@@ -3,7 +3,8 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 const IS_PROD = process.env.NODE_ENV === "production";
 
-export const config = { api: { bodyParser: { sizeLimit: "1mb" } } };
+// Disable CSRF protection for this unauthenticated login endpoint
+export const config = { api: { bodyParser: { sizeLimit: "1mb" } }, skipCsrfProtection: true };
 
 export async function POST(request: NextRequest) {
   try {
