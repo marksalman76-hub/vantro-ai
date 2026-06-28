@@ -1,285 +1,196 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { SkeletonCard } from '@/components/Skeleton';
 
-interface Stats {
-  total_users: number;
-  active_subscriptions: number;
-  trial_subscriptions: number;
-  paid_clients: number;
-  suspended_accounts: number;
-  free_accounts: number;
-  total_media_jobs: number;
-  completed_media_jobs: number;
-  processing_media_jobs: number;
-  pending_media_jobs: number;
-  failed_media_jobs: number;
-  queued_jobs: number;
+// Redesign components
+import MetricCard from '@/components/dashboard/MetricCard';
+import ActionCard from '@/components/dashboard/ActionCard';
+import StatusBadge from '@/components/dashboard/StatusBadge';
+import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import StatusStrip from '@/components/dashboard/StatusStrip';
+import AlertsSection from '@/components/dashboard/AlertsSection';
+import QuickLaunchSection from '@/components/dashboard/QuickLaunchSection';
+import RecentJobsTable from '@/components/dashboard/RecentJobsTable';
+import ThemeToggle from '@/components/dashboard/ThemeToggle';
+
+interface AdminCredits {
+  total_credits?: number;
+  used_credits?: number;
+  remaining_credits?: number;
+  tier?: string;
 }
 
-interface SecurityStats {
-  open_security_alerts: number;
-  critical_alerts: number;
-  financial_review_flagged: number;
-  pending_approvals: number;
-}
-
-interface Job {
+interface HistoryJob {
   id: string;
+  agent_id?: string;
+  agent_name?: string;
   status: string;
-  script: string | null;
-  client_email: string;
-  client_name: string | null;
+  credits_used?: number;
   created_at: string | null;
   completed_at: string | null;
-  video_url: string | null;
-  error_message: string | null;
+  script?: string | null;
+  client_email?: string;
+  client_name?: string | null;
 }
 
-const STATUS_STYLE: Record<string, string> = {
-  completed:  'bg-green-400/10 text-green-400',
-  processing: 'bg-yellow-400/10 text-yellow-400',
-  pending:    'bg-blue-400/10 text-blue-400',
-  failed:     'bg-red-400/10 text-red-400',
-  cancelled:  'bg-gray-700 text-gray-400',
-};
-
-function StatCard({ label, value, color, sub }: { label: string; value: number | string; color: string; sub?: string }) {
-  return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-      <p className="text-gray-500 text-xs mb-1">{label}</p>
-      <p className={`text-2xl font-bold ${color}`}>{value}</p>
-      {sub && <p className="text-gray-600 text-xs mt-1">{sub}</p>}
-    </div>
-  );
+interface AgentUsage {
+  agent_id: string;
+  agent_name: string;
+  count: number;
 }
 
-export default function AdminCommandCenter() {
+interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  affects: string | null;
+  type: string;
+  show_as: string;
+}
+
+function isThisMonth(dateStr: string | null): boolean {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+}
+
+export default function AdminDashboard() {
   const router = useRouter();
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [secStats, setSecStats] = useState<SecurityStats | null>(null);
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [credits, setCredits] = useState<AdminCredits | null>(null);
+  const [jobs, setJobs] = useState<HistoryJob[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
     if (!token) { router.push('/admin-login'); return; }
 
+    const headers = { Authorization: `Bearer ${token}` };
+
+    try {
+      const d = JSON.parse(localStorage.getItem('dismissed_announcements') || '[]');
+      setDismissed(new Set(d));
+    } catch { /* ignore */ }
+
     Promise.all([
-      fetch('/api/admin/stats', { headers: { Authorization: `Bearer ${token}` } }),
-      fetch('/api/admin/jobs', { headers: { Authorization: `Bearer ${token}` } }),
-      fetch('/api/admin/security/stats', { headers: { Authorization: `Bearer ${token}` } }),
-    ])
-      .then(async ([sr, jr, secr]) => {
-        const [s, j, sec] = await Promise.all([sr.json(), jr.json(), secr.json()]);
-        setStats(s);
-        setJobs((j.jobs || []).slice(0, 10));
-        setSecStats(sec);
-      })
-      .catch(() => setError('Failed to load dashboard data'))
-      .finally(() => setLoading(false));
+      fetch('/api/admin/stats', { headers }).then(r => r.ok ? r.json() : null),
+      fetch('/api/admin/jobs', { headers }).then(r => r.ok ? r.json() : null),
+      fetch('/api/platform/announcements', { headers }).then(r => r.ok ? r.json() : []),
+    ]).then(([c, j, ann]) => {
+      if (c) setCredits(c as AdminCredits);
+      if (j?.jobs) {
+        const mapped = (j.jobs as HistoryJob[]).map(job => ({
+          id: job.id,
+          agent_id: job.agent_id || 'unknown',
+          agent_name: job.agent_name || 'Unknown Agent',
+          status: job.status,
+          credits_used: job.credits_used || 0,
+          created_at: job.created_at,
+          completed_at: job.completed_at,
+        }));
+        setJobs(mapped);
+      }
+      if (Array.isArray(ann)) setAnnouncements(ann);
+    }).finally(() => setLoading(false));
   }, [router]);
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-screen">
-      <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
+  const onDismiss = (id: string) => {
+    const next = new Set(dismissed).add(id);
+    setDismissed(next);
+    localStorage.setItem('dismissed_announcements', JSON.stringify(Array.from(next)));
+  };
 
-  if (error) return (
-    <div className="flex items-center justify-center h-screen">
-      <p className="text-red-400">{error}</p>
-    </div>
-  );
+  const onSignOut = () => {
+    localStorage.removeItem('admin_token');
+    router.push('/admin-login');
+  };
+
+  const completedThisMonth = jobs.filter(
+    j => j.status === 'completed' && isThisMonth(j.completed_at || j.created_at)
+  ).length;
+
+  const agentCounts: Record<string, AgentUsage> = {};
+  for (const job of jobs) {
+    if (job.agent_id) {
+      if (!agentCounts[job.agent_id]) {
+        agentCounts[job.agent_id] = { agent_id: job.agent_id, agent_name: job.agent_name || 'Unknown', count: 0 };
+      }
+      agentCounts[job.agent_id].count++;
+    }
+  }
+  const topAgents = Object.values(agentCounts)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
+
+  const pendingApprovals = jobs.filter(j =>
+    j.status === 'pending_approval' || j.status === 'pending_financial_review'
+  ).length;
+
+  const failedJobs = jobs.filter(j => j.status === 'failed').length;
+
+  if (loading) {
+    return (
+      <div className="p-8 max-w-5xl" style={{ paddingTop: '6rem' }}>
+        <div className="mb-8">
+          <div className="animate-pulse bg-gray-800 rounded h-7 w-36 mb-2" />
+          <div className="animate-pulse bg-gray-800 rounded h-4 w-56" />
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-8 max-w-7xl">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold">Command Center</h1>
-        <p className="text-gray-500 text-sm mt-1">Platform health and activity overview</p>
-      </div>
+    <>
+      <DashboardHeader
+        credits={credits ? {
+          total_credits: credits.total_credits ?? 0,
+          used_credits: credits.used_credits ?? 0,
+          remaining_credits: credits.remaining_credits ?? 0,
+        } : null}
+        pendingApprovals={pendingApprovals}
+        failedJobs={failedJobs}
+        onSignOut={onSignOut}
+      />
 
-      {/* Health Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-6">
-        {[
-          {
-            label: 'Security Alerts',
-            value: secStats?.open_security_alerts ?? '—',
-            href: '/admin/security',
-            urgent: (secStats?.open_security_alerts ?? 0) > 0,
-            critical: (secStats?.critical_alerts ?? 0) > 0,
-          },
-          {
-            label: 'Pending Approvals',
-            value: secStats?.pending_approvals ?? '—',
-            href: '/admin/approvals',
-            urgent: (secStats?.pending_approvals ?? 0) > 0,
-            critical: false,
-          },
-          {
-            label: 'Financial Review',
-            value: secStats?.financial_review_flagged ?? '—',
-            href: '/admin/approvals',
-            urgent: (secStats?.financial_review_flagged ?? 0) > 0,
-            critical: false,
-          },
-          {
-            label: 'Critical Alerts',
-            value: secStats?.critical_alerts ?? '—',
-            href: '/admin/security?severity=critical',
-            urgent: false,
-            critical: (secStats?.critical_alerts ?? 0) > 0,
-          },
-        ].map((item) => (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={`flex items-center justify-between px-4 py-3 rounded-xl border transition-colors ${
-              item.critical
-                ? 'bg-red-500/10 border-red-500/30 hover:border-red-500/50'
-                : item.urgent
-                ? 'bg-amber-500/10 border-amber-500/20 hover:border-amber-500/40'
-                : 'bg-gray-900 border-gray-800 hover:border-gray-700'
-            }`}
-          >
-            <span className={`text-xs font-medium ${
-              item.critical ? 'text-red-400' : item.urgent ? 'text-amber-400' : 'text-gray-500'
-            }`}>{item.label}</span>
-            <span className={`text-lg font-bold ${
-              item.critical ? 'text-red-300' : item.urgent ? 'text-amber-300' : 'text-gray-300'
-            }`}>{item.value}</span>
-          </Link>
-        ))}
-      </div>
+      <div className="p-8 max-w-5xl" style={{ paddingTop: '6rem' }}>
+        <StatusStrip
+          credits={credits ? {
+            total_credits: credits.total_credits ?? 0,
+            used_credits: credits.used_credits ?? 0,
+            remaining_credits: credits.remaining_credits ?? 0,
+            tier: credits.tier ?? 'enterprise',
+          } : null}
+          completedThisMonth={completedThisMonth}
+          pendingApprovals={pendingApprovals}
+          topAgents={topAgents}
+        />
 
-      {stats && (
-        <>
-          {/* Client stats */}
-          <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Clients</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-            <StatCard label="Total users"    value={stats.total_users}          color="text-white" />
-            <StatCard label="Paid"           value={stats.paid_clients}         color="text-green-400" />
-            <StatCard label="Trial"          value={stats.trial_subscriptions}  color="text-blue-400" />
-            <StatCard label="Free"           value={stats.free_accounts}        color="text-gray-400" />
-            <StatCard label="Suspended"      value={stats.suspended_accounts}   color="text-red-400" />
-            <StatCard
-              label="Conversion"
-              value={stats.total_users > 0 ? `${Math.round((stats.paid_clients / stats.total_users) * 100)}%` : '0%'}
-              color="text-amber-400"
-            />
-          </div>
-
-          {/* Job stats */}
-          <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Jobs</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-8">
-            <StatCard label="Total jobs"   value={stats.total_media_jobs}      color="text-white" />
-            <StatCard label="Completed"    value={stats.completed_media_jobs}  color="text-green-400" />
-            <StatCard label="Processing"   value={stats.processing_media_jobs} color="text-yellow-400" />
-            <StatCard label="Queued"       value={stats.queued_jobs}           color="text-blue-400" />
-            <StatCard label="Failed"       value={stats.failed_media_jobs}     color="text-red-400" />
-            <StatCard
-              label="Success rate"
-              value={stats.total_media_jobs > 0
-                ? `${Math.round((stats.completed_media_jobs / stats.total_media_jobs) * 100)}%`
-                : '—'}
-              color="text-purple-400"
-            />
-          </div>
-        </>
-      )}
-
-      {/* Admin actions */}
-      <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Actions</p>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8">
-        {[
-          { href: '/admin/agents',    icon: '◆', label: 'Run an Agent',  desc: 'Execute a single AI agent on your task' },
-          { href: '/admin/agent-jobs', icon: '◉', label: 'Build a Team', desc: 'Coordinate multiple agents on one goal' },
-          { href: '/admin/assets',    icon: '▶', label: 'Create Media',  desc: 'Video, image, audio, social content' },
-        ].map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="bg-gray-900 border border-gray-800 hover:border-violet-500/40 rounded-xl p-5 transition-all group flex items-start gap-4"
-          >
-            <span className="text-2xl text-violet-400 group-hover:text-violet-300 transition-colors leading-none mt-0.5">{item.icon}</span>
-            <div>
-              <p className="font-semibold text-sm text-white group-hover:text-violet-300 transition-colors">{item.label}</p>
-              <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Quick nav */}
-      <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">Management</p>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
-        {[
-          { href: '/admin/clients',   label: 'Manage Clients',    desc: 'Credits, plans, controls' },
-          { href: '/admin/jobs',      label: 'All Jobs',          desc: 'Retry, cancel, inspect' },
-          { href: '/admin/providers', label: 'Provider Health',   desc: 'HeyGen, Stripe, SQS' },
-          { href: '/admin/aws',       label: 'AWS Infra',         desc: 'ECS, RDS, WAF, ALB' },
-        ].map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="bg-gray-900 border border-gray-800 hover:border-violet-500/50 rounded-xl p-4 transition-colors group"
-          >
-            <p className="font-semibold text-sm text-white group-hover:text-violet-300 transition-colors">{item.label}</p>
-            <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
-          </Link>
-        ))}
-      </div>
-
-      {/* Recent jobs */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl">
-        <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between">
-          <h2 className="font-semibold">Recent Jobs</h2>
-          <Link href="/admin/jobs" className="text-xs text-violet-400 hover:text-violet-300">View all →</Link>
+        <div className="mb-6">
+          <AlertsSection
+            announcements={announcements}
+            pendingApprovals={pendingApprovals}
+            failedJobs={failedJobs}
+            dismissed={dismissed}
+            onDismiss={onDismiss}
+          />
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-800">
-                {['Client', 'Script', 'Status', 'Created', 'Actions'].map((h) => (
-                  <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {jobs.map((j) => (
-                <tr key={j.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
-                  <td className="px-6 py-3">
-                    <p className="text-gray-200 text-xs">{j.client_email}</p>
-                    {j.client_name && <p className="text-gray-500 text-xs">{j.client_name}</p>}
-                  </td>
-                  <td className="px-6 py-3 text-gray-400 text-xs max-w-xs truncate">{j.script || '—'}</td>
-                  <td className="px-6 py-3">
-                    <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLE[j.status] || 'bg-gray-700 text-gray-400'}`}>
-                      {j.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-3 text-gray-500 text-xs">
-                    {j.created_at ? new Date(j.created_at).toLocaleDateString('en-GB') : '—'}
-                  </td>
-                  <td className="px-6 py-3">
-                    <Link href={`/admin/jobs?id=${j.id}`} className="text-xs text-violet-400 hover:text-violet-300">
-                      View →
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-              {jobs.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-6 py-10 text-center text-gray-600 text-sm">No jobs yet.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+
+        <QuickLaunchSection />
+
+        <RecentJobsTable jobs={jobs} />
       </div>
-    </div>
+
+      <ThemeToggle />
+    </>
   );
 }
