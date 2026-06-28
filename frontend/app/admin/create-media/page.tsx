@@ -191,7 +191,12 @@ export default function AdminCreateMediaPage() {
       {/* Step: brief */}
       {step === 'brief' && (
         <div>
-          <h2 className="font-semibold text-xs mb-1">Describe what you need</h2>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="font-semibold text-xs">Describe what you need</h2>
+            <Link href="/admin/assets" className="text-[11px] text-violet-400 hover:text-violet-300 font-medium">
+              Manage brand assets →
+            </Link>
+          </div>
           <p className="text-[11px] text-gray-500 mb-3">Include your goal, key message, target audience, and any specific requirements</p>
           <textarea
             rows={6}
@@ -316,34 +321,26 @@ export default function AdminCreateMediaPage() {
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
             <p className="text-xs font-medium text-white mb-0.5">Upload references</p>
             <p className="text-[11px] text-gray-500 mb-2">Optional: provide reference images, scripts, or files for this task</p>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="w-6 h-6 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 flex items-center justify-center text-violet-400 text-lg transition-colors"
-                type="button"
-              >
-                +
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*,video/*"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files) {
-                    setRefFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
-                    e.target.value = '';
-                  }
-                }}
-              />
-              <Link
-                href="/admin/brand"
-                className="text-[11px] text-violet-400 hover:text-violet-300 font-medium"
-              >
-                Manage brand assets →
-              </Link>
-            </div>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-6 h-6 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 flex items-center justify-center text-violet-400 text-lg transition-colors"
+              type="button"
+            >
+              +
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,video/*"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files) {
+                  setRefFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
+                  e.target.value = '';
+                }
+              }}
+            />
             {refFiles.length > 0 && (
               <div className="mt-2 space-y-1">
                 {refFiles.map((file, idx) => (
