@@ -171,7 +171,7 @@ async def register(request: Request, body: RegisterRequest, db: Session = Depend
 
     access_token = create_access_token(new_id, expires_delta=timedelta(hours=1))
     refresh_opaque = _create_refresh_token(new_id, request, db)
-    _audit(db, request, "register", user_id=new_id)
+    _audit(db, request, "register", user_id=new_id, resource_type="user")
     email_service.send_welcome(body.email, body.name or body.email.split("@")[0])
 
     resp = JSONResponse(
@@ -188,12 +188,12 @@ async def register(request: Request, body: RegisterRequest, db: Session = Depend
 async def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == body.email.lower()).first()
     if not user or not verify_password(body.password, user.password_hash):
-        _audit(db, request, "login_failed", extra={"email": body.email})
+        _audit(db, request, "login_failed", resource_type="auth", extra={"email": body.email})
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     access_token = create_access_token(user.id, expires_delta=timedelta(hours=1))
     refresh_opaque = _create_refresh_token(user.id, request, db)
-    _audit(db, request, "login", user_id=user.id)
+    _audit(db, request, "login", user_id=user.id, resource_type="auth")
 
     resp = JSONResponse(content={"access_token": access_token, "token_type": "bearer", "user_id": user.id})
     _set_auth_cookie(resp, access_token)

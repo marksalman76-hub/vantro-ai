@@ -27,19 +27,29 @@ def upgrade() -> None:
         "CREATE INDEX IF NOT EXISTS ix_organizations_owner_id ON organizations (owner_id)",
     ]:
         try:
-            conn.execute(sa.text(stmt))
+            conn.execute(sa.text("SAVEPOINT idx_022_sp"))
+            try:
+                conn.execute(sa.text(stmt))
+                conn.execute(sa.text("RELEASE SAVEPOINT idx_022_sp"))
+            except Exception:
+                conn.execute(sa.text("ROLLBACK TO SAVEPOINT idx_022_sp"))
         except Exception:
             pass
 
     # media_jobs — only if the table exists
     try:
-        result = conn.execute(
-            sa.text("SELECT to_regclass('media_jobs')")
-        ).scalar()
-        if result:
-            conn.execute(sa.text(
-                "CREATE INDEX IF NOT EXISTS ix_media_jobs_workspace_id ON media_jobs (workspace_id)"
-            ))
+        conn.execute(sa.text("SAVEPOINT media_022_sp"))
+        try:
+            result = conn.execute(
+                sa.text("SELECT to_regclass('media_jobs')")
+            ).scalar()
+            if result:
+                conn.execute(sa.text(
+                    "CREATE INDEX IF NOT EXISTS ix_media_jobs_workspace_id ON media_jobs (workspace_id)"
+                ))
+            conn.execute(sa.text("RELEASE SAVEPOINT media_022_sp"))
+        except Exception:
+            conn.execute(sa.text("ROLLBACK TO SAVEPOINT media_022_sp"))
     except Exception:
         pass
 

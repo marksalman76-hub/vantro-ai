@@ -186,9 +186,8 @@ async def lifespan(app: FastAPI):
     _testing = os.getenv("TESTING", "0") == "1"
     _external_worker = os.getenv("DISABLE_INLINE_WORKER", "0") == "1"
     if not _testing and not _external_worker:
-        from app.agents.agent_worker import run_agent_worker, _reindex_new_skills
+        from app.agents.agent_worker import run_agent_worker
         worker_task = asyncio.create_task(run_agent_worker())
-        asyncio.create_task(_reindex_new_skills())
     else:
         if _external_worker:
             logger.info("Inline agent worker disabled — dedicated worker ECS service is active")
