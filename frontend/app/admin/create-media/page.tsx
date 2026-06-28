@@ -114,10 +114,16 @@ export default function AdminCreateMediaPage() {
         return;
       }
 
+      const formData = new FormData();
+      formData.append('prompt', task);
+      formData.append('context', JSON.stringify({}));
+      formData.append('output_language', '');
+      refFiles.forEach((file) => formData.append('reference_files', file));
+
       const res = await fetch(`/api/agents/${mediaAgent.id}/run`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: task }),
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
       });
       const d = await res.json();
       console.log('Agent response:', { status: res.status, ok: res.ok, data: d });

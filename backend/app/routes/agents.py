@@ -70,8 +70,35 @@ def _get_user(credentials: HTTPAuthorizationCredentials, db: Session) -> User:
     return user
 
 
+def _is_admin(user: User) -> bool:
+    """Return True if the user has admin privileges (DB flag or ADMIN_EMAIL env match).
+
+    Single source of truth for admin detection. Use this helper everywhere —
+    do NOT duplicate the env-var check inline in route handlers.
+    """
+    admin_email = os.getenv("ADMIN_EMAIL", "")
+    return bool(
+        user.is_admin
+        or (admin_email and user.email.lower() == admin_email.lower())
+    )
+
+
 def _workspace_tier(user: User, db: Session) -> tuple[str, Workspace | None, CreditsAccount | None]:
-    """Return (tier, workspace, credits_account) for the user's first org/workspace."""
+    """Return (tier, workspace, credits_account) for the user's first org/workspace.
+
+    Admins always receive tier="enterprise" and cred=None (unlimited credits).
+    cred=None is the canonical signal throughout this module that credit checks
+    must be skipped — never introduce credit gates conditioned only on cred being None.
+    """
+    # Admin short-circuit: enterprise tier, no credit gate, workspace fetched for job records.
+    if _is_admin(user):
+        org = db.query(Organization).filter(Organization.owner_id == user.id).first()
+        ws = (
+            db.query(Workspace).filter(Workspace.organization_id == org.id).first()
+            if org else None
+        )
+        return "enterprise", ws, None
+
     org = db.query(Organization).filter(Organization.owner_id == user.id).first()
     if not org:
         return STARTER, None, None
@@ -122,9 +149,8 @@ async def list_all_agents(
     user = _get_user(credentials, db)
     tier, _, _ = _workspace_tier(user, db)
 
-    # Admins get full access (check both DB flag and env var bootstrap)
-    admin_email = os.getenv("ADMIN_EMAIL", "")
-    is_admin = user.is_admin or (admin_email and user.email.lower() == admin_email.lower())
+    # _workspace_tier already returns enterprise for admins; defence-in-depth override.
+    is_admin = _is_admin(user)
     if is_admin:
         tier = "enterprise"
 
@@ -149,15 +175,14 @@ async def list_available_agents(
     user = _get_user(credentials, db)
     tier, ws, _ = _workspace_tier(user, db)
 
-    # Admins get full access (check both DB flag and env var bootstrap)
-    admin_email = os.getenv("ADMIN_EMAIL", "")
-    is_admin = user.is_admin or (admin_email and user.email.lower() == admin_email.lower())
+    # _workspace_tier already returns enterprise for admins; defence-in-depth override.
+    is_admin = _is_admin(user)
     if is_admin:
         tier = "enterprise"
 
     workspace_id = ws.id if ws else user.id
-
-    cache_key = f"agents:catalogue:{workspace_id}"
+    admin_suffix = ":admin" if is_admin else ""
+    cache_key = f"agents:catalogue:{workspace_id}{admin_suffix}"
     cached = cache_service.get(cache_key)
     if cached is not None:
         from fastapi.responses import JSONResponse
@@ -192,7 +217,6 @@ class AgentRunRequest(BaseModel):
 async def run_agent(
     agent_id: str,
     request: Request,
-    body: AgentRunRequest,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
@@ -200,13 +224,13 @@ async def run_agent(
     Submit an agent job.
     HITL-3 agents (ads, ugc, finance, workflow, head) are queued as 'pending_approval'
     and require admin approval before execution.
+    Accepts both JSON and multipart/form-data (with optional reference_files).
     """
     user = _get_user(credentials, db)
     tier, ws, cred = _workspace_tier(user, db)
 
-    # Admins get full access (check both DB flag and env var bootstrap)
-    admin_email = os.getenv("ADMIN_EMAIL", "")
-    is_admin = user.is_admin or (admin_email and user.email.lower() == admin_email.lower())
+    # _workspace_tier already returns enterprise for admins; defence-in-depth override.
+    is_admin = _is_admin(user)
     if is_admin:
         tier = "enterprise"
 
@@ -223,6 +247,30 @@ async def run_agent(
 
     if not ws:
         raise HTTPException(status_code=400, detail="No workspace found for this account")
+
+    # Parse request body (JSON or multipart/form-data)
+    content_type = request.headers.get("content-type", "")
+    if "application/json" in content_type:
+        body = await request.json()
+        prompt = body.get("prompt", "")
+        context = body.get("context", {})
+        output_language = body.get("output_language", "")
+        reference_files = []
+    elif "multipart/form-data" in content_type:
+        form = await request.form()
+        prompt = form.get("prompt", "")
+        context_str = form.get("context", "{}")
+        try:
+            context = json.loads(context_str) if isinstance(context_str, str) else context_str
+        except:
+            context = {}
+        output_language = form.get("output_language", "")
+        reference_files = form.getlist("reference_files")
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported content type")
+
+    if not prompt:
+        raise HTTPException(status_code=400, detail="prompt is required")
 
     meta = AGENT_CATALOGUE[norm_id]
     credit_cost = meta["credit_estimate"]
@@ -252,7 +300,7 @@ async def run_agent(
     # (e.g. "buy these ads", "spend $500 on Facebook"), we hold the job for
     # admin review before it even reaches the executor — defence-in-depth.
     from app.agents.agent_executor import scan_for_financial_actions
-    prompt_violations = scan_for_financial_actions(body.prompt)
+    prompt_violations = scan_for_financial_actions(prompt)
     if prompt_violations:
         import logging as _logging
         _logging.getLogger(__name__).warning(
@@ -276,9 +324,9 @@ async def run_agent(
         cred.updated_at = datetime.utcnow()
 
     import json as _json
-    _ctx = dict(body.context)
-    if body.output_language:
-        _ctx["output_language"] = body.output_language
+    _ctx = dict(context)
+    if output_language:
+        _ctx["output_language"] = output_language
     now = datetime.utcnow()
     job = AgentJob(
         id=str(uuid.uuid4()),
@@ -287,9 +335,9 @@ async def run_agent(
         agent_name=meta["name"],
         status=status,
         hitl_level=hitl,
-        input_data=_json.dumps({"prompt": body.prompt[:10_000], "context": _ctx}),
+        input_data=_json.dumps({"prompt": prompt[:10_000], "context": _ctx}),
         credits_used=credit_cost,
-        output_language=body.output_language or None,
+        output_language=output_language or None,
         created_at=now,
         updated_at=now,
     )
@@ -469,6 +517,8 @@ async def stream_agent(
     user = _get_user(credentials, db)
     _, ws, _ = _workspace_tier(user, db)
 
+    is_admin = _is_admin(user)
+
     normalized = normalize_agent_id(agent_id)
     if not agent_exists(normalized):
         raise HTTPException(status_code=404, detail=f"Unknown agent: {agent_id}")
@@ -483,24 +533,25 @@ async def stream_agent(
     if not ws:
         raise HTTPException(status_code=400, detail="No workspace found for this account")
 
-    # Credit check and upfront deduction (row-level lock to prevent concurrent overdraw)
-    cred = (
-        db.query(CreditsAccount)
-        .filter(CreditsAccount.workspace_id == ws.id)
-        .with_for_update()
-        .first()
-    )
-    remaining = (cred.total_credits - cred.used_credits) if cred else 0
-    if remaining < 1:
-        raise HTTPException(
-            status_code=402,
-            detail="Insufficient credits. Minimum 1 credit required to stream.",
+    # Credit check and upfront deduction — skipped entirely for admins (unlimited credits).
+    if not is_admin:
+        cred = (
+            db.query(CreditsAccount)
+            .filter(CreditsAccount.workspace_id == ws.id)
+            .with_for_update()
+            .first()
         )
+        remaining = (cred.total_credits - cred.used_credits) if cred else 0
+        if remaining < 1:
+            raise HTTPException(
+                status_code=402,
+                detail="Insufficient credits. Minimum 1 credit required to stream.",
+            )
 
-    if cred:
-        cred.used_credits = cred.used_credits + 1
-        cred.updated_at = datetime.utcnow()
-        db.commit()
+        if cred:
+            cred.used_credits = cred.used_credits + 1
+            cred.updated_at = datetime.utcnow()
+            db.commit()
 
     # Build guarded prompt
     system_prompt = get_agent_system_prompt(normalized)
@@ -634,6 +685,8 @@ async def revise_agent_job(
     if not ws:
         raise HTTPException(status_code=404, detail="No workspace found")
 
+    is_admin = _is_admin(user)
+
     orig = db.query(AgentJob).filter(AgentJob.id == job_id, AgentJob.workspace_id == ws.id).first()
     if not orig:
         raise HTTPException(status_code=404, detail="Original job not found")
@@ -642,15 +695,17 @@ async def revise_agent_job(
 
     meta = AGENT_CATALOGUE.get(orig.agent_id, {})
     credit_cost = meta.get("credit_estimate", 1)
-    remaining = (cred.total_credits - cred.used_credits) if cred else 0
-    if remaining < credit_cost:
-        raise HTTPException(status_code=402, detail=f"Insufficient credits. Need {credit_cost}, have {remaining}.")
 
-    if cred:
-        cred = db.query(CreditsAccount).filter(CreditsAccount.workspace_id == ws.id).with_for_update().first()
+    # Credit check and deduction — skipped entirely for admins (unlimited credits).
+    if not is_admin:
+        remaining = (cred.total_credits - cred.used_credits) if cred else 0
+        if remaining < credit_cost:
+            raise HTTPException(status_code=402, detail=f"Insufficient credits. Need {credit_cost}, have {remaining}.")
         if cred:
-            cred.used_credits += credit_cost
-            cred.updated_at = datetime.utcnow()
+            cred = db.query(CreditsAccount).filter(CreditsAccount.workspace_id == ws.id).with_for_update().first()
+            if cred:
+                cred.used_credits += credit_cost
+                cred.updated_at = datetime.utcnow()
 
     now = datetime.utcnow()
     revision_input = json.loads(orig.input_data or "{}")

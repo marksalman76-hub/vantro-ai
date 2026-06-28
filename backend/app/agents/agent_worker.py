@@ -310,8 +310,57 @@ async def _process_job(job_id: str) -> None:
                 pass
             return
 
+        # ── Media provider routing for ugc_media_agent ──────────────────────────
+        # For UGC media jobs, route the LLM-generated brief to Higgsfield for
+        # actual video generation. The output from execute_agent is the creative
+        # brief/script; Higgsfield will generate the video asset.
+        media_provider_output = output
+        if job.agent_id == "ugc_media_agent":
+            try:
+                from app.integrations.execution_adapters import ExecutionAdapters
+                adapters = ExecutionAdapters()
+                adapter_result = adapters.execute(
+                    adapter_name="ugc_video_provider_adapter",
+                    payload={
+                        "workflow": {
+                            "tenant_id": job.workspace_id,
+                            "task": output[:1000],
+                            "region": "Global",
+                            "language": "English",
+                        },
+                        "context": {
+                            "agent_id": job.agent_id,
+                            "job_id": job.id,
+                        },
+                    },
+                )
+
+                if adapter_result.provider_ready:
+                    higgsfield = adapter_result.execution_payload.get("provider_instance")
+                    if higgsfield:
+                        try:
+                            async def _call_higgsfield():
+                                return await higgsfield.execute(
+                                    prompt=output,
+                                    duration=30,
+                                    aspect_ratio="9:16",
+                                )
+                            media_task_result = await _call_higgsfield()
+                            media_provider_output = json.dumps({
+                                "type": "media_generation",
+                                "script": output,
+                                "higgsfield_task": media_task_result,
+                            })
+                            logger.info("Worker: UGC media job %s routed to Higgsfield", job_id)
+                        except Exception as e:
+                            logger.error("Worker: Higgsfield execution failed for job %s: %s", job_id, e)
+                            media_provider_output = f"{output}\n\n[Media generation error: {str(e)}]"
+            except Exception as e:
+                logger.error("Worker: Media adapter setup failed for job %s: %s", job_id, e)
+        # ────────────────────────────────────────────────────────────────────────
+
         job.status       = "completed"
-        job.output_data  = f"<!-- provider:{provider_used} -->\n{output}"
+        job.output_data  = f"<!-- provider:{provider_used} -->\n{media_provider_output}"
         job.credits_used = credit_cost
         job.updated_at   = now
         job.completed_at = now
