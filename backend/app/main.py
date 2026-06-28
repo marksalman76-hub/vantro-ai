@@ -172,8 +172,13 @@ async def lifespan(app: FastAPI):
     logger.info("Vantro API starting up")
 
     # Register platform creative providers (HeyGen, ElevenLabs, Runway, etc.)
-    from app.providers import init_providers
-    init_providers()
+    # Run as background task to avoid blocking startup
+    def init_providers_sync():
+        from app.providers import init_providers
+        init_providers()
+
+    import threading
+    threading.Thread(target=init_providers_sync, daemon=True).start()
 
     # Start the agent worker background loop.
     # Skipped in test mode, and when DISABLE_INLINE_WORKER=1 (dedicated ECS service handles it).
