@@ -39,7 +39,7 @@ export default function AdminLoginPage() {
 
       // Verify this account has admin access by hitting an admin-gated endpoint
       const check = await fetch('/api/admin/clients', {
-        headers: { Authorization: `Bearer ${json.access_token}` },
+        headers: { Authorization: `Bearer ${json.token}` },
       });
 
       if (check.status === 403) {
@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
       }
 
       // Store token and go
-      localStorage.setItem('admin_token', json.access_token);
+      localStorage.setItem('admin_token', json.token);
       router.push('/admin');
     } catch {
       setError('Network error — is the server running?');
