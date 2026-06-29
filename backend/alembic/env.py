@@ -1,5 +1,5 @@
 ﻿from alembic import context
-from sqlalchemy import engine_from_config, pool
+from sqlalchemy import engine_from_config, pool, text
 from logging.config import fileConfig
 import os
 import sys
@@ -44,6 +44,13 @@ def run_migrations_online():
         poolclass=pool.NullPool,
     )
     with connectable.connect() as connection:
+        connection.execute(text(
+            "CREATE TABLE IF NOT EXISTS alembic_version (version_num VARCHAR(255) NOT NULL)"
+        ))
+        connection.execute(text(
+            "ALTER TABLE alembic_version ALTER COLUMN version_num TYPE VARCHAR(255)"
+        ))
+        connection.commit()
         context.configure(
             connection=connection,
             target_metadata=target_metadata

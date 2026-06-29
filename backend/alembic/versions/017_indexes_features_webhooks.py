@@ -14,37 +14,43 @@ branch_labels = None
 depends_on = None
 
 
+def _table_exists(conn, table_name: str) -> bool:
+    return bool(conn.execute(
+        sa.text("SELECT to_regclass(:table_name)"),
+        {"table_name": table_name},
+    ).scalar())
+
+
+def _column_exists(conn, table_name: str, column_name: str) -> bool:
+    return bool(conn.execute(
+        sa.text("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM information_schema.columns
+                WHERE table_name = :table_name AND column_name = :column_name
+            )
+        """),
+        {"table_name": table_name, "column_name": column_name},
+    ).scalar())
+
+
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # ── Indexes ──────────────────────────────────────────────────────────────
-    for stmt in [
-        "CREATE INDEX IF NOT EXISTS idx_agent_jobs_workspace_id ON agent_jobs(workspace_id)",
-        "CREATE INDEX IF NOT EXISTS idx_agent_jobs_status ON agent_jobs(status)",
-        "CREATE INDEX IF NOT EXISTS idx_agent_jobs_created_at ON agent_jobs(created_at DESC)",
-        "CREATE INDEX IF NOT EXISTS idx_users_organization_id ON users(organization_id)",
+    for table_name, column_name, stmt in [
+        ("agent_jobs", "workspace_id", "CREATE INDEX IF NOT EXISTS idx_agent_jobs_workspace_id ON agent_jobs(workspace_id)"),
+        ("agent_jobs", "status", "CREATE INDEX IF NOT EXISTS idx_agent_jobs_status ON agent_jobs(status)"),
+        ("agent_jobs", "created_at", "CREATE INDEX IF NOT EXISTS idx_agent_jobs_created_at ON agent_jobs(created_at DESC)"),
+        ("users", "organization_id", "CREATE INDEX IF NOT EXISTS idx_users_organization_id ON users(organization_id)"),
     ]:
-        try:
+        if _column_exists(conn, table_name, column_name):
             conn.execute(sa.text(stmt))
-        except Exception:
-            pass
 
-    # credit_ledger index — only if table exists
-    try:
-        result = conn.execute(
-            sa.text("SELECT to_regclass('credit_ledger')")
-        ).scalar()
-        if result:
-            try:
-                conn.execute(sa.text(
-                    "CREATE INDEX IF NOT EXISTS idx_credit_ledger_workspace ON credit_ledger(workspace_id)"
-                ))
-            except Exception:
-                pass
-    except Exception:
-        pass
+    if _table_exists(conn, "credit_ledger") and _column_exists(conn, "credit_ledger", "workspace_id"):
+        conn.execute(sa.text(
+            "CREATE INDEX IF NOT EXISTS idx_credit_ledger_workspace ON credit_ledger(workspace_id)"
+        ))
 
-    # ── feature_flags ────────────────────────────────────────────────────────
     conn.execute(sa.text("""
         CREATE TABLE IF NOT EXISTS feature_flags (
             id VARCHAR PRIMARY KEY,
@@ -57,7 +63,6 @@ def upgrade() -> None:
         )
     """))
 
-    # ── webhooks_log ─────────────────────────────────────────────────────────
     conn.execute(sa.text("""
         CREATE TABLE IF NOT EXISTS webhooks_log (
             id VARCHAR PRIMARY KEY,
@@ -71,12 +76,10 @@ def upgrade() -> None:
         )
     """))
 
-    try:
+    if _column_exists(conn, "webhooks_log", "workspace_id"):
         conn.execute(sa.text(
             "CREATE INDEX IF NOT EXISTS idx_webhooks_log_workspace ON webhooks_log(workspace_id)"
         ))
-    except Exception:
-        pass
 
 
 def downgrade() -> None:

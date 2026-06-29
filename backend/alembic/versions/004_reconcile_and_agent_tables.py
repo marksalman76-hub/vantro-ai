@@ -25,11 +25,43 @@ def upgrade() -> None:
     op.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token           VARCHAR")
     op.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS reset_token_expires   TIMESTAMP")
 
-    # Back-fill name from first_name + last_name if present
+    # Back-fill name from first_name + last_name only on legacy schemas that have them.
     op.execute("""
-        UPDATE users
-        SET name = TRIM(COALESCE(first_name,'') || ' ' || COALESCE(last_name,''))
-        WHERE name IS NULL AND (first_name IS NOT NULL OR last_name IS NOT NULL)
+        DO $$
+        DECLARE
+            first_expr TEXT := quote_literal('');
+            last_expr TEXT := quote_literal('');
+            first_predicate TEXT := 'false';
+            last_predicate TEXT := 'false';
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'users' AND column_name = 'first_name'
+            ) THEN
+                first_expr := 'COALESCE(first_name, '''')';
+                first_predicate := 'first_name IS NOT NULL';
+            END IF;
+
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'users' AND column_name = 'last_name'
+            ) THEN
+                last_expr := 'COALESCE(last_name, '''')';
+                last_predicate := 'last_name IS NOT NULL';
+            END IF;
+
+            IF first_predicate <> 'false' OR last_predicate <> 'false' THEN
+                EXECUTE format(
+                    'UPDATE users
+                     SET name = TRIM(%s || '' '' || %s)
+                     WHERE name IS NULL AND (%s OR %s)',
+                    first_expr,
+                    last_expr,
+                    first_predicate,
+                    last_predicate
+                );
+            END IF;
+        END $$;
     """)
 
     # ── 2. organizations: add owner_id if missing ─────────────────────────────
@@ -47,20 +79,38 @@ def upgrade() -> None:
         )
     """)
 
-    # Seed credits_accounts from workspaces.total_credits / used_credits if they exist
+    # Seed credits_accounts from legacy workspace credit columns when present.
     op.execute("""
-        INSERT INTO credits_accounts (id, workspace_id, total_credits, used_credits, created_at, updated_at)
-        SELECT
-            gen_random_uuid()::text,
-            w.id,
-            COALESCE(w.total_credits, 0),
-            COALESCE(w.used_credits, 0),
-            NOW(),
-            NOW()
-        FROM workspaces w
-        WHERE NOT EXISTS (
-            SELECT 1 FROM credits_accounts ca WHERE ca.workspace_id = w.id
-        )
+        DO $$
+        DECLARE
+            total_expr TEXT := '0';
+            used_expr TEXT := '0';
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'workspaces' AND column_name = 'total_credits'
+            ) THEN
+                total_expr := 'COALESCE(w.total_credits, 0)';
+            END IF;
+
+            IF EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'workspaces' AND column_name = 'used_credits'
+            ) THEN
+                used_expr := 'COALESCE(w.used_credits, 0)';
+            END IF;
+
+            EXECUTE format(
+                'INSERT INTO credits_accounts (id, workspace_id, total_credits, used_credits, created_at, updated_at)
+                 SELECT gen_random_uuid()::text, w.id, %s, %s, NOW(), NOW()
+                 FROM workspaces w
+                 WHERE NOT EXISTS (
+                     SELECT 1 FROM credits_accounts ca WHERE ca.workspace_id = w.id
+                 )',
+                total_expr,
+                used_expr
+            );
+        END $$;
     """)
 
     # ── 4. media_jobs table ───────────────────────────────────────────────────
