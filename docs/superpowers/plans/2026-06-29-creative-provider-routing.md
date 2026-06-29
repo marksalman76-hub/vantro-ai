@@ -508,7 +508,7 @@ Expected: FAIL because `higgsfield` and `nano_banana` are not in `PROVIDER_STACK
 Modify `backend/app/runtime/audio_visual_provider_stack.py`:
 
 ```python
-from backend.app.runtime.creative_provider_routing import (
+from app.runtime.creative_provider_routing import (
     CREATIVE_AGENT_IDS,
     creative_provider_status,
 )
