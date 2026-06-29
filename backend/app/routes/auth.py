@@ -186,19 +186,28 @@ async def register(request: Request, body: RegisterRequest, db: Session = Depend
 @router.post("/login")
 @limiter.limit("10/minute")
 async def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == body.email.lower()).first()
-    if not user or not verify_password(body.password, user.password_hash):
-        _audit(db, request, "login_failed", resource_type="auth", extra={"email": body.email})
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    import logging as _logging
+    _log = _logging.getLogger(__name__)
 
-    access_token = create_access_token(user.id, expires_delta=timedelta(hours=1))
-    refresh_opaque = _create_refresh_token(user.id, request, db)
-    _audit(db, request, "login", user_id=user.id, resource_type="auth")
+    try:
+        user = db.query(User).filter(User.email == body.email.lower()).first()
+        if not user or not verify_password(body.password, user.password_hash):
+            _audit(db, request, "login_failed", resource_type="auth", extra={"email": body.email})
+            raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    resp = JSONResponse(content={"access_token": access_token, "token_type": "bearer", "user_id": user.id})
-    _set_auth_cookie(resp, access_token)
-    _set_refresh_cookie(resp, refresh_opaque)
-    return resp
+        access_token = create_access_token(user.id, expires_delta=timedelta(hours=1))
+        refresh_opaque = _create_refresh_token(user.id, request, db)
+        _audit(db, request, "login", user_id=user.id, resource_type="auth")
+
+        resp = JSONResponse(content={"access_token": access_token, "token_type": "bearer", "user_id": user.id})
+        _set_auth_cookie(resp, access_token)
+        _set_refresh_cookie(resp, refresh_opaque)
+        return resp
+    except HTTPException:
+        raise
+    except Exception as e:
+        _log.error("Login error: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/refresh")
