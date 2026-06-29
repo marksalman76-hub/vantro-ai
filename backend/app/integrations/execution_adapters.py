@@ -136,6 +136,14 @@ class ExecutionAdapters:
 
         # Extract workspace_id from payload (tenant_id)
         workflow = payload.get("workflow", {})
+        context = payload.get("context", {}) if isinstance(payload.get("context"), dict) else {}
+        creative_provider_route = (
+            workflow.get("creative_provider_route")
+            if isinstance(workflow.get("creative_provider_route"), dict)
+            else context.get("creative_provider_route")
+        )
+        video_route = creative_provider_route.get("video", {}) if isinstance(creative_provider_route, dict) else {}
+        image_route = creative_provider_route.get("image", {}) if isinstance(creative_provider_route, dict) else {}
         workspace_id = str(workflow.get("tenant_id", ""))
 
         # Initialize Higgsfield provider
@@ -176,6 +184,11 @@ class ExecutionAdapters:
                 "provider_connected": provider_connected,
                 "provider_instance": higgsfield,
                 "workspace_id": workspace_id,
+                "creative_provider_route": creative_provider_route,
+                "selected_video_provider": video_route.get("provider"),
+                "selected_video_model": video_route.get("model"),
+                "selected_image_provider": image_route.get("provider"),
+                "selected_image_model": image_route.get("model"),
             },
         )
 

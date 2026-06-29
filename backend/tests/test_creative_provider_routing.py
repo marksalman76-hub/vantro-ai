@@ -13,6 +13,7 @@ from app.runtime.audio_visual_provider_stack import (
     providers_for_agent,
     recommended_stack_for_task,
 )
+from app.integrations.execution_adapters import ExecutionAdapters
 
 
 CREATIVE_AGENT_CASES = [
@@ -199,3 +200,35 @@ def test_provider_config_status_keeps_credentials_hidden():
     assert "credential_values_exposed" in status
     assert status["credential_values_exposed"] is False
     assert "api_key" not in str(status).lower()
+
+
+def test_execution_adapter_preserves_selected_creative_models_without_credentials():
+    adapter = ExecutionAdapters(db=None)
+    route = resolve_creative_provider_route(
+        agent_id="ugc_media_agent",
+        media_type="both",
+        video_quality="4K",
+        image_tier="pro",
+    )
+
+    result = adapter.execute(
+        adapter_name="ugc_video_provider_adapter",
+        payload={
+            "workflow": {
+                "tenant_id": "workspace-test",
+                "task": "Create a cinematic product launch clip",
+                "creative_provider_route": route,
+            },
+            "context": {
+                "agent_id": "ugc_media_agent",
+                "job_id": "job-test",
+                "creative_provider_route": route,
+            },
+        },
+    )
+
+    assert result.execution_payload["selected_video_provider"] == "higgsfield"
+    assert result.execution_payload["selected_video_model"] == "Cinema Studio 4K"
+    assert result.execution_payload["selected_image_provider"] == "nano_banana"
+    assert result.execution_payload["selected_image_model"] == "Nano Banana Pro"
+    assert result.provider_ready is False

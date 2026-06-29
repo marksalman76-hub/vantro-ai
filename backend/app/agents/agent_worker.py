@@ -315,10 +315,19 @@ async def _process_job(job_id: str) -> None:
         # actual video generation. The output from execute_agent is the creative
         # brief/script; Higgsfield will generate the video asset.
         media_provider_output = output
-        if job.agent_id == "ugc_media_agent":
-            try:
-                from app.integrations.execution_adapters import ExecutionAdapters
+        try:
+            from app.runtime.creative_provider_routing import is_creative_agent, resolve_creative_provider_route
+            from app.integrations.execution_adapters import ExecutionAdapters
+            if is_creative_agent(job.agent_id):
                 adapters = ExecutionAdapters(db=db)
+                creative_provider_route = context.get("creative_provider_route")
+                if not isinstance(creative_provider_route, dict) or not creative_provider_route.get("success"):
+                    creative_provider_route = resolve_creative_provider_route(
+                        agent_id=job.agent_id,
+                        media_type="both",
+                        request_context=context,
+                    )
+
                 adapter_result = adapters.execute(
                     adapter_name="ugc_video_provider_adapter",
                     payload={
@@ -327,10 +336,12 @@ async def _process_job(job_id: str) -> None:
                             "task": output[:1000],
                             "region": "Global",
                             "language": "English",
+                            "creative_provider_route": creative_provider_route,
                         },
                         "context": {
                             "agent_id": job.agent_id,
                             "job_id": job.id,
+                            "creative_provider_route": creative_provider_route,
                         },
                     },
                 )
@@ -341,6 +352,7 @@ async def _process_job(job_id: str) -> None:
                         try:
                             media_task_result = await higgsfield.execute(
                                 prompt=output,
+                                model=creative_provider_route.get("video", {}).get("model"),
                                 duration=30,
                                 aspect_ratio="9:16",
                             )
@@ -353,8 +365,8 @@ async def _process_job(job_id: str) -> None:
                         except Exception as e:
                             logger.error("Worker: Higgsfield execution failed for job %s: %s", job_id, e)
                             media_provider_output = f"{output}\n\n[Media generation error: {str(e)}]"
-            except Exception as e:
-                logger.error("Worker: Media adapter setup failed for job %s: %s", job_id, e)
+        except Exception as e:
+            logger.error("Worker: Media adapter setup failed for job %s: %s", job_id, e)
         # ────────────────────────────────────────────────────────────────────────
 
         job.status       = "completed"
