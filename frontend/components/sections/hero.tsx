@@ -1,489 +1,333 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { Swiper, SwiperSlide } from 'swiper/react'
-import { EffectCoverflow } from 'swiper/modules'
-import 'swiper/css'
-import 'swiper/css/effect-coverflow'
-import s from './hero.module.css'
+import { ArrowUpRight } from 'lucide-react'
+import dynamic from 'next/dynamic'
 
-const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+~|}{[]:;?><'
+const HeroCanvas = dynamic(() => import('@/components/ui/HeroCanvas'), { ssr: false })
 
-const VIDEO_URL = 'https://d8j0ntlcm91z4.cloudfront.net/user_39ca84eAE1ODL9hbR5VhoEj8tBf/hf_20260613_120544_a609e0c2-e52d-4bd5-b10f-b66ac51f1965.mp4'
+/* ── Constants ─────────────────────────────────────────────────────── */
+const VIDEO_URL =
+  'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260521_064421_279656fd-e76f-40a0-8fed-7456d4f7715a.mp4'
+
+const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+'
 
 const STATS = [
-  { title: 'TEAMS ACTIVE',        value: '500+',   footer: 'AI AGENTS DEPLOYED GLOBALLY',    details: ['Multi-tenant workspace isolation', 'Real-time agent health monitoring', '24/7 autonomous execution'] },
-  { title: 'TASKS AUTOMATED',     value: '2M+',    footer: 'TASKS EXECUTED THIS QUARTER',    details: ['Multi-step workflow completion', 'Cross-platform action execution', 'Zero human intervention required'] },
-  { title: 'HOURS SAVED',         value: '40h',    footer: 'SAVED PER TEAM PER MONTH',       details: ['Sales SDR workflows automated', 'Support ticket resolution 10×', 'Research reports in minutes'] },
-  { title: 'PREDICTION ACCURACY', value: '93%',    footer: 'FORECAST ACCURACY RATE',         details: ['Reinforced gradient mapping', 'Low latency model resolution', 'Adaptive feedback system'] },
-  { title: 'EPOCH LATENCY',       value: '0.4ms',  footer: 'AGENT RESPONSE SPEED',           details: ['Hardware accelerated pipeline', 'Direct execution on task receipt', 'Sub-millisecond job dispatch'] },
-  { title: 'UPTIME SLA',          value: '99.9%',  footer: 'PRODUCTION RELIABILITY',         details: ['Multi-region failover active', 'Continuous health checks', 'Zero-downtime deployments'] },
+  { value: '500+', label: 'Teams Active' },
+  { value: '2M+',  label: 'Tasks Automated' },
+  { value: '40h',  label: 'Saved / Team / Month' },
 ]
 
-// [text, delay, side]
-const LINES: [string, number, 'left' | 'right'][] = [
-  ['Deploy AI',  100, 'left'],
-  ['Agents',     300, 'left'],
-  ['That Work',  200, 'right'],
-  ['For You',    400, 'right'],
-]
-
-export default function Hero() {
-  const videoRef        = useRef<HTMLVideoElement>(null)
-  const headerRef       = useRef<HTMLElement>(null)
-  const mainRef         = useRef<HTMLElement>(null)
-  const heroRef         = useRef<HTMLDivElement>(null)
-  const heroDescRef     = useRef<HTMLDivElement>(null)
-  const cinematicRef    = useRef<HTMLDivElement>(null)
-  const statsRef        = useRef<HTMLDivElement>(null)
-  const menuPillRef     = useRef<HTMLDivElement>(null)
-  const menuPillMRef    = useRef<HTMLDivElement>(null)
-  const logoPillMRef    = useRef<HTMLAnchorElement>(null)
-  const scrambleRefs    = useRef<(HTMLSpanElement | null)[]>([])
+/* ── ScrambleLine ──────────────────────────────────────────────────── */
+function ScrambleLine({ text, trigger, delay = 0 }: { text: string; trigger: boolean; delay?: number }) {
+  const [display, setDisplay] = useState(' '.repeat(text.length))
+  const frameRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (!videoRef.current || !headerRef.current || !mainRef.current || !heroRef.current || !heroDescRef.current || !cinematicRef.current || !statsRef.current) return
-    const video        = videoRef.current
-    const header       = headerRef.current
-    const mainContent  = mainRef.current
-    const heroSection  = heroRef.current
-    const heroDesc     = heroDescRef.current
-    const cinematic    = cinematicRef.current
-    const statsSection = statsRef.current
+    if (!trigger) return
 
-    let scrollY      = 0
-    let smoothScroll = 0
-    let entrancePhase: 'loading' | 'animating' | 'complete' = 'loading'
-    let entranceStart = 0
-    let videoReady   = false
-    let rafId        = 0
-    let isSeeking    = false
-    let nextSeekTime: number | null = null
-    let statsRevealed = false
+    let startTime: number | null = null
+    const duration = 900
 
-    // Scramble state
-    interface ScrambleState {
-      el: HTMLSpanElement
-      text: string
-      delay: number
-      phase: 'idle' | 'scrambling-in' | 'revealed' | 'scrambling-out' | 'hidden'
-      progress: number
-      lastTime: number
-      started: boolean
-    }
-    const scrambles: ScrambleState[] = LINES.map((line, i) => ({
-      el: scrambleRefs.current[i]!,
-      text: line[0],
-      delay: line[1],
-      phase: 'idle' as const,
-      progress: 0,
-      lastTime: 0,
-      started: false,
-    })).filter(s => s.el != null)
+    const animate = (ts: number) => {
+      if (startTime === null) startTime = ts
+      const elapsed = ts - startTime - delay
+      if (elapsed < 0) { frameRef.current = requestAnimationFrame(animate); return }
 
-    // Scroll tracking
-    function onScroll() { scrollY = window.scrollY }
-    window.addEventListener('scroll', onScroll, { passive: true })
-    scrollY = window.scrollY
+      const t = Math.min(1, elapsed / duration)
+      let result = ''
 
-    // Stats reveal on scroll
-    function checkStats() {
-      if (statsRevealed || !statsSection) return
-      const rect = statsSection.getBoundingClientRect()
-      if (rect.top < window.innerHeight * 0.9) {
-        statsRevealed = true
-        statsSection.classList.add(s.revealed)
+      for (let i = 0; i < text.length; i++) {
+        if (text[i] === ' ') { result += ' '; continue }
+        const threshold = i / text.length
+        if (t >= threshold + 0.15) result += text[i]
+        else if (t >= threshold - 0.1) result += GLYPHS[Math.floor(Math.random() * GLYPHS.length)]
+        else result += ' '
       }
-    }
-    window.addEventListener('scroll', checkStats, { passive: true })
 
-    // Video seeking
-    video.addEventListener('seeking', () => { isSeeking = true })
-    video.addEventListener('seeked', () => {
-      isSeeking = false
-      if (nextSeekTime !== null) {
-        const t = nextSeekTime; nextSeekTime = null
-        if (video.readyState >= 1 && video.duration > 0) { isSeeking = true; video.currentTime = t }
-      }
-    })
-    video.addEventListener('loadedmetadata', () => { video.autoplay = false; video.pause() })
-    video.autoplay = false; video.pause()
-
-    // Safety timeout
-    const safeTimeout = setTimeout(() => {
-      if (entrancePhase === 'loading') {
-        entrancePhase = 'animating'
-        entranceStart = performance.now()
-      }
-    }, 3500)
-
-    function updateScrambles(now: number) {
-      const heroHeight = heroSection.offsetHeight || window.innerHeight * 3
-      const scrollNorm = Math.min(1, scrollY / heroHeight)
-      const scrollActive = scrollNorm > 0.015
-
-      scrambles.forEach(sc => {
-        if (!videoReady && sc.phase === 'idle') return
-
-        if (videoReady && sc.phase === 'idle' && !scrollActive && !sc.started) {
-          sc.started = true
-          setTimeout(() => {
-            sc.phase = 'scrambling-in'; sc.progress = 0; sc.lastTime = now
-          }, sc.delay)
-          return
-        }
-
-        if (scrollActive && (sc.phase === 'revealed' || sc.phase === 'scrambling-in')) {
-          sc.phase = 'scrambling-out'; sc.progress = 0; sc.lastTime = now
-        } else if (!scrollActive && (sc.phase === 'hidden' || sc.phase === 'scrambling-out')) {
-          sc.phase = 'scrambling-in'; sc.progress = 0; sc.lastTime = now
-        }
-
-        if (sc.phase === 'scrambling-in') {
-          const dur = 900
-          sc.progress = Math.min(1, sc.progress + (now - sc.lastTime) / dur)
-          sc.lastTime = now
-          const t = sc.progress
-          let result = ''
-          for (let i = 0; i < sc.text.length; i++) {
-            if (sc.text[i] === ' ') { result += ' '; continue }
-            const threshold = i / sc.text.length
-            if (t >= threshold + 0.15)       result += sc.text[i]
-            else if (t >= threshold - 0.1)   result += GLYPHS[Math.floor(Math.random() * GLYPHS.length)]
-            else                              result += ' '
-          }
-          sc.el.textContent = result
-          sc.el.style.opacity = '1'
-          if (t >= 1) { sc.phase = 'revealed'; sc.el.textContent = sc.text }
-
-        } else if (sc.phase === 'scrambling-out') {
-          const dur = 700
-          sc.progress = Math.min(1, sc.progress + (now - sc.lastTime) / dur)
-          sc.lastTime = now
-          const t = sc.progress
-          let result = ''
-          for (let i = 0; i < sc.text.length; i++) {
-            if (sc.text[i] === ' ') { result += ' '; continue }
-            const threshold = i / sc.text.length
-            if (t >= threshold + 0.2)        result += ' '
-            else if (t >= threshold - 0.05)  result += GLYPHS[Math.floor(Math.random() * GLYPHS.length)]
-            else                             result += sc.text[i]
-          }
-          sc.el.textContent = result
-          sc.el.style.opacity = String(Math.max(0, 1 - t * 1.5))
-          if (t >= 1) {
-            sc.phase = 'hidden'
-            sc.el.textContent = sc.text.replace(/\S/g, ' ')
-            sc.el.style.opacity = '0'
-          }
-        }
-      })
+      setDisplay(result)
+      if (t < 1) frameRef.current = requestAnimationFrame(animate)
+      else setDisplay(text)
     }
 
-    let heroDescEntered = false
+    frameRef.current = requestAnimationFrame(animate)
+    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current) }
+  }, [trigger, text, delay])
 
-    function tick(now: number) {
-      // Smooth lerp
-      smoothScroll += (scrollY - smoothScroll) * 0.12
-      if (Math.abs(scrollY - smoothScroll) < 0.0001) smoothScroll = scrollY
+  return <span className="inline-block">{display}</span>
+}
 
-      // Hero-relative scroll progress (0→1 over hero section height)
-      const heroHeight = heroSection.offsetHeight || window.innerHeight * 3
-      const scrollNorm = Math.min(1, smoothScroll / heroHeight)
+/* ── Vantro mark SVG ───────────────────────────────────────────────── */
+function VantroMark() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="rgba(255,255,255,0.4)" aria-hidden="true">
+      <path d="M12 2L14.09 8.26L20.28 9.27L16.14 13.3L17.18 19.5L12 16.77L6.82 19.5L7.86 13.3L3.72 9.27L9.91 8.26L12 2Z" />
+    </svg>
+  )
+}
 
-      // Video blur / scale
-      const subtleBase = Math.max(0, Math.min(1, (scrollNorm - 0.1) / 0.45))
-      const progressive = Math.max(0, Math.min(1, (scrollNorm - 0.55) / 0.4))
-      const blurVal = subtleBase * 5 + progressive * 50
-      const scaleVal = 1.03 + Math.max(0, Math.min(1, (scrollNorm - 0.1) / 0.9)) * 0.08
+/* ── Hero ──────────────────────────────────────────────────────────── */
+export default function Hero() {
+  const videoRef   = useRef<HTMLVideoElement>(null)
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const [isLoaded, setIsLoaded] = useState(false)
+  const [arrowHover, setArrowHover] = useState(0)
 
-      // Entrance animation
-      let eZoom = 1.0, eOpacity = 1.0
-      if (entrancePhase === 'loading') {
-        eZoom = 1.12; eOpacity = 0
-        if (video.readyState >= 3) { entrancePhase = 'animating'; entranceStart = now }
-      }
-      if (entrancePhase === 'animating') {
-        const elapsed = now - entranceStart
-        const prog = Math.min(1, elapsed / 1400)
-        const ease = 1 - Math.pow(1 - prog, 3)
-        eZoom = 1.12 - 0.12 * ease
-        eOpacity = Math.min(1.0, elapsed / 500)
-        if (prog >= 1) {
-          entrancePhase = 'complete'; videoReady = true
-          header.classList.add(s.visible)
-          mainContent.classList.add(s.visible)
-        }
-      }
-      if (entrancePhase === 'complete' && !videoReady) {
-        videoReady = true
-        header.classList.add(s.visible)
-        mainContent.classList.add(s.visible)
-      }
-
-      video.style.filter = `blur(${blurVal}px)`
-      video.style.transform = `scale(${scaleVal * eZoom})`
-      video.style.opacity = String(eOpacity)
-
-      // Video seek
-      if (video.readyState >= 1 && video.duration > 0) {
-        const target = Math.max(0, Math.min(video.duration, scrollNorm * video.duration))
-        if (Math.abs(video.currentTime - target) > 0.008) {
-          if (!isSeeking && !video.seeking) { isSeeking = true; video.currentTime = target }
-          else { nextSeekTime = target }
-        }
-      }
-
-      // Hero fade / scale
-      const heroOp = Math.max(0, Math.min(1, 1 - scrollNorm / 0.26))
-      const heroSc = 1 - (1 - 0.96) * Math.min(1, scrollNorm / 0.26)
-      heroSection.style.opacity = String(heroOp)
-      heroSection.style.transform = `scale(${heroSc})`
-
-      // Desc fade
-      const descOp = Math.max(0, Math.min(1, 1 - scrollNorm / 0.12))
-      const descY  = -30 * Math.min(1, scrollNorm / 0.12)
-      heroDesc.style.opacity = String(descOp)
-      heroDesc.style.transform = `translateY(${descY}px)`
-
-      // Cinematic paragraph
-      const scrollPx = smoothScroll
-      const yVal = -120 * Math.min(1, scrollPx / 1000)
-      let cinOp = 0
-      if (scrollNorm <= 0.08)       cinOp = 0
-      else if (scrollNorm <= 0.22)  cinOp = (scrollNorm - 0.08) / (0.22 - 0.08)
-      else if (scrollNorm <= 0.42)  cinOp = 1
-      else if (scrollNorm <= 0.65)  cinOp = 1 - (scrollNorm - 0.42) / (0.65 - 0.42)
-      else                          cinOp = 0
-      cinematic.style.transform = `rotateX(24deg) translateY(${yVal}px) translateZ(15px)`
-      cinematic.style.opacity = String(Math.max(0, Math.min(1, cinOp)))
-
-      // Scrambles
-      updateScrambles(now)
-
-      // Hero desc entrance
-      if (videoReady && !heroDescEntered) {
-        heroDescEntered = true
-        heroDesc.style.transition = 'opacity 0.9s cubic-bezier(0.215,0.61,0.355,1) 0.2s, transform 0.9s cubic-bezier(0.215,0.61,0.355,1) 0.2s'
-        heroDesc.style.opacity = '1'
-        heroDesc.style.transform = 'translateY(0)'
-      }
-
-      rafId = requestAnimationFrame(tick)
-    }
-
-    heroDesc.style.opacity = '0'
-    heroDesc.style.transform = 'translateY(25px)'
-    rafId = requestAnimationFrame(tick)
-    checkStats()
-
-    // Lenis (desktop only)
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth < 768
-    let lenisInstance: { destroy: () => void } | null = null
-    if (!isMobile) {
-      import('lenis').then(({ default: Lenis }) => {
-        lenisInstance = new Lenis({
-          duration: 1.2,
-          easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-          smoothWheel: true,
-        }) as unknown as { destroy: () => void }
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        ;(lenisInstance as any).on('scroll', () => { scrollY = window.scrollY })
-        const raf = (time: number) => { (lenisInstance as any).raf(time); requestAnimationFrame(raf) }
-        requestAnimationFrame(raf)
-      }).catch(() => null)
-    }
-
-    return () => {
-      cancelAnimationFrame(rafId)
-      clearTimeout(safeTimeout)
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('scroll', checkStats)
-      lenisInstance?.destroy()
-    }
+  /* Video load */
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video) return
+    const onCanPlay = () => setIsLoaded(true)
+    video.addEventListener('canplaythrough', onCanPlay)
+    video.load()
+    return () => video.removeEventListener('canplaythrough', onCanPlay)
   }, [])
 
-  // Hamburger handlers
-  function toggleMenu() {
-    menuPillRef.current?.classList.toggle(s.open)
-  }
-  function toggleMobileMenu() {
-    const pill = menuPillMRef.current
-    const logo = logoPillMRef.current
-    if (!pill || !logo) return
-    pill.classList.toggle(s.open)
-    logo.classList.toggle(s.collapsed, pill.classList.contains(s.open))
-  }
-  function closeMobileMenu() {
-    menuPillMRef.current?.classList.remove(s.open)
-    logoPillMRef.current?.classList.remove(s.collapsed)
-  }
+  /* Scroll → video scrub  (WISA-pattern: video.seeking guard) */
+  useEffect(() => {
+    if (!isLoaded) return
+    const video   = videoRef.current
+    const section = sectionRef.current
+    if (!video || !section) return
+
+    /* wait one tick so duration is ready */
+    const tid = setTimeout(() => {
+      const handleScroll = () => {
+        if (video.seeking || !video.duration) return
+        const rect    = section.getBoundingClientRect()
+        const scrolled = -rect.top                          // px past section top
+        const max     = section.offsetHeight - window.innerHeight
+        const t       = Math.max(0, Math.min(1, scrolled / Math.max(1, max)))
+        video.currentTime = t * video.duration
+      }
+      window.addEventListener('scroll', handleScroll, { passive: true })
+      handleScroll()
+      return () => window.removeEventListener('scroll', handleScroll)
+    }, 100)
+
+    return () => clearTimeout(tid)
+  }, [isLoaded])
 
   return (
-    <>
-      {/* Fixed video background */}
-      <div className={s.videoLayer}>
-        <video ref={videoRef} loop muted playsInline preload="auto" src={VIDEO_URL} />
+    /*
+     * min-h-[200vh] + sticky inner:
+     * Section is tall so scroll drives the scrub; the viewport content stays
+     * pinned via sticky until the section scrolls out.
+     */
+    <section ref={sectionRef} className="relative min-h-[200vh] w-full">
+      <HeroCanvas />
+
+      {/* ── Pinned viewport ─────────────────────────────────────────── */}
+      <div className="sticky top-0 h-screen w-full overflow-hidden">
+
+        {/* Video */}
+        <video
+          ref={videoRef}
+          muted
+          playsInline
+          preload="metadata"
+          poster=""
+          className="absolute inset-0 w-full h-full object-cover"
+          src={VIDEO_URL}
+        />
+
+        {/* Gradient overlays */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/55 via-black/15 to-black/75 pointer-events-none" />
+        <div
+          className="absolute bottom-0 left-0 w-full h-40 pointer-events-none"
+          style={{ background: 'linear-gradient(to top, rgb(11,15,25), transparent)' }}
+        />
+
+        {/* Dot grid (SynapseX ambient) */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.04]"
+          style={{
+            backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)',
+            backgroundSize: '24px 24px',
+          }}
+        />
+
+        {/* Loading screen */}
+        {!isLoaded && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-[#07091A]">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+              className="mb-8"
+            >
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M12 2L14.09 8.26L20.28 9.27L16.14 13.3L17.18 19.5L12 16.77L6.82 19.5L7.86 13.3L3.72 9.27L9.91 8.26L12 2Z"
+                  stroke="url(#star-grad)" strokeWidth="1.5" strokeLinejoin="round"
+                />
+                <defs>
+                  <linearGradient id="star-grad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#C084FC" />
+                    <stop offset="100%" stopColor="#3B82F6" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </motion.div>
+            <div className="w-40 h-px overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+              <motion.div
+                className="h-full"
+                initial={{ x: '-100%' }}
+                animate={{ x: '100%' }}
+                transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                style={{ background: 'linear-gradient(90deg, transparent, #C084FC, #3B82F6, transparent)' }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── Hero content ────────────────────────────────────────── */}
+        <div className="relative z-10 h-full flex flex-col max-w-7xl mx-auto px-8 md:px-16 lg:px-20">
+
+          {/* Navbar offset */}
+          <div className="h-20 flex-shrink-0" />
+
+          {/* Main title — SynapseX two-line scramble layout */}
+          <div className="flex-1 flex items-center">
+            <h1
+              className="font-sans font-light text-white leading-[0.95] tracking-[-0.03em] select-none"
+              style={{ fontSize: 'clamp(52px, 8vw, 104px)' }}
+            >
+              <ScrambleLine text="Deploy AI" trigger={isLoaded} delay={100} />
+              <br />
+              <ScrambleLine text="Agents" trigger={isLoaded} delay={300} />
+            </h1>
+          </div>
+
+          {/* Bottom row — desc left / stats+CTA right */}
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 pb-10 md:pb-16">
+
+            {/* Description */}
+            <div className="flex flex-col gap-4 max-w-[380px]">
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={isLoaded ? { opacity: 1, y: 0 } : {}}
+                transition={{ duration: 0.9, delay: 0.85, ease: [0.16, 1, 0.3, 1] }}
+                className="text-[15px] text-white/55 leading-[1.65]"
+              >
+                Autonomous AI agents that handle sales, support, research, and operations 24/7.{' '}
+                <span className="text-white/80 font-medium">No MLOps team required.</span>
+              </motion.p>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={isLoaded ? { opacity: 1 } : {}}
+                transition={{ duration: 0.8, delay: 1.2 }}
+                className="flex items-center gap-4 flex-wrap"
+              >
+                {['No credit card', 'SOC 2 certified', 'Cancel any time'].map((t, i) => (
+                  <span key={t} className="flex items-center gap-1.5 text-[10px] font-mono tracking-[0.1em] text-white/30 uppercase whitespace-nowrap">
+                    <svg className="w-2.5 h-2.5 text-emerald-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>
+                    {t}
+                  </span>
+                ))}
+              </motion.div>
+            </div>
+
+            {/* Stats + CTA */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={isLoaded ? { opacity: 1, y: 0 } : {}}
+              transition={{ duration: 0.9, delay: 1.05, ease: [0.16, 1, 0.3, 1] }}
+              className="flex flex-col items-start md:items-end gap-6"
+            >
+              {/* Stats row */}
+              <div className="flex gap-8 sm:gap-12">
+                {STATS.map((s) => (
+                  <div key={s.label}>
+                    <p className="text-[24px] sm:text-[28px] font-semibold text-white leading-none">{s.value}</p>
+                    <p className="text-[10px] text-white/35 uppercase tracking-[0.12em] mt-1 whitespace-nowrap">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* WISA-style two-part CTA button */}
+              <div className="flex items-stretch gap-[1px] group cursor-pointer">
+                <Link
+                  href="/signup"
+                  className="flex items-center px-7 py-4 text-[11px] font-mono tracking-[-0.01em] text-white/85 transition-all duration-200 group-hover:bg-white group-hover:text-black"
+                  style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(80px)' }}
+                >
+                  DEPLOY YOUR FIRST AGENT
+                </Link>
+                <button
+                  className="flex items-center justify-center px-5 py-4 text-white transition-all duration-200 group-hover:bg-white group-hover:text-black overflow-hidden relative"
+                  style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(80px)' }}
+                  onMouseEnter={() => setArrowHover((n) => n + 1)}
+                  onMouseLeave={() => setArrowHover((n) => n + 1)}
+                  aria-label="Get started"
+                >
+                  {/* WISA fly-out / fly-in arrow animation */}
+                  {arrowHover === 0 ? (
+                    <ArrowUpRight className="w-4 h-4" />
+                  ) : (
+                    <>
+                      <span
+                        key={`out-${arrowHover}`}
+                        className="absolute"
+                        style={{ animation: 'flyOutRight 0.5s cubic-bezier(0.4,0,0.2,1) forwards' }}
+                      >
+                        <ArrowUpRight className="w-4 h-4" />
+                      </span>
+                      <span
+                        key={`in-${arrowHover}`}
+                        style={{ animation: 'flyInLeft 0.5s cubic-bezier(0.4,0,0.2,1) forwards' }}
+                      >
+                        <ArrowUpRight className="w-4 h-4" />
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+
+          {/* Edge anchors (mentality-pattern, adapted) */}
+          <div className="absolute right-8 md:right-16 top-1/2 -translate-y-1/2 hidden lg:flex flex-col items-center gap-3">
+            <div
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-full text-[10px] font-mono tracking-widest"
+              style={{
+                background: 'rgba(255,255,255,0.08)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: 'rgba(255,255,255,0.35)',
+              }}
+            >
+              <VantroMark />
+              <span>v2.0</span>
+            </div>
+          </div>
+
+          <div className="absolute bottom-10 left-8 md:left-16 hidden md:block">
+            <span className="text-[10px] font-mono tracking-[0.15em] text-white/20 uppercase">2025</span>
+          </div>
+
+          <div className="absolute bottom-10 right-8 md:right-16 hidden md:block">
+            <span className="text-[10px] font-mono tracking-[0.15em] text-white/20 uppercase">ai agent platform</span>
+          </div>
+        </div>
       </div>
 
-      {/* Bottom blur */}
-      <div className={s.bottomBlur} />
-
-      {/* Header */}
-      <header ref={headerRef} className={s.mainHeader}>
-        {/* Desktop */}
-        <div className={`${s.desktopHeader}`} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: '100%' }}>
-          <div className={s.headerLeft}>
-            <Link href="/" className={s.logoPill}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-                <path d="M12 2L14.09 8.26L20.28 9.27L16.14 13.3L17.18 19.5L12 16.77L6.82 19.5L7.86 13.3L3.72 9.27L9.91 8.26L12 2Z" />
-              </svg>
-              <span>Vantro</span>
-            </Link>
-            <div ref={menuPillRef} className={s.menuPill}>
-              <button className={s.hamburgerBtn} onClick={toggleMenu} aria-label="Toggle menu">
-                <div className={s.hamburgerIcon}>
-                  <span /><span /><span />
-                </div>
-              </button>
-              <div className={s.menuLinks}>
-                <Link href="#agents"       onClick={toggleMenu}>Agents</Link>
-                <Link href="#integrations" onClick={toggleMenu}>Integrations</Link>
-                <Link href="/pricing"      onClick={toggleMenu}>Pricing</Link>
-              </div>
-            </div>
-          </div>
-          <Link href="/signup" className={s.ctaBtn}>
-            <span>Get Started</span>
-          </Link>
-        </div>
-
-        {/* Mobile */}
-        <div className={s.mobileHeader}>
-          <div className={s.mobileLeft}>
-            <Link ref={logoPillMRef} href="/" className={s.logoPillM}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="white" aria-hidden="true">
-                <path d="M12 2L14.09 8.26L20.28 9.27L16.14 13.3L17.18 19.5L12 16.77L6.82 19.5L7.86 13.3L3.72 9.27L9.91 8.26L12 2Z" />
-              </svg>
-              <span>Vantro</span>
-            </Link>
-            <div ref={menuPillMRef} className={s.menuPillM}>
-              <button className={s.hamburgerBtnM} onClick={toggleMobileMenu} aria-label="Toggle mobile menu">
-                <div className={s.hamburgerIconM}>
-                  <span /><span /><span />
-                </div>
-              </button>
-              <div className={s.menuLinksM}>
-                <Link href="#agents"  onClick={closeMobileMenu}>Agents</Link>
-                <Link href="/pricing" onClick={closeMobileMenu}>Pricing</Link>
-              </div>
-            </div>
-          </div>
-          <Link href="/signup" className={s.ctaBtnM}>
-            <span>Get Started</span>
-          </Link>
-        </div>
-      </header>
-
-      {/* Main content */}
-      <main ref={mainRef} className={s.mainContent}>
-        <div className={s.dotGrid} />
-
-        {/* Hero */}
-        <div ref={heroRef} className={s.heroSection}>
-          <div style={{ width: '100%', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '48px' }}>
-            <div className={s.heroGrid}>
-              <div style={{ textAlign: 'left' }}>
-                <div className={s.heroTitle}>
-                  <span
-                    className={s.scrambleLine}
-                    ref={el => { scrambleRefs.current[0] = el }}
-                    style={{ opacity: 0 }}
-                  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                  <span
-                    className={s.scrambleLine}
-                    ref={el => { scrambleRefs.current[1] = el }}
-                    style={{ opacity: 0 }}
-                  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                </div>
-              </div>
-              <div />
-            </div>
-
-            <div className={s.heroGridBottom}>
-              <div ref={heroDescRef} className={s.heroDesc}>
-                <p>
-                  Autonomous AI agents that handle sales, support, research, and operations 24/7.
-                  No MLOps team required. Connect your tools, configure in plain English, go live today.
-                </p>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', textAlign: 'right' }}>
-                <div className={`${s.heroTitle} ${s.heroTitleRight}`}>
-                  <span
-                    className={s.scrambleLine}
-                    ref={el => { scrambleRefs.current[2] = el }}
-                    style={{ opacity: 0 }}
-                  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                  <span
-                    className={s.scrambleLine}
-                    ref={el => { scrambleRefs.current[3] = el }}
-                    style={{ opacity: 0 }}
-                  >&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Cinematic paragraph */}
-        <div className={s.cinematicSection}>
-          <div ref={cinematicRef} className={s.cinematicInner} style={{ opacity: 0 }}>
-            <h2>
-              A multi-agent intelligence layer built on the architecture of autonomous AI.
-              Vantro dispatches specialized agents — each trained for one domain, each running 24/7.
-              Every task becomes measurable, structured, and visible.
-              Operational noise filters into revenue.
-            </h2>
-          </div>
-        </div>
-
-        {/* Stats carousel */}
-        <div ref={statsRef} className={s.statsSection}>
-          <Swiper
-            modules={[EffectCoverflow]}
-            effect="coverflow"
-            grabCursor
-            slidesPerView="auto"
-            centeredSlides
-            loop
-            spaceBetween={32}
-            coverflowEffect={{ rotate: 30, stretch: 0, depth: 100, modifier: 1, slideShadows: false }}
-          >
-            {STATS.map((card) => (
-              <SwiperSlide key={card.title} style={{ width: 380, maxWidth: '85%', height: 480 }}>
-                <div className={s.statCardOuter}>
-                  <div className={s.statCardInner}>
-                    <div>
-                      <div className={s.statTitle}>{card.title}</div>
-                      <div className={s.statValue}>{card.value}</div>
-                    </div>
-                    <div className={s.statDetails}>
-                      {card.details.map(d => (
-                        <div key={d} className={s.statDetail}>
-                          <span className={s.statDot} />
-                          <span>{d}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  <div className={s.statFooter}>{card.footer}</div>
-                </div>
-              </SwiperSlide>
-            ))}
-          </Swiper>
-        </div>
-      </main>
-    </>
+      {/* ── Cinematic paragraph (SynapseX §1.5) ────────────────────── */}
+      <div
+        className="relative z-10 flex items-center justify-center px-8 md:px-16"
+        style={{ height: '100vh', background: 'linear-gradient(to bottom, rgb(11,15,25) 0%, rgb(7,11,26) 100%)' }}
+      >
+        <p
+          className="max-w-[900px] text-center font-sans font-light text-white/75 leading-[1.35] tracking-[-0.02em]"
+          style={{ fontSize: 'clamp(20px, 3vw, 40px)' }}
+        >
+          A multi-agent intelligence layer built on the architecture of autonomous AI.
+          Vantro dispatches specialized agents — each trained for one domain, each running
+          24/7. Every task becomes measurable, structured, and visible.{' '}
+          <span className="text-white/90">Operational noise filters into revenue.</span>
+        </p>
+      </div>
+    </section>
   )
 }
