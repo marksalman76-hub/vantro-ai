@@ -144,6 +144,42 @@ async def create_media_job(
             external_job_id = result.get("task_id")
             provider_type = "higgsfield"
 
+        elif req.type in ["voiceover", "podcast", "narration"]:
+            # Route to ElevenLabs for audio
+            elevenlabs_cred = (
+                db.query(WorkspaceIntegration)
+                .filter(
+                    WorkspaceIntegration.workspace_id == workspace.id,
+                    WorkspaceIntegration.integration_key == "ELEVENLABS_API_KEY",
+                    WorkspaceIntegration.is_active == True,
+                )
+                .first()
+            )
+
+            if not elevenlabs_cred:
+                raise HTTPException(
+                    status_code=503,
+                    detail="ElevenLabs not configured for this workspace"
+                )
+
+            # Decrypt API key
+            api_key = decrypt(elevenlabs_cred.encrypted_value)
+            elevenlabs = ElevenLabsProvider()
+            elevenlabs.set_api_key(api_key)
+
+            result = await elevenlabs.execute(
+                text=req.brief,
+                voice_id=req.gender or "default",
+                language=req.language,
+                tone=req.tone.lower(),
+            )
+
+            if "error" in result:
+                raise HTTPException(status_code=503, detail=f"ElevenLabs error: {result['error']}")
+
+            external_job_id = result.get("task_id")
+            provider_type = "elevenlabs"
+
         # Create MediaJob record (schema updated to store flexible fields)
         job = MediaJob(
             id=job_id,
