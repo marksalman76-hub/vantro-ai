@@ -152,13 +152,14 @@ export default function AdminCreateMediaPage() {
         .find(Boolean) || { id: 'ugc_media_agent' };
       const selectedAssets = brandAssets.filter((asset) => selectedAssetIds.has(asset.id));
 
-      const res = await fetch(`/api/admin/agents/${mediaAgent.id}/run`, {
+      const res = await fetch('/api/admin-run-agent', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          agent_id: mediaAgent.id,
           prompt: task,
           context: {
             media_request: req,
