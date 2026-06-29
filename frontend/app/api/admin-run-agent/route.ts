@@ -44,11 +44,19 @@ export async function POST(request: Request) {
       context: body.context,
     });
 
-    const res = await fetch(`${API_URL}/api/admin/agents/${agentId}/run`, {
+    let res = await fetch(`${API_URL}/api/admin/agents/${agentId}/run`, {
       method: "POST",
       headers: { Authorization: token, "Content-Type": "application/json" },
       body: backendBody,
     });
+
+    if (res.status >= 500) {
+      res = await fetch(`${API_URL}/api/agents/${agentId}/run`, {
+        method: "POST",
+        headers: { Authorization: token, "Content-Type": "application/json" },
+        body: backendBody,
+      });
+    }
 
     return forwardBackendResponse(res);
   } catch (error) {
