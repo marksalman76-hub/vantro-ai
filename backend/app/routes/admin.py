@@ -908,14 +908,33 @@ async def admin_run_agent(
     meta = AGENT_CATALOGUE[norm_id]
     hitl = meta["hitl_default"]
 
-    # Get or create admin workspace
-    ws = db.query(Workspace).filter(Workspace.owner_id == admin.id).first()
+    # Get or create admin workspace. Workspace rows are organization-scoped;
+    # older admin rows may not have user.organization_id populated yet.
+    org = None
+    if getattr(admin, "organization_id", None):
+        org = db.query(Organization).filter(Organization.id == admin.organization_id).first()
+    if not org:
+        org = db.query(Organization).filter(Organization.owner_id == admin.id).first()
+    if not org:
+        org = Organization(
+            id=str(_uuid.uuid4()),
+            name="Admin Organization",
+            slug=f"admin-{admin.id[:8]}",
+            owner_id=admin.id,
+        )
+        db.add(org)
+        db.flush()
+    if getattr(admin, "organization_id", None) != org.id:
+        admin.organization_id = org.id
+
+    ws = db.query(Workspace).filter(Workspace.organization_id == org.id).first()
     if not ws:
         ws = Workspace(
             id=str(_uuid.uuid4()),
-            owner_id=admin.id,
+            organization_id=org.id,
             name="Admin Workspace",
-            plan="enterprise",
+            slug=f"admin-workspace-{admin.id[:8]}",
+            workspace_type="admin",
             created_at=datetime.utcnow(),
         )
         db.add(ws)
