@@ -332,10 +332,9 @@ export default function CreateMediaPage() {
                 accept="image/*,video/*"
                 className="hidden"
                 onChange={(e) => {
-                  if (e.target.files) {
-                    setRefFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
-                    e.target.value = '';
-                  }
+                  const picked = e.target.files ? Array.from(e.target.files) : [];
+                  e.target.value = '';
+                  if (picked.length > 0) setRefFiles(prev => [...prev, ...picked]);
                 }}
               />
               <Link

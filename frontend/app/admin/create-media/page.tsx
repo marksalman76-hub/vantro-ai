@@ -1,8 +1,17 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+
+interface BrandAsset {
+  id: string;
+  name: string;
+  filename: string;
+  mime_type: string;
+  size: number;
+  created_at: string;
+}
 
 type Step = 'type' | 'brief' | 'format' | 'brand' | 'review';
 
@@ -69,7 +78,39 @@ export default function AdminCreateMediaPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [refFiles, setRefFiles] = useState<File[]>([]);
+  const [brandAssets, setBrandAssets] = useState<BrandAsset[]>([]);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
+    if (!token) return;
+    fetch('/api/admin/brand-assets', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => setBrandAssets(d.assets || []))
+      .catch(() => {});
+  }, []);
+
+  function toggleAsset(id: string) {
+    setSelectedAssetIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  function formatSize(bytes: number) {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+
+  function assetThumb(asset: BrandAsset) {
+    if (asset.mime_type.startsWith('image/')) return '▧';
+    if (asset.mime_type.startsWith('video/')) return '▶';
+    if (asset.mime_type === 'application/pdf') return '📄';
+    return '✎';
+  }
 
   function next() {
     const idx = STEPS.indexOf(step);
@@ -233,44 +274,79 @@ export default function AdminCreateMediaPage() {
           )}
 
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4 mt-4">
-            <p className="text-xs font-medium text-white mb-0.5">Upload references</p>
-            <p className="text-[11px] text-gray-500 mb-2">Optional: provide reference images, scripts, or files for this task</p>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between mb-0.5">
+              <p className="text-xs font-medium text-white">Reference files</p>
+              <Link href="/admin/brand-assets" className="text-[10px] text-violet-400 hover:text-violet-300">
+                Manage brand assets →
+              </Link>
+            </div>
+            <p className="text-[11px] text-gray-500 mb-3">Select saved brand assets or upload new files for this request</p>
+
+            {/* Saved brand assets */}
+            {brandAssets.length > 0 && (
+              <div className="mb-3">
+                <p className="text-[10px] text-gray-600 uppercase tracking-wider mb-1.5">Saved assets</p>
+                <div className="space-y-1 max-h-36 overflow-y-auto pr-1">
+                  {brandAssets.map(asset => {
+                    const selected = selectedAssetIds.has(asset.id);
+                    return (
+                      <button
+                        key={asset.id}
+                        type="button"
+                        onClick={() => toggleAsset(asset.id)}
+                        className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-left transition-colors ${
+                          selected
+                            ? 'bg-violet-500/10 border border-violet-500/30'
+                            : 'bg-gray-800/50 border border-transparent hover:border-gray-700'
+                        }`}
+                      >
+                        <span className="text-sm">{assetThumb(asset)}</span>
+                        <span className="flex-1 text-[11px] text-gray-300 truncate">{asset.name}</span>
+                        <span className="text-[10px] text-gray-600 shrink-0">{formatSize(asset.size)}</span>
+                        {selected && <span className="text-violet-400 text-[10px] font-bold shrink-0">✓</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Fresh upload */}
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-6 h-6 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 flex items-center justify-center text-violet-400 text-lg transition-colors"
                 type="button"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 text-[11px] font-medium transition-colors"
               >
-                +
+                <span className="text-violet-400">+</span> Upload file
               </button>
               <input
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/*,video/*"
+                accept="image/*,video/*,application/pdf,.doc,.docx,.txt"
                 className="hidden"
                 onChange={(e) => {
-                  if (e.target.files) {
-                    setRefFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
-                    e.target.value = '';
-                  }
+                  const picked = e.target.files ? Array.from(e.target.files) : [];
+                  e.target.value = '';
+                  if (picked.length > 0) setRefFiles(prev => [...prev, ...picked]);
                 }}
               />
-              <Link
-                href="/admin/assets"
-                className="text-[11px] text-violet-400 hover:text-violet-300 font-medium"
-              >
-                Manage brand assets →
-              </Link>
+              {(refFiles.length > 0 || selectedAssetIds.size > 0) && (
+                <span className="text-[10px] text-gray-500">
+                  {refFiles.length + selectedAssetIds.size} file{refFiles.length + selectedAssetIds.size !== 1 ? 's' : ''} selected
+                </span>
+              )}
             </div>
+
             {refFiles.length > 0 && (
               <div className="mt-2 space-y-1">
                 {refFiles.map((file, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-[10px] text-gray-400">
-                    <span>{file.name}</span>
+                  <div key={idx} className="flex items-center justify-between px-2.5 py-1 rounded-lg bg-gray-800/50 text-[11px] text-gray-400">
+                    <span className="truncate">{file.name}</span>
                     <button
                       onClick={() => setRefFiles(prev => prev.filter((_, i) => i !== idx))}
-                      className="text-gray-600 hover:text-gray-400 transition-colors"
+                      className="text-gray-600 hover:text-red-400 transition-colors ml-2 shrink-0"
                       type="button"
                     >
                       ✕
@@ -278,6 +354,13 @@ export default function AdminCreateMediaPage() {
                   </div>
                 ))}
               </div>
+            )}
+
+            {brandAssets.length === 0 && refFiles.length === 0 && (
+              <p className="text-[10px] text-gray-700 mt-2">
+                No saved brand assets yet.{' '}
+                <Link href="/admin/brand-assets" className="text-violet-500 hover:text-violet-400">Upload assets →</Link>
+              </p>
             )}
           </div>
 
