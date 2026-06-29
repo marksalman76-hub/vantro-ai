@@ -14,7 +14,7 @@ from app.auth import verify_token
 from app.database import SessionLocal
 from app.models import User, Organization
 from app.models.workspace import Workspace, CreditsAccount, MediaJob
-from app.models.agent_system import AgentJob, PackageDownload
+from app.models.agent_system import AgentJob, PackageDownload, WorkspaceIntegration
 from app.models.audit_log import AuditLog
 from app.models import Announcement, AgentChangelog, SystemStatus
 from app.agents.agent_registry import (
@@ -94,6 +94,98 @@ def _resolve_client_record(user: User, db: Session) -> dict:
         "remaining_credits": total - used,
         "tier": tier,
     }
+
+
+def _has_active_integration(db: Session, workspace_id: str | None, integration_key: str) -> bool:
+    if not workspace_id:
+        return False
+    return (
+        db.query(WorkspaceIntegration.id)
+        .filter(
+            WorkspaceIntegration.workspace_id == workspace_id,
+            WorkspaceIntegration.integration_key == integration_key,
+            WorkspaceIntegration.is_active == True,
+        )
+        .first()
+        is not None
+    )
+
+
+def _provider_configured(*env_vars: str) -> bool:
+    return any(bool(os.getenv(env_var)) for env_var in env_vars)
+
+
+def _platform_provider_health(user: User, db: Session) -> list[dict]:
+    client_record = _resolve_client_record(user, db)
+    workspace = client_record.get("workspace")
+    workspace_id = getattr(workspace, "id", None)
+    github_configured = _provider_configured("GITHUB_TOKEN", "GH_TOKEN") or _has_active_integration(
+        db,
+        workspace_id,
+        "COMPOSIO_API_KEY",
+    )
+
+    def readiness(configured: bool) -> str:
+        return "ready" if configured else "not_configured"
+
+    return [
+        {
+            "name": "HeyGen",
+            "category": "Video / Avatar",
+            "configured": _provider_configured("HEYGEN_API_KEY"),
+            "readiness": readiness(_provider_configured("HEYGEN_API_KEY")),
+            "notes": "Primary video generation and avatar presenter",
+            "role": "primary",
+        },
+        {
+            "name": "Stripe",
+            "category": "Billing",
+            "configured": _provider_configured("STRIPE_SECRET_KEY"),
+            "readiness": readiness(_provider_configured("STRIPE_SECRET_KEY")),
+            "notes": "Subscriptions, checkouts, and billing portal",
+            "role": "primary",
+        },
+        {
+            "name": "AWS SQS",
+            "category": "Queue / Worker",
+            "configured": _provider_configured("SQS_JOBS_QUEUE_URL"),
+            "readiness": readiness(_provider_configured("SQS_JOBS_QUEUE_URL")),
+            "notes": "Async job queue for video processing",
+            "role": "primary",
+        },
+        {
+            "name": "Redis (ElastiCache)",
+            "category": "Cache / Rate Limiting",
+            "configured": _provider_configured("REDIS_URL"),
+            "readiness": readiness(_provider_configured("REDIS_URL")),
+            "notes": "API rate limiting and response caching",
+            "role": "primary",
+        },
+        {
+            "name": "GitHub",
+            "category": "Code / Repository",
+            "configured": github_configured,
+            "readiness": readiness(github_configured),
+            "notes": "Repository automation via GitHub token or Composio GitHub app connection",
+            "role": "primary",
+        },
+        {
+            "name": "ElevenLabs",
+            "category": "Voice / Audio",
+            "configured": _provider_configured("ELEVENLABS_API_KEY"),
+            "readiness": readiness(_provider_configured("ELEVENLABS_API_KEY")),
+            "notes": "Voice synthesis - future provider",
+            "role": "future",
+        },
+        {
+            "name": "Runway",
+            "category": "Video Generation",
+            "configured": _provider_configured("RUNWAY_API_KEY"),
+            "readiness": readiness(_provider_configured("RUNWAY_API_KEY")),
+            "notes": "Cinematic video generation - future provider",
+            "role": "future",
+        },
+    ]
 
 
 # ─── Stats ────────────────────────────────────────────────────────────────────
@@ -645,10 +737,8 @@ async def get_providers(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
-    _require_admin(credentials, db)
-
-    def provider_status(env_var: str) -> str:
-        return "ready" if os.getenv(env_var) else "not_configured"
+    user = _require_admin(credentials, db)
+    return {"providers": _platform_provider_health(user, db)}
 
     return {
         "providers": [
