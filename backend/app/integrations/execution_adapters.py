@@ -144,6 +144,8 @@ class ExecutionAdapters:
         )
         video_route = creative_provider_route.get("video", {}) if isinstance(creative_provider_route, dict) else {}
         image_route = creative_provider_route.get("image", {}) if isinstance(creative_provider_route, dict) else {}
+        selected_video_provider = video_route.get("provider")
+        selected_video_model = video_route.get("model")
         workspace_id = str(workflow.get("tenant_id", ""))
 
         # Initialize Higgsfield provider
@@ -160,7 +162,7 @@ class ExecutionAdapters:
         if not higgsfield_api_key:
             higgsfield_api_key = os.getenv("HIGGSFIELD_API_KEY", "")
 
-        if higgsfield_api_key:
+        if higgsfield_api_key and selected_video_provider == "higgsfield":
             higgsfield.set_api_key(higgsfield_api_key)
             provider_ready = higgsfield.is_ready()
             provider_connected = True
@@ -180,13 +182,13 @@ class ExecutionAdapters:
             execution_payload={
                 "provider_route": provider_route,
                 "provider_category": "ugc_video_generation",
-                "provider": "higgsfield",
+                "provider": selected_video_provider,
                 "provider_connected": provider_connected,
                 "provider_instance": higgsfield,
                 "workspace_id": workspace_id,
                 "creative_provider_route": creative_provider_route,
-                "selected_video_provider": video_route.get("provider"),
-                "selected_video_model": video_route.get("model"),
+                "selected_video_provider": selected_video_provider,
+                "selected_video_model": selected_video_model,
                 "selected_image_provider": image_route.get("provider"),
                 "selected_image_model": image_route.get("model"),
             },

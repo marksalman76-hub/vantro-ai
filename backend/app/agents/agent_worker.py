@@ -65,6 +65,36 @@ SKILL_REINDEX_INTERVAL      = 21600 # seconds between skill freshness checks (6 
 BILLING_REMINDER_INTERVAL   = 86400 # seconds between billing reminder sweeps (24 hours)
 
 
+def _selected_video_route(creative_provider_route: object) -> dict:
+    if not isinstance(creative_provider_route, dict):
+        return {}
+
+    video_route = creative_provider_route.get("video")
+    return video_route if isinstance(video_route, dict) else {}
+
+
+def _should_execute_higgsfield_live(adapter_result, creative_provider_route: object) -> bool:
+    if not getattr(adapter_result, "provider_ready", False):
+        return False
+
+    execution_payload = getattr(adapter_result, "execution_payload", None)
+    if not isinstance(execution_payload, dict):
+        return False
+
+    video_route = _selected_video_route(creative_provider_route)
+    selected_provider = execution_payload.get("selected_video_provider")
+    selected_model = execution_payload.get("selected_video_model")
+    route_provider = video_route.get("provider")
+    route_model = video_route.get("model")
+
+    return (
+        selected_provider == "higgsfield"
+        and route_provider == "higgsfield"
+        and bool(selected_model)
+        and selected_model == route_model
+    )
+
+
 async def _process_job(job_id: str) -> None:
     """Process a single agent job end-to-end."""
 
@@ -346,13 +376,13 @@ async def _process_job(job_id: str) -> None:
                     },
                 )
 
-                if adapter_result.provider_ready:
+                if _should_execute_higgsfield_live(adapter_result, creative_provider_route):
                     higgsfield = adapter_result.execution_payload.get("provider_instance")
                     if higgsfield:
                         try:
                             media_task_result = await higgsfield.execute(
                                 prompt=output,
-                                model=creative_provider_route.get("video", {}).get("model"),
+                                model=adapter_result.execution_payload.get("selected_video_model"),
                                 duration=30,
                                 aspect_ratio="9:16",
                             )

@@ -1,5 +1,7 @@
 import pytest
 
+from app.agents import agent_worker
+from app.integrations.execution_adapters import AdapterResult
 from app.runtime.creative_provider_routing import (
     CREATIVE_AGENT_IDS,
     creative_provider_status,
@@ -232,3 +234,62 @@ def test_execution_adapter_preserves_selected_creative_models_without_credential
     assert result.execution_payload["selected_image_provider"] == "nano_banana"
     assert result.execution_payload["selected_image_model"] == "Nano Banana Pro"
     assert result.provider_ready is False
+
+
+def test_execution_adapter_keeps_image_route_metadata_but_disables_live_video_for_image_only_routes(monkeypatch):
+    monkeypatch.setenv("HIGGSFIELD_API_KEY", "test-key")
+
+    adapter = ExecutionAdapters(db=None)
+    route = resolve_creative_provider_route(
+        agent_id="product_image_agent",
+        media_type="image",
+        image_tier="pro",
+    )
+
+    result = adapter.execute(
+        adapter_name="ugc_video_provider_adapter",
+        payload={
+            "workflow": {
+                "tenant_id": "workspace-test",
+                "task": "Create premium skincare product renders",
+                "creative_provider_route": route,
+            },
+            "context": {
+                "agent_id": "product_image_agent",
+                "job_id": "job-test",
+                "creative_provider_route": route,
+            },
+        },
+    )
+
+    assert result.execution_payload["selected_image_provider"] == "nano_banana"
+    assert result.execution_payload["selected_image_model"] == "Nano Banana Pro"
+    assert result.execution_payload["selected_video_provider"] is None
+    assert result.execution_payload["selected_video_model"] is None
+    assert result.provider_ready is False
+
+
+def test_worker_live_execution_guard_requires_selected_video_route():
+    adapter_result = AdapterResult(
+        success=True,
+        adapter_name="ugc_video_provider_adapter",
+        execution_mode="higgsfield_live",
+        provider_ready=True,
+        message="prepared",
+        next_steps=[],
+        execution_payload={
+            "selected_video_provider": None,
+            "selected_video_model": None,
+            "selected_image_provider": "nano_banana",
+            "selected_image_model": "Nano Banana Pro",
+        },
+    )
+
+    assert agent_worker._should_execute_higgsfield_live(  # type: ignore[attr-defined]
+        adapter_result,
+        {
+            "success": True,
+            "media_types": ["image"],
+            "image": {"provider": "nano_banana", "model": "Nano Banana Pro"},
+        },
+    ) is False
