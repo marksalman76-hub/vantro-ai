@@ -235,19 +235,20 @@ export default function AdminCreateMediaPage() {
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4 mt-4">
             <p className="text-xs font-medium text-white mb-0.5">Upload references</p>
             <p className="text-[11px] text-gray-500 mb-2">Optional: provide reference images, scripts, or files for this task</p>
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-6 h-6 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 flex items-center justify-center text-violet-400 text-lg transition-colors"
+                className="inline-flex items-center gap-2 rounded-lg bg-violet-600/20 hover:bg-violet-600/30 px-3 py-2 text-violet-300 text-xs font-semibold transition-colors"
                 type="button"
               >
-                +
+                <span className="text-base leading-none">+</span>
+                Upload file
               </button>
               <input
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept="image/*,video/*"
+                accept="image/*,video/*,application/pdf,text/plain,text/csv,.doc,.docx,.ppt,.pptx"
                 className="hidden"
                 onChange={(e) => {
                   if (e.target.files) {
