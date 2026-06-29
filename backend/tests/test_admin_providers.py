@@ -21,6 +21,27 @@ def test_admin_provider_health_includes_github_connection_status(client, db):
     assert github["readiness"] in {"ready", "not_configured"}
 
 
+def test_admin_stats_reports_unlimited_owner_credits(client, db):
+    _, token, credits = make_user(db, email="admin-stats@test.com", is_admin=True)
+    credits.total_credits = 100
+    credits.used_credits = 100
+    db.commit()
+
+    response = client.get(
+        "/api/admin/stats",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert body["credits_unlimited"] is True
+    assert body["credit_label"] == "Unlimited"
+    assert body["tier"] == "owner"
+    assert body["remaining_credits"] is None
+    assert body["total_credits"] is None
+    assert body["used_credits"] == credits.used_credits
+
+
 def test_admin_provider_health_includes_creative_routes_without_credentials(client, db, monkeypatch):
     monkeypatch.setenv("HIGGSFIELD_API_KEY", "higgs-secret-value")
     monkeypatch.setenv("NANO_BANANA_API_KEY", "banana-secret-value")

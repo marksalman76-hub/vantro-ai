@@ -220,7 +220,8 @@ async def get_stats(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
-    _require_admin(credentials, db)
+    admin = _require_admin(credentials, db)
+    admin_record = _resolve_client_record(admin, db)
     total_users   = db.query(func.count(User.id)).scalar() or 0
     active_subs   = db.query(func.count(User.id)).filter(User.subscription_status == "active").scalar() or 0
     trial_subs    = db.query(func.count(User.id)).filter(User.subscription_status == "trialing").scalar() or 0
@@ -244,6 +245,12 @@ async def get_stats(
         "pending_media_jobs": pending,
         "failed_media_jobs": failed,
         "queued_jobs": pending,
+        "credits_unlimited": True,
+        "credit_label": "Unlimited",
+        "total_credits": None,
+        "used_credits": admin_record["used_credits"],
+        "remaining_credits": None,
+        "tier": "owner",
     }
 
 

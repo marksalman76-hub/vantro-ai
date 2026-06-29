@@ -8,6 +8,8 @@ export interface CreditsData {
   used_credits: number;
   remaining_credits: number;
   tier: string;
+  credits_unlimited?: boolean;
+  credit_label?: string;
 }
 
 export interface AgentUsage {
@@ -131,12 +133,17 @@ export default function StatusStrip({
   let creditsColor = 'white';
   let creditsPercentage = 0;
   if (credits) {
-    creditsPercentage = (credits.remaining_credits / credits.total_credits) * 100;
-    if (creditsPercentage < 20) {
+    if (credits.credits_unlimited) {
+      creditsColor = 'oklch(0.62 0.18 250)';
+      creditsPercentage = 100;
+    } else if (credits.total_credits > 0) {
+      creditsPercentage = (credits.remaining_credits / credits.total_credits) * 100;
+    }
+    if (!credits.credits_unlimited && creditsPercentage < 20) {
       creditsColor = 'oklch(0.63 0.20 25)'; // red
-    } else if (creditsPercentage < 50) {
+    } else if (!credits.credits_unlimited && creditsPercentage < 50) {
       creditsColor = 'oklch(0.71 0.17 90)'; // amber
-    } else {
+    } else if (!credits.credits_unlimited) {
       creditsColor = 'oklch(0.60 0.15 142)'; // green
     }
   }
@@ -205,8 +212,8 @@ export default function StatusStrip({
           {credits && (
             <MetricCard
               label="Credits remaining"
-              value={credits.remaining_credits}
-              sub={`of ${credits.total_credits} total`}
+              value={credits.credits_unlimited ? (credits.credit_label || 'Unlimited') : credits.remaining_credits}
+              sub={credits.credits_unlimited ? 'owner access' : `of ${credits.total_credits} total`}
               color={creditsColor}
             />
           )}

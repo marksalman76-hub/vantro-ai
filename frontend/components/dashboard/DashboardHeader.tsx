@@ -7,6 +7,8 @@ interface CreditsData {
   total_credits: number;
   used_credits: number;
   remaining_credits: number;
+  credits_unlimited?: boolean;
+  credit_label?: string;
 }
 
 interface DashboardHeaderProps {
@@ -27,10 +29,13 @@ export default function DashboardHeader({
   const alertCount = pendingApprovals + failedJobs;
   const remainingCredits = credits?.remaining_credits ?? 0;
   const totalCredits = credits?.total_credits ?? 0;
+  const creditsUnlimited = Boolean(credits?.credits_unlimited);
 
   // Determine credit color based on percentage
   let creditColor = 'oklch(0.20 0.2 142)'; // green ≥50%
-  if (totalCredits > 0) {
+  if (creditsUnlimited) {
+    creditColor = 'oklch(0.62 0.18 250)';
+  } else if (totalCredits > 0) {
     const percentageRemaining = (remainingCredits / totalCredits) * 100;
     if (percentageRemaining < 20) {
       creditColor = 'oklch(0.55 0.2 25)'; // red <20%
@@ -121,7 +126,7 @@ export default function DashboardHeader({
                 color: creditColor,
               }}
             >
-              {remainingCredits}
+              {creditsUnlimited ? (credits?.credit_label || 'Unlimited') : remainingCredits}
             </span>
             <span
               style={{

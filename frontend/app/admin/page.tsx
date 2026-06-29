@@ -16,10 +16,21 @@ import RecentJobsTable, { HistoryJob } from '@/components/dashboard/RecentJobsTa
 import ThemeToggle from '@/components/dashboard/ThemeToggle';
 
 interface AdminCredits {
-  total_credits?: number;
+  total_credits?: number | null;
   used_credits?: number;
-  remaining_credits?: number;
+  remaining_credits?: number | null;
   tier?: string;
+  credits_unlimited?: boolean;
+  credit_label?: string;
+}
+
+interface DisplayCredits {
+  total_credits: number;
+  used_credits: number;
+  remaining_credits: number;
+  tier: string;
+  credits_unlimited: boolean;
+  credit_label: string;
 }
 
 interface AgentUsage {
@@ -129,6 +140,15 @@ export default function AdminDashboard() {
 
   const failedJobs = jobs.filter(j => j.status === 'failed').length;
 
+  const ownerCredits: DisplayCredits = {
+    total_credits: credits?.total_credits ?? 0,
+    used_credits: credits?.used_credits ?? 0,
+    remaining_credits: credits?.remaining_credits ?? 0,
+    tier: 'owner',
+    credits_unlimited: true,
+    credit_label: credits?.credit_label || 'Unlimited',
+  };
+
   if (loading) {
     return (
       <div className="p-8 max-w-5xl" style={{ paddingTop: '6rem' }}>
@@ -149,11 +169,7 @@ export default function AdminDashboard() {
   return (
     <>
       <DashboardHeader
-        credits={credits ? {
-          total_credits: credits.total_credits ?? 0,
-          used_credits: credits.used_credits ?? 0,
-          remaining_credits: credits.remaining_credits ?? 0,
-        } : null}
+        credits={ownerCredits}
         pendingApprovals={pendingApprovals}
         failedJobs={failedJobs}
         onSignOut={onSignOut}
@@ -161,12 +177,7 @@ export default function AdminDashboard() {
 
       <div className="p-8 max-w-5xl" style={{ paddingTop: '6rem' }}>
         <StatusStrip
-          credits={credits ? {
-            total_credits: credits.total_credits ?? 0,
-            used_credits: credits.used_credits ?? 0,
-            remaining_credits: credits.remaining_credits ?? 0,
-            tier: credits.tier ?? 'enterprise',
-          } : null}
+          credits={ownerCredits}
           completedThisMonth={completedThisMonth}
           pendingApprovals={pendingApprovals}
           topAgents={topAgents}
