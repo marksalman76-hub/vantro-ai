@@ -26,6 +26,7 @@ class HiggsfieldProvider(BaseProvider):
         aspect_ratio: str = "9:16",
         platform: str = "tiktok",
         tone: str = "professional",
+        quality: str = "1080p",
         **kwargs,
     ) -> dict:
         """Submit UGC video generation task to Higgsfield."""
@@ -38,6 +39,7 @@ class HiggsfieldProvider(BaseProvider):
             "aspect_ratio": aspect_ratio,
             "platform": platform,
             "tone": tone,
+            "quality": quality,
             "model": "ugc_pro",
         }
 
