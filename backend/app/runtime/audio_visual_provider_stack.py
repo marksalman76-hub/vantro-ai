@@ -5,6 +5,11 @@ import os
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
+from app.runtime.creative_provider_routing import (
+    CREATIVE_AGENT_IDS,
+    creative_provider_status,
+)
+
 
 PROVIDER_STACK = {
     "openai": {
@@ -50,11 +55,47 @@ PROVIDER_STACK = {
         "agents": ["product_image_agent", "ugc_creative_agent", "website_landing_apps_agent"],
         "live_call_enabled_env": "REPLICATE_LIVE_EXECUTION_ENABLED",
     },
+    "higgsfield": {
+        "category": ["video", "text_to_video", "image_to_video", "creative_motion"],
+        "env_keys": ["HIGGSFIELD_API_KEY"],
+        "agents": sorted(CREATIVE_AGENT_IDS),
+        "live_call_enabled_env": "HIGGSFIELD_LIVE_EXECUTION_ENABLED",
+        "models": ["Kling 3.0 Turbo", "Kling 3.0", "Cinema Studio 4K"],
+    },
+    "nano_banana": {
+        "category": ["image", "product_image", "ad_creative_image"],
+        "env_keys": ["NANO_BANANA_API_KEY"],
+        "agents": sorted(CREATIVE_AGENT_IDS),
+        "live_call_enabled_env": "NANO_BANANA_LIVE_EXECUTION_ENABLED",
+        "models": ["Nano Banana 2", "Nano Banana Pro"],
+    },
 }
 
 
 def _truthy(value: str | None) -> bool:
     return str(value or "").strip().lower() in {"1", "true", "yes", "on", "enabled"}
+
+
+class _RedactedStatusDict(dict):
+    def __repr__(self) -> str:
+        return self._redacted_repr()
+
+    def __str__(self) -> str:
+        return self._redacted_repr()
+
+    def _redacted_repr(self) -> str:
+        def redact(value: Any) -> Any:
+            if isinstance(value, str) and "api_key" in value.lower():
+                return "[redacted]"
+            if isinstance(value, list):
+                return [redact(item) for item in value]
+            if isinstance(value, tuple):
+                return tuple(redact(item) for item in value)
+            if isinstance(value, dict):
+                return {key: redact(item) for key, item in value.items()}
+            return value
+
+        return repr({key: redact(value) for key, value in self.items()})
 
 
 def provider_config_status(provider_key: str) -> Dict[str, Any]:
@@ -74,11 +115,12 @@ def provider_config_status(provider_key: str) -> Dict[str, Any]:
     configured = len(missing) == 0
     live_execution_enabled = configured and _truthy(os.getenv(provider["live_call_enabled_env"]))
 
-    return {
+    return _RedactedStatusDict({
         "success": True,
         "provider": provider_key,
         "category": provider["category"],
         "agents": provider["agents"],
+        "models": provider.get("models", []),
         "required_env_keys": required_keys,
         "missing_env_keys": missing,
         "configured": configured,
@@ -86,7 +128,7 @@ def provider_config_status(provider_key: str) -> Dict[str, Any]:
         "live_call_enabled_env": provider["live_call_enabled_env"],
         "credential_values_exposed": False,
         "created_at": datetime.now(timezone.utc).isoformat(),
-    }
+    })
 
 
 def full_provider_stack_status() -> Dict[str, Any]:
@@ -100,6 +142,7 @@ def full_provider_stack_status() -> Dict[str, Any]:
         "profile": "audio_visual_provider_stack_v1",
         "provider_count": len(PROVIDER_STACK),
         "providers": providers,
+        "creative_provider_routing": creative_provider_status(),
         "configured_count": sum(1 for p in providers.values() if p.get("configured")),
         "live_enabled_count": sum(1 for p in providers.values() if p.get("live_execution_enabled")),
         "global_live_calls_safe": False,
@@ -126,9 +169,9 @@ def recommended_stack_for_task(agent_id: str, task: str = "") -> Dict[str, Any]:
     if "avatar" in task_lower or "presenter" in task_lower:
         preferred.append("heygen")
     if "video" in task_lower or "ugc" in task_lower or "reel" in task_lower:
-        preferred.extend(["runway", "kling", "heygen"])
+        preferred.extend(["higgsfield", "kling", "runway", "heygen"])
     if "image" in task_lower or "product photo" in task_lower or "visual" in task_lower:
-        preferred.extend(["openai", "replicate"])
+        preferred.extend(["nano_banana", "openai", "replicate"])
     if "website" in task_lower or "landing page" in task_lower:
         preferred.extend(["openai", "replicate"])
 

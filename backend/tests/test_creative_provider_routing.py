@@ -7,6 +7,12 @@ from app.runtime.creative_provider_routing import (
     normalize_creative_agent_id,
     resolve_creative_provider_route,
 )
+from app.runtime.audio_visual_provider_stack import (
+    full_provider_stack_status,
+    provider_config_status,
+    providers_for_agent,
+    recommended_stack_for_task,
+)
 
 
 CREATIVE_AGENT_CASES = [
@@ -151,3 +157,45 @@ def test_creative_provider_status_exposes_models_without_credentials():
         "Nano Banana Pro",
     ]
     assert status["credential_values_exposed"] is False
+
+
+def test_provider_stack_exposes_higgsfield_and_nano_banana():
+    status = full_provider_stack_status()
+
+    assert "higgsfield" in status["providers"]
+    assert "nano_banana" in status["providers"]
+    assert status["providers"]["higgsfield"]["models"] == [
+        "Kling 3.0 Turbo",
+        "Kling 3.0",
+        "Cinema Studio 4K",
+    ]
+    assert status["providers"]["nano_banana"]["models"] == [
+        "Nano Banana 2",
+        "Nano Banana Pro",
+    ]
+    assert status["credential_values_exposed"] is False
+
+
+@pytest.mark.parametrize("agent_id", CREATIVE_AGENT_CASES)
+def test_provider_stack_gives_creative_agents_higgsfield_and_nano_banana(agent_id):
+    providers = providers_for_agent(agent_id)
+
+    assert "higgsfield" in providers
+    assert "nano_banana" in providers
+
+
+def test_recommended_stack_prioritizes_higgsfield_for_video_and_nano_banana_for_image():
+    video_stack = recommended_stack_for_task("ugc_media_agent", "Create a 720p product video")
+    image_stack = recommended_stack_for_task("product_image_agent", "Create a premium product image")
+
+    assert video_stack["recommended_order"][0] == "higgsfield"
+    assert image_stack["recommended_order"][0] == "nano_banana"
+
+
+def test_provider_config_status_keeps_credentials_hidden():
+    status = provider_config_status("higgsfield")
+
+    assert status["provider"] == "higgsfield"
+    assert "credential_values_exposed" in status
+    assert status["credential_values_exposed"] is False
+    assert "api_key" not in str(status).lower()
