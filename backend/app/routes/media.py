@@ -136,6 +136,7 @@ async def create_media_job(
                 platform=req.platform.lower(),
                 tone=req.tone.lower(),
                 quality=req.video_quality,
+                language=req.language,
             )
 
             if "error" in result:

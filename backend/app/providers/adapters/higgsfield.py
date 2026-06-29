@@ -27,6 +27,7 @@ class HiggsfieldProvider(BaseProvider):
         platform: str = "tiktok",
         tone: str = "professional",
         quality: str = "1080p",
+        language: str = "en",
         **kwargs,
     ) -> dict:
         """Submit UGC video generation task to Higgsfield."""
@@ -40,6 +41,7 @@ class HiggsfieldProvider(BaseProvider):
             "platform": platform,
             "tone": tone,
             "quality": quality,
+            "language": language,
             "model": "ugc_pro",
         }
 
