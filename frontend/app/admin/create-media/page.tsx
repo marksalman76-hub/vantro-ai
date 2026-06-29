@@ -123,7 +123,7 @@ export default function AdminCreateMediaPage() {
   }
 
   async function submit() {
-    const token = localStorage.getItem('token') || localStorage.getItem('admin_token');
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
     if (!token) return;
     setSubmitting(true);
     setError('');
@@ -145,21 +145,37 @@ export default function AdminCreateMediaPage() {
       const agentsRes = await fetch('/api/agents', { headers: { Authorization: `Bearer ${token}` } });
       const agentsData = await agentsRes.json();
       // Admin bypasses credit/unlock checks on backend — don't filter by unlocked here
-      const mediaAgent = (agentsData.agents || []).find(
-        (a: { id: string }) =>
-          a.id.includes('ugc') || a.id.includes('media') || a.id.includes('video') || a.id.includes('content')
-      ) || { id: 'ugc_media_agent' };
+      const agents = agentsData.agents || [];
+      const preferredAgentIds = ['ugc_media_agent', 'product_video_agent', 'social_media_content_agent'];
+      const mediaAgent = preferredAgentIds
+        .map((id) => agents.find((a: { id: string }) => a.id === id))
+        .find(Boolean) || { id: 'ugc_media_agent' };
+      const selectedAssets = brandAssets.filter((asset) => selectedAssetIds.has(asset.id));
 
-      const formData = new FormData();
-      formData.append('prompt', task);
-      formData.append('context', JSON.stringify({}));
-      formData.append('output_language', '');
-      refFiles.forEach((file) => formData.append('reference_files', file));
-
-      const res = await fetch(`/api/agents/${mediaAgent.id}/run`, {
+      const res = await fetch(`/api/admin/agents/${mediaAgent.id}/run`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: task,
+          context: {
+            media_request: req,
+            reference_files: refFiles.map((file) => ({
+              name: file.name,
+              type: file.type,
+              size: file.size,
+            })),
+            brand_asset_ids: Array.from(selectedAssetIds),
+            brand_assets: selectedAssets.map((asset) => ({
+              id: asset.id,
+              name: asset.name,
+              mime_type: asset.mime_type,
+              size: asset.size,
+            })),
+          },
+        }),
       });
       const d = await res.json();
       console.log('Agent response:', { status: res.status, ok: res.ok, data: d });
@@ -167,10 +183,10 @@ export default function AdminCreateMediaPage() {
         router.push('/admin/assets');
       } else {
         console.error('Agent submission failed:', { status: res.status, data: d });
-        setError('Could not start this request. Please try again or contact support.');
+        setError(d.detail || d.error || 'Could not start this request. Please try again or contact support.');
       }
-    } catch {
-      setError('Could not start media request. Please contact support.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not start media request. Please contact support.');
     } finally {
       setSubmitting(false);
     }

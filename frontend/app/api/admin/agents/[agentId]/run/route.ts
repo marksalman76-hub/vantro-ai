@@ -2,6 +2,27 @@ import { NextRequest, NextResponse } from "next/server";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 
+async function toJsonResponse(res: Response) {
+  const text = await res.text();
+  const contentType = res.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json") && text) {
+    try {
+      return NextResponse.json(JSON.parse(text), { status: res.status });
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON from backend", detail: text },
+        { status: res.status }
+      );
+    }
+  }
+
+  return NextResponse.json(
+    { error: text || res.statusText || "Backend request failed" },
+    { status: res.status }
+  );
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ agentId: string }> }
@@ -15,9 +36,11 @@ export async function POST(
       headers: { Authorization: token, "Content-Type": "application/json" },
       body,
     });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return toJsonResponse(res);
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Backend unreachable", detail: String(error) },
+      { status: 502 }
+    );
   }
 }
