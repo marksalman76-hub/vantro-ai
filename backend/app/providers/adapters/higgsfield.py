@@ -42,7 +42,7 @@ class HiggsfieldProvider(BaseProvider):
             "tone": tone,
             "quality": quality,
             "language": language,
-            "model": "ugc_pro",
+            "model": kwargs.get("model") or "ugc_pro",
         }
 
         try:

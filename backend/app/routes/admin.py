@@ -24,6 +24,10 @@ from app.agents.agent_registry import (
     TIER_ORDER,
     PURCHASABLE_AGENT_IDS,
 )
+from app.runtime.audio_visual_provider_stack import (
+    full_provider_stack_status,
+    provider_config_status,
+)
 from app.services.email_service import send_approval_result
 
 logger = logging.getLogger(__name__)
@@ -128,7 +132,7 @@ def _platform_provider_health(user: User, db: Session) -> list[dict]:
     def readiness(configured: bool) -> str:
         return "ready" if configured else "not_configured"
 
-    return [
+    providers = [
         {
             "name": "HeyGen",
             "category": "Video / Avatar",
@@ -186,6 +190,27 @@ def _platform_provider_health(user: User, db: Session) -> list[dict]:
             "role": "future",
         },
     ]
+
+    creative_provider_entries = [
+        ("higgsfield", "Higgsfield", "Video Generation", "Creative video generation provider", "primary"),
+        ("nano_banana", "Nano Banana", "Image Generation", "Creative image generation provider", "primary"),
+    ]
+    for provider_key, name, category, notes, role in creative_provider_entries:
+        status = provider_config_status(provider_key)
+        providers.append({
+            "name": name,
+            "category": category,
+            "configured": bool(status.get("configured")),
+            "readiness": readiness(bool(status.get("configured"))),
+            "notes": notes,
+            "role": role,
+            "models": status.get("models", []),
+            "agents": status.get("agents", []),
+            "live_execution_enabled": bool(status.get("live_execution_enabled")),
+            "credential_values_exposed": False,
+        })
+
+    return providers
 
 
 # ─── Stats ────────────────────────────────────────────────────────────────────
@@ -738,7 +763,13 @@ async def get_providers(
     db: Session = Depends(get_db),
 ):
     user = _require_admin(credentials, db)
-    return {"providers": _platform_provider_health(user, db)}
+    provider_stack = full_provider_stack_status()
+    return {
+        "providers": _platform_provider_health(user, db),
+        "provider_stack": provider_stack,
+        "creative_provider_routing": provider_stack["creative_provider_routing"],
+        "credential_values_exposed": False,
+    }
 
     return {
         "providers": [

@@ -1,7 +1,7 @@
 import pytest
 
 from app.agents import agent_worker
-from app.integrations.execution_adapters import AdapterResult
+from app.integrations.execution_adapters import AdapterResult, adapter_summary
 from app.runtime.creative_provider_routing import (
     CREATIVE_AGENT_IDS,
     creative_provider_status,
@@ -187,6 +187,20 @@ def test_provider_stack_gives_creative_agents_higgsfield_and_nano_banana(agent_i
     assert "nano_banana" in providers
 
 
+@pytest.mark.parametrize(
+    "alias",
+    [
+        "paid_ads_agent",
+        "social_media_manager_content_creator_agent",
+    ],
+)
+def test_provider_stack_normalizes_creative_aliases(alias):
+    providers = providers_for_agent(alias)
+
+    assert "higgsfield" in providers
+    assert "nano_banana" in providers
+
+
 def test_recommended_stack_prioritizes_higgsfield_for_video_and_nano_banana_for_image():
     video_stack = recommended_stack_for_task("ugc_media_agent", "Create a 720p product video")
     image_stack = recommended_stack_for_task("product_image_agent", "Create a premium product image")
@@ -234,6 +248,103 @@ def test_execution_adapter_preserves_selected_creative_models_without_credential
     assert result.execution_payload["selected_image_provider"] == "nano_banana"
     assert result.execution_payload["selected_image_model"] == "Nano Banana Pro"
     assert result.provider_ready is False
+
+
+def test_execution_adapter_requires_live_flag_with_higgsfield_credentials(monkeypatch):
+    monkeypatch.setenv("HIGGSFIELD_API_KEY", "test-key")
+    monkeypatch.delenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED", raising=False)
+
+    adapter = ExecutionAdapters(db=None)
+    route = resolve_creative_provider_route(
+        agent_id="ugc_media_agent",
+        media_type="video",
+        video_quality="4K",
+    )
+
+    result = adapter.execute(
+        adapter_name="ugc_video_provider_adapter",
+        payload={
+            "workflow": {
+                "tenant_id": "workspace-test",
+                "task": "Create a cinematic product launch clip",
+                "creative_provider_route": route,
+            },
+            "context": {
+                "agent_id": "ugc_media_agent",
+                "job_id": "job-test",
+                "creative_provider_route": route,
+            },
+        },
+    )
+
+    assert result.provider_ready is False
+    assert result.execution_mode == "provider_orchestrated_safe_stub"
+    assert result.execution_payload["provider_connected"] is True
+
+
+def test_execution_adapter_requires_credentials_and_live_flag_for_higgsfield_live(monkeypatch):
+    monkeypatch.setenv("HIGGSFIELD_API_KEY", "test-key")
+    monkeypatch.setenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED", "true")
+
+    adapter = ExecutionAdapters(db=None)
+    route = resolve_creative_provider_route(
+        agent_id="ugc_media_agent",
+        media_type="video",
+        video_quality="4K",
+    )
+
+    result = adapter.execute(
+        adapter_name="ugc_video_provider_adapter",
+        payload={
+            "workflow": {
+                "tenant_id": "workspace-test",
+                "task": "Create a cinematic product launch clip",
+                "creative_provider_route": route,
+            },
+            "context": {
+                "agent_id": "ugc_media_agent",
+                "job_id": "job-test",
+                "creative_provider_route": route,
+            },
+        },
+    )
+
+    assert result.provider_ready is True
+    assert result.execution_mode == "higgsfield_live"
+    assert result.execution_payload["provider_instance"].is_ready() is True
+
+
+def test_adapter_summary_drops_provider_instance_but_internal_result_keeps_it(monkeypatch):
+    monkeypatch.setenv("HIGGSFIELD_API_KEY", "test-key")
+    monkeypatch.setenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED", "true")
+
+    adapter = ExecutionAdapters(db=None)
+    route = resolve_creative_provider_route(
+        agent_id="ugc_media_agent",
+        media_type="video",
+    )
+
+    result = adapter.execute(
+        adapter_name="ugc_video_provider_adapter",
+        payload={
+            "workflow": {
+                "tenant_id": "workspace-test",
+                "task": "Create a product video",
+                "creative_provider_route": route,
+            },
+            "context": {
+                "agent_id": "ugc_media_agent",
+                "job_id": "job-test",
+                "creative_provider_route": route,
+            },
+        },
+    )
+
+    assert result.execution_payload["provider_instance"].is_ready() is True
+    summary = adapter_summary(result)
+
+    assert "provider_instance" not in summary["execution_payload"]
+    assert summary["execution_payload"]["selected_video_provider"] == "higgsfield"
 
 
 def test_execution_adapter_keeps_image_route_metadata_but_disables_live_video_for_image_only_routes(monkeypatch):

@@ -19,3 +19,36 @@ def test_admin_provider_health_includes_github_connection_status(client, db):
     assert github["category"] == "Code / Repository"
     assert github["role"] == "primary"
     assert github["readiness"] in {"ready", "not_configured"}
+
+
+def test_admin_provider_health_includes_creative_routes_without_credentials(client, db, monkeypatch):
+    monkeypatch.setenv("HIGGSFIELD_API_KEY", "higgs-secret-value")
+    monkeypatch.setenv("NANO_BANANA_API_KEY", "banana-secret-value")
+    _, token, _ = make_user(db, email="admin-creative-providers@test.com", is_admin=True)
+
+    response = client.get(
+        "/api/admin/providers",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    providers = body["providers"]
+    provider_names = {provider["name"] for provider in providers}
+
+    assert "Higgsfield" in provider_names
+    assert "Nano Banana" in provider_names
+    assert "higgs-secret-value" not in str(body)
+    assert "banana-secret-value" not in str(body)
+    assert body["creative_provider_routing"]["providers"]["higgsfield"]["models"] == [
+        "Kling 3.0 Turbo",
+        "Kling 3.0",
+        "Cinema Studio 4K",
+    ]
+    assert body["creative_provider_routing"]["providers"]["nano_banana"]["models"] == [
+        "Nano Banana 2",
+        "Nano Banana Pro",
+    ]
+    assert body["provider_stack"]["providers"]["higgsfield"]["configured"] is True
+    assert body["provider_stack"]["providers"]["nano_banana"]["configured"] is True
+    assert body["credential_values_exposed"] is False

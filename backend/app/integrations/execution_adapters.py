@@ -71,6 +71,10 @@ def _get_higgsfield_api_key(db: Session, workspace_id: str) -> Optional[str]:
         return None
 
 
+def _truthy(value: str | None) -> bool:
+    return str(value or "").strip().lower() in {"1", "true", "yes", "on", "enabled"}
+
+
 class ExecutionAdapters:
     def __init__(self, db: Optional[Session] = None) -> None:
         self.shopify_adapter_runtime = ShopifyDraftProductAdapter()
@@ -153,6 +157,7 @@ class ExecutionAdapters:
         higgsfield_api_key = None
         provider_connected = False
         provider_ready = False
+        higgsfield_live_enabled = _truthy(os.getenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED"))
 
         # Attempt workspace-specific credential lookup first
         if workspace_id and self.db:
@@ -164,8 +169,8 @@ class ExecutionAdapters:
 
         if higgsfield_api_key and selected_video_provider == "higgsfield":
             higgsfield.set_api_key(higgsfield_api_key)
-            provider_ready = higgsfield.is_ready()
             provider_connected = True
+            provider_ready = higgsfield_live_enabled and higgsfield.is_ready()
 
         return AdapterResult(
             success=bool(provider_route["success"]) and provider_ready,
@@ -184,6 +189,7 @@ class ExecutionAdapters:
                 "provider_category": "ugc_video_generation",
                 "provider": selected_video_provider,
                 "provider_connected": provider_connected,
+                "live_execution_enabled": higgsfield_live_enabled,
                 "provider_instance": higgsfield,
                 "workspace_id": workspace_id,
                 "creative_provider_route": creative_provider_route,
@@ -522,6 +528,14 @@ class ExecutionAdapters:
 
 
 def adapter_summary(result: AdapterResult) -> Dict[str, object]:
+    execution_payload = result.execution_payload
+    if isinstance(execution_payload, dict):
+        execution_payload = {
+            key: value
+            for key, value in execution_payload.items()
+            if key != "provider_instance"
+        }
+
     return {
         "success": result.success,
         "adapter_name": result.adapter_name,
@@ -529,5 +543,5 @@ def adapter_summary(result: AdapterResult) -> Dict[str, object]:
         "provider_ready": result.provider_ready,
         "message": result.message,
         "next_steps": result.next_steps,
-        "execution_payload": result.execution_payload,
+        "execution_payload": execution_payload,
     }

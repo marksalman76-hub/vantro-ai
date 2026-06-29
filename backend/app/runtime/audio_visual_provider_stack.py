@@ -8,6 +8,7 @@ from typing import Any, Dict, List
 from app.runtime.creative_provider_routing import (
     CREATIVE_AGENT_IDS,
     creative_provider_status,
+    normalize_creative_agent_id,
 )
 
 
@@ -153,9 +154,10 @@ def full_provider_stack_status() -> Dict[str, Any]:
 
 
 def providers_for_agent(agent_id: str) -> List[str]:
+    canonical_agent_id = normalize_creative_agent_id(agent_id)
     return [
         key for key, provider in PROVIDER_STACK.items()
-        if agent_id in provider.get("agents", [])
+        if canonical_agent_id in provider.get("agents", [])
     ]
 
 
