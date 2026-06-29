@@ -1,7 +1,7 @@
 {
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "npm --prefix frontend run build",
     "start": "next start",
     "test:e2e": "echo 'E2E tests coming soon'"
   },
