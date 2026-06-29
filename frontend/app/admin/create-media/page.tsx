@@ -144,16 +144,11 @@ export default function AdminCreateMediaPage() {
     try {
       const agentsRes = await fetch('/api/agents', { headers: { Authorization: `Bearer ${token}` } });
       const agentsData = await agentsRes.json();
+      // Admin bypasses credit/unlock checks on backend — don't filter by unlocked here
       const mediaAgent = (agentsData.agents || []).find(
-        (a: { id: string; unlocked: boolean }) =>
-          (a.id.includes('media') || a.id.includes('video') || a.id.includes('content')) && a.unlocked
-      );
-
-      if (!mediaAgent) {
-        setError('No media agent is available on your plan. Upgrade to access Create Media.');
-        setSubmitting(false);
-        return;
-      }
+        (a: { id: string }) =>
+          a.id.includes('ugc') || a.id.includes('media') || a.id.includes('video') || a.id.includes('content')
+      ) || { id: 'ugc_media_agent' };
 
       const formData = new FormData();
       formData.append('prompt', task);
