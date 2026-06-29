@@ -29,6 +29,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     # ── Executive / Strategy / Research ────────────────────────────────────
     "head_agent": {
         "name": "Head Agent / CEO",
+        "display_name": "Victoria Chen",
         "category": "Executive",
         "visibility": "purchasable",
         "architecture": "router+orchestration+dynamic_subagents",
@@ -40,6 +41,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "strategist_agent": {
         "name": "Strategist Agent",
+        "display_name": "Marcus Rodriguez",
         "category": "Strategy",
         "visibility": "purchasable",
         "architecture": "sequential_pipeline",
@@ -51,6 +53,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "business_growth_partnerships_agent": {
         "name": "Business Growth & Partnerships Agent",
+        "display_name": "Priya Kapoor",
         "category": "Strategy",
         "visibility": "purchasable",
         "architecture": "agent+mcp",
@@ -62,6 +65,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "research_analytics_agent": {
         "name": "Research & Analytics Agent",
+        "display_name": "David Nakamura",
         "category": "Research",
         "visibility": "purchasable",
         "architecture": "agent+tools+mcp_search_analytics",
@@ -75,6 +79,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     # ── Sales / CRM / Intake ────────────────────────────────────────────────
     "lead_generator_agent": {
         "name": "Lead Generator Agent",
+        "display_name": "Sarah Mitchell",
         "category": "Sales",
         "visibility": "purchasable",
         "architecture": "agent+mcp+sequential_qualification",
@@ -86,6 +91,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "sales_closer_agent": {
         "name": "Sales Closer Agent",
+        "display_name": "James O'Brien",
         "category": "Sales",
         "visibility": "purchasable",
         "architecture": "sequential_pipeline+mcp",
@@ -97,6 +103,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "crm_agent": {
         "name": "CRM Agent",
+        "display_name": "Elena Rossi",
         "category": "Sales",
         "visibility": "purchasable",
         "architecture": "agent+mcp+write_gates",
@@ -108,6 +115,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "intake_trial_agent": {
         "name": "Intake & Trial Agent",
+        "display_name": "Alex Thompson",
         "category": "Sales",
         "visibility": "purchasable",
         "architecture": "sequential_pipeline+router",
@@ -121,6 +129,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     # ── Marketing / Content / Ads ───────────────────────────────────────────
     "marketing_specialist_agent": {
         "name": "Marketing Specialist Agent",
+        "display_name": "Lisa Patel",
         "category": "Marketing",
         "visibility": "purchasable",
         "architecture": "router+sequential_campaign_pipeline",
@@ -132,6 +141,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "social_media_content_agent": {
         "name": "Social Media Content Agent",
+        "display_name": "Jordan Blake",
         "category": "Marketing",
         "visibility": "purchasable",
         "architecture": "agent+tools+sequential_content",
@@ -143,6 +153,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "seo_content_agent": {
         "name": "SEO & Content Agent",
+        "display_name": "Sophie Laurent",
         "category": "Marketing",
         "visibility": "purchasable",
         "architecture": "sequential_pipeline+router",
@@ -154,6 +165,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "ads_optimisation_agent": {
         "name": "Ads Optimisation Agent",
+        "display_name": "Mikhail Sokolov",
         "category": "Marketing",
         "visibility": "purchasable",
         "architecture": "agent+mcp_ads+router",
@@ -165,6 +177,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "influencer_outreach_agent": {
         "name": "Influencer Outreach Agent",
+        "display_name": "Jasmine Wu",
         "category": "Marketing",
         "visibility": "purchasable",
         "architecture": "agent+mcp_outreach",
@@ -178,6 +191,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     # ── Media / Creative Production ─────────────────────────────────────────
     "ugc_media_agent": {
         "name": "UGC Media Agent",
+        "display_name": "Chris Anderson",
         "category": "Media",
         "visibility": "purchasable",
         "architecture": "parallel_execution+shared_tools+router",
@@ -191,6 +205,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     # ── Digital / Product / Ecommerce ───────────────────────────────────────
     "website_app_agent": {
         "name": "Website / App Agent",
+        "display_name": "Emma Richardson",
         "category": "Digital",
         "visibility": "purchasable",
         "architecture": "sequential_pipeline+mcp_cms_code",
@@ -202,6 +217,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "product_development_agent": {
         "name": "Product Development Agent",
+        "display_name": "Gabriel Santos",
         "category": "Digital",
         "visibility": "purchasable",
         "architecture": "sequential_research_design",
@@ -213,6 +229,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "ecommerce_agent": {
         "name": "Ecommerce Agent",
+        "display_name": "Olivia Chen",
         "category": "Digital",
         "visibility": "purchasable",
         "architecture": "agent+mcp_ecommerce",
@@ -226,6 +243,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     # ── Customer / Retention / Reputation ───────────────────────────────────
     "customer_lifecycle_agent": {
         "name": "Customer Lifecycle Agent",
+        "display_name": "Rachel Kim",
         "category": "Support",
         "visibility": "purchasable",
         "architecture": "agent+mcp_crm_email_ecommerce",
@@ -237,6 +255,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "email_reply_agent": {
         "name": "Email Reply Agent",
+        "display_name": "Thomas Berg",
         "category": "Support",
         "visibility": "purchasable",
         "architecture": "agent+mcp_email",
@@ -248,6 +267,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "review_reputation_agent": {
         "name": "Review / Reputation Agent",
+        "display_name": "Nicole Moreau",
         "category": "Support",
         "visibility": "purchasable",
         "architecture": "agent+review_support_tools",
@@ -261,6 +281,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     # ── Operations / Finance / Automation ───────────────────────────────────
     "ops_automation_agent": {
         "name": "Ops & Automation Agent",
+        "display_name": "Kevin O'Malley",
         "category": "Operations",
         "visibility": "purchasable",
         "architecture": "sequential_process_pipeline+agent+mcp+router",
@@ -272,6 +293,7 @@ AGENT_CATALOGUE: Dict[str, Dict] = {
     },
     "finance_admin_agent": {
         "name": "Finance / Admin Agent",
+        "display_name": "Yuki Tanaka",
         "category": "Operations",
         "visibility": "purchasable",
         "architecture": "agent+billing_admin_mcp",
