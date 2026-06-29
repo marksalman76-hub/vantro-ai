@@ -69,8 +69,13 @@ async function handler(
     });
 
     return forwardBackendResponse(res);
-  } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  } catch (error) {
+    const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.error("[admin-proxy] request failed", { path, detail });
+    return NextResponse.json(
+      { error: "Internal server error", detail },
+      { status: 500 },
+    );
   }
 }
 

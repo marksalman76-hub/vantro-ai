@@ -48,8 +48,10 @@ export async function POST(
     });
     return toJsonResponse(res);
   } catch (error) {
+    const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.error("[admin-run-proxy] request failed", { agentId, detail });
     return NextResponse.json(
-      { error: "Backend unreachable", detail: String(error) },
+      { error: "Backend unreachable", detail },
       { status: 502 }
     );
   }
