@@ -196,12 +196,18 @@ async def login(request: Request, body: LoginRequest, db: Session = Depends(get_
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
         access_token = create_access_token(user.id, expires_delta=timedelta(hours=1))
-        refresh_opaque = _create_refresh_token(user.id, request, db)
+        try:
+            refresh_opaque = _create_refresh_token(user.id, request, db)
+        except Exception as rt_err:
+            _log.error("Refresh token creation failed: %s", rt_err)
+            refresh_opaque = None
+
         _audit(db, request, "login", user_id=user.id, resource_type="auth")
 
         resp = JSONResponse(content={"access_token": access_token, "token_type": "bearer", "user_id": user.id})
         _set_auth_cookie(resp, access_token)
-        _set_refresh_cookie(resp, refresh_opaque)
+        if refresh_opaque:
+            _set_refresh_cookie(resp, refresh_opaque)
         return resp
     except HTTPException:
         raise
