@@ -5,20 +5,30 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 async function toJsonResponse(res: Response) {
   const text = await res.text();
   const contentType = res.headers.get("content-type") || "";
+  const headers = contentType ? { "Content-Type": contentType } : undefined;
 
-  if (contentType.includes("application/json") && text) {
-    try {
-      return NextResponse.json(JSON.parse(text), { status: res.status });
-    } catch {
+  if (text.trim()) {
+    if (contentType.includes("application/json")) {
+      return new NextResponse(text, { status: res.status, headers });
+    }
+
+    if (res.ok) {
       return NextResponse.json(
-        { error: "Invalid JSON from backend", detail: text },
+        { ok: true, status: res.status, response: text },
         { status: res.status }
       );
     }
+
+    return NextResponse.json(
+      { error: text || res.statusText || "Backend request failed" },
+      { status: res.status }
+    );
   }
 
   return NextResponse.json(
-    { error: text || res.statusText || "Backend request failed" },
+    res.ok
+      ? { ok: true, status: res.status }
+      : { error: res.statusText || "Backend request failed" },
     { status: res.status }
   );
 }
