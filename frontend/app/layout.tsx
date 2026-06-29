@@ -1,111 +1,48 @@
 import type { Metadata } from 'next'
-import { Poppins, Playfair_Display, Inter, Outfit, Instrument_Serif, Barlow, Space_Mono } from 'next/font/google'
+import { Space_Grotesk } from 'next/font/google'
 import './globals.css'
-import GTMScript       from '@/components/GTMScript'
-import CookieConsent   from '@/components/CookieConsent'
-import ExitIntentPopup from '@/components/ExitIntentPopup'
-import StickyCtaBar    from '@/components/StickyCtaBar'
 
-const poppins = Poppins({
+const spaceGrotesk = Space_Grotesk({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-poppins',
-  display: 'swap',
-})
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-playfair',
-  display: 'swap',
-})
-
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-})
-
-const outfit = Outfit({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
-  variable: '--font-outfit',
-  display: 'swap',
-})
-
-const instrumentSerif = Instrument_Serif({
-  subsets: ['latin'],
-  weight: '400',
-  style: ['normal', 'italic'],
-  variable: '--font-instrument-serif',
-  display: 'swap',
-})
-
-const barlow = Barlow({
-  subsets: ['latin'],
-  weight: ['300', '400', '500', '600'],
-  variable: '--font-barlow',
-  display: 'swap',
-})
-
-const spaceMono = Space_Mono({
-  subsets: ['latin'],
-  weight: ['400', '700'],
-  variable: '--font-space-mono',
+  variable: '--font-space-grotesk',
   display: 'swap',
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://vantro.ai'),
   title: {
-    default: 'Vantro — Deploy AI Agents That Work For You',
-    template: '%s | Vantro',
+    default: 'Vantro AI — Autonomous AI Workforce Platform',
+    template: '%s | Vantro AI',
   },
-  description:
-    'Deploy autonomous AI agents that handle sales, support, research, and operations 24/7. Join 500+ teams saving 100+ hours per week with Vantro.',
-  keywords: [
-    'AI agents',
-    'autonomous AI',
-    'business automation',
-    'AI workforce',
-    'sales automation',
-    'customer support AI',
-    'Vantro',
-  ],
-  authors: [{ name: 'Vantro Inc.' }],
-  creator: 'Vantro Inc.',
+  description: '22 specialized AI agents running 24/7 across sales, ops, support, and engineering. Deploy your autonomous AI workforce in 5 minutes. 200+ integrations.',
+  keywords: ['AI agents', 'autonomous AI workforce', 'AI automation platform', 'AI sales agent', 'AI ops automation', 'AI customer support'],
+  alternates: { canonical: 'https://vantro.ai' },
   openGraph: {
     type: 'website',
-    locale: 'en_US',
     url: 'https://vantro.ai',
-    siteName: 'Vantro',
-    title: 'Vantro — Deploy AI Agents That Work For You',
-    description:
-      'Deploy autonomous AI agents that handle sales, support, research, and operations 24/7.',
-    images: [{ url: 'https://vantro.ai/og-image.png', width: 1200, height: 630 }],
+    siteName: 'Vantro AI',
+    title: 'Vantro AI — Deploy Your Autonomous AI Workforce',
+    description: '22 specialized AI agents. 200+ integrations. Working 24/7 so your team can focus on what only humans can do.',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Vantro AI Platform' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Vantro — Deploy AI Agents That Work For You',
-    description: 'Autonomous AI agents for every business function.',
-    creator: '@vantroai',
+    site: '@vantroai',
+    title: 'Vantro AI — Autonomous AI Workforce',
+    description: '22 specialized AI agents. 200+ integrations. Deploy in 5 minutes.',
+    images: ['/og-image.png'],
   },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: { index: true, follow: true, 'max-video-preview': -1, 'max-image-preview': 'large' },
-  },
-  metadataBase: new URL('https://vantro.ai'),
+  robots: { index: true, follow: true },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${poppins.variable} ${playfair.variable} ${inter.variable} ${outfit.variable} ${instrumentSerif.variable} ${barlow.variable} ${spaceMono.variable}`}>
-      <body className="font-sans bg-dark text-white antialiased">
-        <GTMScript />
-        {children}
-        <CookieConsent />
-        <ExitIntentPopup />
-        <StickyCtaBar />
-      </body>
+    <html lang="en" className={spaceGrotesk.variable}>
+      <head>
+        {/* Apply saved theme before first paint to prevent flash */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('vantro_theme');if(t==='light')document.documentElement.setAttribute('data-theme','light');}catch(e){}})();` }} />
+      </head>
+      <body>{children}</body>
     </html>
   )
 }
