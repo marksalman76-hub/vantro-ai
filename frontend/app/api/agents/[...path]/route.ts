@@ -10,15 +10,27 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
   const url = new URL(request.url);
   const query = url.search;
 
-  let body: string | undefined;
+  const contentType = request.headers.get("content-type") || "";
+  const isMultipart = contentType.includes("multipart/form-data");
+
+  let body: BodyInit | undefined;
   if (request.method !== "GET" && request.method !== "HEAD") {
-    try { body = await request.text(); } catch { body = undefined; }
+    try {
+      body = isMultipart ? await request.blob() : await request.text();
+    } catch { body = undefined; }
+  }
+
+  const forwardHeaders: Record<string, string> = { Authorization: token };
+  if (isMultipart) {
+    forwardHeaders["Content-Type"] = contentType; // preserve boundary
+  } else {
+    forwardHeaders["Content-Type"] = "application/json";
   }
 
   try {
     const res = await fetch(`${API_URL}/api/agents/${path}${query}`, {
       method: request.method,
-      headers: { Authorization: token, "Content-Type": "application/json" },
+      headers: forwardHeaders,
       ...(body !== undefined ? { body } : {}),
     });
     const data = await res.json();

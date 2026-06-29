@@ -110,6 +110,12 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         if "/auth/" in path:
             return await call_next(request)
 
+        # Bearer token requests are already CSRF-safe (cross-origin JS can't set
+        # custom headers, so a Bearer token proves same-origin or trusted client)
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.lower().startswith("bearer "):
+            return await call_next(request)
+
         # Exempt paths and safe methods
         if path in _CSRF_EXEMPT_PATHS or method in _CSRF_SAFE_METHODS:
             response = await call_next(request)
