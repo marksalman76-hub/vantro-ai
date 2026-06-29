@@ -2,6 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 
+async function forwardBackendResponse(res: Response) {
+  const contentType = res.headers.get("content-type") || "";
+  const text = await res.text();
+
+  if (!text.trim()) {
+    return NextResponse.json(
+      res.ok
+        ? { ok: true, status: res.status }
+        : { error: res.statusText || "Backend request failed" },
+      { status: res.status },
+    );
+  }
+
+  if (contentType.includes("application/json")) {
+    return new NextResponse(text, {
+      status: res.status,
+      headers: { "Content-Type": contentType },
+    });
+  }
+
+  return new NextResponse(text, {
+    status: res.status,
+    headers: contentType ? { "Content-Type": contentType } : undefined,
+  });
+}
+
 async function handler(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
@@ -42,14 +68,7 @@ async function handler(
       ...(body !== undefined ? { body } : {}),
     });
 
-    const contentType = res.headers.get("content-type") || "application/json";
-    if (contentType.includes("application/json")) {
-      const data = await res.json();
-      return NextResponse.json(data, { status: res.status });
-    } else {
-      const data = await res.arrayBuffer();
-      return new NextResponse(data, { status: res.status, headers: { "Content-Type": contentType } });
-    }
+    return forwardBackendResponse(res);
   } catch {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
