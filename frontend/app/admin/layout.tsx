@@ -1,8 +1,16 @@
-import type { Metadata } from 'next'
-import ClientAdminSidebar from './_components/ClientAdminSidebar'
+import type { Metadata } from 'next';
+import AdminSidebar from './_components/AdminSidebar';
+import AdminAuthGuard from './_components/AdminAuthGuard';
 
-export const metadata: Metadata = { title: 'Admin | Vantro' }
+export const metadata: Metadata = {
+  title: 'Admin | Vantro',
+  robots: { index: false, follow: false },
+};
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return <ClientAdminSidebar>{children}</ClientAdminSidebar>
+  return (
+    <AdminAuthGuard sidebar={<AdminSidebar />}>
+      {children}
+    </AdminAuthGuard>
+  );
 }

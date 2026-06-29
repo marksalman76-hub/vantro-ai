@@ -1,330 +1,370 @@
-'use client'
+'use client';
 
-import { useState, useRef, useEffect } from 'react'
-import { AGENTS, CATEGORY_COLORS, Agent } from '@/lib/agents'
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 
-const CATEGORIES = ['All', 'Sales', 'Operations', 'Engineering', 'Support', 'Executive'] as const
+interface AgentMeta {
+  id: string;
+  name: string;
+  category: string;
+  role: string;
+  architecture: string;
+  hitl_level: string;
+  min_package: string;
+  credit_estimate: number;
+  capabilities: string[];
+}
 
-export default function AdminAgentsPage() {
-  const [selected, setSelected]             = useState<Agent | null>(null)
-  const [prompt, setPrompt]                 = useState('')
-  const [output, setOutput]                 = useState('')
-  const [running, setRunning]               = useState(false)
-  const [error, setError]                   = useState('')
-  const [activeCategory, setActiveCategory] = useState<string>('All')
-  const [search, setSearch]                 = useState('')
-  const outputRef    = useRef<HTMLDivElement>(null)
-  const agentAbortRef = useRef<AbortController | null>(null)
+interface InternalLayer {
+  id: string;
+  name: string;
+  category: string;
+  role: string;
+  maps_to: string | null;
+}
 
-  // Abort any in-flight stream on unmount
-  useEffect(() => {
-    return () => { agentAbortRef.current?.abort() }
-  }, [])
+interface AgentsResponse {
+  total: number;
+  internal_total: number;
+  tier_counts: Record<string, number>;
+  agents: AgentMeta[];
+  internal_layers: InternalLayer[];
+}
 
-  // Auto-scroll output
-  useEffect(() => {
-    if (outputRef.current) {
-      outputRef.current.scrollTo({ top: outputRef.current.scrollHeight, behavior: 'smooth' })
-    }
-  }, [output])
+interface JobResult {
+  job_id: string;
+  agent_name: string;
+  status: string;
+  output: string | null;
+  error_message: string | null;
+}
 
-  // Show ALL agents — no plan-tier filtering
-  const filtered = AGENTS.filter(a => {
-    const matchCat   = activeCategory === 'All' || a.category === activeCategory
-    const q          = search.toLowerCase()
-    const matchSearch = !q || a.name.toLowerCase().includes(q) || a.role.toLowerCase().includes(q)
-    return matchCat && matchSearch
-  })
+const CATEGORY_COLOR: Record<string, string> = {
+  Executive:  'bg-amber-500/10  text-amber-400  border-amber-500/20',
+  Strategy:   'bg-violet-500/10 text-violet-400 border-violet-500/20',
+  Research:   'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  Sales:      'bg-blue-500/10   text-blue-400   border-blue-500/20',
+  Marketing:  'bg-pink-500/10   text-pink-400   border-pink-500/20',
+  Media:      'bg-orange-500/10 text-orange-400 border-orange-500/20',
+  Digital:    'bg-indigo-500/10 text-indigo-400 border-indigo-500/20',
+  Support:    'bg-teal-500/10   text-teal-400   border-teal-500/20',
+  Operations: 'bg-gray-500/10   text-gray-300   border-gray-500/20',
+};
 
-  const accent = selected ? (CATEGORY_COLORS[selected.category] || '#1FFFD6') : '#1FFFD6'
+const HITL_COLOR: Record<string, string> = {
+  'HITL-0': 'bg-green-500/10  text-green-400  border-green-500/20',
+  'HITL-1': 'bg-blue-500/10   text-blue-400   border-blue-500/20',
+  'HITL-2': 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
+  'HITL-3': 'bg-red-500/10    text-red-400    border-red-500/20',
+};
 
-  async function runAgent() {
-    if (!selected || !prompt.trim()) return
-    setRunning(true)
-    setOutput('')
-    setError('')
+const CATEGORIES = ['All', 'Executive', 'Strategy', 'Research', 'Sales', 'Marketing', 'Media', 'Digital', 'Support', 'Operations'];
 
-    agentAbortRef.current?.abort()
-    const ac = new AbortController()
-    agentAbortRef.current = ac
+function OutputRenderer({ text }: { text: string }) {
+  return (
+    <div className="text-sm text-gray-200 whitespace-pre-wrap leading-relaxed font-mono bg-gray-950 rounded-xl p-4 max-h-96 overflow-y-auto border border-gray-800">
+      {text}
+    </div>
+  );
+}
 
+function RunModal({ agent, token, onClose }: { agent: AgentMeta; token: string; onClose: () => void }) {
+  const [prompt, setPrompt] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [job, setJob] = useState<JobResult | null>(null);
+  const [polling, setPolling] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const pollJob = useCallback(async (jobId: string) => {
+    setPolling(true);
+    const interval = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/admin/agents/jobs/${jobId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const d = await r.json();
+        setJob(d);
+        if (['completed', 'failed', 'cancelled'].includes(d.status)) {
+          clearInterval(interval);
+          setPolling(false);
+        }
+      } catch {
+        clearInterval(interval);
+        setPolling(false);
+      }
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [token]);
+
+  const submit = async () => {
+    if (!prompt.trim()) return;
+    setSubmitting(true);
     try {
-      // Admin: cookie auth only — no Authorization header
-      const res = await fetch('/api/agent', {
+      const r = await fetch(`/api/admin/agents/${agent.id}/run`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: selected.id, prompt: prompt.trim() }),
-        signal: ac.signal,
-      })
-
-      if (!res.ok) {
-        const d = await res.json().catch(() => ({}))
-        setError((d as { error?: string }).error || 'Agent unavailable. Please try again.')
-        return
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ prompt: prompt.trim() }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setJob({ job_id: '', agent_name: agent.name, status: 'failed', output: null, error_message: d.detail || 'Failed to start job' });
+        return;
       }
-
-      const reader = res.body?.getReader()
-      if (!reader) { setError('Agent unavailable. Please try again.'); return }
-
-      const dec = new TextDecoder()
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        setOutput(prev => prev + dec.decode(value, { stream: true }))
-      }
-    } catch (e) {
-      if ((e as Error)?.name === 'AbortError') return
-      setError('Agent unavailable. Please try again.')
+      setJob({ job_id: d.job_id, agent_name: agent.name, status: d.status, output: null, error_message: null });
+      pollJob(d.job_id);
+    } catch {
+      setJob({ job_id: '', agent_name: agent.name, status: 'failed', output: null, error_message: 'Network error' });
     } finally {
-      setRunning(false)
+      setSubmitting(false);
     }
-  }
+  };
+
+  const copy = () => {
+    if (job?.output) { navigator.clipboard.writeText(job.output); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+  };
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', fontFamily: 'system-ui, sans-serif' }}>
-
-      {/* Left panel — agent list */}
-      <div style={{
-        width: 260, minWidth: 260,
-        borderRight: '1px solid rgba(255,255,255,0.07)',
-        overflowY: 'auto', padding: '16px 8px',
-        background: '#0A0D14',
-      }}>
-
-        {/* Header with agent count + admin badge */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 8px 10px' }}>
-          <p style={{
-            color: 'rgba(255,255,255,0.3)', fontSize: 10, fontWeight: 600,
-            letterSpacing: '0.1em', textTransform: 'uppercase', margin: 0,
-          }}>
-            {AGENTS.length} Agents
-          </p>
-          <span style={{
-            fontSize: 9, fontWeight: 700, letterSpacing: '0.08em',
-            padding: '2px 7px', borderRadius: 99,
-            background: 'rgba(31,255,214,0.12)', color: '#1FFFD6',
-            border: '1px solid rgba(31,255,214,0.3)', textTransform: 'uppercase',
-          }}>
-            ADMIN
-          </span>
-        </div>
-
-        {/* Search */}
-        <input
-          type="search"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Search agents…"
-          style={{
-            width: '100%', boxSizing: 'border-box',
-            background: 'rgba(255,255,255,0.05)',
-            border: '1px solid rgba(255,255,255,0.09)',
-            borderRadius: 8, padding: '6px 10px',
-            color: '#fff', fontSize: 12, outline: 'none', marginBottom: 10,
-            fontFamily: 'system-ui, sans-serif',
-          }}
-        />
-
-        {/* Category filter */}
-        <div style={{ display: 'flex', gap: 4, overflowX: 'auto', paddingBottom: 8, marginBottom: 8 }}>
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              style={{
-                padding: '3px 10px', borderRadius: 99, border: 'none', cursor: 'pointer',
-                fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap',
-                fontFamily: 'system-ui, sans-serif',
-                background: activeCategory === cat ? '#1FFFD6' : 'rgba(255,255,255,0.07)',
-                color: activeCategory === cat ? '#0A0D14' : 'rgba(255,255,255,0.45)',
-              }}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
-
-        {/* Agent list */}
-        {filtered.map(a => {
-          const active = selected?.id === a.id
-          const color  = CATEGORY_COLORS[a.category]
-          return (
-            <button
-              key={a.id}
-              aria-label={a.name}
-              onClick={() => { setSelected(a); setOutput(''); setError('') }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '7px 10px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                background: active ? `${color}14` : 'transparent',
-                outline: active ? `1px solid ${color}40` : '1px solid transparent',
-                textAlign: 'left', width: '100%',
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
-              onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
-            >
-              <img
-                src={a.avatar}
-                alt={a.name}
-                style={{ width: 28, height: 28, borderRadius: 7, objectFit: 'cover', border: `1px solid ${color}40`, flexShrink: 0 }}
-              />
-              <div style={{ minWidth: 0 }}>
-                <p style={{ color: active ? '#fff' : 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: 600, margin: 0, fontFamily: 'system-ui, sans-serif' }}>{a.name}</p>
-                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'system-ui, sans-serif' }}>{a.role}</p>
-              </div>
-            </button>
-          )
-        })}
-
-        {filtered.length === 0 && (
-          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', padding: '10px 8px' }}>No agents match.</p>
-        )}
-      </div>
-
-      {/* Right panel — task area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: '#0A0D14' }}>
-        {!selected ? (
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-            {/* Admin mode badge */}
-            <div style={{
-              display: 'inline-flex', alignItems: 'center', gap: 8,
-              padding: '6px 16px', borderRadius: 99,
-              background: 'rgba(31,255,214,0.08)',
-              border: '1px solid rgba(31,255,214,0.25)',
-            }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#1FFFD6', display: 'inline-block' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#1FFFD6', letterSpacing: '0.08em' }}>ADMIN — No Credit Limit</span>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-start justify-between p-6 border-b border-gray-800">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-lg font-bold text-white">{agent.name}</h2>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${HITL_COLOR[agent.hitl_level]}`}>{agent.hitl_level}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 font-bold">Admin run</span>
             </div>
-            <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true" style={{ opacity: 0.15 }}>
-              <circle cx="16" cy="11" r="5.5" stroke="#fff" strokeWidth="1.5"/>
-              <path d="M6 27c0-5.523 4.477-10 10-10s10 4.477 10 10" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 13, fontFamily: 'system-ui, sans-serif' }}>
-              Select an agent to get started
-            </p>
+            <p className="text-gray-500 text-xs leading-relaxed max-w-lg">{agent.role}</p>
           </div>
-        ) : (
-          <>
-            {/* Header */}
-            <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
-              <img
-                src={selected.avatar}
-                alt={selected.name}
-                style={{ width: 38, height: 38, borderRadius: 10, objectFit: 'cover', border: `2px solid ${accent}60`, flexShrink: 0 }}
-              />
+          <button onClick={onClose} className="text-gray-600 hover:text-white transition-colors ml-4 shrink-0 text-xl leading-none">✕</button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          {!job ? (
+            <>
               <div>
-                <p style={{ color: '#fff', fontSize: 15, fontWeight: 700, margin: 0, fontFamily: 'system-ui, sans-serif' }}>{selected.name}</p>
-                <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, margin: '2px 0 4px', fontFamily: 'system-ui, sans-serif' }}>{selected.role}</p>
-                <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 99, background: `${accent}18`, color: accent, border: `1px solid ${accent}40`, fontWeight: 600, letterSpacing: '0.04em', fontFamily: 'system-ui, sans-serif' }}>
-                  {selected.category}
-                </span>
+                <label className="block text-xs font-medium text-gray-400 mb-2">Task / Prompt</label>
+                <textarea
+                  value={prompt}
+                  onChange={e => setPrompt(e.target.value)}
+                  rows={6}
+                  placeholder={`Describe what you want ${agent.name} to do…`}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-violet-500"
+                />
+                <p className="text-gray-700 text-xs mt-1.5">Admin run — no package or credit restrictions apply.</p>
+              </div>
+              <button
+                onClick={submit}
+                disabled={submitting || !prompt.trim()}
+                className="w-full py-3 rounded-xl bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white font-semibold text-sm transition-colors flex items-center justify-center gap-2"
+              >
+                {submitting ? (
+                  <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Starting…</>
+                ) : (
+                  `Run ${agent.name}`
+                )}
+              </button>
+            </>
+          ) : (
+            <div className="space-y-4">
+              {/* Status */}
+              <div className="flex items-center gap-3">
+                <div className={`w-2 h-2 rounded-full ${
+                  job.status === 'completed' ? 'bg-green-400' :
+                  job.status === 'failed' ? 'bg-red-400' :
+                  job.status === 'running' ? 'bg-yellow-400 animate-pulse' :
+                  'bg-blue-400 animate-pulse'
+                }`} />
+                <span className="text-sm font-medium text-white capitalize">{job.status}</span>
+                {polling && <span className="text-xs text-gray-500">Polling…</span>}
               </div>
 
-              {/* Admin mode badge (right side) */}
-              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  fontSize: 10, color: '#1FFFD6',
-                  background: 'rgba(31,255,214,0.08)',
-                  padding: '3px 10px', borderRadius: 100,
-                  fontFamily: 'system-ui, sans-serif', fontWeight: 700,
-                  letterSpacing: '0.06em',
-                  border: '1px solid rgba(31,255,214,0.25)',
-                }}>
-                  <span style={{ width: 4, height: 4, borderRadius: '50%', background: '#1FFFD6', display: 'inline-block' }} />
-                  ADMIN — No Credit Limit
-                </span>
-              </div>
-            </div>
-
-            {/* Stats strip */}
-            <div style={{ padding: '10px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', gap: 24, flexShrink: 0 }}>
-              {[
-                { label: 'Success rate', value: `${selected.stats.successRate}%` },
-                { label: 'Response',     value: selected.stats.responseTime },
-                { label: 'Languages',   value: String(selected.stats.languages) },
-              ].map(({ label, value }) => (
-                <div key={label}>
-                  <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2, fontFamily: 'system-ui, sans-serif' }}>{label}</div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: accent, fontFamily: 'system-ui, sans-serif' }}>{value}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Output area */}
-            <div ref={outputRef} style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
-              {!output && !running && !error && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13, lineHeight: 1.65, margin: 0, fontFamily: 'system-ui, sans-serif' }}>
-                    {selected.bio}
-                  </p>
-                  <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: 12, margin: 0, fontFamily: 'system-ui, sans-serif' }}>
-                    Describe your task below and press Run.
-                  </p>
-                </div>
-              )}
-              {error && (
-                <div style={{ background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.20)', borderRadius: 10, padding: '12px 16px', color: '#f87171', fontSize: 13, fontFamily: 'system-ui, sans-serif' }}>{error}</div>
-              )}
-              {output && (
-                <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: 13.5, lineHeight: 1.75, whiteSpace: 'pre-wrap', fontFamily: 'system-ui, sans-serif' }}>{output}</div>
-              )}
-              {running && !output && (
-                <>
-                  <style>{`@keyframes admDot{0%,80%,100%{opacity:.25;transform:scale(.7)}40%{opacity:1;transform:scale(1)}}`}</style>
-                  <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
-                    {[0, 1, 2].map(i => (
-                      <span key={i} style={{ width: 7, height: 7, borderRadius: '50%', background: accent, display: 'inline-block', animation: `admDot 1.2s ease-in-out ${i * 0.2}s infinite` }} />
-                    ))}
+              {/* Output */}
+              {job.output && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-gray-400">Output</p>
+                    <button onClick={copy} className="text-xs text-violet-400 hover:text-violet-300 transition-colors">
+                      {copied ? 'Copied' : 'Copy'}
+                    </button>
                   </div>
-                </>
+                  <OutputRenderer text={job.output} />
+                </div>
               )}
-            </div>
 
-            {/* Prompt input */}
-            <div style={{ padding: '14px 24px 20px', borderTop: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
-              <textarea
-                value={prompt}
-                onChange={e => setPrompt(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) runAgent() }}
-                placeholder={`Tell ${selected.name} what to do…`}
-                rows={3}
-                style={{
-                  width: '100%', background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)', borderRadius: 10,
-                  padding: '11px 14px', color: '#fff', fontSize: 13,
-                  fontFamily: 'system-ui, sans-serif', resize: 'vertical',
-                  outline: 'none', marginBottom: 10, boxSizing: 'border-box',
-                  transition: 'border-color 0.15s',
-                }}
-                onFocus={e => (e.currentTarget.style.borderColor = `${accent}60`)}
-                onBlur={e =>  (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
-              />
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)', fontFamily: 'system-ui, sans-serif' }}>⌘ Enter to run</span>
+              {/* Error */}
+              {job.error_message && (
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                  <p className="text-red-400 text-xs">{job.error_message}</p>
+                </div>
+              )}
+
+              {/* Pending / running message */}
+              {!job.output && !job.error_message && (
+                <div className="bg-gray-800 rounded-xl px-4 py-6 text-center">
+                  <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-gray-400 text-sm">Agent is working…</p>
+                  <p className="text-gray-600 text-xs mt-1">Job ID: {job.job_id}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
                 <button
-                  onClick={runAgent}
-                  disabled={running || !prompt.trim()}
-                  style={{
-                    background: running || !prompt.trim()
-                      ? 'rgba(255,255,255,0.06)'
-                      : `linear-gradient(135deg, ${accent}, ${accent}99)`,
-                    color: running || !prompt.trim() ? 'rgba(255,255,255,0.25)' : '#0A0D14',
-                    border: 'none', borderRadius: 8, padding: '9px 22px',
-                    fontSize: 13, fontWeight: 700,
-                    cursor: running || !prompt.trim() ? 'not-allowed' : 'pointer',
-                    fontFamily: 'system-ui, sans-serif',
-                    transition: 'all 0.15s',
-                  }}
+                  onClick={() => { setJob(null); setPrompt(''); }}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-700 text-gray-400 hover:text-white hover:border-gray-600 text-sm transition-colors"
                 >
-                  {running ? 'Running…' : `Run ${selected.name}`}
+                  Run again
+                </button>
+                <button onClick={onClose} className="flex-1 py-2.5 rounded-xl bg-gray-800 text-white text-sm hover:bg-gray-700 transition-colors">
+                  Close
                 </button>
               </div>
             </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
     </div>
-  )
+  );
+}
+
+export default function AdminAgentsPage() {
+  const router = useRouter();
+  const [data, setData] = useState<AgentsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [catFilter, setCatFilter] = useState('All');
+  const [search, setSearch] = useState('');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [runAgent, setRunAgent] = useState<AgentMeta | null>(null);
+  const [token, setToken] = useState('');
+
+  useEffect(() => {
+    const t = localStorage.getItem('admin_token');
+    if (!t) { router.push('/admin-login'); return; }
+    setToken(t);
+    fetch('/api/admin/agents', { headers: { Authorization: `Bearer ${t}` } })
+      .then(async (r) => {
+        const d = await r.json();
+        if (d && Array.isArray(d.agents)) setData(d);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [router]);
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+  if (!data) return (
+    <div className="flex items-center justify-center h-screen">
+      <p className="text-gray-500 text-sm">Failed to load agents. Check backend connectivity.</p>
+    </div>
+  );
+
+  const filtered = data.agents.filter((a) => {
+    if (catFilter !== 'All' && a.category !== catFilter) return false;
+    if (search && !a.name.toLowerCase().includes(search.toLowerCase()) && !a.role.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
+  return (
+    <div className="p-8 max-w-7xl">
+      {runAgent && <RunModal agent={runAgent} token={token} onClose={() => setRunAgent(null)} />}
+
+      <div className="mb-7">
+        <div className="flex items-center gap-3 mb-1">
+          <h1 className="text-2xl font-bold">Run an Agent</h1>
+          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">Admin — no restrictions</span>
+        </div>
+        <p className="text-gray-500 text-sm">{data.total} agents available · click any agent to run a task</p>
+      </div>
+
+      {/* Search + filters */}
+      <div className="flex flex-wrap gap-3 mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search agents…"
+          className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 w-60"
+        />
+        <div className="flex flex-wrap gap-2">
+          {CATEGORIES.map(c => (
+            <button key={c} onClick={() => setCatFilter(c)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                catFilter === c ? 'bg-violet-600 text-white' : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
+              }`}>
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Agent grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-10">
+        {filtered.map((a) => {
+          const isExpanded = expandedId === a.id;
+          return (
+            <div key={a.id} className="bg-gray-900 border border-gray-800 hover:border-violet-500/40 rounded-xl p-4 transition-colors">
+              {/* Top row */}
+              <div
+                className="flex items-start justify-between gap-3 mb-2 cursor-pointer"
+                onClick={() => setExpandedId(isExpanded ? null : a.id)}
+              >
+                <p className="font-semibold text-sm text-white leading-tight">{a.name}</p>
+                <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${CATEGORY_COLOR[a.category] || 'bg-gray-800 text-gray-400 border-gray-700'}`}>
+                  {a.category}
+                </span>
+              </div>
+
+              {/* Badges */}
+              <div className="flex flex-wrap gap-1.5 mb-2.5 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : a.id)}>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${HITL_COLOR[a.hitl_level]}`}>{a.hitl_level}</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-800 text-gray-400 border border-gray-700">~{a.credit_estimate} cr</span>
+              </div>
+
+              <p className="text-gray-500 text-xs leading-relaxed line-clamp-2 cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : a.id)}>
+                {a.role}
+              </p>
+
+              {/* Expanded detail */}
+              {isExpanded && (
+                <div className="mt-3 pt-3 border-t border-gray-800">
+                  {a.capabilities.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mb-3">
+                      {a.capabilities.map(c => (
+                        <span key={c} className="text-[10px] px-2 py-0.5 rounded-md bg-gray-800 text-gray-300 border border-gray-700">{c}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Run button — always visible */}
+              <button
+                onClick={() => setRunAgent(a)}
+                className="mt-3 w-full py-2 rounded-lg bg-violet-600/20 hover:bg-violet-600 border border-violet-500/30 hover:border-violet-500 text-violet-300 hover:text-white text-xs font-semibold transition-all"
+              >
+                ▶ Run Task
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Internal layers */}
+      <p className="text-xs font-semibold text-gray-600 uppercase tracking-widest mb-3">
+        Internal System Layers — not client-visible ({data.internal_layers.length})
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        {data.internal_layers.map((a) => (
+          <div key={a.id} className="bg-gray-900/40 border border-gray-800/50 rounded-xl p-4">
+            <p className="font-medium text-sm text-gray-400 mb-1">{a.name}</p>
+            <p className="text-gray-600 text-xs leading-relaxed">{a.role}</p>
+            {a.maps_to && <p className="text-[10px] text-gray-700 mt-1.5">Maps to: <span className="font-mono">{a.maps_to}</span></p>}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

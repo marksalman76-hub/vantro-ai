@@ -1,430 +1,214 @@
-'use client'
+'use client';
 
-import { useEffect, useRef, useState } from 'react'
-import { useGSAP } from '@gsap/react'
-import gsap from 'gsap'
-
-gsap.registerPlugin()
-
-// ─── Types ────────────────────────────────────────────────────────────────────
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface Job {
-  id: string
-  agent_id?: string
-  agent_name?: string
-  status: string
-  created_at: string
-  completed_at?: string | null
-  output?: string
-  credits_used?: number
+  id: string;
+  status: string;
+  script: string | null;
+  video_url: string | null;
+  error_message: string | null;
+  external_job_id: string | null;
+  avatar_id: string;
+  created_at: string | null;
+  completed_at: string | null;
+  client_id: string | null;
+  client_email: string;
+  client_name: string | null;
+  workspace: string | null;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
+const STATUS_STYLE: Record<string, string> = {
+  completed:  'bg-green-400/10 text-green-400',
+  processing: 'bg-yellow-400/10 text-yellow-400',
+  pending:    'bg-blue-400/10 text-blue-400',
+  failed:     'bg-red-400/10 text-red-400',
+  cancelled:  'bg-gray-700 text-gray-400',
+};
 
-const CARD: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.04)',
-  border: '1px solid rgba(255,255,255,0.08)',
-  borderRadius: '1rem',
-  padding: '1.25rem',
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function formatDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-    })
-  } catch {
-    return iso
-  }
-}
-
-function truncate(str: string, max: number) {
-  if (!str) return '—'
-  return str.length > max ? str.slice(0, max) + '…' : str
-}
-
-function normalizeStatus(s: string) {
-  const v = s?.toLowerCase() ?? ''
-  if (v === 'completed' || v === 'done') return 'completed'
-  if (v === 'running' || v === 'processing' || v === 'approved') return 'running'
-  if (v === 'failed') return 'failed'
-  if (v === 'pending' || v === 'queued') return 'queued'
-  if (v === 'cancelled') return 'cancelled'
-  return v
-}
-
-function humanStatus(s: string) {
-  const n = normalizeStatus(s)
-  if (n === 'completed') return 'Completed'
-  if (n === 'running') return 'Running'
-  if (n === 'failed') return 'Failed'
-  if (n === 'queued') return 'Queued'
-  if (n === 'cancelled') return 'Cancelled'
-  return s
-}
-
-function statusColor(s: string) {
-  const n = normalizeStatus(s)
-  if (n === 'completed') return '#1FFFD6'
-  if (n === 'running') return '#FF6B35'
-  if (n === 'failed') return '#f87171'
-  if (n === 'queued') return '#00D9FF'
-  return 'rgba(255,255,255,0.35)'
-}
-
-// ─── StatusBadge ──────────────────────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: string }) {
-  const color = statusColor(status)
-  return (
-    <span style={{
-      fontSize: '0.72rem',
-      fontWeight: 700,
-      letterSpacing: '0.04em',
-      color,
-      background: `${color}18`,
-      border: `1px solid ${color}40`,
-      borderRadius: 999,
-      padding: '0.2rem 0.65rem',
-      whiteSpace: 'nowrap',
-      fontFamily: "'Space Grotesk', sans-serif",
-    }}>
-      {humanStatus(status)}
-    </span>
-  )
-}
-
-// ─── Skeleton rows ─────────────────────────────────────────────────────────────
-
-function SkeletonRows() {
-  return (
-    <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '1rem', overflow: 'hidden' }}>
-      {[1, 2, 3, 4, 5].map((i, idx) => (
-        <div
-          key={i}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem',
-            padding: '0.85rem 1.25rem',
-            borderBottom: idx < 4 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-            animation: 'pulse 1.5s ease-in-out infinite',
-            animationDelay: `${idx * 0.08}s`,
-          }}
-        >
-          <div style={{ flex: 2, height: 14, borderRadius: 4, background: 'rgba(255,255,255,0.07)' }} />
-          <div style={{ flex: 1, height: 22, borderRadius: 999, background: 'rgba(255,255,255,0.05)' }} />
-          <div style={{ flex: 1.5, height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.05)' }} />
-          <div style={{ flex: 2, height: 12, borderRadius: 4, background: 'rgba(255,255,255,0.04)' }} />
-          <div style={{ width: 48, height: 28, borderRadius: 6, background: 'rgba(255,255,255,0.05)' }} />
-        </div>
-      ))}
-    </div>
-  )
-}
-
-// ─── DetailPanel ─────────────────────────────────────────────────────────────
-
-function DetailPanel({ job, onClose }: { job: Job; onClose: () => void }) {
-  const panelRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (panelRef.current) {
-      gsap.fromTo(
-        panelRef.current,
-        { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.3, ease: 'power2.out' }
-      )
-    }
-  }, [])
-
-  return (
-    <div ref={panelRef} style={{ ...CARD, marginTop: '1rem', position: 'relative' }}>
-      <button
-        onClick={onClose}
-        style={{
-          position: 'absolute',
-          top: '1rem',
-          right: '1rem',
-          background: 'rgba(255,255,255,0.07)',
-          border: '1px solid rgba(255,255,255,0.10)',
-          borderRadius: '0.4rem',
-          color: 'rgba(255,255,255,0.5)',
-          fontSize: '0.75rem',
-          fontWeight: 600,
-          padding: '0.2rem 0.6rem',
-          cursor: 'pointer',
-          fontFamily: "'Space Grotesk', sans-serif",
-        }}
-      >
-        Close
-      </button>
-
-      <div style={{ marginBottom: '1rem', paddingRight: '3rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <h3 style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '1rem', color: '#fff', margin: 0 }}>
-            {job.agent_name || job.agent_id || 'Unknown Agent'}
-          </h3>
-          <StatusBadge status={job.status} />
-        </div>
-        <p style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)', margin: '0.3rem 0 0' }}>
-          Started: {formatDate(job.created_at)}
-          {job.completed_at ? ` · Completed: ${formatDate(job.completed_at)}` : ''}
-          {job.credits_used != null ? ` · ${job.credits_used} credit${job.credits_used !== 1 ? 's' : ''}` : ''}
-        </p>
-      </div>
-
-      <div style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '0.625rem', padding: '1rem' }}>
-        <div style={{ fontSize: '0.68rem', fontWeight: 600, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', marginBottom: '0.6rem', fontFamily: "'Space Grotesk', sans-serif" }}>
-          Full Output
-        </div>
-        <pre style={{
-          fontFamily: "'Space Grotesk', sans-serif",
-          fontSize: '0.82rem',
-          color: 'rgba(255,255,255,0.75)',
-          lineHeight: 1.65,
-          margin: 0,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-        }}>
-          {job.output || 'No output available for this job.'}
-        </pre>
-      </div>
-    </div>
-  )
-}
-
-// ─── ViewButton ───────────────────────────────────────────────────────────────
-
-function ViewButton({ isSelected, onClick }: { isSelected: boolean; onClick: () => void }) {
-  const btnRef = useRef<HTMLButtonElement>(null)
-
-  function handleEnter() {
-    gsap.to(btnRef.current, { scale: 1.05, borderColor: 'rgba(0,217,255,0.45)', color: '#00D9FF', duration: 0.16, ease: 'power2.out' })
-  }
-
-  function handleLeave() {
-    gsap.to(btnRef.current, {
-      scale: 1,
-      borderColor: isSelected ? 'rgba(0,217,255,0.35)' : 'rgba(255,255,255,0.12)',
-      color: isSelected ? '#00D9FF' : 'rgba(255,255,255,0.45)',
-      duration: 0.22,
-      ease: 'power3.out',
-    })
-  }
-
-  return (
-    <button
-      ref={btnRef}
-      type="button"
-      onClick={onClick}
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-      style={{
-        fontSize: '0.72rem',
-        fontWeight: 600,
-        color: isSelected ? '#00D9FF' : 'rgba(255,255,255,0.45)',
-        background: isSelected ? 'rgba(0,217,255,0.08)' : 'transparent',
-        border: `1px solid ${isSelected ? 'rgba(0,217,255,0.35)' : 'rgba(255,255,255,0.12)'}`,
-        borderRadius: '0.4rem',
-        padding: '0.3rem 0.65rem',
-        cursor: 'pointer',
-        fontFamily: "'Space Grotesk', sans-serif",
-        willChange: 'transform',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {isSelected ? 'Hide' : 'View'}
-    </button>
-  )
-}
-
-// ─── JobRow ───────────────────────────────────────────────────────────────────
-
-function JobRow({ job, isLast, isSelected, onView }: { job: Job; isLast: boolean; isSelected: boolean; onView: () => void }) {
-  const rowRef = useRef<HTMLDivElement>(null)
-
-  function handleEnter() {
-    gsap.to(rowRef.current, { background: 'rgba(255,255,255,0.025)', duration: 0.15, ease: 'power2.out' })
-  }
-
-  function handleLeave() {
-    gsap.to(rowRef.current, { background: isSelected ? 'rgba(0,217,255,0.04)' : 'transparent', duration: 0.22, ease: 'power3.out' })
-  }
-
-  return (
-    <div
-      ref={rowRef}
-      data-job-row
-      style={{
-        display: 'grid',
-        gridTemplateColumns: '2fr 1fr 1.8fr 2.5fr auto',
-        gap: '0.75rem',
-        alignItems: 'center',
-        padding: '0.85rem 1.25rem',
-        borderBottom: isLast ? 'none' : '1px solid rgba(255,255,255,0.05)',
-        background: isSelected ? 'rgba(0,217,255,0.04)' : 'transparent',
-      }}
-      onMouseEnter={handleEnter}
-      onMouseLeave={handleLeave}
-    >
-      <div>
-        <div style={{ fontWeight: 600, fontSize: '0.875rem', color: 'rgba(255,255,255,0.90)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Space Grotesk', sans-serif" }}>
-          {job.agent_name || job.agent_id || 'Unknown'}
-        </div>
-        {job.credits_used != null && (
-          <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.22)', marginTop: '0.15rem', fontFamily: "'Space Grotesk', sans-serif" }}>
-            {job.credits_used} credit{job.credits_used !== 1 ? 's' : ''}
-          </div>
-        )}
-      </div>
-      <div><StatusBadge status={job.status} /></div>
-      <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.38)', fontFamily: "'Space Grotesk', sans-serif" }}>
-        {formatDate(job.created_at)}
-      </div>
-      <div style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: "'Space Grotesk', sans-serif" }}>
-        {truncate(job.output || '', 60)}
-      </div>
-      <div><ViewButton isSelected={isSelected} onClick={onView} /></div>
-    </div>
-  )
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+const STATUSES = ['all', 'pending', 'processing', 'completed', 'failed', 'cancelled'] as const;
+type StatusFilter = typeof STATUSES[number];
 
 export default function AdminJobsPage() {
-  const [jobs, setJobs]       = useState<Job[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState<string | null>(null)
-  const [selectedJob, setSelectedJob] = useState<Job | null>(null)
+  const router = useRouter();
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [search, setSearch] = useState('');
+  const [actionLoading, setActionLoading] = useState<string>('');
+  const [message, setMessage] = useState('');
 
-  const pageRef   = useRef<HTMLDivElement>(null)
-  const headerRef = useRef<HTMLDivElement>(null)
-  const tableRef  = useRef<HTMLDivElement>(null)
-  const emptyRef  = useRef<HTMLDivElement>(null)
+  const getToken = () => localStorage.getItem('admin_token') || '';
 
-  useEffect(() => {
-    const ac = new AbortController()
-    fetch('/api/agents/jobs?skip=0&limit=100', { signal: ac.signal })
-      .then(r => r.json())
-      .then((data: { jobs?: Job[] }) => setJobs(data.jobs || []))
-      .catch((e: Error) => { if (e.name !== 'AbortError') setError('Failed to load jobs') })
-      .finally(() => setLoading(false))
-    return () => ac.abort()
-  }, [])
-
-  useGSAP(() => {
-    const tl = gsap.timeline({ defaults: { ease: 'power3.out' } })
-    tl.fromTo(headerRef.current, { y: -20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 })
-    tl.fromTo(tableRef.current, { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45 }, '-=0.25')
-  }, { scope: pageRef })
-
-  useGSAP(() => {
-    if (loading) return
-    const rows = tableRef.current?.querySelectorAll<HTMLElement>('[data-job-row]')
-    if (rows?.length) {
-      gsap.fromTo(rows, { x: -10, opacity: 0 }, { x: 0, opacity: 1, duration: 0.32, stagger: 0.05, ease: 'power2.out', delay: 0.1 })
-    }
-  }, { scope: pageRef, dependencies: [loading] })
-
-  useGSAP(() => {
-    if (loading || jobs.length > 0 || !emptyRef.current) return
-    gsap.to(emptyRef.current, { boxShadow: '0 0 28px rgba(0,217,255,0.10)', borderColor: 'rgba(0,217,255,0.18)', repeat: -1, yoyo: true, duration: 2.2, ease: 'sine.inOut' })
-  }, { scope: pageRef, dependencies: [loading, jobs.length] })
-
-  function handleViewJob(job: Job) {
-    setSelectedJob(prev => (prev?.id === job.id ? null : job))
+  function load() {
+    const token = getToken();
+    if (!token) { router.push('/admin-login'); return; }
+    fetch('/api/admin/jobs', { headers: { Authorization: `Bearer ${token}` } })
+      .then(async (r) => {
+        const d = await r.json();
+        setJobs(d.jobs || []);
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }
 
-  return (
-    <div ref={pageRef} style={{ padding: '2.5rem', background: '#0A0D14', minHeight: '100vh' }}>
-      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-      {/* Header */}
-      <div ref={headerRef} style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.375rem' }}>
-          <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '1.75rem', margin: 0, color: '#fff' }}>
-            Jobs
-          </h1>
-          <span style={{
-            fontSize: '0.65rem',
-            fontWeight: 700,
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: '#1FFFD6',
-            background: 'rgba(31,255,214,0.10)',
-            border: '1px solid rgba(31,255,214,0.25)',
-            borderRadius: 999,
-            padding: '0.2rem 0.6rem',
-            fontFamily: "'Space Grotesk', sans-serif",
-          }}>
-            Admin Mode
-          </span>
-        </div>
-        <p style={{ color: 'rgba(255,255,255,0.35)', margin: 0, fontSize: '0.9rem', fontFamily: "'Space Grotesk', sans-serif" }}>
-          All agent runs across the platform
-        </p>
+  async function jobAction(jobId: string, action: 'retry' | 'cancel') {
+    setActionLoading(`${action}-${jobId}`);
+    try {
+      const res = await fetch(`/api/admin/jobs/${jobId}/${action}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      if (res.ok) {
+        setMessage(`Job ${action === 'retry' ? 'requeued' : 'cancelled'}`);
+        load();
+      }
+    } finally {
+      setActionLoading('');
+    }
+  }
+
+  const filtered = jobs.filter((j) => {
+    const matchStatus = statusFilter === 'all' || j.status === statusFilter;
+    const matchSearch =
+      j.client_email.toLowerCase().includes(search.toLowerCase()) ||
+      (j.client_name || '').toLowerCase().includes(search.toLowerCase()) ||
+      (j.script || '').toLowerCase().includes(search.toLowerCase()) ||
+      j.id.toLowerCase().includes(search.toLowerCase());
+    return matchStatus && matchSearch;
+  });
+
+  const counts: Record<string, number> = { all: jobs.length };
+  for (const j of jobs) counts[j.status] = (counts[j.status] || 0) + 1;
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+    </div>
+  );
+
+  return (
+    <div className="p-8 max-w-7xl">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold">Jobs & Executions</h1>
+        <p className="text-gray-500 text-sm mt-1">{jobs.length} total jobs</p>
       </div>
 
-      {/* Table / States */}
-      <div ref={tableRef}>
-        {loading ? (
-          <SkeletonRows />
-        ) : error ? (
-          <div style={{ ...CARD, textAlign: 'center', padding: '2.5rem 1.25rem', color: '#f87171', fontSize: '0.9rem', fontFamily: "'Space Grotesk', sans-serif" }}>
-            {error}
-          </div>
-        ) : jobs.length === 0 ? (
-          <div
-            ref={emptyRef}
-            style={{ ...CARD, textAlign: 'center', padding: '3rem 1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}
-          >
-            <svg width="38" height="38" viewBox="0 0 38 38" fill="none" aria-hidden="true">
-              <polyline points="3,19 9,19 13,7 18,31 23,14 26,24 30,19 35,19" stroke="rgba(255,255,255,0.18)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <div>
-              <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'rgba(255,255,255,0.45)', fontSize: '0.95rem', margin: '0 0 0.4rem', fontWeight: 500 }}>
-                No jobs found
-              </p>
-              <p style={{ fontFamily: "'Space Grotesk', sans-serif", color: 'rgba(255,255,255,0.25)', fontSize: '0.82rem', margin: 0 }}>
-                Agent activity will appear here once users start running jobs
-              </p>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '1rem', overflow: 'hidden' }}>
-              {/* Table header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.8fr 2.5fr auto', gap: '0.75rem', padding: '0.65rem 1.25rem', borderBottom: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)' }}>
-                {['Agent', 'Status', 'Started', 'Output Preview', ''].map((col, i) => (
-                  <div key={i} style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', fontFamily: "'Space Grotesk', sans-serif" }}>
-                    {col}
-                  </div>
-                ))}
-              </div>
-              {/* Rows */}
-              {jobs.map((job, i) => (
-                <JobRow
-                  key={job.id}
-                  job={job}
-                  isLast={i === jobs.length - 1}
-                  isSelected={selectedJob?.id === job.id}
-                  onView={() => handleViewJob(job)}
-                />
+      {message && (
+        <div className="mb-4 bg-green-500/10 border border-green-500/30 rounded-xl px-4 py-2.5 flex items-center justify-between">
+          <p className="text-green-400 text-sm">{message}</p>
+          <button onClick={() => setMessage('')} className="text-green-400/60 hover:text-green-400">×</button>
+        </div>
+      )}
+
+      {/* Filters */}
+      <div className="flex items-center gap-3 mb-5 flex-wrap">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by client, script, or job ID…"
+          className="bg-gray-900 border border-gray-800 rounded-xl px-4 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-violet-500 w-80"
+        />
+        <div className="flex gap-1 flex-wrap">
+          {STATUSES.map((s) => (
+            <button
+              key={s}
+              onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors capitalize ${
+                statusFilter === s
+                  ? 'bg-violet-600 text-white'
+                  : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
+              }`}
+            >
+              {s} {counts[s] !== undefined ? `(${counts[s]})` : ''}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-800">
+              {['Client', 'Script', 'Status', 'Created', 'Completed', 'Actions'].map((h) => (
+                <th key={h} className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
               ))}
-            </div>
-            {selectedJob && (
-              <DetailPanel job={selectedJob} onClose={() => setSelectedJob(null)} />
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((j) => (
+              <tr key={j.id} className="border-b border-gray-800/50 hover:bg-gray-800/30 transition-colors">
+                <td className="px-5 py-3">
+                  {j.client_id ? (
+                    <Link href={`/admin/clients/${j.client_id}`} className="text-violet-400 hover:text-violet-300 text-xs">
+                      {j.client_email}
+                    </Link>
+                  ) : (
+                    <span className="text-gray-400 text-xs">{j.client_email}</span>
+                  )}
+                  {j.client_name && <p className="text-gray-600 text-xs">{j.client_name}</p>}
+                </td>
+                <td className="px-5 py-3 max-w-xs">
+                  <p className="text-gray-300 text-xs truncate">{j.script || '—'}</p>
+                  {j.error_message && (
+                    <p className="text-red-400 text-xs truncate mt-0.5" title={j.error_message}>
+                      ⚠ {j.error_message}
+                    </p>
+                  )}
+                </td>
+                <td className="px-5 py-3">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_STYLE[j.status] || 'bg-gray-700 text-gray-400'}`}>
+                    {j.status}
+                  </span>
+                </td>
+                <td className="px-5 py-3 text-gray-500 text-xs">
+                  {j.created_at ? new Date(j.created_at).toLocaleDateString('en-GB') : '—'}
+                </td>
+                <td className="px-5 py-3 text-gray-500 text-xs">
+                  {j.completed_at ? new Date(j.completed_at).toLocaleDateString('en-GB') : '—'}
+                </td>
+                <td className="px-5 py-3">
+                  <div className="flex items-center gap-2">
+                    {j.video_url && (
+                      <a href={j.video_url} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:text-blue-300">
+                        Watch
+                      </a>
+                    )}
+                    {(j.status === 'failed' || j.status === 'cancelled') && (
+                      <button
+                        onClick={() => jobAction(j.id, 'retry')}
+                        disabled={actionLoading === `retry-${j.id}`}
+                        className="text-xs text-green-400 hover:text-green-300 disabled:opacity-50"
+                      >
+                        {actionLoading === `retry-${j.id}` ? '…' : 'Retry'}
+                      </button>
+                    )}
+                    {(j.status === 'pending' || j.status === 'processing') && (
+                      <button
+                        onClick={() => jobAction(j.id, 'cancel')}
+                        disabled={actionLoading === `cancel-${j.id}`}
+                        className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50"
+                      >
+                        {actionLoading === `cancel-${j.id}` ? '…' : 'Cancel'}
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr>
+                <td colSpan={6} className="px-5 py-12 text-center text-gray-600">No jobs match your filter.</td>
+              </tr>
             )}
-          </>
-        )}
+          </tbody>
+        </table>
       </div>
     </div>
-  )
+  );
 }

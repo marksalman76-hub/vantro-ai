@@ -1,234 +1,193 @@
-'use client'
+'use client';
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { SkeletonCard } from '@/components/Skeleton';
 
-interface Charge {
-  id: string
-  amount: number
-  currency: string
-  status: string
-  description: string | null
-  email: string | null
-  created: number
+// Redesign components
+import MetricCard from '@/components/dashboard/MetricCard';
+import ActionCard from '@/components/dashboard/ActionCard';
+import StatusBadge from '@/components/dashboard/StatusBadge';
+import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import StatusStrip from '@/components/dashboard/StatusStrip';
+import AlertsSection from '@/components/dashboard/AlertsSection';
+import QuickLaunchSection from '@/components/dashboard/QuickLaunchSection';
+import RecentJobsTable, { HistoryJob } from '@/components/dashboard/RecentJobsTable';
+import ThemeToggle from '@/components/dashboard/ThemeToggle';
+
+interface AdminCredits {
+  total_credits?: number;
+  used_credits?: number;
+  remaining_credits?: number;
+  tier?: string;
 }
 
-interface Customer {
-  id: string
-  email: string | null
-  created: number
+interface AgentUsage {
+  agent_id: string;
+  agent_name: string;
+  count: number;
 }
 
-interface Stats {
-  balance: { available: number; pending: number }
-  mrr: number
-  activeSubscriptions: number
-  recentCharges: Charge[]
-  recentCustomers: Customer[]
+interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  affects: string | null;
+  type: string;
+  show_as: string;
 }
 
-function fmt(cents: number) {
-  return '$' + (cents / 100).toLocaleString('en-US', { minimumFractionDigits: 2 })
+function isThisMonth(dateStr: string | null): boolean {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 }
 
-function fmtDate(unix: number) {
-  return new Date(unix * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-}
+export default function AdminDashboard() {
+  const router = useRouter();
+  const [credits, setCredits] = useState<AdminCredits | null>(null);
+  const [jobs, setJobs] = useState<HistoryJob[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
-const QUICK_LINKS = [
-  { label: 'Stripe Dashboard', url: 'https://dashboard.stripe.com', color: '#635bff' },
-  { label: 'Resend Emails', url: 'https://resend.com/emails', color: '#1FFFD6' },
-  { label: 'Vercel Deploy', url: 'https://vercel.com/marksalman76-5799s-projects/vantro-ai', color: '#ffffff' },
-  { label: 'GitHub Repo', url: 'https://github.com/marksalman76-hub/vantro-ai', color: '#f0f6fc' },
-]
+  interface RawJob {
+    id: string;
+    agent_id?: string;
+    agent_name?: string;
+    status: string;
+    credits_used?: number;
+    created_at: string | null;
+    completed_at: string | null;
+  }
 
-export default function AdminPage() {
-  const [authed, setAuthed] = useState<boolean | null>(null)
-  const [stats, setStats] = useState<Stats | null>(null)
-  const [password, setPassword] = useState('')
-  const [loginError, setLoginError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [statsError, setStatsError] = useState('')
+  useEffect(() => {
+    const token = localStorage.getItem('admin_token');
+    if (!token) { router.push('/admin-login'); return; }
 
-  const loadStats = useCallback(async () => {
-    const res = await fetch('/api/admin/stats')
-    if (res.status === 401) { setAuthed(false); return }
-    if (!res.ok) { setStatsError('Failed to load Stripe stats — check STRIPE_SECRET_KEY'); setAuthed(true); return }
-    const data = await res.json()
-    setStats(data)
-    setAuthed(true)
-  }, [])
+    const headers = { Authorization: `Bearer ${token}` };
 
-  useEffect(() => { loadStats() }, [loadStats])
+    try {
+      const d = JSON.parse(localStorage.getItem('dismissed_announcements') || '[]');
+      setDismissed(new Set(d));
+    } catch { /* ignore */ }
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setLoginError('')
-    const res = await fetch('/api/admin/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password }),
-    })
-    if (res.ok) {
-      setPassword('')
-      await loadStats()
-    } else {
-      setLoginError('Invalid password')
+    Promise.all([
+      fetch('/api/admin/stats', { headers }).then(r => r.ok ? r.json() : null),
+      fetch('/api/admin/jobs', { headers }).then(r => r.ok ? r.json() : null),
+      fetch('/api/platform/announcements', { headers }).then(r => r.ok ? r.json() : []),
+    ]).then(([c, j, ann]) => {
+      if (c) setCredits(c as AdminCredits);
+      if (j?.jobs) {
+        const mapped: HistoryJob[] = (j.jobs as RawJob[]).map(job => ({
+          id: job.id,
+          agent_id: job.agent_id || 'unknown',
+          agent_name: job.agent_name || 'Unknown Agent',
+          status: job.status,
+          credits_used: job.credits_used || 0,
+          created_at: job.created_at,
+          completed_at: job.completed_at,
+        }));
+        setJobs(mapped);
+      }
+      if (Array.isArray(ann)) setAnnouncements(ann);
+    }).finally(() => setLoading(false));
+  }, [router]);
+
+  const onDismiss = (id: string) => {
+    const next = new Set(dismissed).add(id);
+    setDismissed(next);
+    localStorage.setItem('dismissed_announcements', JSON.stringify(Array.from(next)));
+  };
+
+  const onSignOut = () => {
+    localStorage.removeItem('admin_token');
+    router.push('/admin-login');
+  };
+
+  const completedThisMonth = jobs.filter(
+    j => j.status === 'completed' && isThisMonth(j.completed_at || j.created_at)
+  ).length;
+
+  const agentCounts: Record<string, AgentUsage> = {};
+  for (const job of jobs) {
+    if (job.agent_id) {
+      if (!agentCounts[job.agent_id]) {
+        agentCounts[job.agent_id] = { agent_id: job.agent_id, agent_name: job.agent_name || 'Unknown', count: 0 };
+      }
+      agentCounts[job.agent_id].count++;
     }
-    setLoading(false)
   }
+  const topAgents = Object.values(agentCounts)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3);
 
-  async function handleLogout() {
-    await fetch('/api/admin/auth', { method: 'DELETE' })
-    setAuthed(false)
-    setStats(null)
-  }
+  const pendingApprovals = jobs.filter(j =>
+    j.status === 'pending_approval' || j.status === 'pending_financial_review'
+  ).length;
 
-  if (authed === null) {
+  const failedJobs = jobs.filter(j => j.status === 'failed').length;
+
+  if (loading) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0A0D14', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#1FFFD6' }} />
+      <div className="p-8 max-w-5xl" style={{ paddingTop: '6rem' }}>
+        <div className="mb-8">
+          <div className="animate-pulse bg-gray-800 rounded h-7 w-36 mb-2" />
+          <div className="animate-pulse bg-gray-800 rounded h-4 w-56" />
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </div>
       </div>
-    )
-  }
-
-  if (!authed) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0A0D14', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui' }}>
-        <form onSubmit={handleLogin} style={{ width: 360, padding: '2rem', background: '#12151E', borderRadius: 16, border: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <div style={{ fontSize: 11, letterSpacing: '0.15em', color: '#1FFFD6', textTransform: 'uppercase', marginBottom: 8 }}>Vantro Admin</div>
-            <h1 style={{ fontSize: 22, fontWeight: 600, color: '#fff', margin: 0 }}>Sign in</h1>
-          </div>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            placeholder="Admin password"
-            required
-            autoFocus
-            style={{ width: '100%', boxSizing: 'border-box', padding: '0.75rem 1rem', background: '#0A0D14', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, color: '#fff', fontSize: 14, outline: 'none', marginBottom: 12 }}
-          />
-          {loginError && <p style={{ color: '#ff6b6b', fontSize: 13, margin: '0 0 12px' }}>{loginError}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            style={{ width: '100%', padding: '0.75rem', background: '#1FFFD6', color: '#0A0D14', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
-          >
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
-      </div>
-    )
+    );
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0A0D14', color: '#fff', fontFamily: 'system-ui', padding: '2rem' }}>
-      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+    <>
+      <DashboardHeader
+        credits={credits ? {
+          total_credits: credits.total_credits ?? 0,
+          used_credits: credits.used_credits ?? 0,
+          remaining_credits: credits.remaining_credits ?? 0,
+        } : null}
+        pendingApprovals={pendingApprovals}
+        failedJobs={failedJobs}
+        onSignOut={onSignOut}
+      />
 
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
-          <div>
-            <div style={{ fontSize: 11, letterSpacing: '0.15em', color: '#1FFFD6', textTransform: 'uppercase', marginBottom: 4 }}>Vantro.ai</div>
-            <h1 style={{ fontSize: 24, fontWeight: 700, margin: 0 }}>Admin Portal</h1>
-          </div>
-          <button onClick={handleLogout} style={{ padding: '0.5rem 1rem', background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, color: '#aaa', fontSize: 13, cursor: 'pointer' }}>
-            Sign out
-          </button>
+      <div className="p-8 max-w-5xl" style={{ paddingTop: '6rem' }}>
+        <StatusStrip
+          credits={credits ? {
+            total_credits: credits.total_credits ?? 0,
+            used_credits: credits.used_credits ?? 0,
+            remaining_credits: credits.remaining_credits ?? 0,
+            tier: credits.tier ?? 'enterprise',
+          } : null}
+          completedThisMonth={completedThisMonth}
+          pendingApprovals={pendingApprovals}
+          topAgents={topAgents}
+        />
+
+        <div className="mb-6">
+          <AlertsSection
+            announcements={announcements}
+            pendingApprovals={pendingApprovals}
+            failedJobs={failedJobs}
+            dismissed={dismissed}
+            onDismiss={onDismiss}
+          />
         </div>
 
-        {statsError && (
-          <div style={{ padding: '1rem', background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 8, color: '#ff6b6b', marginBottom: '1.5rem', fontSize: 14 }}>
-            {statsError}
-          </div>
-        )}
+        <QuickLaunchSection />
 
-        {/* Revenue metrics */}
-        {stats && (
-          <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-              {[
-                { label: 'MRR', value: fmt(stats.mrr), sub: 'monthly recurring revenue' },
-                { label: 'Active Plans', value: String(stats.activeSubscriptions), sub: 'live subscriptions' },
-                { label: 'Available', value: fmt(stats.balance.available), sub: 'Stripe balance' },
-                { label: 'Pending', value: fmt(stats.balance.pending), sub: 'processing' },
-              ].map(m => (
-                <div key={m.label} style={{ background: '#12151E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '1.25rem' }}>
-                  <div style={{ fontSize: 11, color: '#555', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>{m.label}</div>
-                  <div style={{ fontSize: 28, fontWeight: 700, color: '#1FFFD6', marginBottom: 2 }}>{m.value}</div>
-                  <div style={{ fontSize: 12, color: '#444' }}>{m.sub}</div>
-                </div>
-              ))}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2rem' }}>
-              {/* Recent charges */}
-              <div style={{ background: '#12151E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '1.25rem' }}>
-                <h2 style={{ fontSize: 13, fontWeight: 600, color: '#888', margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Recent Charges</h2>
-                {stats.recentCharges.length === 0
-                  ? <p style={{ color: '#444', fontSize: 13 }}>No charges yet</p>
-                  : stats.recentCharges.map(c => (
-                    <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <div>
-                        <div style={{ fontSize: 13, color: '#ddd' }}>{c.email || 'unknown'}</div>
-                        <div style={{ fontSize: 11, color: '#444' }}>{fmtDate(c.created)}</div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 14, fontWeight: 600, color: c.status === 'succeeded' ? '#1FFFD6' : '#ff6b6b' }}>{fmt(c.amount)}</div>
-                        <div style={{ fontSize: 10, color: '#444', textTransform: 'uppercase' }}>{c.status}</div>
-                      </div>
-                    </div>
-                  ))
-                }
-              </div>
-
-              {/* Recent customers */}
-              <div style={{ background: '#12151E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '1.25rem' }}>
-                <h2 style={{ fontSize: 13, fontWeight: 600, color: '#888', margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Recent Customers</h2>
-                {stats.recentCustomers.length === 0
-                  ? <p style={{ color: '#444', fontSize: 13 }}>No customers yet</p>
-                  : stats.recentCustomers.map(c => (
-                    <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                      <div style={{ fontSize: 13, color: '#ddd' }}>{c.email || c.id}</div>
-                      <div style={{ fontSize: 11, color: '#444' }}>{fmtDate(c.created)}</div>
-                    </div>
-                  ))
-                }
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Quick links */}
-        <div style={{ background: '#12151E', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 12, padding: '1.25rem', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: 13, fontWeight: 600, color: '#888', margin: '0 0 1rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Admin Tools</h2>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-            {QUICK_LINKS.map(link => (
-              <a
-                key={link.label}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ padding: '0.6rem 1.2rem', background: 'rgba(255,255,255,0.04)', border: `1px solid ${link.color}25`, borderRadius: 8, color: link.color, fontSize: 13, fontWeight: 500, textDecoration: 'none' }}
-              >
-                {link.label} ↗
-              </a>
-            ))}
-          </div>
-        </div>
-
-        {/* Pending actions */}
-        <div style={{ background: '#12151E', border: '1px solid rgba(255,165,0,0.2)', borderRadius: 12, padding: '1.25rem' }}>
-          <h2 style={{ fontSize: 13, fontWeight: 600, color: '#888', margin: '0 0 0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Pending Actions</h2>
-          <ul style={{ margin: 0, paddingLeft: '1.25rem', color: '#888', fontSize: 13, lineHeight: 2.2 }}>
-            <li>Rotate <code style={{ color: '#1FFFD6', background: 'rgba(31,255,214,0.08)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>ANTHROPIC_API_KEY</code> in Vercel env vars</li>
-            <li>Rotate <code style={{ color: '#1FFFD6', background: 'rgba(31,255,214,0.08)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>RUNWAY_API_KEY</code> and <code style={{ color: '#1FFFD6', background: 'rgba(31,255,214,0.08)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>ELEVENLABS_API_KEY</code></li>
-            <li>Set <code style={{ color: '#ffa500', background: 'rgba(255,165,0,0.08)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>ADMIN_PASSWORD</code> in Vercel env vars → redeploy</li>
-            <li>Set <code style={{ color: '#ffa500', background: 'rgba(255,165,0,0.08)', padding: '1px 6px', borderRadius: 4, fontSize: 12 }}>STRIPE_SECRET_KEY</code> in Vercel env vars if not done</li>
-          </ul>
-        </div>
-
+        <RecentJobsTable jobs={jobs} />
       </div>
-    </div>
-  )
+
+      <ThemeToggle />
+    </>
+  );
 }

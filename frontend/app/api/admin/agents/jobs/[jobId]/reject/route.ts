@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 
-export async function GET(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ jobId: string }> }
+) {
+  const { jobId } = await params;
   const token = request.headers.get("authorization") || "";
   try {
-    const res = await fetch(`${API_URL}/api/admin/stats`, {
+    const res = await fetch(`${API_URL}/api/admin/agents/jobs/${jobId}/reject`, {
+      method: "POST",
       headers: { Authorization: token },
     });
     const data = await res.json();
