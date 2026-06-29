@@ -139,7 +139,11 @@ def resolve_creative_provider_route(
             "credential_values_exposed": False,
         }
 
-    selected_media_types = _media_types(media_type or _context_value(request_context, "media_type", "type"))
+    requested_media_type = str(media_type or "").strip()
+    if requested_media_type.lower() in {"", "both"}:
+        requested_media_type = _context_value(request_context, "media_type", "type") or "both"
+
+    selected_media_types = _media_types(requested_media_type)
     if not selected_media_types:
         return {
             "success": False,

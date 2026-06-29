@@ -118,6 +118,25 @@ def test_unknown_agent_returns_clear_failure():
     assert route["credential_values_exposed"] is False
 
 
+@pytest.mark.parametrize(
+    "request_context",
+    [
+        {"media_type": "video"},
+        {"media_request": {"media_type": "video"}},
+    ],
+)
+def test_request_context_media_type_overrides_default_media_type(request_context):
+    route = resolve_creative_provider_route(
+        agent_id="ugc_media_agent",
+        request_context=request_context,
+    )
+
+    assert route["success"] is True
+    assert route["media_types"] == ["video"]
+    assert "video" in route
+    assert "image" not in route
+
+
 def test_creative_provider_status_exposes_models_without_credentials():
     status = creative_provider_status()
 
