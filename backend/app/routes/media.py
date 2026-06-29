@@ -169,15 +169,15 @@ async def create_media_job(
 
             result = await elevenlabs.execute(
                 text=req.brief,
-                voice_id=req.gender or "default",
+                voice_id="21m00Tcm4TlvDq8ikWAM",  # Default: Rachel voice
                 language=req.language,
-                tone=req.tone.lower(),
             )
 
             if "error" in result:
                 raise HTTPException(status_code=503, detail=f"ElevenLabs error: {result['error']}")
 
-            external_job_id = result.get("task_id")
+            # ElevenLabs returns audio_base64 directly (synchronous)
+            external_job_id = None  # No async task for ElevenLabs
             provider_type = "elevenlabs"
 
         # Create MediaJob record (schema updated to store flexible fields)
