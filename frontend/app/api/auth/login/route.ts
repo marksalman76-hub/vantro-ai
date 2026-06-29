@@ -15,10 +15,13 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({ email, password }),
     });
     const data = await res.json();
-    if (!res.ok) return NextResponse.json({ error: data.detail || "Login failed" }, { status: res.status });
+    if (!res.ok) {
+      const detail = data.detail || data.error || "Login failed";
+      return NextResponse.json({ detail, error: detail }, { status: res.status });
+    }
 
-    const token = data.access_token;
-    const response = NextResponse.json({ token, user_id: data.user_id });
+    const token = data.access_token || data.token;
+    const response = NextResponse.json({ access_token: token, token, user_id: data.user_id });
     // Set httpOnly cookie — invisible to JS, immune to XSS token theft
     response.cookies.set("access_token", token, {
       httpOnly: true,
@@ -29,6 +32,9 @@ export async function POST(request: NextRequest) {
     });
     return response;
   } catch {
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { detail: "Internal server error", error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
