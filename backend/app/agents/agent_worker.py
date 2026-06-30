@@ -351,8 +351,8 @@ async def _process_job(job_id: str) -> None:
                         import json as _json
                         bp = owner.brand_profile
                         context["_brand_profile"] = _json.dumps(bp) if isinstance(bp, dict) else str(bp)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("Worker: brand profile enrichment failed for job %s: %s", job_id, _e)
 
         # Parse output_language from job input context (if client specified one)
         _output_language: str | None = None
@@ -361,8 +361,8 @@ async def _process_job(job_id: str) -> None:
             _output_language = _parsed_input.get("context", {}).get("output_language")
             if _output_language:
                 job.output_language = _output_language
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("Worker: output_language parse failed for job %s: %s", job_id, _e)
 
         # RAG: retrieve relevant skill chunks for this task (non-blocking — silent on failure)
         try:
@@ -370,8 +370,8 @@ async def _process_job(job_id: str) -> None:
             _skill_ctx = retrieve_relevant_skills(db, user_prompt)
             if _skill_ctx:
                 context["_skill_context"] = _skill_ctx
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("Worker: skill RAG failed for job %s: %s", job_id, _e)
 
         # Few-shot: inject quality-reference examples for this agent (non-blocking)
         try:
@@ -379,8 +379,8 @@ async def _process_job(job_id: str) -> None:
             _examples = get_few_shot_examples(db, job.agent_id)
             if _examples:
                 context["_few_shot_examples"] = _examples
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("Worker: few-shot retrieval failed for job %s: %s", job_id, _e)
 
         # Composio: pass workspace credentials so executor can build live tool list (non-blocking)
         try:
@@ -388,8 +388,8 @@ async def _process_job(job_id: str) -> None:
             _creds = get_composio_credentials(db, job.workspace_id)
             if _creds:
                 context["_composio_api_key"], context["_composio_entity_id"] = _creds
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("Worker: Composio credentials failed for job %s: %s", job_id, _e)
 
         # Workspace memory: inject top-3 recent outcomes for this agent (non-blocking)
         try:
@@ -405,8 +405,8 @@ async def _process_job(job_id: str) -> None:
             ).fetchall()
             if _mem_rows:
                 context["_workspace_memory"] = "\n".join(r[0] for r in _mem_rows)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("Worker: workspace memory fetch failed for job %s: %s", job_id, _e)
 
         hitl_level = get_agent_hitl(job.agent_id)
         _sentry_txn.set_tag("hitl_level", hitl_level)
@@ -428,8 +428,8 @@ async def _process_job(job_id: str) -> None:
                 if orig and orig.output_data:
                     _revision_output = orig.output_data.split(" -->\n", 1)[-1]
                 _revision_prompt_text = getattr(job, "revision_prompt", None)
-        except Exception:
-            pass
+        except Exception as _e:
+            logger.debug("Worker: revision context fetch failed for job %s: %s", job_id, _e)
 
         with _sentry_txn.start_child(op="llm.execute", description=f"agent:{job.agent_id}") as _llm_span:
             _llm_span.set_data("hitl_level", hitl_level)
