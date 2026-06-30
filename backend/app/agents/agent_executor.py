@@ -686,7 +686,7 @@ def execute_agent(
                     )
                 else:
                     text, in_tok, out_tok = _call_anthropic(guarded_system_prompt, user_message)
-                provider = f"anthropic/{ANTHROPIC_MODEL}"
+                provider = f"anthropic/{selected_model}"
                 credits  = _tokens_to_credits(in_tok, out_tok)
             except Exception as e:
                 logger.warning("Anthropic call failed for agent %s: %s — trying OpenAI", agent_id, e)
