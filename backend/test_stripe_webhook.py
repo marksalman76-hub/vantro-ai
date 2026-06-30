@@ -48,7 +48,7 @@ def test_customer_creation():
     
     try:
         customer = stripe.Customer.create(
-            email=f'test-{int(time.time())}@trance-formation.com.au',
+            email=f'test-{int(time.time())}@vantro.ai',
             description='Test customer for webhook'
         )
         

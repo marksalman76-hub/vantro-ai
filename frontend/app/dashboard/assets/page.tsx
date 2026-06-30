@@ -6,6 +6,36 @@ import { useRouter } from 'next/navigation';
 
 interface AgentJob { id: string; agent_name: string; status: string; credits_used: number; created_at: string | null; output: string | null; }
 
+interface MediaGenerationOutput {
+  type?: string;
+  script?: string;
+  preview_url?: string;
+  download_url?: string;
+  real_media_asset_created?: boolean;
+  preview_ready?: boolean;
+  download_ready?: boolean;
+  provider_readiness?: {
+    message?: string;
+    selected_video_model?: string | null;
+    selected_image_model?: string | null;
+  };
+}
+
+function cleanOutput(output: string) {
+  return output.replace(/^<!-- provider:.*? -->\n/, '').trim();
+}
+
+function parseMediaGenerationOutput(output: string | null): MediaGenerationOutput | null {
+  const clean = cleanOutput(output || '');
+  if (!clean.startsWith('{')) return null;
+  try {
+    const parsed = JSON.parse(clean);
+    return parsed?.type === 'media_generation' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 const STATUS_STYLE: Record<string, string> = {
   completed: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
   running:   'text-blue-400 bg-blue-500/10 border-blue-500/20',
@@ -29,6 +59,7 @@ export default function AssetsPage() {
   const [loading, setLoading] = useState(true);
   const [viewJob, setViewJob] = useState<AgentJob | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const mediaPreview = viewJob ? parseMediaGenerationOutput(viewJob.output) : null;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -58,16 +89,63 @@ export default function AssetsPage() {
               <button onClick={() => setViewJob(null)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-gray-800">✕</button>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-5">
-              {(viewJob.output ?? '').split('\n').map((line, i) => {
-                if (/^#{1,3}\s/.test(line)) return <p key={i} className="font-bold text-white text-sm mt-4 mb-1">{line.replace(/^#+\s/, '')}</p>;
-                if (/^[-*]\s|^\d+\.\s/.test(line)) return <p key={i} className="text-gray-300 text-sm ml-3 leading-relaxed">{line}</p>;
-                if (!line.trim()) return <div key={i} className="h-2"/>;
-                return <p key={i} className="text-gray-300 text-sm leading-relaxed">{line}</p>;
-              })}
+              {mediaPreview ? (
+                <div className="space-y-4">
+                  <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-950">
+                    {mediaPreview.preview_url ? (
+                      mediaPreview.preview_url.includes('.mp4') || mediaPreview.preview_url.startsWith('data:video')
+                        ? <video src={mediaPreview.preview_url} controls className="w-full max-h-[420px] bg-black" />
+                        : <img src={mediaPreview.preview_url} alt={viewJob.agent_name} className="w-full max-h-[420px] object-contain bg-black" />
+                    ) : (
+                      <div className="flex h-64 items-center justify-center text-xs text-gray-600">Preview not available yet</div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-gray-800 bg-gray-950 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-600">Status</p>
+                      <p className="mt-1 text-xs text-white">
+                        {mediaPreview.real_media_asset_created ? 'Live media asset created' : 'Preview generated; live provider not ready'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-gray-800 bg-gray-950 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-600">Selected route</p>
+                      <p className="mt-1 text-xs text-white">
+                        {mediaPreview.provider_readiness?.selected_video_model || mediaPreview.provider_readiness?.selected_image_model || 'No model selected'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {mediaPreview.script && (
+                    <div className="rounded-xl border border-gray-800 bg-gray-950 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-600 mb-2">Generated brief</p>
+                      <p className="text-xs leading-relaxed text-gray-300 whitespace-pre-wrap">{mediaPreview.script}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                cleanOutput(viewJob.output ?? '').split('\n').map((line, i) => {
+                  if (/^#{1,3}\s/.test(line)) return <p key={i} className="font-bold text-white text-sm mt-4 mb-1">{line.replace(/^#+\s/, '')}</p>;
+                  if (/^[-*]\s|^\d+\.\s/.test(line)) return <p key={i} className="text-gray-300 text-sm ml-3 leading-relaxed">{line}</p>;
+                  if (!line.trim()) return <div key={i} className="h-2"/>;
+                  return <p key={i} className="text-gray-300 text-sm leading-relaxed">{line}</p>;
+                })
+              )}
             </div>
             <div className="px-6 py-4 border-t border-gray-800 flex justify-between">
               <button onClick={() => navigator.clipboard?.writeText(viewJob.output ?? '')} className="text-xs text-gray-500 hover:text-white">Copy output</button>
-              <button onClick={() => setViewJob(null)} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg">Close</button>
+              <div className="flex items-center gap-2">
+                {mediaPreview?.download_ready && mediaPreview.download_url && (
+                  <a
+                    href={mediaPreview.download_url}
+                    download={`${viewJob.agent_name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-asset`}
+                    className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium rounded-lg"
+                  >
+                    Download
+                  </a>
+                )}
+                <button onClick={() => setViewJob(null)} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg">Close</button>
+              </div>
             </div>
           </div>
         </div>

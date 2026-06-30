@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@vantro.ai")
 SES_REGION = os.getenv("AWS_REGION", "us-east-1")
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://www.vantro.ai")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://vantro.ai")
 
 
 def _ses_client():

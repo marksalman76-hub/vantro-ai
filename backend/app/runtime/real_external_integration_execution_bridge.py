@@ -57,8 +57,8 @@ def execute_real_external_action(
             "partnership", "proposal"
         ]):
             email_payload = {
-                "recipient": "mark@trance-formation.com.au",
-                "sender_email": "noreply@trance-formation.com.au",
+                "recipient": "mark@vantro.ai",
+                "sender_email": "noreply@vantro.ai",
                 "sender_name": "AI Workforce Platform",
                 "subject": f"Live delegated workforce proof: {action_text[:80]}",
                 "html_content": (

@@ -46,6 +46,16 @@ def _get_user(credentials: HTTPAuthorizationCredentials, db: Session) -> User:
     return user
 
 
+def _is_admin(user: User) -> bool:
+    import os
+
+    admin_email = os.getenv("ADMIN_EMAIL", "")
+    return bool(
+        getattr(user, "is_admin", False)
+        or (admin_email and user.email.lower() == admin_email.lower())
+    )
+
+
 def _get_workspace(user: User, db: Session) -> Workspace:
     org = db.query(Organization).filter(Organization.owner_id == user.id).first()
     if not org:
@@ -82,12 +92,13 @@ async def create_media_job(
     """
     user = _get_user(credentials, db)
     workspace = _get_workspace(user, db)
+    is_admin = _is_admin(user)
 
     # Check credits
     credits = db.query(CreditsAccount).filter(
         CreditsAccount.workspace_id == workspace.id
     ).first()
-    if not credits or credits.remaining_credits < 10:
+    if not is_admin and (not credits or credits.remaining_credits < 10):
         raise HTTPException(status_code=402, detail="Insufficient credits")
 
     job_id = str(uuid.uuid4())
@@ -202,9 +213,11 @@ async def create_media_job(
         db.commit()
         db.refresh(job)
 
-        # Deduct estimated credits
-        credits.used_credits += 15  # Estimate for media generation
-        db.commit()
+        # Deduct estimated credits. Admin media generation is Enterprise/unlimited
+        # and must not mutate client credit balances.
+        if not is_admin and credits:
+            credits.used_credits += 15  # Estimate for media generation
+            db.commit()
 
         return {
             "status": "queued",

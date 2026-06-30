@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 security = HTTPBearer(auto_error=False)
 
-FRONTEND_URL = get_config("FRONTEND_URL", "https://www.vantro.ai")
+FRONTEND_URL = get_config("FRONTEND_URL", "https://vantro.ai")
 
 # Plan → Stripe price IDs (mirrors stripe.py)
 PLANS: dict[str, str] = {

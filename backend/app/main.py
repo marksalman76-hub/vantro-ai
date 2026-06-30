@@ -273,7 +273,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "https://vantro.ai",
-        "https://www.vantro.ai",
+        "https://vantro.ai",
     ],
     allow_origin_regex=r"https://vantro-.*\.vercel\.app",
     allow_credentials=True,

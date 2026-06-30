@@ -204,7 +204,7 @@ _All items must be checked before first paying customer is onboarded._
 - [ ] Status page live at `https://status.vantro.ai` (Instatus, Statuspage.io, or BetterUptime)
 - [ ] Components monitored and displayed:
   - [ ] API (`api.vantro.ai`)
-  - [ ] Web app (`app.vantro.ai`)
+  - [ ] Web app (`vantro.ai`)
   - [ ] Agent worker / job processing
   - [ ] Database
   - [ ] Billing / Stripe integration
@@ -238,7 +238,7 @@ _All items must be checked before first paying customer is onboarded._
   - [ ] Customers can cancel self-serve (no email-to-cancel dark pattern)
   - [ ] Customers can view invoices and download receipts
   - [ ] Customers can update payment method
-  - [ ] Customer portal URL: `https://billing.stripe.com/p/login/...` linked from `app.vantro.ai/settings/billing`
+  - [ ] Customer portal URL: `https://billing.stripe.com/p/login/...` linked from `vantro.ai/settings/billing`
 - [ ] Cancellation triggers:
   - [ ] Confirmation email sent immediately with effective date
   - [ ] Workspace downgraded at period end (not immediately)

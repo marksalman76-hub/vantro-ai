@@ -144,7 +144,7 @@ export default function AdminDashboard() {
     total_credits: credits?.total_credits ?? 0,
     used_credits: credits?.used_credits ?? 0,
     remaining_credits: credits?.remaining_credits ?? 0,
-    tier: 'owner',
+    tier: 'enterprise',
     credits_unlimited: true,
     credit_label: credits?.credit_label || 'Unlimited',
   };

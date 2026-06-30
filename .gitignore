@@ -43,9 +43,11 @@ runtime_data/*.jsonl
 .env
 .env.aws.local
 .env.local
-.env.*
+.env.* 
 !.env.example
 !.env.template
+.claude/
+**/.claude/settings.local.json
 telemetry/security/*secret*
 telemetry/security/*audit-report*
 logs/*.log
@@ -85,3 +87,25 @@ local_hash_runway_key*.py
 patch_verify_*.py
 preflight_confirmation_markers.txt
 successful_smoke_media_job.txt
+
+# Generated frontend/build artifacts
+frontend/tsconfig.tsbuildinfo
+
+# Terraform local output artifacts
+terraform/tfplan
+terraform/*.log
+
+# Local UI/debug screenshots
+admin-login-*.png
+create-media-*.png
+screenshot.png
+
+# Superpowers SDD transient review/task artifacts
+.superpowers/sdd/*.diff
+.superpowers/sdd/final-review-fix-report.md
+.superpowers/sdd/task-*-brief.md
+.superpowers/sdd/task-*-report.md
+
+# Local placeholder/scratch files
+TASK_1_REPORT.md
+frontend/filename.txt

@@ -85,7 +85,7 @@ Once merged to `main`, GitHub Actions `deploy.yml` automatically triggers:
 - Builds Docker API image: `backend/Dockerfile`
 - Builds Docker worker image: `backend/Dockerfile.worker`
 - Tags both with `$GITHUB_SHA` (commit hash) + `:latest`
-- Pushes to ECR: `685570573617.dkr.ecr.us-east-1.amazonaws.com/trance-formation/api:sha`
+- Pushes to the configured Vantro ECR API repository with the commit SHA tag.
 
 **Monitor:** GitHub Actions tab, "Build & push images" job
 
@@ -100,12 +100,12 @@ Once merged to `main`, GitHub Actions `deploy.yml` automatically triggers:
 #### **Step 3: Deploy API & Worker** (5–10 min each, in parallel)
 - Renders task definitions with new image SHA
 - Registers new task revisions in ECS
-- Updates services: `trance-formation-api-service` and `vantro-worker`
+- Updates the configured Vantro API and worker ECS services.
 - Waits for rolling deployment to stabilize (all tasks healthy)
 
 **Monitor:** 
 - GitHub Actions "Deploy API service" / "Deploy worker service" jobs
-- ECS console → cluster `trance-formation-prod` → services
+- ECS console → configured Vantro production cluster → services
 - CloudWatch Logs for startup errors
 
 ---
@@ -171,9 +171,9 @@ github.com/your-org/ecommerce-ai-agent-platform/actions
 
 **2. AWS ECS Console**
 ```
-https://console.aws.amazon.com/ecs/v2/clusters/trance-formation-prod
+https://console.aws.amazon.com/ecs/v2/clusters/$VANTRO_ECS_CLUSTER
 ```
-- Click service `trance-formation-api-service`
+- Click the configured Vantro API service.
 - Under "Deployments" tab, watch task count transition
 - Desired = new tasks, Running = healthy tasks
 - Goal: all tasks Running before moving to next service
@@ -196,7 +196,7 @@ curl https://api.vantro.ai/health
 # Expected: {"status": "healthy", "service": "vantro-api"}
 
 # Frontend availability
-curl https://www.vantro.ai
+curl https://vantro.ai
 # Expected: 200 OK (HTML page)
 ```
 
@@ -215,8 +215,8 @@ If deployment fails or introduces issues:
 ```bash
 # Get previous task definition revision
 REVISION=$(aws ecs describe-services \
-  --cluster trance-formation-prod \
-  --services trance-formation-api-service \
+  --cluster "$VANTRO_ECS_CLUSTER" \
+  --services "$VANTRO_API_SERVICE" \
   --region us-east-1 \
   --query 'services[0].taskDefinition' --output text | grep -oE ':[0-9]+$' | sed 's/:/-/')
 
@@ -225,8 +225,8 @@ PREV_REVISION=$((${REVISION##*-} - 1))
 
 # Revert service to previous task def
 aws ecs update-service \
-  --cluster trance-formation-prod \
-  --service trance-formation-api-service \
+  --cluster "$VANTRO_ECS_CLUSTER" \
+  --service "$VANTRO_API_SERVICE" \
   --task-definition vantro-api:$PREV_REVISION \
   --force-new-deployment \
   --region us-east-1
@@ -299,8 +299,8 @@ aws secretsmanager put-secret-value \
   --secret-id FEATURE_2FA_ENABLED --secret-string "true" --region us-east-1
 
 # Restart ECS tasks to pick up new secret
-aws ecs update-service --cluster trance-formation-prod \
-  --service trance-formation-api-service --force-new-deployment --region us-east-1
+aws ecs update-service --cluster "$VANTRO_ECS_CLUSTER" \
+  --service "$VANTRO_API_SERVICE" --force-new-deployment --region us-east-1
 
 # Test feature
 # ...
@@ -357,7 +357,7 @@ curl https://api.vantro.ai/health
 curl https://api.vantro.ai/
 
 # Frontend loads
-curl https://www.vantro.ai/login --silent | grep -q "vantro" && echo "✅ Frontend OK"
+curl https://vantro.ai/login --silent | grep -q "vantro" && echo "✅ Frontend OK"
 
 # Key endpoints
 curl -H "Authorization: Bearer $TEST_TOKEN" https://api.vantro.ai/api/auth/me
@@ -413,21 +413,21 @@ aws logs filter-log-events \
 
 ```bash
 # View current ECS service status
-aws ecs describe-services --cluster trance-formation-prod \
-  --services trance-formation-api-service vantro-worker --region us-east-1
+aws ecs describe-services --cluster "$VANTRO_ECS_CLUSTER" \
+  --services "$VANTRO_API_SERVICE" "$VANTRO_WORKER_SERVICE" --region us-east-1
 
 # Stream API logs
 aws logs tail /ecs/vantro/api --follow --region us-east-1
 
 # Force new deployment (if needed)
-aws ecs update-service --cluster trance-formation-prod \
-  --service trance-formation-api-service --force-new-deployment --region us-east-1
+aws ecs update-service --cluster "$VANTRO_ECS_CLUSTER" \
+  --service "$VANTRO_API_SERVICE" --force-new-deployment --region us-east-1
 
 # View task definitions
 aws ecs list-task-definitions --family-prefix vantro-api --region us-east-1
 
 # Manually run migration ECS task (if needed)
-aws ecs run-task --cluster trance-formation-prod \
+aws ecs run-task --cluster "$VANTRO_ECS_CLUSTER" \
   --task-definition vantro-api \
   --overrides '{"containerOverrides":[{"name":"api","command":["alembic","upgrade","head"]}]}' \
   --launch-type FARGATE --region us-east-1

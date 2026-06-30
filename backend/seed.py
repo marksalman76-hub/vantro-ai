@@ -43,7 +43,7 @@ def seed_admin():
             id=org_id,
             name="Owner Account",
             slug="owner",
-            email="admin@trance-formation.com.au",
+            email="admin@vantro.ai",
             status="active",
             is_active=True
         )
@@ -71,7 +71,7 @@ def seed_admin():
         admin_user = User(
             id=user_id,
             organization_id=org_id,
-            email="admin@trance-formation.com.au",
+            email="admin@vantro.ai",
             first_name="Admin",
             last_name="User",
             password_hash="hashed_password_placeholder",  # TODO: Hash real password
@@ -124,7 +124,7 @@ def seed_admin():
         print("\nAdmin account created:")
         print(f"  Organization: {org.slug}")
         print(f"  Workspace: {workspace.slug}")
-        print(f"  Email: admin@trance-formation.com.au")
+        print(f"  Email: admin@vantro.ai")
         print(f"  Role: admin")
         
     except Exception as e:

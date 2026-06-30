@@ -1,5 +1,9 @@
 import json
 
+from app.agents.agent_worker import (
+    _job_uses_owner_admin_unlimited_billing,
+    _resolve_billable_credit_cost,
+)
 from app.models.agent_system import AgentJob
 from app.models.workspace import Workspace
 from conftest import make_user
@@ -41,6 +45,15 @@ def test_admin_run_agent_uses_admin_organization_workspace(client, db):
     route = input_data["context"]["creative_provider_route"]
     assert route["video"]["provider"] == "higgsfield"
     assert route["video"]["model"] == "Kling 3.0 Turbo"
+    assert input_data["context"]["billing_mode"] == "owner_admin_unlimited"
+    assert input_data["context"]["package_tier"] == "enterprise"
+    assert input_data["context"]["credits_unlimited"] is True
+    assert _job_uses_owner_admin_unlimited_billing(job) is True
+    assert _resolve_billable_credit_cost(
+        actual_credits=42,
+        pre_committed=job.credits_used,
+        owner_admin_unlimited=True,
+    ) == 0
 
 
 def test_admin_run_agent_uses_requested_creative_identity_for_premium_route(client, db):

@@ -653,7 +653,7 @@ def send_report_email(report: "WeeklyReport", recipients: list, db: Session) -> 
       {agent_blocks_html}
       <div style="margin-top:32px;padding:20px;background:#1f2937;border-radius:12px;text-align:center;border:1px solid #4c1d95;">
         <p style="color:#c4b5fd;margin:0 0 16px;font-size:14px;">Take action on these insights in your portal</p>
-        <a href="https://www.vantro.ai/dashboard/reports" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;">View full report →</a>
+        <a href="https://vantro.ai/dashboard/reports" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;">View full report →</a>
       </div>
       <p style="color:#4b5563;font-size:11px;margin-top:32px;text-align:center;">
         {report.reporting_period_start.strftime('%d %b') if report.reporting_period_start else 'This week'} – {report.reporting_period_end.strftime('%d %b %Y') if report.reporting_period_end else 'today'} · Manage report settings in your portal

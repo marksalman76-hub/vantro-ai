@@ -32,12 +32,6 @@ export default function NotFound() {
           >
             Go home
           </Link>
-          <Link
-            href="/dashboard"
-            className="border border-gray-700 hover:border-gray-500 text-gray-300 hover:text-white font-medium px-6 py-3 rounded-xl transition-colors"
-          >
-            Dashboard
-          </Link>
         </div>
       </div>
     </div>

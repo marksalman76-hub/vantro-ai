@@ -38,7 +38,7 @@ PLAN_CREDITS = {
 # Map Stripe price_id → plan name (for renewal events that don't carry metadata)
 PRICE_TO_PLAN = {v: k for k, v in PLANS.items()}
 
-FRONTEND_URL = get_config("FRONTEND_URL", "https://www.vantro.ai")
+FRONTEND_URL = get_config("FRONTEND_URL", "https://vantro.ai")
 
 
 def get_db():

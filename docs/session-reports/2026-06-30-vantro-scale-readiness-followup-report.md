@@ -102,8 +102,7 @@ Observed issue:
 - `py -m pytest` used Python `3.14` from:
   - `C:\Users\User\AppData\Local\Python\pythoncore-3.14-64\python.exe`
 - That Python did not have `pytest`.
-- `python -m pytest` sometimes used a different virtual environment from another project:
-  - `C:\Users\User\Desktop\modular-ai-agent-platform\.venv`
+- `python -m pytest` sometimes used a stale virtual environment inherited from another local project session.
 - The actual repo virtual environment was:
   - `C:\Users\User\OneDrive\Desktop\ecommerce-ai-agent-platform\.venv`
 
@@ -207,12 +206,7 @@ Vercel:
 
 Docker/ECR:
 
-- API image built and pushed:
-  - `685570573617.dkr.ecr.us-east-1.amazonaws.com/trance-formation/api:565d9fd`
-  - `685570573617.dkr.ecr.us-east-1.amazonaws.com/trance-formation/api:latest`
-- Worker image built and pushed:
-  - `685570573617.dkr.ecr.us-east-1.amazonaws.com/trance-formation/worker:565d9fd`
-  - `685570573617.dkr.ecr.us-east-1.amazonaws.com/trance-formation/worker:latest`
+- API and worker images were built and pushed to the Vantro production ECR repositories.
 
 AWS ECS:
 
@@ -296,7 +290,7 @@ After the atomic job-claim fix was verified and deployed, live AWS scaling was c
 
 API service:
 
-- ECS service: `trance-formation-api-service`
+- ECS service: Vantro production API service
 - Autoscaling target:
   - min capacity: `2`
   - max capacity: `20`
@@ -420,4 +414,3 @@ Remaining local uncommitted files at the time of this report were unrelated:
 - `frontend/tsconfig.tsbuildinfo`
 
 They were intentionally not included in the production commits.
-

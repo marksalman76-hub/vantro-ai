@@ -20,11 +20,11 @@ def _backend_base_url() -> str:
         os.getenv("API_BASE_URL")
         or os.getenv("BACKEND_BASE_URL")
         or os.getenv("PUBLIC_BACKEND_BASE_URL")
-        or "https://api.trance-formation.com.au"
+        or "https://api.vantro.ai"
     ).rstrip("/")
 
-    if "app.trance-formation.com.au" in value:
-        return "https://api.trance-formation.com.au"
+    if "admin.vantro.ai" in value:
+        return "https://api.vantro.ai"
 
     return value
 

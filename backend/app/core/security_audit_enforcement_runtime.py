@@ -47,7 +47,7 @@ ADMIN_MEDIA_JOB_STATUS_READ_PATH_PREFIXES = (
     "/admin/creative/media-assets",
     "/admin/security/media-job-read-diagnostics",
 )
-DEFAULT_TRUSTED_ORIGINS = ("https://app.trance-formation.com.au", "https://trance-formation.com.au")
+DEFAULT_TRUSTED_ORIGINS = ("https://admin.vantro.ai", "https://vantro.ai")
 STATE_CHANGING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 

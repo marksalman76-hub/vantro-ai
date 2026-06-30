@@ -173,7 +173,7 @@ import { Rate, Trend } from 'k6/metrics';
 const errorRate = new Rate('errors');
 const agentJobDuration = new Trend('agent_job_submit_duration');
 
-const BASE_URL = __ENV.BASE_URL || 'https://staging.vantro.ai';
+const BASE_URL = __ENV.BASE_URL || 'https://vantro.ai';
 
 export const options = {
   vus: 50,
@@ -289,7 +289,7 @@ export function teardown(data) {
 k6 run \
   --vus 50 \
   --duration 60s \
-  -e BASE_URL=https://staging.vantro.ai \
+  -e BASE_URL=https://vantro.ai \
   -e STAGING_TOKEN=<pre-seeded-token> \
   -e STAGING_WORKSPACE_ID=<staging-workspace-id> \
   launch/load-tests/vantro-baseline.js
@@ -438,7 +438,7 @@ aws ecs run-task ... # (repeat upgrade command above)
 - [ ] Rollback test succeeded
 - [ ] Staging app restarted and health check passes post-migration:
   ```bash
-  curl -sf https://staging.vantro.ai/health | jq .
+  curl -sf https://vantro.ai/health | jq .
   ```
 
 ---
@@ -448,11 +448,11 @@ aws ecs run-task ... # (repeat upgrade command above)
 ### Goal
 10-point checklist verifying every critical path works on staging before production deploy.
 
-**Staging base URL:** `https://staging.vantro.ai`
+**Staging base URL:** `https://vantro.ai`
 
 Set up:
 ```bash
-STAGING="https://staging.vantro.ai"
+STAGING="https://vantro.ai"
 # After running point 2 (signup), capture the token:
 TOKEN=""
 WORKSPACE_ID=""

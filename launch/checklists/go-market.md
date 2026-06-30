@@ -209,11 +209,11 @@ Test the complete new user journey end-to-end with a real email address:
   ```
   echo | openssl s_client -servername vantro.ai -connect vantro.ai:443 2>/dev/null | openssl x509 -noout -dates
   ```
-- [ ] `www.vantro.ai` redirects to `vantro.ai` (301):
+- [ ] Canonical homepage responds successfully:
   ```
-  curl -s -o /dev/null -w "%{http_code}" https://www.vantro.ai
+  curl -s -o /dev/null -w "%{http_code}" https://vantro.ai
   ```
-  Expected: `301` with `Location: https://vantro.ai/`
+  Expected: `200`
 - [ ] No mixed content warnings: open `https://vantro.ai` in Chrome → DevTools → Console → no "Mixed Content" errors
 - [ ] HSTS header present:
   ```

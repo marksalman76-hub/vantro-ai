@@ -87,10 +87,7 @@ export default function CreatePage() {
             <p className="mb-1" style={{ color: 'rgb(203,213,225)' }}>{result.message}</p>
             <p className="text-xs mb-8" style={{ color: 'rgba(255,255,255,0.3)' }}>Job ID: {result.id}</p>
             <div className="flex flex-col gap-3">
-              <Link href="/dashboard">
-                <GlassButton variant="solid" size="md" className="w-full justify-center">View in dashboard</GlassButton>
-              </Link>
-              <GlassButton variant="glass" size="md" onClick={() => { setResult(null); setScript(''); }} className="w-full justify-center">
+              <GlassButton variant="solid" size="md" onClick={() => { setResult(null); setScript(''); }} className="w-full justify-center">
                 Create another video
               </GlassButton>
             </div>
@@ -107,13 +104,13 @@ export default function CreatePage() {
       {/* Nav */}
       <nav className="px-6 py-4 flex items-center justify-between relative z-10"
         style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', backdropFilter: 'blur(12px)' }}>
-        <Link href="/dashboard" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-sm"
             style={{ background: 'linear-gradient(135deg,#3B82F6,#8B5CF6)', boxShadow: '0 0 20px rgba(59,130,246,0.4)' }}>V</div>
           <span className="font-bold text-white">Vantro<span className="text-blue-400">.ai</span></span>
         </Link>
-        <Link href="/dashboard" className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.4)' }}>
-          ← Back to dashboard
+        <Link href="/" className="text-sm transition-colors" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          Back to home
         </Link>
       </nav>
 

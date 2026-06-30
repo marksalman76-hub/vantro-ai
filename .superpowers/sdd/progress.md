@@ -42,3 +42,11 @@ Plan: docs/superpowers/plans/2026-02-27-dashboard-redesign.md
 - Full responsive layout verified (desktop/tablet/mobile)
 - Sticky header, collapsible sections, theme persistence all working
 - Ready for production deployment
+
+# Creative Provider Routing
+Plan: docs/superpowers/plans/2026-06-29-creative-provider-routing.md
+
+- [x] Creative Provider Routing Task 1: complete (commits cf3c215..89d5563, review clean)
+- [x] Creative Provider Routing Task 2: complete (commits 89d5563..7ce3a03, review clean)
+- [x] Creative Provider Routing Task 3: complete (commits 7ce3a03..8ce18e7, review clean)
+- [x] Creative Provider Routing Task 4: complete (commits 8ce18e7..d26fdca, backend tests/py_compile/root build passed)

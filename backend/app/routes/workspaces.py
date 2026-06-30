@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/workspaces", tags=["workspaces"])
 security = HTTPBearer(auto_error=False)
 
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://www.vantro.ai")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://vantro.ai")
 INVITE_TTL_HOURS = 72
 
 

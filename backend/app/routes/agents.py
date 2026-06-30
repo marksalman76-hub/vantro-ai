@@ -327,6 +327,14 @@ async def run_agent(
     _ctx = dict(context)
     if output_language:
         _ctx["output_language"] = output_language
+    if is_admin:
+        _ctx.update({
+            "portal_mode": "admin",
+            "actor_role": "owner_admin",
+            "package_tier": "enterprise",
+            "billing_mode": "owner_admin_unlimited",
+            "credits_unlimited": True,
+        })
     try:
         from app.runtime.creative_provider_routing import (
             is_creative_agent,
@@ -467,6 +475,7 @@ async def list_agent_jobs(
                 "output_language": j.output_language,
                 "revision_of": j.revision_of,
                 "output_preview": (j.output_data or "")[:300] if j.status == "completed" else None,
+                "output": j.output_data if j.status in ("completed", "pending_financial_review") else None,
             }
             for j in jobs
         ],

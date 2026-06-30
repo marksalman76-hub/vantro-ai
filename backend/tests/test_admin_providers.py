@@ -36,7 +36,9 @@ def test_admin_stats_reports_unlimited_owner_credits(client, db):
     body = response.json()
     assert body["credits_unlimited"] is True
     assert body["credit_label"] == "Unlimited"
-    assert body["tier"] == "owner"
+    assert body["tier"] == "enterprise"
+    assert body["package"] == "Enterprise"
+    assert body["billing_mode"] == "owner_admin_unlimited"
     assert body["remaining_credits"] is None
     assert body["total_credits"] is None
     assert body["used_credits"] == credits.used_credits

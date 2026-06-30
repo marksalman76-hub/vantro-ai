@@ -3,6 +3,9 @@ const nextConfig = {
   compress: true,
   productionBrowserSourceMaps: false,
   transpilePackages: ['lenis'],
+  turbopack: {
+    root: __dirname,
+  },
 
   async headers() {
     return [

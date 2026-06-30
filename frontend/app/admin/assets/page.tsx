@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Asset {
@@ -47,12 +47,59 @@ function inferType(agentId = '', agentName = ''): Asset['type'] {
   return 'report';
 }
 
+interface JobDetail {
+  name: string;
+  output: string;
+  agent: string;
+  created_at: string;
+}
+
+interface MediaGenerationOutput {
+  type?: string;
+  requested_agent_id?: string;
+  script?: string;
+  preview_url?: string;
+  download_url?: string;
+  asset_url?: string;
+  real_media_asset_created?: boolean;
+  preview_ready?: boolean;
+  download_ready?: boolean;
+  provider_readiness?: {
+    execution_mode?: string;
+    provider_ready?: boolean;
+    message?: string;
+    selected_video_provider?: string | null;
+    selected_video_model?: string | null;
+    selected_image_provider?: string | null;
+    selected_image_model?: string | null;
+    next_steps?: string[];
+  };
+}
+
+function cleanOutput(output: string) {
+  return output.replace(/^<!-- provider:.*? -->\n/, '').trim();
+}
+
+function parseMediaGenerationOutput(output: string): MediaGenerationOutput | null {
+  const clean = cleanOutput(output);
+  if (!clean.startsWith('{')) return null;
+  try {
+    const parsed = JSON.parse(clean);
+    return parsed?.type === 'media_generation' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function AdminAssetsPage() {
   const router = useRouter();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [viewJob, setViewJob] = useState<JobDetail | null>(null);
+  const [viewLoading, setViewLoading] = useState(false);
+  const mediaPreview = viewJob ? parseMediaGenerationOutput(viewJob.output) : null;
 
   useEffect(() => {
     const t = localStorage.getItem('admin_token');
@@ -87,8 +134,106 @@ export default function AdminAssetsPage() {
   const toggleStatus = (id: string, newStatus: 'visible' | 'hidden') =>
     setAssets(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
 
+  const openJob = useCallback(async (asset: Asset) => {
+    const t = localStorage.getItem('admin_token');
+    if (!t) return;
+    setViewLoading(true);
+    try {
+      const res = await fetch(`/api/admin/agents/jobs/${asset.job_id}`, {
+        headers: { Authorization: `Bearer ${t}` },
+      });
+      const d = await res.json();
+      setViewJob({ name: asset.name, output: d.output || '(no output)', agent: asset.agent, created_at: asset.created_at });
+    } catch {
+      setViewJob({ name: asset.name, output: '(could not load output)', agent: asset.agent, created_at: asset.created_at });
+    } finally {
+      setViewLoading(false);
+    }
+  }, []);
+
   return (
     <div className="p-8 max-w-6xl">
+      {/* Output viewer modal */}
+      {viewJob && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl w-full max-w-3xl max-h-[85vh] flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
+              <div>
+                <p className="font-semibold text-white text-sm">{viewJob.name}</p>
+                <p className="text-xs text-gray-500">{viewJob.agent} · {new Date(viewJob.created_at).toLocaleString()}</p>
+              </div>
+              <button onClick={() => setViewJob(null)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-5">
+              {mediaPreview ? (
+                <div className="space-y-4">
+                  <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-950">
+                    {mediaPreview.preview_url ? (
+                      mediaPreview.preview_url.includes('.mp4') || mediaPreview.preview_url.startsWith('data:video')
+                        ? <video src={mediaPreview.preview_url} controls className="w-full max-h-[420px] bg-black" />
+                        : <img src={mediaPreview.preview_url} alt={viewJob.name} className="w-full max-h-[420px] object-contain bg-black" />
+                    ) : (
+                      <div className="flex h-64 items-center justify-center text-xs text-gray-600">Preview not available yet</div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl border border-gray-800 bg-gray-950 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-600">Status</p>
+                      <p className="mt-1 text-xs text-white">
+                        {mediaPreview.real_media_asset_created ? 'Live media asset created' : 'Preview generated; live provider not ready'}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-gray-800 bg-gray-950 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-600">Selected route</p>
+                      <p className="mt-1 text-xs text-white">
+                        {mediaPreview.provider_readiness?.selected_video_model || mediaPreview.provider_readiness?.selected_image_model || 'No model selected'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {mediaPreview.provider_readiness?.message && (
+                    <div className="rounded-xl border border-gray-800 bg-gray-950 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-600">Provider readiness</p>
+                      <p className="mt-1 text-xs text-gray-300">{mediaPreview.provider_readiness.message}</p>
+                    </div>
+                  )}
+
+                  {mediaPreview.script && (
+                    <div className="rounded-xl border border-gray-800 bg-gray-950 p-3">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-600 mb-2">Generated brief</p>
+                      <p className="text-xs leading-relaxed text-gray-300 whitespace-pre-wrap">{mediaPreview.script}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                cleanOutput(viewJob.output).split('\n').map((line, i) => {
+                  if (/^#{1,3}\s/.test(line)) return <p key={i} className="font-bold text-white text-sm mt-4 mb-1">{line.replace(/^#+\s/, '')}</p>;
+                  if (/^[-*]\s|^\d+\.\s/.test(line)) return <p key={i} className="text-gray-300 text-sm ml-3 leading-relaxed">{line}</p>;
+                  if (!line.trim()) return <div key={i} className="h-2" />;
+                  return <p key={i} className="text-gray-300 text-sm leading-relaxed">{line}</p>;
+                })
+              )}
+            </div>
+            <div className="px-6 py-4 border-t border-gray-800 flex justify-between">
+              <button onClick={() => navigator.clipboard?.writeText(viewJob.output)} className="text-xs text-gray-500 hover:text-white transition-colors">Copy output</button>
+              <div className="flex items-center gap-2">
+                {mediaPreview?.download_ready && mediaPreview.download_url && (
+                  <a
+                    href={mediaPreview.download_url}
+                    download={`${viewJob.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-asset`}
+                    className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium rounded-lg transition-colors"
+                  >
+                    Download
+                  </a>
+                )}
+                <button onClick={() => setViewJob(null)} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-white mb-1">Assets & Outputs</h1>
         <p className="text-gray-500 text-sm">All client deliverables — control visibility, consent, and access</p>
@@ -156,7 +301,13 @@ export default function AdminAssetsPage() {
                 <td className="px-5 py-4 text-gray-500 text-xs">{new Date(asset.created_at).toLocaleDateString()}</td>
                 <td className="px-5 py-4">
                   <div className="flex items-center gap-2">
-                    <button className="text-xs text-violet-400 hover:text-violet-300">Open</button>
+                    <button
+                      onClick={() => openJob(asset)}
+                      disabled={viewLoading}
+                      className="text-xs text-violet-400 hover:text-violet-300 disabled:opacity-50 transition-colors"
+                    >
+                      {viewLoading ? '…' : 'Open'}
+                    </button>
                     {asset.status === 'visible'
                       ? <button onClick={() => toggleStatus(asset.id, 'hidden')} className="text-xs text-gray-500 hover:text-yellow-400">Hide</button>
                       : <button onClick={() => toggleStatus(asset.id, 'visible')} className="text-xs text-gray-500 hover:text-emerald-400">Show</button>}

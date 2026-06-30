@@ -31,7 +31,7 @@ yield f'data: {json.dumps({"type": "start", "agent_id": normalized, "model": mod
 ```python
 "account_id": "685570573617",
 ...
-{"name": "ECS API Service", "detail": "trance-formation-api — Fargate 256 CPU / 512 MB"},
+{"name": "ECS API Service", "detail": "Vantro API — Fargate 256 CPU / 512 MB"},
 {"name": "ECS Worker Service", "detail": "vantro-worker — Fargate 512 CPU / 1024 MB"},
 ```
 The `GET /api/admin/infrastructure` endpoint returns the real AWS account ID (fingerprinting target) and internal service names. Anyone who gains admin access — including a compromised admin session — can enumerate the entire cloud footprint.

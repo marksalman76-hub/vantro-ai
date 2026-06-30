@@ -47,7 +47,7 @@ npx playwright install --with-deps chromium
 npx playwright test
 
 # Run against production
-BASE_URL=https://www.vantro.ai npx playwright test
+BASE_URL=https://vantro.ai npx playwright test
 
 # Show HTML report
 npx playwright show-report

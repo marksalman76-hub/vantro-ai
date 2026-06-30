@@ -250,7 +250,9 @@ async def get_stats(
         "total_credits": None,
         "used_credits": admin_record["used_credits"],
         "remaining_credits": None,
-        "tier": "owner",
+        "tier": "enterprise",
+        "package": "Enterprise",
+        "billing_mode": "owner_admin_unlimited",
     }
 
 
@@ -851,13 +853,13 @@ async def get_infrastructure(
             {"name": "SQS Job Queue",        "status": "configured" if os.getenv("SQS_JOBS_QUEUE_URL") else "not_configured", "detail": "FIFO queue for async video job processing"},
             {"name": "ElastiCache Redis",    "status": "configured" if os.getenv("REDIS_URL") else "not_configured", "detail": "t3.micro Redis 7.0 for rate limiting and caching"},
             {"name": "AWS Secrets Manager",  "status": "configured", "detail": "All secrets injected via ECS task definition"},
-            {"name": "ECS API Service",      "status": "running",    "detail": "trance-formation-api — Fargate 256 CPU / 512 MB"},
+            {"name": "ECS API Service",      "status": "running",    "detail": "Vantro API — Fargate 256 CPU / 512 MB"},
             {"name": "ECS Worker Service",   "status": "running",    "detail": "vantro-worker — Fargate 512 CPU / 1024 MB"},
             {"name": "ALB",                  "status": "configured", "detail": "api.vantro.ai — HTTPS via ACM cert"},
             {"name": "WAF",                  "status": "configured", "detail": "AWS managed rules + IP rate limiting"},
             {"name": "CloudWatch Alarms",    "status": "configured", "detail": "CPU, memory, error alarms → SNS email"},
             {"name": "ACM Certificate",      "status": "configured", "detail": "api.vantro.ai — DNS validated"},
-            {"name": "ECR",                  "status": "configured", "detail": "trance-formation/api and trance-formation/worker"},
+            {"name": "ECR",                  "status": "configured", "detail": "Vantro API and worker repositories"},
             {"name": "IAM Roles",            "status": "configured", "detail": "ecsTaskExecutionRole + ecsTaskRole"},
         ],
     }
@@ -894,6 +896,13 @@ async def admin_run_agent(
     )
 
     run_context = dict(body.context or {})
+    run_context.update({
+        "portal_mode": "admin",
+        "actor_role": "owner_admin",
+        "package_tier": "enterprise",
+        "billing_mode": "owner_admin_unlimited",
+        "credits_unlimited": True,
+    })
     if is_creative_agent(norm_id):
         media_request = run_context.get("media_request") if isinstance(run_context.get("media_request"), dict) else {}
         route_media_type = media_request.get("media_type") or media_request.get("type") or run_context.get("media_type") or "both"

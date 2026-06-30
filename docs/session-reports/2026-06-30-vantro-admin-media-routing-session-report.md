@@ -2,37 +2,30 @@
 
 Date: 2026-06-30  
 Repository: `marksalman76-hub/vantro-ai`  
-Primary domains: `vantro.ai`, `www.vantro.ai`, `admin.vantro.ai`  
+Primary domains: `vantro.ai`, `admin.vantro.ai`, `api.vantro.ai`  
 Primary live admin route: `https://admin.vantro.ai/admin`  
 
 ## Executive Summary
 
-This session focused on stabilizing Vantro's live production experience, removing confusion from old landing-page variants, restoring admin access through the `admin.vantro.ai` subdomain, wiring creative agents to the canonical provider-routing layer, and debugging the Create Media execution path.
+This session focused on stabilizing Vantro's live production experience, locking the public site to the canonical `vantro.ai` deployment, restoring admin access through the `admin.vantro.ai` subdomain, wiring creative agents to the canonical provider-routing layer, and debugging the Create Media execution path.
 
-The most important outcome is that the live public landing experience was kept on the stable Vantro landing site, the admin app was moved behind `admin.vantro.ai`, and Create Media now routes through a Vercel-side admin run proxy that can fall back to the standard agent execution endpoint when the backend admin route returns a server error.
+The most important outcome is that the live public experience is canonical at `vantro.ai`, the admin app is behind `admin.vantro.ai`, and Create Media now routes through a Vercel-side admin run proxy that can fall back to the standard agent execution endpoint when the backend admin route returns a server error.
 
 The session also locked in creative provider routing rules for Higgsfield video models and Nano Banana image models, added admin unlimited-credit display behavior, installed and used Vercel CLI, pushed multiple production commits to GitHub, and verified multiple Vercel production deployments.
 
-## Domain and Landing Page Cleanup
-
-The session began with confusion between multiple Vantro landing-page iterations:
-
-- The stable landing page at `vantro.ai` showed the intended dark Vantro hero with orange branding and AI workforce cards.
-- A separate green cinematic hero version was still appearing in some contexts and needed to be removed.
-- The user clarified that only the stable Vantro landing site shown in the attached screenshot should remain, including its attached pages.
+## Canonical Public Site
 
 Actions completed:
 
-- Confirmed the intended public site was the stable Vantro AI Workforce landing page.
-- Removed or detached the green cinematic hero deployment so it no longer remained as the intended public production experience.
-- Kept the stable Vantro landing deployment intact.
-- Confirmed `vantro.ai` and `www.vantro.ai` were aliased to the stable production deployment.
+- Confirmed the intended public site is `https://vantro.ai`.
+- Kept the canonical Vantro production deployment intact.
+- Confirmed `vantro.ai` is the public production URL.
 - Confirmed the admin app should not live under `vantro.ai/admin-*`; admin routes were intended to live under `admin.vantro.ai`.
 
 Result:
 
-- Public website direction was clarified and locked to one canonical landing site.
-- The old green cinematic hero was treated as obsolete and not part of the intended live production site.
+- Public website direction was clarified and locked to one canonical live site.
+- Prior public-site variants are no longer referenced as part of the intended live production surface.
 
 ## Admin Domain and Route Separation
 
@@ -182,7 +175,6 @@ Production deployment observations:
 - Pushing to GitHub `main` triggered Vercel production deployments.
 - Vercel aliases confirmed:
   - `https://vantro.ai`
-  - `https://www.vantro.ai`
   - `https://admin.vantro.ai`
   - `https://vantro-ai.vercel.app`
 
@@ -374,7 +366,7 @@ Vercel verification:
 
 - Multiple production deployments were inspected.
 - Final fallback deployment for commit `a5d805f4` was `Ready`.
-- Aliases included `https://admin.vantro.ai`, `https://vantro.ai`, and `https://www.vantro.ai`.
+- Aliases included `https://admin.vantro.ai` and `https://vantro.ai`.
 
 Known warnings during build:
 
@@ -407,7 +399,7 @@ These warnings did not block the build.
 Public site:
 
 - Canonical public landing site remains on `vantro.ai`.
-- The old green cinematic hero is not the intended production site.
+- No prior public-site variant is part of the intended production surface.
 
 Admin site:
 

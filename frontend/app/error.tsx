@@ -34,10 +34,10 @@ export default function GlobalError({
             Try again
           </button>
           <a
-            href="/dashboard"
+            href="/"
             className="px-5 py-2.5 rounded-xl text-sm font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 transition-colors"
           >
-            Go to dashboard
+            Go home
           </a>
         </div>
       </div>
