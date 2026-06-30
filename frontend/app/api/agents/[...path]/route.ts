@@ -33,7 +33,16 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
       headers: forwardHeaders,
       ...(body !== undefined ? { body } : {}),
     });
-    const data = await res.json();
+    let data: unknown;
+    try {
+      data = await res.json();
+    } catch {
+      const text = await res.text().catch(() => "");
+      return NextResponse.json(
+        { error: text || res.statusText || "Backend request failed" },
+        { status: res.status || 502 }
+      );
+    }
     return NextResponse.json(data, { status: res.status });
   } catch (e) {
     return NextResponse.json({ error: "Backend unreachable", detail: String(e) }, { status: 502 });

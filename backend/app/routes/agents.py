@@ -354,10 +354,13 @@ async def run_agent(
                 request_context=_ctx,
             )
             if not creative_provider_route.get("success"):
-                raise HTTPException(status_code=400, detail=creative_provider_route)
+                reason = creative_provider_route.get("reason", "media_type_not_supported")
+                raise HTTPException(status_code=400, detail=f"Creative route error: {reason}")
             _ctx["creative_provider_route"] = creative_provider_route
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Agent routing error: {type(e).__name__}")
     now = datetime.utcnow()
     job = AgentJob(
         id=str(uuid.uuid4()),

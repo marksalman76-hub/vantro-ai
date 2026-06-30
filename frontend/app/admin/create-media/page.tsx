@@ -336,7 +336,12 @@ export default function AdminCreateMediaPage() {
           redirectToAdminLogin(router);
           return;
         }
-        setError(d.detail || d.error || 'Could not start this request. Please try again or contact support.');
+        const rawErr = d.detail || d.error;
+        const errMsg = typeof rawErr === 'string' ? rawErr
+          : typeof rawErr === 'object' && rawErr !== null
+            ? ((rawErr as Record<string, unknown>).reason as string) || JSON.stringify(rawErr)
+            : 'Could not start this request. Please try again or contact support.';
+        setError(errMsg);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start media request. Please contact support.');

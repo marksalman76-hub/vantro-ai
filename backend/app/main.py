@@ -297,7 +297,6 @@ app.include_router(billing_router)
 app.include_router(api_v1_router)
 app.include_router(platform_router)
 app.include_router(brand_assets_router)
-app.include_router(media_router)
 
 
 @app.get("/health")

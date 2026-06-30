@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       body: backendBody,
     });
 
-    if (res.status >= 500 || res.status === 404) {
+    if (res.status >= 500 || res.status === 404 || res.status === 401) {
       console.warn(`[admin-run-agent] admin endpoint returned ${res.status} for agent=${agentId}, falling back to client route`);
       res = await fetch(`${API_URL}/api/agents/${agentId}/run`, {
         method: "POST",

@@ -53,7 +53,7 @@ def _set_auth_cookie(response: JSONResponse, token: str) -> None:
         httponly=True,
         secure=_IS_PROD,
         samesite="lax",
-        max_age=3600,  # matches 1-hour access token
+        max_age=86400,  # matches 24-hour access token
         path="/",
     )
 
@@ -169,7 +169,7 @@ async def register(request: Request, body: RegisterRequest, db: Session = Depend
     db.add(user)
     db.commit()
 
-    access_token = create_access_token(new_id, expires_delta=timedelta(hours=1))
+    access_token = create_access_token(new_id, expires_delta=timedelta(hours=24))
     refresh_opaque = _create_refresh_token(new_id, request, db)
     _audit(db, request, "register", user_id=new_id, resource_type="user")
     email_service.send_welcome(body.email, body.name or body.email.split("@")[0])
@@ -195,7 +195,7 @@ async def login(request: Request, body: LoginRequest, db: Session = Depends(get_
             _audit(db, request, "login_failed", resource_type="auth", extra={"email": body.email})
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
-        access_token = create_access_token(user.id, expires_delta=timedelta(hours=1))
+        access_token = create_access_token(user.id, expires_delta=timedelta(hours=24))
         try:
             refresh_opaque = _create_refresh_token(user.id, request, db)
         except Exception as rt_err:
@@ -237,7 +237,7 @@ async def refresh_token(request: Request, db: Session = Depends(get_db)):
     rt.revoked_at = datetime.utcnow()
     db.commit()
 
-    new_access = create_access_token(rt.user_id, expires_delta=timedelta(hours=1))
+    new_access = create_access_token(rt.user_id, expires_delta=timedelta(hours=24))
     new_refresh = _create_refresh_token(rt.user_id, request, db)
     _audit(db, request, "token_refresh", user_id=rt.user_id)
 
