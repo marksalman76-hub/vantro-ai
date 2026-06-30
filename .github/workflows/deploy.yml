@@ -18,6 +18,8 @@ env:
   ECS_SERVICE_API: trance-formation-api-service
   ECS_SERVICE_WORKER: vantro-worker
   ECS_SERVICE_AGENT_WORKER: vantro-agent-worker
+  ECS_SUBNET_IDS: subnet-0bf8bad29d2b65b7c,subnet-0e53a96f9db9efb74
+  ECS_SECURITY_GROUP_ID: sg-0c783bf5d3eb894cc
 
 jobs:
   build:
@@ -94,7 +96,7 @@ jobs:
             --task-definition trance-formation-api \
             --overrides '{"containerOverrides":[{"name":"api","command":["python","-m","alembic","upgrade","head"]}]}' \
             --launch-type FARGATE \
-            --network-configuration "awsvpcConfiguration={subnets=[${{ secrets.ECS_SUBNET_IDS }}],securityGroups=[${{ secrets.ECS_SECURITY_GROUP_ID }}],assignPublicIp=DISABLED}" \
+            --network-configuration "awsvpcConfiguration={subnets=[$ECS_SUBNET_IDS],securityGroups=[$ECS_SECURITY_GROUP_ID],assignPublicIp=DISABLED}" \
             --region "$AWS_REGION" \
             --query 'tasks[0].taskArn' \
             --output text)
@@ -274,7 +276,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [smoke-test, deploy-api]
-    if: failure()
+    if: failure() && needs.deploy-api.outputs.previous-task-def != '' && needs.deploy-api.outputs.previous-task-def != 'None'
 
     steps:
       - name: Configure AWS credentials
