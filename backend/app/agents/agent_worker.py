@@ -56,13 +56,45 @@ def _emit_metric(metric_name: str, value: float, unit: str = "Count", dimensions
     except Exception as exc:
         logger.debug("CloudWatch emit failed: %s", exc)
 
-POLL_INTERVAL_SECONDS       = 5     # how often to check for new jobs
-MAX_CONCURRENT_JOBS         = 3     # max parallel agent executions
+def _positive_int_env(name: str, default: int) -> int:
+    try:
+        value = int(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+    return value if value > 0 else default
+
+
+POLL_INTERVAL_SECONDS       = _positive_int_env("AGENT_WORKER_POLL_INTERVAL_SECONDS", 5)
+MAX_CONCURRENT_JOBS         = _positive_int_env("AGENT_WORKER_MAX_CONCURRENT_JOBS", 3)
 STALE_JOB_MINUTES           = 15    # jobs stuck "running" longer than this are force-failed
 STALE_CHECK_INTERVAL        = 60    # seconds between stale-job sweeps
 REPORT_CHECK_INTERVAL       = 3600  # seconds between weekly report checks (1 hour)
 SKILL_REINDEX_INTERVAL      = 21600 # seconds between skill freshness checks (6 hours)
 BILLING_REMINDER_INTERVAL   = 86400 # seconds between billing reminder sweeps (24 hours)
+
+
+def _claim_job_for_execution(db, job_id: str):
+    """Atomically claim a runnable job so scaled workers cannot duplicate work."""
+    from app.models.agent_system import AgentJob
+
+    now = datetime.utcnow()
+    updated = (
+        db.query(AgentJob)
+        .filter(AgentJob.id == job_id, AgentJob.status.in_(["pending", "approved"]))
+        .update(
+            {
+                AgentJob.status: "running",
+                AgentJob.updated_at: now,
+            },
+            synchronize_session=False,
+        )
+    )
+    if updated != 1:
+        db.rollback()
+        return None
+
+    db.commit()
+    return db.query(AgentJob).filter(AgentJob.id == job_id).first()
 
 
 def _selected_video_route(creative_provider_route: object) -> dict:
@@ -108,20 +140,10 @@ async def _process_job(job_id: str) -> None:
 
     db = SessionLocal()
     try:
-        job = db.query(AgentJob).filter(AgentJob.id == job_id).first()
+        job = _claim_job_for_execution(db, job_id)
         if not job:
-            logger.warning("Worker: job %s not found", job_id)
+            logger.debug("Worker: job %s was already claimed or is not runnable, skipping", job_id)
             return
-
-        # Guard: only process jobs that are still in a runnable state
-        if job.status not in ("pending", "approved"):
-            logger.debug("Worker: job %s already in status %s, skipping", job_id, job.status)
-            return
-
-        # Mark as running
-        job.status = "running"
-        job.updated_at = datetime.utcnow()
-        db.commit()
 
         logger.info("Worker: executing agent=%s job=%s", job.agent_id, job_id)
 
