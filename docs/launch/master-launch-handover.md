@@ -30,6 +30,13 @@ Commercial beta / soft-launch ready.
 5. One pilot onboarding.
 6. One customer execution.
 7. Sales page/demo rollout.
+8. Complete scale gates in `docs/launch/launch-readiness-scale-gates.md`.
 
 ## Architecture Remaining
-No major architecture work remains.
+Scale architecture remains before final public launch:
+
+- Queue-depth autoscaling.
+- DB pool sizing.
+- RDS capacity increase.
+- Provider rate-limit contracts.
+- Load testing.
