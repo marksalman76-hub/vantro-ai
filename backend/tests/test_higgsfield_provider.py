@@ -224,5 +224,6 @@ def test_higgsfield_mcp_readiness_uses_secret_credentials(tmp_path, monkeypatch)
     credentials_path = tmp_path / "higgsfield" / "credentials.json"
     assert credentials_path.exists()
     assert "test-access" in credentials_path.read_text(encoding="utf-8")
+    assert "--bare" in created["args"]
     assert "--mcp-config" in created["args"]
     assert "--strict-mcp-config" in created["args"]

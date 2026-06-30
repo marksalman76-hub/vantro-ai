@@ -85,6 +85,7 @@ async def _run_claude_mcp_prompt(
     _prepare_higgsfield_mcp_credentials()
     process = await asyncio.create_subprocess_exec(
         "claude",
+        "--bare",
         "-p",
         prompt,
         "--mcp-config",
@@ -263,6 +264,7 @@ class HiggsfieldProvider(BaseProvider):
             result = subprocess.run(
                 [
                     "claude",
+                    "--bare",
                     "-p",
                     "List Higgsfield MCP tools only. Do not create media. Return [].",
                     "--mcp-config",
