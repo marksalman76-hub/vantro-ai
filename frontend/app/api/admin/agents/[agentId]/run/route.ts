@@ -33,12 +33,17 @@ async function toJsonResponse(res: Response) {
   );
 }
 
+function getAuthHeader(request: NextRequest) {
+  const cookieToken = request.cookies.get("access_token")?.value;
+  return cookieToken ? `Bearer ${cookieToken}` : (request.headers.get("authorization") || "");
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ agentId: string }> }
 ) {
   const { agentId } = await params;
-  const token = request.headers.get("authorization") || "";
+  const token = getAuthHeader(request);
   try {
     const body = await request.text();
     const res = await fetch(`${API_URL}/api/admin/agents/${agentId}/run`, {

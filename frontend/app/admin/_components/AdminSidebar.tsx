@@ -31,9 +31,15 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  function signOut() {
+  async function signOut() {
     localStorage.removeItem('admin_token');
-    router.push('/admin-login');
+    localStorage.removeItem('token');
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch {
+      // Local session state is already cleared; continue to login.
+    }
+    router.replace('/admin-login');
   }
 
   return (

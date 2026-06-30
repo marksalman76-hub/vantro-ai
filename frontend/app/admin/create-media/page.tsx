@@ -190,6 +190,11 @@ function clearStoredAdminTokens() {
   localStorage.removeItem('token');
 }
 
+function redirectToAdminLogin(router: ReturnType<typeof useRouter>) {
+  clearStoredAdminTokens();
+  router.replace('/admin-login');
+}
+
 export default function AdminCreateMediaPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('type');
@@ -282,6 +287,11 @@ export default function AdminCreateMediaPage() {
     try {
       const agentsRes = await fetch('/api/agents', { headers: authHeaders(token), credentials: 'include' });
       const agentsData = await agentsRes.json();
+      if (agentsRes.status === 401) {
+        setError('Your admin session expired. Please sign in again, then rerun this media request.');
+        redirectToAdminLogin(router);
+        return;
+      }
       // Admin bypasses credit/unlock checks on backend — don't filter by unlocked here
       const agents = agentsData.agents || [];
       const mediaAgent = agents.find((a: { id: string }) => a.id === selectedAgentId) || { id: selectedAgentId };
@@ -322,9 +332,8 @@ export default function AdminCreateMediaPage() {
       } else {
         console.error('Agent submission failed:', { status: res.status, data: d });
         if (res.status === 401) {
-          clearStoredAdminTokens();
           setError('Your admin session expired. Please sign in again, then rerun this media request.');
-          router.push('/admin-login');
+          redirectToAdminLogin(router);
           return;
         }
         setError(d.detail || d.error || 'Could not start this request. Please try again or contact support.');

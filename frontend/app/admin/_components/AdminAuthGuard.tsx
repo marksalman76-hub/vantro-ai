@@ -9,11 +9,23 @@ export default function AdminAuthGuard({ children, sidebar }: { children: React.
 
   useEffect(() => {
     const token = localStorage.getItem('admin_token');
-    if (!token) {
-      router.replace('/admin-login');
-    } else {
-      setStatus('authed');
-    }
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+
+    fetch('/api/admin/clients', { headers, credentials: 'include' })
+      .then((res) => {
+        if (res.ok) {
+          setStatus('authed');
+          return;
+        }
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('token');
+        router.replace('/admin-login');
+      })
+      .catch(() => {
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('token');
+        router.replace('/admin-login');
+      });
   }, [router]);
 
   if (status === 'loading') return (

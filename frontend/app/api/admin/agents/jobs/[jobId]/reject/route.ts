@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 
+function getAuthHeader(request: NextRequest) {
+  const cookieToken = request.cookies.get("access_token")?.value;
+  return cookieToken ? `Bearer ${cookieToken}` : (request.headers.get("authorization") || "");
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ jobId: string }> }
 ) {
   const { jobId } = await params;
-  const token = request.headers.get("authorization") || "";
+  const token = getAuthHeader(request);
   try {
     const res = await fetch(`${API_URL}/api/admin/agents/jobs/${jobId}/reject`, {
       method: "POST",
