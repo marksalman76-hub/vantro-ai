@@ -10,9 +10,12 @@ interface Asset {
   name: string;
   agent: string;
   status: 'visible' | 'hidden' | 'archived';
+  job_status: string;
+  error_message?: string;
   consent_required: boolean;
   job_id: string;
   created_at: string;
+  completed_at?: string;
   size_label: string;
 }
 
@@ -51,6 +54,8 @@ interface JobDetail {
   name: string;
   output: string;
   agent: string;
+  status: string;
+  error_message?: string;
   created_at: string;
 }
 
@@ -91,6 +96,15 @@ function parseMediaGenerationOutput(output: string): MediaGenerationOutput | nul
   }
 }
 
+function jobStatusClass(status: string) {
+  const normalized = status.toLowerCase();
+  if (normalized === 'completed') return 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
+  if (['failed', 'rejected', 'cancelled'].includes(normalized)) return 'text-red-400 bg-red-500/10 border-red-500/20';
+  if (['running', 'processing', 'approved'].includes(normalized)) return 'text-blue-400 bg-blue-500/10 border-blue-500/20';
+  if (['pending_approval', 'pending_financial_review'].includes(normalized)) return 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20';
+  return 'text-violet-300 bg-violet-500/10 border-violet-500/20';
+}
+
 export default function AdminAssetsPage() {
   const router = useRouter();
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -104,10 +118,9 @@ export default function AdminAssetsPage() {
   useEffect(() => {
     const t = localStorage.getItem('admin_token');
     if (!t) { router.push('/admin-login'); return; }
-    fetch('/api/admin/agents/jobs', { headers: { Authorization: `Bearer ${t}` } })
+    fetch('/api/admin/agents/jobs', { headers: { Authorization: `Bearer ${t}` }, credentials: 'include' })
       .then(r => r.json())
       .then(data => setAssets((data.jobs || [])
-        .filter((j: any) => j.status === 'completed')
         .map((j: any): Asset => ({
           id: j.id,
           client: j.client_email || 'Unknown',
@@ -115,6 +128,8 @@ export default function AdminAssetsPage() {
           name: (j.agent_name || j.agent_id) + (j.created_at ? ' — ' + new Date(j.created_at).toLocaleDateString() : ''),
           agent: j.agent_name || j.agent_id,
           status: 'visible',
+          job_status: j.status || 'pending',
+          error_message: j.error_message || '',
           consent_required: false,
           job_id: j.id,
           created_at: j.created_at || '',
@@ -141,11 +156,19 @@ export default function AdminAssetsPage() {
     try {
       const res = await fetch(`/api/admin/agents/jobs/${asset.job_id}`, {
         headers: { Authorization: `Bearer ${t}` },
+        credentials: 'include',
       });
       const d = await res.json();
-      setViewJob({ name: asset.name, output: d.output || '(no output)', agent: asset.agent, created_at: asset.created_at });
+      setViewJob({
+        name: asset.name,
+        output: d.output || asset.error_message || '(no output yet)',
+        agent: asset.agent,
+        status: d.status || asset.job_status,
+        error_message: d.error_message || asset.error_message || '',
+        created_at: asset.created_at,
+      });
     } catch {
-      setViewJob({ name: asset.name, output: '(could not load output)', agent: asset.agent, created_at: asset.created_at });
+      setViewJob({ name: asset.name, output: '(could not load output)', agent: asset.agent, status: asset.job_status, created_at: asset.created_at });
     } finally {
       setViewLoading(false);
     }
@@ -270,7 +293,7 @@ export default function AdminAssetsPage() {
               <tr><td colSpan={8} className="py-6 px-5"><div className="space-y-2">{[1,2,3].map(i=><div key={i} className="h-10 bg-gray-800 rounded animate-pulse"/>)}</div></td></tr>
             )}
             {!loading && visible.length === 0 && (
-              <tr><td colSpan={8} className="text-center text-gray-600 text-sm py-10">No completed jobs found.</td></tr>
+              <tr><td colSpan={8} className="text-center text-gray-600 text-sm py-10">No agent jobs found.</td></tr>
             )}
             {visible.map(asset => (
               <tr key={asset.id} className="hover:bg-gray-800/30 transition-colors">
@@ -286,11 +309,12 @@ export default function AdminAssetsPage() {
                 <td className="px-5 py-4 text-gray-300 text-xs">{asset.client}</td>
                 <td className="px-5 py-4 text-gray-400 text-xs">{asset.agent}</td>
                 <td className="px-5 py-4">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                    asset.status === 'visible' ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20' :
-                    asset.status === 'hidden' ? 'text-gray-400 bg-gray-800 border-gray-700' :
-                    'text-red-400 bg-red-500/10 border-red-500/20'
-                  }`}>{asset.status}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${jobStatusClass(asset.job_status)}`}>
+                    {asset.job_status.replace(/_/g, ' ')}
+                  </span>
+                  {asset.status !== 'visible' && (
+                    <p className="mt-1 text-[10px] text-gray-600">{asset.status}</p>
+                  )}
                 </td>
                 <td className="px-5 py-4">
                   {asset.consent_required
