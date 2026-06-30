@@ -43,8 +43,8 @@ const nextConfig = {
 }
 
 module.exports = withSentryConfig(nextConfig, {
-  org: "vantro",
-  project: "javascript-nextjs",
+  org: "vantro-vz",
+  project: "sentry-orange-pendant",
   authToken: process.env.SENTRY_AUTH_TOKEN,
   widenClientFileUpload: true,
   tunnelRoute: "/monitoring",
