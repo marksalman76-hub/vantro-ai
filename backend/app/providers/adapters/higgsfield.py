@@ -76,6 +76,19 @@ def _mcp_process_env() -> dict:
     return env
 
 
+def _claude_command_base() -> list[str]:
+    command = ["claude"]
+    bare_mode = os.getenv("HIGGSFIELD_CLAUDE_BARE_MODE", "").strip().lower()
+    has_anthropic_api_key = bool(os.getenv("ANTHROPIC_API_KEY", "").strip())
+    has_claude_oauth_token = bool(os.getenv("CLAUDE_CODE_OAUTH_TOKEN", "").strip())
+    should_use_bare = bare_mode in {"1", "true", "yes", "on"} or (
+        not bare_mode and has_anthropic_api_key and not has_claude_oauth_token
+    )
+    if should_use_bare:
+        command.append("--bare")
+    return command
+
+
 async def _run_claude_mcp_prompt(
     prompt: str,
     *,
@@ -84,8 +97,7 @@ async def _run_claude_mcp_prompt(
 ) -> str:
     _prepare_higgsfield_mcp_credentials()
     process = await asyncio.create_subprocess_exec(
-        "claude",
-        "--bare",
+        *_claude_command_base(),
         "-p",
         prompt,
         "--mcp-config",
@@ -263,8 +275,7 @@ class HiggsfieldProvider(BaseProvider):
 
             result = subprocess.run(
                 [
-                    "claude",
-                    "--bare",
+                    *_claude_command_base(),
                     "-p",
                     "List Higgsfield MCP tools only. Do not create media. Return [].",
                     "--mcp-config",

@@ -214,6 +214,8 @@ def test_higgsfield_mcp_readiness_uses_secret_credentials(tmp_path, monkeypatch)
         '{"access_token":"test-access","refresh_token":"test-refresh"}',
     )
     monkeypatch.setenv("HIGGSFIELD_MCP_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
+    monkeypatch.delenv("CLAUDE_CODE_OAUTH_TOKEN", raising=False)
     monkeypatch.setattr(higgsfield_module.shutil, "which", lambda name: "claude")
     monkeypatch.setattr(higgsfield_module.subprocess, "run", fake_run)
     higgsfield_module._MCP_READY_CACHE.update({"checked_at": 0.0, "ready": False})
@@ -227,3 +229,11 @@ def test_higgsfield_mcp_readiness_uses_secret_credentials(tmp_path, monkeypatch)
     assert "--bare" in created["args"]
     assert "--mcp-config" in created["args"]
     assert "--strict-mcp-config" in created["args"]
+
+
+def test_higgsfield_claude_command_uses_oauth_without_bare(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "oauth-token")
+    monkeypatch.delenv("HIGGSFIELD_CLAUDE_BARE_MODE", raising=False)
+
+    assert higgsfield_module._claude_command_base() == ["claude"]
