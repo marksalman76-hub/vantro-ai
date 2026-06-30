@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface Asset {
@@ -66,6 +66,9 @@ interface MediaGenerationOutput {
   preview_url?: string;
   download_url?: string;
   asset_url?: string;
+  task_id?: string;
+  provider?: string;
+  video_url?: string;
   real_media_asset_created?: boolean;
   preview_ready?: boolean;
   download_ready?: boolean;
@@ -79,6 +82,13 @@ interface MediaGenerationOutput {
     selected_image_model?: string | null;
     next_steps?: string[];
   };
+}
+
+interface MediaStatusResult {
+  task_id: string | null;
+  status: 'processing' | 'completed' | 'failed' | 'no_task_id';
+  video_url: string | null;
+  error?: string;
 }
 
 function cleanOutput(output: string) {
@@ -105,6 +115,9 @@ function jobStatusClass(status: string) {
   return 'text-violet-300 bg-violet-500/10 border-violet-500/20';
 }
 
+const POLL_INTERVAL_MS = 10_000;
+const POLL_MAX = 30; // 5 minutes max
+
 export default function AdminAssetsPage() {
   const router = useRouter();
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -112,8 +125,77 @@ export default function AdminAssetsPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [viewJob, setViewJob] = useState<JobDetail | null>(null);
+  const [viewJobId, setViewJobId] = useState<string | null>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [mediaStatus, setMediaStatus] = useState<MediaStatusResult | null>(null);
+  const pollCountRef = useRef(0);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const mediaPreview = viewJob ? parseMediaGenerationOutput(viewJob.output) : null;
+
+  // Derived: the best video URL — from live poll result, or from stored output fields
+  const resolvedVideoUrl =
+    mediaStatus?.video_url ||
+    mediaPreview?.video_url ||
+    mediaPreview?.download_url ||
+    mediaPreview?.preview_url ||
+    mediaPreview?.asset_url ||
+    null;
+
+  // Needs polling when modal open, task_id present, no URL yet, and not terminal
+  const needsPolling =
+    !!viewJobId &&
+    !!mediaPreview?.task_id &&
+    mediaPreview?.provider === 'higgsfield' &&
+    !resolvedVideoUrl &&
+    mediaStatus?.status !== 'completed' &&
+    mediaStatus?.status !== 'failed';
+
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  const pollMediaStatus = useCallback(async (jobId: string) => {
+    if (pollCountRef.current >= POLL_MAX) {
+      stopPolling();
+      return;
+    }
+    pollCountRef.current += 1;
+    const t = localStorage.getItem('admin_token');
+    if (!t) return;
+    try {
+      const res = await fetch(`/api/admin/agents/jobs/${jobId}/media-status`, {
+        headers: { Authorization: `Bearer ${t}` },
+        credentials: 'include',
+      });
+      if (!res.ok) return;
+      const data: MediaStatusResult = await res.json();
+      setMediaStatus(data);
+      if (data.status === 'completed' || data.status === 'failed' || data.status === 'no_task_id') {
+        stopPolling();
+        return;
+      }
+    } catch {
+      // network error — keep retrying until max
+    }
+    pollTimerRef.current = setTimeout(() => pollMediaStatus(jobId), POLL_INTERVAL_MS);
+  }, [stopPolling]);
+
+  // Start/stop polling whenever the open job changes
+  useEffect(() => {
+    stopPolling();
+    setMediaStatus(null);
+    pollCountRef.current = 0;
+
+    if (viewJobId && mediaPreview?.task_id && mediaPreview?.provider === 'higgsfield' && !resolvedVideoUrl) {
+      pollTimerRef.current = setTimeout(() => pollMediaStatus(viewJobId), POLL_INTERVAL_MS);
+    }
+    return stopPolling;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewJobId, mediaPreview?.task_id]);
 
   useEffect(() => {
     const t = localStorage.getItem('admin_token');
@@ -153,6 +235,7 @@ export default function AdminAssetsPage() {
     const t = localStorage.getItem('admin_token');
     if (!t) return;
     setViewLoading(true);
+    setViewJobId(asset.job_id);
     try {
       const res = await fetch(`/api/admin/agents/jobs/${asset.job_id}`, {
         headers: { Authorization: `Bearer ${t}` },
@@ -174,6 +257,14 @@ export default function AdminAssetsPage() {
     }
   }, []);
 
+  const closeJob = useCallback(() => {
+    stopPolling();
+    setViewJob(null);
+    setViewJobId(null);
+    setMediaStatus(null);
+    pollCountRef.current = 0;
+  }, [stopPolling]);
+
   return (
     <div className="p-8 max-w-6xl">
       {/* Output viewer modal */}
@@ -185,16 +276,29 @@ export default function AdminAssetsPage() {
                 <p className="font-semibold text-white text-sm">{viewJob.name}</p>
                 <p className="text-xs text-gray-500">{viewJob.agent} · {new Date(viewJob.created_at).toLocaleString()}</p>
               </div>
-              <button onClick={() => setViewJob(null)} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">✕</button>
+              <button onClick={closeJob} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors">✕</button>
             </div>
             <div className="flex-1 overflow-y-auto px-6 py-5">
               {mediaPreview ? (
                 <div className="space-y-4">
                   <div className="overflow-hidden rounded-xl border border-gray-800 bg-gray-950">
-                    {mediaPreview.preview_url ? (
-                      mediaPreview.preview_url.includes('.mp4') || mediaPreview.preview_url.startsWith('data:video')
-                        ? <video src={mediaPreview.preview_url} controls className="w-full max-h-[420px] bg-black" />
-                        : <img src={mediaPreview.preview_url} alt={viewJob.name} className="w-full max-h-[420px] object-contain bg-black" />
+                    {resolvedVideoUrl ? (
+                      resolvedVideoUrl.includes('.mp4') || resolvedVideoUrl.startsWith('data:video')
+                        ? <video src={resolvedVideoUrl} controls className="w-full max-h-[420px] bg-black" />
+                        : <img src={resolvedVideoUrl} alt={viewJob.name} className="w-full max-h-[420px] object-contain bg-black" />
+                    ) : needsPolling ? (
+                      <div className="flex h-64 flex-col items-center justify-center gap-3 text-sm text-gray-400">
+                        <svg className="h-6 w-6 animate-spin text-violet-400" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+                        <span>Video rendering… checking every 10s</span>
+                        {pollCountRef.current > 0 && (
+                          <span className="text-xs text-gray-600">Poll {pollCountRef.current}/{POLL_MAX}</span>
+                        )}
+                      </div>
+                    ) : mediaStatus?.status === 'failed' ? (
+                      <div className="flex h-64 items-center justify-center text-xs text-red-400">Video render failed</div>
                     ) : (
                       <div className="flex h-64 items-center justify-center text-xs text-gray-600">Preview not available yet</div>
                     )}
@@ -241,16 +345,18 @@ export default function AdminAssetsPage() {
             <div className="px-6 py-4 border-t border-gray-800 flex justify-between">
               <button onClick={() => navigator.clipboard?.writeText(viewJob.output)} className="text-xs text-gray-500 hover:text-white transition-colors">Copy output</button>
               <div className="flex items-center gap-2">
-                {mediaPreview?.download_ready && mediaPreview.download_url && (
+                {resolvedVideoUrl && (
                   <a
-                    href={mediaPreview.download_url}
+                    href={resolvedVideoUrl}
                     download={`${viewJob.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-asset`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium rounded-lg transition-colors"
                   >
                     Download
                   </a>
                 )}
-                <button onClick={() => setViewJob(null)} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors">Close</button>
+                <button onClick={closeJob} className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white text-xs font-medium rounded-lg transition-colors">Close</button>
               </div>
             </div>
           </div>

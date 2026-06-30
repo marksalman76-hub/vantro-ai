@@ -1007,6 +1007,103 @@ async def admin_get_agent_job(
     }
 
 
+# ─── Media Status Polling (Admin) ────────────────────────────────────────────
+
+@router.get("/agents/jobs/{job_id}/media-status")
+async def admin_get_agent_job_media_status(
+    job_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """
+    Poll Higgsfield (or other async video provider) for the render status of a
+    completed agent job whose output_data carries a task_id.
+
+    Returns:
+        {"task_id": str, "status": "processing"|"completed"|"failed", "video_url": str|null}
+      or {"status": "no_task_id"} when no task_id is present.
+    """
+    import json as _json
+    from app.providers.adapters.higgsfield import (
+        _run_claude_mcp_prompt,
+        _extract_json_payload,
+        _find_first_key,
+    )
+
+    _require_admin(credentials, db)
+
+    job = db.query(AgentJob).filter(AgentJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Parse output_data
+    output_raw = job.output_data or ""
+    try:
+        output = _json.loads(output_raw) if output_raw.strip().startswith("{") else {}
+    except (ValueError, TypeError):
+        output = {}
+
+    task_id = output.get("task_id")
+    provider = (output.get("provider") or "").lower()
+
+    if not task_id:
+        return {"status": "no_task_id", "task_id": None, "video_url": None}
+
+    # If there is already a video_url in the stored output, return it immediately
+    existing_url = (
+        output.get("video_url")
+        or output.get("download_url")
+        or output.get("preview_url")
+        or output.get("asset_url")
+    )
+    if existing_url:
+        return {"task_id": task_id, "status": "completed", "video_url": existing_url}
+
+    # ── Higgsfield via Claude Code MCP ───────────────────────────────────────
+    if provider == "higgsfield":
+        mcp_prompt = (
+            f"Use the connected Higgsfield MCP tool to check the status of task_id '{task_id}'. "
+            "Try mcp__higgsfield__check_video_status or mcp__higgsfield__get_video_result. "
+            "Return only the raw JSON result."
+        )
+        try:
+            timeout = int(os.getenv("HIGGSFIELD_MCP_TIMEOUT_SECONDS", "60"))
+            raw = await _run_claude_mcp_prompt(
+                mcp_prompt,
+                timeout_seconds=timeout,
+                allowed_tools="mcp__higgsfield__*",
+            )
+            data = _extract_json_payload(raw)
+        except Exception as exc:
+            logger.warning("Higgsfield media-status MCP error for job %s: %s", job_id, exc)
+            return {"task_id": task_id, "status": "processing", "video_url": None, "error": str(exc)}
+
+        # Extract status
+        raw_status = (
+            data.get("status")
+            or data.get("state")
+            or ""
+        )
+        normalized = raw_status.lower() if isinstance(raw_status, str) else ""
+        if normalized in {"completed", "done", "succeeded", "success", "ready"}:
+            status = "completed"
+        elif normalized in {"failed", "error", "cancelled", "canceled"}:
+            status = "failed"
+        else:
+            status = "processing"
+
+        # Extract video URL
+        video_url = _find_first_key(
+            data,
+            {"video_url", "url", "download_url", "output_url", "result_url", "asset_url", "preview_url"},
+        ) or None
+
+        return {"task_id": task_id, "status": status, "video_url": video_url}
+
+    # ── Fallback: unknown provider ────────────────────────────────────────────
+    return {"task_id": task_id, "status": "processing", "video_url": None}
+
+
 # ─── Support Tickets (Admin) ──────────────────────────────────────────────────
 
 @router.get("/support/tickets")
