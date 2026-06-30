@@ -413,6 +413,18 @@ class HiggsfieldProvider(BaseProvider):
                 or first_result.get("id")
                 or first_result.get("task_id")
             )
+            if not task_id:
+                raw_error = str(data.get("error") or data.get("message") or data.get("raw_output") or "").strip()
+                return {
+                    "error": raw_error or "Higgsfield MCP did not return a task id",
+                    "status": "failed",
+                    "provider": "higgsfield",
+                    "execution_surface": "claude_code_mcp",
+                    "task_id": None,
+                    "mcp_result": data,
+                    "audio_media_id": elevenlabs_audio.get("media_id") if isinstance(elevenlabs_audio, dict) else None,
+                    "audio_provider": "elevenlabs" if isinstance(elevenlabs_audio, dict) else None,
+                }
             return {
                 "status": data.get("status") or first_result.get("status") or ("queued" if task_id else "submitted"),
                 "provider": "higgsfield",
