@@ -21,6 +21,8 @@ import logging
 from datetime import datetime
 from typing import Optional
 
+import sentry_sdk
+
 logger = logging.getLogger(__name__)
 
 # Thread-safe workspace context — set by execute_agent, read by _anthropic_client/_openai_client.
@@ -587,6 +589,8 @@ def execute_agent(
     Raises on failure — caller must handle and update job status to 'failed'.
     """
     import hashlib as _hashlib
+    sentry_sdk.set_tag("agent_id", agent_id)
+    sentry_sdk.set_tag("hitl_level", hitl_level or "HITL-1")
     # Extract enrichment payloads injected by the worker. These are consumed here
     # to shape the system prompt and tool list — they must not appear as raw
     # "key: value" lines in the user message.
@@ -688,6 +692,8 @@ def execute_agent(
                     text, in_tok, out_tok = _call_anthropic(guarded_system_prompt, user_message)
                 provider = f"anthropic/{selected_model}"
                 credits  = _tokens_to_credits(in_tok, out_tok)
+                sentry_sdk.set_tag("provider", "anthropic")
+                sentry_sdk.set_measurement("credits_used", credits)
             except Exception as e:
                 logger.warning("Anthropic call failed for agent %s: %s — trying OpenAI", agent_id, e)
 
@@ -696,6 +702,8 @@ def execute_agent(
                 text, in_tok, out_tok = _call_openai(guarded_system_prompt, user_message)
                 provider = f"openai/{OPENAI_MODEL}"
                 credits  = _tokens_to_credits(in_tok, out_tok)
+                sentry_sdk.set_tag("provider", "openai")
+                sentry_sdk.set_measurement("credits_used", credits)
             except Exception as e:
                 logger.error("OpenAI call failed for agent %s: %s", agent_id, e)
                 raise RuntimeError(f"Both providers failed: {e}") from e
@@ -718,6 +726,7 @@ def execute_agent(
     # authorisation phrase, the worker routes to pending_financial_review.
     violations = scan_for_financial_actions(text)
     if violations:
+        sentry_sdk.logger.warning("Financial guard triggered for agent {agent_id} ({violation_count} matched phrases)", agent_id=agent_id, violation_count=len(violations))
         logger.warning(
             "Financial action guard triggered for agent=%s — matched phrases: %s",
             agent_id, violations,

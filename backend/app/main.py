@@ -11,6 +11,14 @@ if _SENTRY_DSN:
         from sentry_sdk.integrations.fastapi import FastApiIntegration
         from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
         from sentry_sdk.integrations.logging import LoggingIntegration
+        from sentry_sdk.types import Log, Hint
+        from typing import Optional as _Optional
+
+        def _before_send_log(log: Log, _hint: Hint) -> _Optional[Log]:
+            if log.get("severity_text") in ("trace", "debug"):
+                return None
+            return log
+
         sentry_sdk.init(
             dsn=_SENTRY_DSN,
             integrations=[
@@ -18,11 +26,14 @@ if _SENTRY_DSN:
                 SqlalchemyIntegration(),
                 LoggingIntegration(level=logging.WARNING, event_level=logging.ERROR),
             ],
-            traces_sample_rate=0.2,
-            profiles_sample_rate=0.1,
+            traces_sample_rate=1.0,
+            profile_session_sample_rate=1.0,
+            profile_lifecycle="trace",
             environment=os.getenv("ENVIRONMENT", "production"),
             release=os.getenv("APP_VERSION", "1.0.0"),
-            send_default_pii=False,
+            send_default_pii=True,
+            enable_logs=True,
+            before_send_log=_before_send_log,
         )
     except ImportError:
         logging.warning("sentry-sdk not installed; install sentry-sdk[fastapi] to enable error tracking")
@@ -297,6 +308,12 @@ app.include_router(billing_router)
 app.include_router(api_v1_router)
 app.include_router(platform_router)
 app.include_router(brand_assets_router)
+
+
+@app.get("/sentry-debug")
+async def sentry_debug():
+    """Intentional error to verify Sentry is capturing exceptions. Remove or restrict in prod."""
+    division_by_zero = 1 / 0
 
 
 @app.get("/health")

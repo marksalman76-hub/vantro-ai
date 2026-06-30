@@ -62,6 +62,14 @@
         {
           "name": "HIGGSFIELD_CLAUDE_MCP_OAUTH_JSON",
           "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/higgsfield-claude-mcp-oauth-json-wwp4lp"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/openai-api-key-dsCL3D"
+        },
+        {
+          "name": "SENTRY_DSN",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/sentry-dsn-ZI0RuC"
         }
       ],
       "environment": [

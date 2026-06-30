@@ -17,6 +17,8 @@ import logging
 import os
 from datetime import datetime
 
+import sentry_sdk
+
 import boto3
 
 logger = logging.getLogger(__name__)
@@ -304,6 +306,7 @@ async def _process_job(job_id: str) -> None:
     from app.agents.agent_executor import execute_agent
     from app.agents.agent_registry import get_agent_credit_estimate, agent_exists, get_agent_hitl
 
+    _sentry_txn = None
     db = SessionLocal()
     try:
         job = _claim_job_for_execution(db, job_id)
@@ -312,6 +315,13 @@ async def _process_job(job_id: str) -> None:
             return
 
         logger.info("Worker: executing agent=%s job=%s", job.agent_id, job_id)
+        _job_start_time = datetime.utcnow()
+        _sentry_txn = sentry_sdk.start_transaction(op="agent.job", name=f"agent:{job.agent_id}")
+        _sentry_txn.set_tag("agent_id", job.agent_id)
+        _sentry_txn.set_data("workspace_id", str(job.workspace_id))
+        _sentry_txn.set_data("job_id", job_id)
+        sentry_sdk.set_user({"id": str(job.workspace_id)})
+        sentry_sdk.logger.info("Agent job {job_id} started for agent {agent_id}", agent_id=str(job.agent_id), job_id=job_id)
 
         system_prompt = get_agent_system_prompt(job.agent_id)
         user_prompt   = job.input_data or ""
@@ -399,6 +409,7 @@ async def _process_job(job_id: str) -> None:
             pass
 
         hitl_level = get_agent_hitl(job.agent_id)
+        _sentry_txn.set_tag("hitl_level", hitl_level)
 
         # Mark step: execution started
         _step_ts = datetime.utcnow().isoformat()
@@ -420,20 +431,22 @@ async def _process_job(job_id: str) -> None:
         except Exception:
             pass
 
-        output, provider_used, actual_credits, financial_violations, prompt_version = await asyncio.get_event_loop().run_in_executor(
-            None,
-            lambda: execute_agent(
-                agent_id=job.agent_id,
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                context=context,
-                workspace_id=job.workspace_id,
-                hitl_level=hitl_level,
-                output_language=_output_language,
-                revision_of_output=_revision_output,
-                revision_prompt=_revision_prompt_text,
-            ),
-        )
+        with _sentry_txn.start_child(op="llm.execute", description=f"agent:{job.agent_id}") as _llm_span:
+            _llm_span.set_data("hitl_level", hitl_level)
+            output, provider_used, actual_credits, financial_violations, prompt_version = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: execute_agent(
+                    agent_id=job.agent_id,
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    context=context,
+                    workspace_id=job.workspace_id,
+                    hitl_level=hitl_level,
+                    output_language=_output_language,
+                    revision_of_output=_revision_output,
+                    revision_prompt=_revision_prompt_text,
+                ),
+            )
 
         job.agent_version   = prompt_version
         job.prompt_snapshot = system_prompt[:4000]  # cap to avoid DB bloat
@@ -470,6 +483,7 @@ async def _process_job(job_id: str) -> None:
         # decide whether to release or reject the output.
         # This fires regardless of HITL level — it is a hard platform rule.
         if financial_violations:
+            sentry_sdk.logger.warning("Agent job {job_id} held for financial review ({violation_count} violations)", agent_id=str(job.agent_id), job_id=job_id, violation_count=len(financial_violations))
             logger.warning(
                 "Worker: job %s held for financial review — violations: %s",
                 job_id, financial_violations,
@@ -497,6 +511,8 @@ async def _process_job(job_id: str) -> None:
             except Exception:
                 pass
             db.commit()
+            _sentry_txn.set_tag("outcome", "financial_review")
+            _sentry_txn.finish()
             return
         # ────────────────────────────────────────────────────────────────────
 
@@ -505,6 +521,7 @@ async def _process_job(job_id: str) -> None:
         import re as _re
         _confidence_low = bool(_re.search(r'\[CONFIDENCE:\s*LOW\]', output, _re.IGNORECASE))
         if _confidence_low and job.status not in ("pending_financial_review",):
+            sentry_sdk.logger.warning("Agent job {job_id} escalated to pending_approval (CONFIDENCE: LOW)", agent_id=str(job.agent_id), job_id=job_id)
             logger.warning(
                 "Worker: job %s escalated to pending_approval — agent output [CONFIDENCE: LOW]",
                 job_id,
@@ -533,6 +550,8 @@ async def _process_job(job_id: str) -> None:
                             )
             except Exception:
                 pass
+            _sentry_txn.set_tag("outcome", "confidence_escalated")
+            _sentry_txn.finish()
             return
 
         # ── Media provider routing for ugc_media_agent ──────────────────────────
@@ -649,6 +668,23 @@ async def _process_job(job_id: str) -> None:
             "Worker: job %s completed via %s (%d credits deducted)",
             job_id, provider_used, credit_cost,
         )
+        _sentry_txn.set_measurement("credits_used", credit_cost)
+        _sentry_txn.set_tag("outcome", "completed")
+        _sentry_txn.set_tag("provider", provider_used.split("/")[0] if provider_used else "unknown")
+        _sentry_txn.finish()
+        sentry_sdk.logger.info(
+            "Agent job {job_id} completed",
+            attributes={
+                "job.id": job_id,
+                "agent.id": str(job.agent_id),
+                "agent.hitl_level": hitl_level,
+                "job.credits_used": credit_cost,
+                "job.provider": provider_used.split("/")[0] if provider_used else "unknown",
+                "job.provider_model": provider_used or "unknown",
+                "job.duration_ms": round((datetime.utcnow() - _job_start_time).total_seconds() * 1000),
+                "workspace.id": str(job.workspace_id),
+            },
+        )
         ws_dims = [{"Name": "WorkspaceId", "Value": str(job.workspace_id)}]
         _emit_metric("AgentJobsCompleted", 1, dimensions=ws_dims)
         _emit_metric("CreditsDeducted", credit_cost, dimensions=ws_dims)
@@ -659,6 +695,18 @@ async def _process_job(job_id: str) -> None:
         )
 
     except Exception as exc:
+        sentry_sdk.capture_exception(exc)
+        sentry_sdk.logger.error(
+            "Agent job {job_id} failed",
+            attributes={
+                "job.id": job_id,
+                "error.message": str(exc)[:500],
+                "error.type": type(exc).__name__,
+            },
+        )
+        if _sentry_txn is not None:
+            _sentry_txn.set_tag("outcome", "failed")
+            _sentry_txn.finish()
         logger.error("Worker: job %s failed: %s", job_id, exc, exc_info=True)
         try:
             job = db.query(AgentJob).filter(AgentJob.id == job_id).first()
