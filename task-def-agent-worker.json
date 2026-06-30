@@ -45,6 +45,10 @@
         {
           "name": "ELEVENLABS_API_KEY",
           "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/elevenlabs-api-key-lc7jgp"
+        },
+        {
+          "name": "CLAUDE_CODE_OAUTH_TOKEN",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/claude-code-oauth-token-yXGWVN"
         }
       ],
       "healthCheck": {
