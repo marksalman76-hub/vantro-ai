@@ -173,6 +173,23 @@ export function isCreativeAgentOptionAllowed(agentId: string, req: MediaRequest)
   return { allowed: true, reason: '' };
 }
 
+function getStoredAdminToken() {
+  if (typeof window === 'undefined') return '';
+  return localStorage.getItem('admin_token') || localStorage.getItem('token') || '';
+}
+
+function authHeaders(token: string, extra?: Record<string, string>) {
+  return {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(extra || {}),
+  };
+}
+
+function clearStoredAdminTokens() {
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('token');
+}
+
 export default function AdminCreateMediaPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('type');
@@ -199,9 +216,8 @@ export default function AdminCreateMediaPage() {
   const selectedAgentRule = isCreativeAgentOptionAllowed(selectedCreativeAgentId, req);
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
-    if (!token) return;
-    fetch('/api/admin/brand-assets', { headers: { Authorization: `Bearer ${token}` } })
+    const token = getStoredAdminToken();
+    fetch('/api/admin/brand-assets', { headers: authHeaders(token), credentials: 'include' })
       .then(r => r.json())
       .then(d => setBrandAssets(d.assets || []))
       .catch(() => {});
@@ -239,8 +255,7 @@ export default function AdminCreateMediaPage() {
   }
 
   async function submit() {
-    const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
-    if (!token) return;
+    const token = getStoredAdminToken();
     const selectedAgentId = resolveCreateMediaAgentId(req, selectedCreativeAgentId);
     const selectedAgentAllowed = isCreativeAgentOptionAllowed(selectedAgentId, req);
     if (!selectedAgentAllowed.allowed) {
@@ -265,7 +280,7 @@ export default function AdminCreateMediaPage() {
     ].filter(Boolean).join(' ');
 
     try {
-      const agentsRes = await fetch('/api/agents', { headers: { Authorization: `Bearer ${token}` } });
+      const agentsRes = await fetch('/api/agents', { headers: authHeaders(token), credentials: 'include' });
       const agentsData = await agentsRes.json();
       // Admin bypasses credit/unlock checks on backend — don't filter by unlocked here
       const agents = agentsData.agents || [];
@@ -275,9 +290,9 @@ export default function AdminCreateMediaPage() {
       const res = await fetch('/api/admin-run-agent', {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
+          ...authHeaders(token, { 'Content-Type': 'application/json' }),
         },
+        credentials: 'include',
         body: JSON.stringify({
           agent_id: mediaAgent.id,
           prompt: task,
@@ -306,6 +321,12 @@ export default function AdminCreateMediaPage() {
         router.push('/admin/assets');
       } else {
         console.error('Agent submission failed:', { status: res.status, data: d });
+        if (res.status === 401) {
+          clearStoredAdminTokens();
+          setError('Your admin session expired. Please sign in again, then rerun this media request.');
+          router.push('/admin-login');
+          return;
+        }
         setError(d.detail || d.error || 'Could not start this request. Please try again or contact support.');
       }
     } catch (err) {

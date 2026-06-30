@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 
@@ -28,8 +28,9 @@ async function forwardBackendResponse(res: Response) {
   );
 }
 
-export async function POST(request: Request) {
-  const token = request.headers.get("authorization") || "";
+export async function POST(request: NextRequest) {
+  const cookieToken = request.cookies?.get("access_token")?.value;
+  const token = cookieToken ? `Bearer ${cookieToken}` : (request.headers.get("authorization") || "");
 
   try {
     const body = await request.json();

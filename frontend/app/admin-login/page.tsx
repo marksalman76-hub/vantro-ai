@@ -13,10 +13,30 @@ export default function AdminLoginPage() {
   const emailRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Already logged in? Go straight to admin
+    let cancelled = false;
+
+    // Already logged in? Verify the stored token before going straight to admin.
     const token = localStorage.getItem('admin_token');
-    if (token) router.replace('/admin');
+    if (token) {
+      fetch('/api/admin/clients', { headers: { Authorization: `Bearer ${token}` }, credentials: 'include' })
+        .then((res) => {
+          if (cancelled) return;
+          if (res.ok) {
+            router.replace('/admin');
+          } else {
+            localStorage.removeItem('admin_token');
+            emailRef.current?.focus();
+          }
+        })
+        .catch(() => {
+          if (!cancelled) emailRef.current?.focus();
+        });
+    }
     emailRef.current?.focus();
+
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   const submit = async (e: React.FormEvent) => {
