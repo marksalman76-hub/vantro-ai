@@ -36,7 +36,7 @@ const ETHNICITIES = ['Caucasian', 'African', 'Asian', 'Hispanic', 'Middle Easter
 const LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Mandarin', 'Japanese', 'Arabic', 'Other'];
 const VIDEO_QUALITIES = ['720p', '1080p', '4K'];
 
-interface MediaRequest {
+export interface MediaRequest {
   type: string;
   brief: string;
   platform: string;
@@ -50,6 +50,58 @@ interface MediaRequest {
   use_brand_profile: boolean;
 }
 
+export const CREATIVE_AGENT_OPTIONS = [
+  {
+    id: 'ugc_media_agent',
+    label: 'UGC / AI Media Agent',
+    desc: 'Default video and creator-led media',
+    videoModels: ['720p', '1080p'],
+    imageTiers: ['standard'],
+  },
+  {
+    id: 'ugc_creative_agent',
+    label: 'UGC Creative Agent',
+    desc: 'Premium UGC, 4K, and pro creative routes',
+    videoModels: ['720p', '1080p', '4K'],
+    imageTiers: ['standard', 'pro'],
+  },
+  {
+    id: 'product_image_agent',
+    label: 'Product Image Agent',
+    desc: 'Static image, banner, and product visuals',
+    videoModels: [],
+    imageTiers: ['standard', 'pro'],
+  },
+  {
+    id: 'ad_creative_agent',
+    label: 'Ad Creative Agent',
+    desc: 'Paid social creative and campaign assets',
+    videoModels: ['720p', '1080p'],
+    imageTiers: ['standard', 'pro'],
+  },
+  {
+    id: 'creative_rotation_agent',
+    label: 'Creative Rotation Agent',
+    desc: 'Fast creative variants and testing angles',
+    videoModels: ['720p'],
+    imageTiers: ['standard'],
+  },
+  {
+    id: 'social_media_content_agent',
+    label: 'Social Media Content Agent',
+    desc: 'Organic social content and platform posts',
+    videoModels: ['720p'],
+    imageTiers: ['standard'],
+  },
+  {
+    id: 'ads_optimisation_agent',
+    label: 'Ads Optimisation Agent',
+    desc: 'Ad account creative support and image routes',
+    videoModels: [],
+    imageTiers: ['standard'],
+  },
+];
+
 const STEPS: Step[] = ['type', 'brief', 'format', 'brand', 'review'];
 const STEP_LABELS: Record<Step, string> = {
   type:   'Media type',
@@ -59,10 +111,66 @@ const STEP_LABELS: Record<Step, string> = {
   review: 'Review',
 };
 
-function selectCreativeAgentId(req: MediaRequest) {
+export const BRIEF_STEP_FIELD_ORDER = [
+  'creative_agent',
+  'brief_text',
+  'reference_files',
+];
+
+function recommendedCreativeAgentId(req: MediaRequest) {
   if (req.type === 'image') return 'product_image_agent';
   if (req.video_quality === '4K') return 'ugc_creative_agent';
   return 'ugc_media_agent';
+}
+
+export function resolveCreateMediaAgentId(req: MediaRequest, selectedAgentId: string) {
+  return selectedAgentId || recommendedCreativeAgentId(req);
+}
+
+function requestedCreativeMediaType(req: MediaRequest) {
+  return req.type === 'image' ? 'image' : 'video';
+}
+
+function requestedVideoQuality(req: MediaRequest) {
+  return req.video_quality || '1080p';
+}
+
+export function getCreativeAgentBoundaryLabel(agentId: string) {
+  const agent = CREATIVE_AGENT_OPTIONS.find(option => option.id === agentId);
+  if (!agent) return '';
+  const video = agent.videoModels.length
+    ? `Video: ${agent.videoModels.length === 1 ? `${agent.videoModels[0]} only` : agent.videoModels.join(', ')}.`
+    : 'Video: none.';
+  const image = agent.imageTiers.length
+    ? `Image: ${agent.imageTiers.join(', ')}.`
+    : 'Image: none.';
+  return `${video} ${image}`;
+}
+
+export function isCreativeAgentOptionAllowed(agentId: string, req: MediaRequest): { allowed: boolean; reason: string } {
+  const agent = CREATIVE_AGENT_OPTIONS.find(option => option.id === agentId);
+  if (!agent) return { allowed: false, reason: 'Unknown creative agent.' };
+
+  if (requestedCreativeMediaType(req) === 'image') {
+    if (agent.imageTiers.length === 0) {
+      return { allowed: false, reason: 'Media boundary: video assets only.' };
+    }
+    return { allowed: true, reason: '' };
+  }
+
+  if (agent.videoModels.length === 0) {
+    return { allowed: false, reason: 'Media boundary: image assets only.' };
+  }
+
+  const quality = requestedVideoQuality(req);
+  if (!agent.videoModels.includes(quality)) {
+    return {
+      allowed: false,
+      reason: `Video model boundary: supports ${agent.videoModels.length === 1 ? `${agent.videoModels[0]} only` : `${agent.videoModels.slice(0, -1).join(', ')} and ${agent.videoModels.at(-1)} only`}.`,
+    };
+  }
+
+  return { allowed: true, reason: '' };
 }
 
 export default function AdminCreateMediaPage() {
@@ -86,7 +194,9 @@ export default function AdminCreateMediaPage() {
   const [refFiles, setRefFiles] = useState<File[]>([]);
   const [brandAssets, setBrandAssets] = useState<BrandAsset[]>([]);
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
+  const [selectedCreativeAgentId, setSelectedCreativeAgentId] = useState('ugc_media_agent');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const selectedAgentRule = isCreativeAgentOptionAllowed(selectedCreativeAgentId, req);
 
   useEffect(() => {
     const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
@@ -131,6 +241,13 @@ export default function AdminCreateMediaPage() {
   async function submit() {
     const token = localStorage.getItem('admin_token') || localStorage.getItem('token');
     if (!token) return;
+    const selectedAgentId = resolveCreateMediaAgentId(req, selectedCreativeAgentId);
+    const selectedAgentAllowed = isCreativeAgentOptionAllowed(selectedAgentId, req);
+    if (!selectedAgentAllowed.allowed) {
+      setError(selectedAgentAllowed.reason);
+      setStep('brief');
+      return;
+    }
     setSubmitting(true);
     setError('');
     const task = [
@@ -152,7 +269,6 @@ export default function AdminCreateMediaPage() {
       const agentsData = await agentsRes.json();
       // Admin bypasses credit/unlock checks on backend — don't filter by unlocked here
       const agents = agentsData.agents || [];
-      const selectedAgentId = selectCreativeAgentId(req);
       const mediaAgent = agents.find((a: { id: string }) => a.id === selectedAgentId) || { id: selectedAgentId };
       const selectedAssets = brandAssets.filter((asset) => selectedAssetIds.has(asset.id));
 
@@ -167,6 +283,8 @@ export default function AdminCreateMediaPage() {
           prompt: task,
           context: {
             media_request: req,
+            selected_creative_agent_id: selectedAgentId,
+            requested_creative_agent_id: selectedAgentId,
             reference_files: refFiles.map((file) => ({
               name: file.name,
               type: file.type,
@@ -278,18 +396,55 @@ export default function AdminCreateMediaPage() {
         <div>
           <h2 className="font-semibold text-xs mb-1">Describe what you need</h2>
           <p className="text-[11px] text-gray-500 mb-3">Include your goal, key message, target audience, and any specific requirements</p>
+
+          <div className="bg-gray-900 border border-violet-500/30 rounded-xl p-4 mb-4" data-brief-field={BRIEF_STEP_FIELD_ORDER[0]}>
+            <div className="flex items-start justify-between gap-3 mb-3">
+              <div>
+                <label htmlFor="creative-agent-selector" className="text-xs font-medium text-white">
+                  Select creative agent
+                </label>
+                <p className="text-[11px] text-gray-500 mt-0.5">
+                  Required routing control. Choose exactly which agent should handle this media brief.
+                </p>
+              </div>
+              <span className="text-[10px] text-gray-600 shrink-0">
+                Suggested: {CREATIVE_AGENT_OPTIONS.find(agent => agent.id === recommendedCreativeAgentId(req))?.label}
+              </span>
+            </div>
+            <select
+              id="creative-agent-selector"
+              aria-label="Select creative agent"
+              value={selectedCreativeAgentId}
+              onChange={(event) => setSelectedCreativeAgentId(event.target.value)}
+              className="w-full bg-gray-950 border border-gray-800 focus:border-violet-500/50 rounded-xl px-3.5 py-2.5 text-xs text-white outline-none transition-colors"
+            >
+              {CREATIVE_AGENT_OPTIONS.map(agent => {
+                const rule = isCreativeAgentOptionAllowed(agent.id, req);
+                return (
+                <option key={agent.id} value={agent.id} disabled={!rule.allowed}>
+                  {agent.label} - {agent.desc}{rule.allowed ? '' : ` (Unavailable: ${rule.reason})`}
+                </option>
+                );
+              })}
+            </select>
+            <p className={`text-[10px] mt-2 ${selectedAgentRule.allowed ? 'text-gray-500' : 'text-red-300'}`}>
+              {selectedAgentRule.allowed ? getCreativeAgentBoundaryLabel(selectedCreativeAgentId) : selectedAgentRule.reason}
+            </p>
+          </div>
+
           <textarea
             rows={6}
             value={req.brief}
             onChange={e => setReq(r => ({ ...r, brief: e.target.value }))}
             placeholder="e.g. A 30-second product demo showing how our inventory tool saves time. Target audience: small business owners. Key message: reduce admin time by 80%. Include a call to action to book a demo."
             className="w-full bg-gray-900 border border-gray-800 focus:border-violet-500/50 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-gray-700 outline-none resize-none transition-colors"
+            data-brief-field={BRIEF_STEP_FIELD_ORDER[1]}
           />
           {req.brief.length > 0 && req.brief.length < 30 && (
             <p className="text-[9px] text-amber-400 mt-1">More detail = better results</p>
           )}
 
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4 mt-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4 mt-4" data-brief-field={BRIEF_STEP_FIELD_ORDER[2]}>
             <div className="flex items-center justify-between mb-0.5">
               <p className="text-xs font-medium text-white">Reference files</p>
               <Link href="/admin/brand-assets" className="text-[10px] text-violet-400 hover:text-violet-300">
@@ -602,6 +757,7 @@ export default function AdminCreateMediaPage() {
           <div className="bg-gray-900 border border-gray-800 rounded-xl divide-y divide-gray-800 mb-4">
             {[
               { label: 'Media type', value: MEDIA_TYPES.find(t => t.id === req.type)?.label || req.type },
+              { label: 'Creative agent', value: CREATIVE_AGENT_OPTIONS.find(agent => agent.id === resolveCreateMediaAgentId(req, selectedCreativeAgentId))?.label || selectedCreativeAgentId },
               { label: 'Brief', value: req.brief },
               { label: 'Platform', value: req.platform || 'Not specified' },
               { label: 'Aspect ratio', value: req.aspect_ratio || 'Not specified' },
