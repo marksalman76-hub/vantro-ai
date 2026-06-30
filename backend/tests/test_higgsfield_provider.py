@@ -101,6 +101,27 @@ def test_higgsfield_mcp_execute_uses_claude_generate_video(monkeypatch):
     assert '"duration": 5' in captured["prompt"]
 
 
+def test_higgsfield_mcp_execute_extracts_nested_result_task_id(monkeypatch):
+    async def fake_run(prompt, *, timeout_seconds, allowed_tools=None):
+        return json.dumps({"results": [{"id": "nested-video-123", "status": "pending"}]})
+
+    monkeypatch.setenv("HIGGSFIELD_EXECUTION_SURFACE", "claude_code_mcp")
+    monkeypatch.setattr(higgsfield_module.shutil, "which", lambda name: "claude")
+    monkeypatch.setattr(higgsfield_module, "_run_claude_mcp_prompt", fake_run)
+
+    result = asyncio.run(
+        HiggsfieldProvider().execute(
+            prompt="Create a 5 second product launch clip",
+            model="kling3_0_turbo",
+            duration=5,
+            aspect_ratio="9:16",
+        )
+    )
+
+    assert result["status"] == "pending"
+    assert result["task_id"] == "nested-video-123"
+
+
 def test_higgsfield_mcp_generates_elevenlabs_audio_and_attaches_it(monkeypatch):
     calls = []
     uploaded = {}

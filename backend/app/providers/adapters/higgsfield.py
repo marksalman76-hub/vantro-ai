@@ -130,6 +130,13 @@ def _find_first_key(value: object, keys: set[str]) -> str:
     return ""
 
 
+def _first_higgsfield_result(data: dict) -> dict:
+    results = data.get("results")
+    if isinstance(results, list) and results and isinstance(results[0], dict):
+        return results[0]
+    return {}
+
+
 async def _upload_audio_base64_to_higgsfield_mcp(
     *,
     audio_base64: str,
@@ -384,9 +391,17 @@ class HiggsfieldProvider(BaseProvider):
                     "execution_surface": "claude_code_mcp",
                 }
             data = _extract_json_payload(raw_output)
-            task_id = data.get("job_id") or data.get("id") or data.get("task_id")
+            first_result = _first_higgsfield_result(data)
+            task_id = (
+                data.get("job_id")
+                or data.get("id")
+                or data.get("task_id")
+                or first_result.get("job_id")
+                or first_result.get("id")
+                or first_result.get("task_id")
+            )
             return {
-                "status": data.get("status") or ("queued" if task_id else "submitted"),
+                "status": data.get("status") or first_result.get("status") or ("queued" if task_id else "submitted"),
                 "provider": "higgsfield",
                 "execution_surface": "claude_code_mcp",
                 "task_id": task_id,
