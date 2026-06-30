@@ -15,6 +15,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 from datetime import datetime
 
 import sentry_sdk
@@ -189,6 +190,64 @@ def _build_elevenlabs_voiceover(language: str) -> dict:
     }
 
 
+_VOICEOVER_TEXT_LIMIT = 1500
+
+
+def _extract_voiceover_text_from_llm_output(raw_output: str) -> str:
+    """Extract clean voiceover text from LLM output (JSON or structured text).
+
+    Priority:
+    1. VOICEOVER_SCRIPT: <text> machine-readable line (added to agent prompt)
+    2. JSON field matching known script key names
+    3. Regex patterns for common text-format labels
+    4. Truncated raw output as last resort (prevents ElevenLabs 2500-char limit breach)
+    """
+    if not isinstance(raw_output, str):
+        return ""
+
+    # 1. Machine-readable marker line the agent prompt now emits
+    match = re.search(r"VOICEOVER_SCRIPT:\s*(.+)", raw_output)
+    if match:
+        return match.group(1).strip()[:_VOICEOVER_TEXT_LIMIT]
+
+    # 2. JSON field extraction
+    try:
+        parsed = json.loads(raw_output)
+        if isinstance(parsed, dict):
+            for key in (
+                "voiceover_script",
+                "voiceover_text",
+                "voice_script",
+                "narration_script",
+                "narration",
+                "script",
+                "voiceover",
+                "spoken_text",
+                "dialogue",
+            ):
+                val = parsed.get(key)
+                if isinstance(val, str) and val.strip():
+                    return val.strip()[:_VOICEOVER_TEXT_LIMIT]
+    except (TypeError, ValueError):
+        pass
+
+    # 3. Common text-format labels in structured brief output
+    for pattern in (
+        r"(?i)Script text:\s*(.+)",
+        r"(?i)Voice-?over copy:\s*(.+)",
+        r"(?i)Narration script:\s*(.+)",
+        r"(?i)Spoken script:\s*(.+)",
+    ):
+        match = re.search(pattern, raw_output)
+        if match:
+            text = match.group(1).strip()
+            if len(text) > 20:
+                return text[:_VOICEOVER_TEXT_LIMIT]
+
+    # 4. Truncated fallback — never send the full brief to ElevenLabs TTS
+    return raw_output[:_VOICEOVER_TEXT_LIMIT]
+
+
 def _build_higgsfield_execution_kwargs(
     context: object,
     adapter_result: object,
@@ -213,7 +272,7 @@ def _build_higgsfield_execution_kwargs(
         or media_request.get("voice_script")
         or media_request.get("narration_script")
         or media_request.get("voiceover")
-        or fallback_voiceover_script,
+        or _extract_voiceover_text_from_llm_output(fallback_voiceover_script),
         "",
     )
 
