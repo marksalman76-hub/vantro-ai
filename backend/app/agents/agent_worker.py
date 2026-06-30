@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 _CW_NAMESPACE = "Vantro/AgentJobs"
 _AWS_REGION = os.getenv("AWS_DEFAULT_REGION", "us-east-1")
+OWNER_ADMIN_BILLING_MODE = "owner_admin_unlimited"
 
 _cloudwatch = None
 
@@ -125,6 +126,171 @@ def _should_execute_higgsfield_live(adapter_result, creative_provider_route: obj
         and bool(selected_model)
         and selected_model == route_model
     )
+
+
+def _first_media_url(value: object) -> str:
+    if not isinstance(value, dict):
+        return ""
+    for key in ("asset_url", "media_url", "preview_url", "download_url", "video_url", "image_url"):
+        candidate = value.get(key)
+        if isinstance(candidate, str) and candidate.strip():
+            return candidate.strip()
+    return ""
+
+
+def _job_context_from_input_data(input_data: object) -> dict:
+    if not isinstance(input_data, str) or not input_data.strip():
+        return {}
+    try:
+        parsed = json.loads(input_data)
+    except (TypeError, ValueError):
+        return {}
+    if not isinstance(parsed, dict):
+        return {}
+    context = parsed.get("context")
+    return context if isinstance(context, dict) else {}
+
+
+def _job_uses_owner_admin_unlimited_billing(job: object) -> bool:
+    context = _job_context_from_input_data(getattr(job, "input_data", ""))
+    return (
+        context.get("billing_mode") == OWNER_ADMIN_BILLING_MODE
+        and context.get("credits_unlimited") is True
+        and str(context.get("package_tier") or "").lower() == "enterprise"
+    )
+
+
+def _media_request_from_context(context: object) -> dict:
+    if not isinstance(context, dict):
+        return {}
+    media_request = context.get("media_request")
+    return media_request if isinstance(media_request, dict) else {}
+
+
+def _clean_media_string(value: object, default: str = "") -> str:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return default
+
+
+def _normalize_aspect_ratio(value: object) -> str:
+    raw = _clean_media_string(value, "9:16")
+    return raw.split(" ", 1)[0].strip() or "9:16"
+
+
+def _build_elevenlabs_voiceover(language: str) -> dict:
+    return {
+        "provider": "elevenlabs",
+        "model_id": os.getenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"),
+        "language": language,
+        "multilingual": True,
+    }
+
+
+def _build_higgsfield_execution_kwargs(
+    context: object,
+    adapter_result: object,
+    fallback_voiceover_script: str = "",
+) -> dict:
+    media_request = _media_request_from_context(context)
+    execution_payload = getattr(adapter_result, "execution_payload", {})
+    execution_payload = execution_payload if isinstance(execution_payload, dict) else {}
+    route = execution_payload.get("creative_provider_route")
+    video_route = _selected_video_route(route)
+    language = _clean_media_string(
+        media_request.get("language") or execution_payload.get("language"),
+        "English",
+    )
+    quality = _clean_media_string(
+        media_request.get("video_quality") or video_route.get("quality"),
+        "1080p",
+    )
+    voiceover = _build_elevenlabs_voiceover(language)
+    voiceover_script = _clean_media_string(
+        media_request.get("voiceover_script")
+        or media_request.get("voice_script")
+        or media_request.get("narration_script")
+        or media_request.get("voiceover")
+        or fallback_voiceover_script,
+        "",
+    )
+
+    return {
+        "model": execution_payload.get("selected_video_model_id") or execution_payload.get("selected_video_model"),
+        "duration": 30,
+        "aspect_ratio": _normalize_aspect_ratio(media_request.get("aspect_ratio")),
+        "platform": _clean_media_string(media_request.get("platform"), "tiktok").lower(),
+        "tone": _clean_media_string(media_request.get("tone"), "professional").lower(),
+        "quality": quality,
+        "language": language,
+        "voice_provider": voiceover["provider"],
+        "voice_model_id": voiceover["model_id"],
+        "voice_language": voiceover["language"],
+        "voiceover_script": voiceover_script,
+        "multilingual_voice_enabled": voiceover["multilingual"],
+    }
+
+
+def _resolve_billable_credit_cost(*, actual_credits: int, pre_committed: int, owner_admin_unlimited: bool) -> int:
+    if owner_admin_unlimited:
+        return 0
+    return max(0, int(actual_credits or pre_committed or 0))
+
+
+def _build_media_generation_output(
+    *,
+    script: str,
+    creative_provider_route: object,
+    adapter_result: object | None,
+    live_task_result: object | None,
+    requested_agent_id: str,
+    fallback_preview_asset: object | None = None,
+) -> dict:
+    from app.integrations.execution_adapters import adapter_summary
+
+    adapter_payload = adapter_summary(adapter_result) if adapter_result else {}
+    execution_payload = adapter_payload.get("execution_payload") if isinstance(adapter_payload, dict) else {}
+    execution_payload = execution_payload if isinstance(execution_payload, dict) else {}
+
+    live_asset_url = _first_media_url(live_task_result)
+    fallback_asset = fallback_preview_asset if isinstance(fallback_preview_asset, dict) else {}
+    fallback_preview_url = _first_media_url(fallback_asset)
+    preview_url = live_asset_url or fallback_preview_url
+    download_url = live_asset_url or fallback_preview_url
+    live_task = live_task_result if isinstance(live_task_result, dict) else None
+    real_media_asset_created = bool(live_asset_url)
+
+    return {
+        "type": "media_generation",
+        "requested_agent_id": requested_agent_id,
+        "script": script,
+        "creative_provider_route": creative_provider_route if isinstance(creative_provider_route, dict) else {},
+        "provider_readiness": {
+            "adapter_name": adapter_payload.get("adapter_name"),
+            "execution_mode": adapter_payload.get("execution_mode"),
+            "provider_ready": bool(adapter_payload.get("provider_ready")),
+            "message": adapter_payload.get("message"),
+            "next_steps": adapter_payload.get("next_steps") or [],
+            "provider_connected": bool(execution_payload.get("provider_connected")),
+            "live_execution_enabled": bool(execution_payload.get("live_execution_enabled")),
+            "selected_video_provider": execution_payload.get("selected_video_provider"),
+            "selected_video_model": execution_payload.get("selected_video_model"),
+            "selected_video_model_id": execution_payload.get("selected_video_model_id"),
+            "selected_image_provider": execution_payload.get("selected_image_provider"),
+            "selected_image_model": execution_payload.get("selected_image_model"),
+            "language": execution_payload.get("language"),
+            "voiceover": execution_payload.get("voiceover") or {},
+        },
+        "provider_task": live_task,
+        "fallback_preview_asset": fallback_asset,
+        "real_media_asset_created": real_media_asset_created,
+        "preview_ready": bool(preview_url),
+        "preview_url": preview_url,
+        "download_ready": bool(download_url),
+        "download_url": download_url,
+        "asset_url": live_asset_url,
+        "credential_values_exposed": False,
+    }
 
 
 async def _process_job(job_id: str) -> None:
@@ -272,9 +438,17 @@ async def _process_job(job_id: str) -> None:
         job.agent_version   = prompt_version
         job.prompt_snapshot = system_prompt[:4000]  # cap to avoid DB bloat
 
+        owner_admin_unlimited = _job_uses_owner_admin_unlimited_billing(job)
+
         # actual_credits is derived from real token usage; adjust the pre-committed
-        # estimate up or down accordingly.
-        credit_cost = actual_credits
+        # estimate up or down accordingly. Owner/admin Enterprise jobs are
+        # metered for provider diagnostics only and never mutate client credits.
+        pre_committed = job.credits_used or 0
+        credit_cost = _resolve_billable_credit_cost(
+            actual_credits=actual_credits,
+            pre_committed=pre_committed,
+            owner_admin_unlimited=owner_admin_unlimited,
+        )
         cred = (
             db.query(CreditsAccount)
             .join(Workspace, Workspace.id == CreditsAccount.workspace_id)
@@ -282,9 +456,8 @@ async def _process_job(job_id: str) -> None:
             .with_for_update()
             .first()
         )
-        pre_committed = job.credits_used or 0
         delta = credit_cost - pre_committed  # positive = underpaid, negative = refund
-        if cred and delta != 0:
+        if cred and delta != 0 and not owner_admin_unlimited:
             cred.used_credits = max(0, min(cred.total_credits, cred.used_credits + delta))
             cred.updated_at = datetime.utcnow()
 
@@ -373,13 +546,22 @@ async def _process_job(job_id: str) -> None:
             if is_creative_agent(job.agent_id):
                 adapters = ExecutionAdapters(db=db)
                 creative_provider_route = context.get("creative_provider_route")
+                media_request = _media_request_from_context(context)
+                media_language = _clean_media_string(media_request.get("language"), "English")
+                media_voiceover = _build_elevenlabs_voiceover(media_language)
+                requested_agent_id = str(
+                    context.get("requested_creative_agent_id")
+                    or context.get("selected_creative_agent_id")
+                    or job.agent_id
+                )
                 if not isinstance(creative_provider_route, dict) or not creative_provider_route.get("success"):
                     creative_provider_route = resolve_creative_provider_route(
-                        agent_id=job.agent_id,
+                        agent_id=requested_agent_id,
                         media_type="both",
                         request_context=context,
                     )
 
+                live_task_result = None
                 adapter_result = adapters.execute(
                     adapter_name="ugc_video_provider_adapter",
                     payload={
@@ -387,12 +569,15 @@ async def _process_job(job_id: str) -> None:
                             "tenant_id": job.workspace_id,
                             "task": output[:1000],
                             "region": "Global",
-                            "language": "English",
+                            "language": media_language,
+                            "media_request": media_request,
+                            "voiceover": media_voiceover,
                             "creative_provider_route": creative_provider_route,
                         },
                         "context": {
                             "agent_id": job.agent_id,
                             "job_id": job.id,
+                            "media_request": media_request,
                             "creative_provider_route": creative_provider_route,
                         },
                     },
@@ -402,21 +587,48 @@ async def _process_job(job_id: str) -> None:
                     higgsfield = adapter_result.execution_payload.get("provider_instance")
                     if higgsfield:
                         try:
-                            media_task_result = await higgsfield.execute(
-                                prompt=output,
-                                model=adapter_result.execution_payload.get("selected_video_model"),
-                                duration=30,
-                                aspect_ratio="9:16",
+                            higgsfield_kwargs = _build_higgsfield_execution_kwargs(
+                                context,
+                                adapter_result,
+                                fallback_voiceover_script=output,
                             )
-                            media_provider_output = json.dumps({
-                                "type": "media_generation",
-                                "script": output,
-                                "higgsfield_task": media_task_result,
-                            })
+                            live_task_result = await higgsfield.execute(
+                                prompt=output,
+                                **higgsfield_kwargs,
+                            )
                             logger.info("Worker: UGC media job %s routed to Higgsfield", job_id)
                         except Exception as e:
                             logger.error("Worker: Higgsfield execution failed for job %s: %s", job_id, e)
-                            media_provider_output = f"{output}\n\n[Media generation error: {str(e)}]"
+                            live_task_result = {"error": str(e), "provider": "higgsfield"}
+
+                fallback_preview_asset = None
+                if not _first_media_url(live_task_result):
+                    try:
+                        from app.runtime.shared_creative_visual_generation_runtime import generate_creative_visual_asset
+                        fallback_preview_asset = generate_creative_visual_asset(
+                            prompt=output,
+                            agent_id=requested_agent_id,
+                            tenant_id=job.workspace_id,
+                            asset_kind="creative_media_preview_asset",
+                        )
+                    except Exception as preview_exc:
+                        logger.warning(
+                            "Worker: fallback preview generation failed for job %s: %s",
+                            job_id,
+                            preview_exc,
+                        )
+
+                media_provider_output = json.dumps(
+                    _build_media_generation_output(
+                        script=output,
+                        creative_provider_route=creative_provider_route,
+                        adapter_result=adapter_result,
+                        live_task_result=live_task_result,
+                        requested_agent_id=requested_agent_id,
+                        fallback_preview_asset=fallback_preview_asset,
+                    ),
+                    sort_keys=True,
+                )
         except Exception as e:
             logger.error("Worker: Media adapter setup failed for job %s: %s", job_id, e)
         # ────────────────────────────────────────────────────────────────────────

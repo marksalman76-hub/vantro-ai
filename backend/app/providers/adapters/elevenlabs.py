@@ -42,7 +42,7 @@ class ElevenLabsProvider(BaseProvider):
                     },
                     json={
                         "text": text,
-                        "model_id": "eleven_multilingual_v2",
+                        "model_id": kwargs.get("model_id") or "eleven_multilingual_v2",
                         "voice_settings": {
                             "stability": stability,
                             "similarity_boost": similarity_boost,
@@ -56,6 +56,8 @@ class ElevenLabsProvider(BaseProvider):
                 "status": "success",
                 "provider": "elevenlabs",
                 "voice_id": voice_id,
+                "model_id": kwargs.get("model_id") or "eleven_multilingual_v2",
+                "language": language,
                 "audio_base64": audio_b64,
                 "content_type": "audio/mpeg",
                 "character_count": len(text),

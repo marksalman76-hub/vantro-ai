@@ -2,6 +2,7 @@ import pytest
 
 from app.agents import agent_worker
 from app.integrations.execution_adapters import AdapterResult, adapter_summary
+from app.agents.agent_worker import _build_media_generation_output
 from app.runtime.creative_provider_routing import (
     CREATIVE_AGENT_IDS,
     creative_provider_status,
@@ -94,6 +95,7 @@ def test_video_quality_selects_higgsfield_model(quality, expected_model):
 
     assert route["video"]["provider"] == "higgsfield"
     assert route["video"]["model"] == expected_model
+    assert route["video"]["model_id"]
 
 
 @pytest.mark.parametrize(
@@ -168,6 +170,11 @@ def test_creative_provider_status_exposes_models_without_credentials():
         "Kling 3.0 Turbo",
         "Kling 3.0",
         "Cinema Studio 4K",
+    ]
+    assert status["providers"]["higgsfield"]["model_ids"] == [
+        "kling3_0_turbo",
+        "kling3_0",
+        "cinematic_studio_3_0",
     ]
     assert status["providers"]["nano_banana"]["models"] == [
         "Nano Banana 2",
@@ -265,13 +272,61 @@ def test_execution_adapter_preserves_selected_creative_models_without_credential
 
     assert result.execution_payload["selected_video_provider"] == "higgsfield"
     assert result.execution_payload["selected_video_model"] == "Cinema Studio 4K"
+    assert result.execution_payload["selected_video_model_id"] == "cinematic_studio_3_0"
     assert result.execution_payload["selected_image_provider"] == "nano_banana"
     assert result.execution_payload["selected_image_model"] == "Nano Banana Pro"
     assert result.provider_ready is False
 
 
+def test_execution_adapter_preserves_media_request_and_voiceover_metadata():
+    adapter = ExecutionAdapters(db=None)
+    route = resolve_creative_provider_route(
+        agent_id="ugc_creative_agent",
+        media_type="video",
+        video_quality="4K",
+    )
+    media_request = {
+        "platform": "Instagram Reels",
+        "aspect_ratio": "16:9 (landscape)",
+        "tone": "Luxury",
+        "language": "Spanish",
+        "video_quality": "4K",
+    }
+
+    result = adapter.execute(
+        adapter_name="ugc_video_provider_adapter",
+        payload={
+            "workflow": {
+                "tenant_id": "workspace-test",
+                "task": "Create a Spanish product launch clip",
+                "language": "Spanish",
+                "media_request": media_request,
+                "voiceover": {
+                    "provider": "elevenlabs",
+                    "model_id": "eleven_multilingual_v2",
+                    "language": "Spanish",
+                    "multilingual": True,
+                },
+                "creative_provider_route": route,
+            },
+            "context": {
+                "agent_id": "ugc_creative_agent",
+                "job_id": "job-test",
+                "media_request": media_request,
+                "creative_provider_route": route,
+            },
+        },
+    )
+
+    assert result.execution_payload["language"] == "Spanish"
+    assert result.execution_payload["media_request"] == media_request
+    assert result.execution_payload["voiceover"]["provider"] == "elevenlabs"
+    assert result.execution_payload["voiceover"]["model_id"] == "eleven_multilingual_v2"
+
+
 def test_execution_adapter_requires_live_flag_with_higgsfield_credentials(monkeypatch):
     monkeypatch.setenv("HIGGSFIELD_API_KEY", "test-key")
+    monkeypatch.setenv("HIGGSFIELD_EXECUTION_SURFACE", "api_key")
     monkeypatch.delenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED", raising=False)
 
     adapter = ExecutionAdapters(db=None)
@@ -304,6 +359,7 @@ def test_execution_adapter_requires_live_flag_with_higgsfield_credentials(monkey
 
 def test_execution_adapter_requires_credentials_and_live_flag_for_higgsfield_live(monkeypatch):
     monkeypatch.setenv("HIGGSFIELD_API_KEY", "test-key")
+    monkeypatch.setenv("HIGGSFIELD_EXECUTION_SURFACE", "api_key")
     monkeypatch.setenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED", "true")
 
     adapter = ExecutionAdapters(db=None)
@@ -334,8 +390,48 @@ def test_execution_adapter_requires_credentials_and_live_flag_for_higgsfield_liv
     assert result.execution_payload["provider_instance"].is_ready() is True
 
 
+def test_execution_adapter_uses_higgsfield_claude_mcp_without_api_key(monkeypatch):
+    monkeypatch.delenv("HIGGSFIELD_API_KEY", raising=False)
+    monkeypatch.setenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED", "true")
+    monkeypatch.setenv("HIGGSFIELD_EXECUTION_SURFACE", "claude_code_mcp")
+    monkeypatch.setattr(
+        "app.integrations.execution_adapters.HiggsfieldProvider.is_mcp_ready",
+        lambda self: True,
+    )
+
+    adapter = ExecutionAdapters(db=None)
+    route = resolve_creative_provider_route(
+        agent_id="ugc_media_agent",
+        media_type="video",
+        video_quality="720p",
+    )
+
+    result = adapter.execute(
+        adapter_name="ugc_video_provider_adapter",
+        payload={
+            "workflow": {
+                "tenant_id": "workspace-test",
+                "task": "Create a product clip",
+                "creative_provider_route": route,
+            },
+            "context": {
+                "agent_id": "ugc_media_agent",
+                "job_id": "job-test",
+                "creative_provider_route": route,
+            },
+        },
+    )
+
+    assert result.provider_ready is True
+    assert result.execution_mode == "higgsfield_mcp_live"
+    assert result.execution_payload["execution_surface"] == "claude_code_mcp"
+    assert result.execution_payload["provider_connected"] is True
+    assert result.execution_payload["selected_video_model_id"] == "kling3_0_turbo"
+
+
 def test_adapter_summary_drops_provider_instance_but_internal_result_keeps_it(monkeypatch):
     monkeypatch.setenv("HIGGSFIELD_API_KEY", "test-key")
+    monkeypatch.setenv("HIGGSFIELD_EXECUTION_SURFACE", "api_key")
     monkeypatch.setenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED", "true")
 
     adapter = ExecutionAdapters(db=None)
@@ -369,6 +465,7 @@ def test_adapter_summary_drops_provider_instance_but_internal_result_keeps_it(mo
 
 def test_execution_adapter_keeps_image_route_metadata_but_disables_live_video_for_image_only_routes(monkeypatch):
     monkeypatch.setenv("HIGGSFIELD_API_KEY", "test-key")
+    monkeypatch.setenv("HIGGSFIELD_EXECUTION_SURFACE", "api_key")
 
     adapter = ExecutionAdapters(db=None)
     route = resolve_creative_provider_route(
@@ -424,6 +521,105 @@ def test_worker_live_execution_guard_requires_selected_video_route():
             "image": {"provider": "nano_banana", "model": "Nano Banana Pro"},
         },
     ) is False
+
+
+def test_worker_builds_higgsfield_kwargs_from_create_media_request(monkeypatch):
+    monkeypatch.setenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
+    route = resolve_creative_provider_route(
+        agent_id="ugc_creative_agent",
+        media_type="video",
+        video_quality="4K",
+        package_tier="enterprise",
+    )
+    adapter_result = AdapterResult(
+        success=True,
+        adapter_name="ugc_video_provider_adapter",
+        execution_mode="higgsfield_live",
+        provider_ready=True,
+        message="prepared",
+        next_steps=[],
+        execution_payload={
+            "selected_video_provider": "higgsfield",
+            "selected_video_model": "Cinema Studio 4K",
+            "selected_video_model_id": "cinematic_studio_3_0",
+        },
+    )
+
+    kwargs = agent_worker._build_higgsfield_execution_kwargs(  # type: ignore[attr-defined]
+        {
+            "media_request": {
+                "platform": "Instagram Reels",
+                "aspect_ratio": "16:9 (landscape)",
+                "tone": "Luxury",
+                "language": "Spanish",
+                "video_quality": "4K",
+                "voiceover_script": "Descubre nuestra nueva coleccion premium.",
+            }
+        },
+        adapter_result,
+    )
+
+    assert kwargs["model"] == "cinematic_studio_3_0"
+    assert kwargs["platform"] == "instagram reels"
+    assert kwargs["aspect_ratio"] == "16:9"
+    assert kwargs["tone"] == "luxury"
+    assert kwargs["quality"] == "4K"
+    assert kwargs["language"] == "Spanish"
+    assert kwargs["voice_provider"] == "elevenlabs"
+    assert kwargs["voice_model_id"] == "eleven_multilingual_v2"
+    assert kwargs["voice_language"] == "Spanish"
+    assert kwargs["voiceover_script"] == "Descubre nuestra nueva coleccion premium."
+    assert kwargs["multilingual_voice_enabled"] is True
+
+
+def test_worker_media_preview_packet_preserves_provider_readiness_when_live_asset_missing():
+    route = resolve_creative_provider_route(
+        agent_id="product_image_agent",
+        media_type="image",
+        image_tier="pro",
+        package_tier="enterprise",
+    )
+    adapter_result = AdapterResult(
+        success=False,
+        adapter_name="ugc_video_provider_adapter",
+        execution_mode="provider_orchestrated_safe_stub",
+        provider_ready=False,
+        message="Product image generation adapter prepared through provider orchestrator.",
+        next_steps=["Connect image provider credentials."],
+        execution_payload={
+            "selected_video_provider": None,
+            "selected_video_model": None,
+            "selected_image_provider": "nano_banana",
+            "selected_image_model": "Nano Banana Pro",
+            "provider_connected": False,
+            "live_execution_enabled": False,
+        },
+    )
+
+    packet = _build_media_generation_output(
+        script="Create a premium product image.",
+        creative_provider_route=route,
+        adapter_result=adapter_result,
+        live_task_result=None,
+        requested_agent_id="product_image_agent",
+        fallback_preview_asset={
+            "asset_id": "asset-preview",
+            "preview_url": "data:image/svg+xml;base64,abc",
+            "asset_url": "data:image/svg+xml;base64,abc",
+            "provider": "local_visual_generation_runtime",
+            "fallback_used": True,
+        },
+    )
+
+    assert packet["type"] == "media_generation"
+    assert packet["requested_agent_id"] == "product_image_agent"
+    assert packet["real_media_asset_created"] is False
+    assert packet["preview_ready"] is True
+    assert packet["preview_url"].startswith("data:image/svg+xml")
+    assert packet["download_ready"] is True
+    assert packet["download_url"].startswith("data:image/svg+xml")
+    assert packet["provider_readiness"]["provider_ready"] is False
+    assert packet["provider_readiness"]["selected_image_model"] == "Nano Banana Pro"
 
 
 def test_lower_tier_social_agent_cannot_use_premium_higgsfield_models():

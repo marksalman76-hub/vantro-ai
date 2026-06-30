@@ -150,7 +150,13 @@ class ExecutionAdapters:
         image_route = creative_provider_route.get("image", {}) if isinstance(creative_provider_route, dict) else {}
         selected_video_provider = video_route.get("provider")
         selected_video_model = video_route.get("model")
+        selected_video_model_id = video_route.get("model_id") or selected_video_model
         workspace_id = str(workflow.get("tenant_id", ""))
+        media_request = workflow.get("media_request") if isinstance(workflow.get("media_request"), dict) else {}
+        if not media_request and isinstance(context.get("media_request"), dict):
+            media_request = context.get("media_request")
+        language = str(workflow.get("language") or media_request.get("language") or "English")
+        voiceover = workflow.get("voiceover") if isinstance(workflow.get("voiceover"), dict) else {}
 
         # Initialize Higgsfield provider
         higgsfield = HiggsfieldProvider()
@@ -158,43 +164,62 @@ class ExecutionAdapters:
         provider_connected = False
         provider_ready = False
         higgsfield_live_enabled = _truthy(os.getenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED"))
+        execution_surface = os.getenv("HIGGSFIELD_EXECUTION_SURFACE", "claude_code_mcp").strip().lower()
 
-        # Attempt workspace-specific credential lookup first
-        if workspace_id and self.db:
-            higgsfield_api_key = _get_higgsfield_api_key(self.db, workspace_id)
+        if selected_video_provider == "higgsfield" and execution_surface == "claude_code_mcp":
+            provider_connected = higgsfield.is_mcp_ready()
+            provider_ready = higgsfield_live_enabled and provider_connected
+        else:
+            # Attempt workspace-specific credential lookup first
+            if workspace_id and self.db:
+                higgsfield_api_key = _get_higgsfield_api_key(self.db, workspace_id)
 
-        # Fallback to global env var for backward compatibility (testing, legacy deployments)
-        if not higgsfield_api_key:
-            higgsfield_api_key = os.getenv("HIGGSFIELD_API_KEY", "")
+            # Fallback to global env var for backward compatibility (testing, legacy deployments)
+            if not higgsfield_api_key:
+                higgsfield_api_key = os.getenv("HIGGSFIELD_API_KEY", "")
 
-        if higgsfield_api_key and selected_video_provider == "higgsfield":
-            higgsfield.set_api_key(higgsfield_api_key)
-            provider_connected = True
-            provider_ready = higgsfield_live_enabled and higgsfield.is_ready()
+            if higgsfield_api_key and selected_video_provider == "higgsfield":
+                higgsfield.set_api_key(higgsfield_api_key)
+                provider_connected = True
+                provider_ready = higgsfield_live_enabled and higgsfield.is_ready()
+
+        execution_mode = (
+            "higgsfield_mcp_live"
+            if provider_ready and execution_surface == "claude_code_mcp"
+            else "higgsfield_live"
+            if provider_ready
+            else "provider_orchestrated_safe_stub"
+        )
 
         return AdapterResult(
             success=bool(provider_route["success"]) and provider_ready,
             adapter_name="ugc_video_provider_adapter",
-            execution_mode="higgsfield_live" if provider_ready else "provider_orchestrated_safe_stub",
+            execution_mode=execution_mode,
             provider_ready=provider_ready,
             message="UGC video generation routed to Higgsfield" if provider_ready else "UGC video provider adapter prepared through provider orchestrator.",
             next_steps=[] if provider_ready else [
-                "Connect Higgsfield API key via /api/integrations/connect",
-                "Set HIGGSFIELD_API_KEY environment variable (fallback only).",
-                "Set HIGGSFIELD_BASE_URL if using custom Higgsfield deployment.",
+                "Run `claude mcp login higgsfield` where the worker executes.",
+                "Set HIGGSFIELD_EXECUTION_SURFACE=claude_code_mcp.",
+                "Set HIGGSFIELD_LIVE_EXECUTION_ENABLED=true after MCP preflight succeeds.",
+                "For legacy HTTP mode only, configure HIGGSFIELD_API_KEY.",
                 "Run safe test generation before enabling client delivery.",
             ],
             execution_payload={
                 "provider_route": provider_route,
                 "provider_category": "ugc_video_generation",
                 "provider": selected_video_provider,
+                "execution_surface": execution_surface,
                 "provider_connected": provider_connected,
                 "live_execution_enabled": higgsfield_live_enabled,
                 "provider_instance": higgsfield,
                 "workspace_id": workspace_id,
+                "language": language,
+                "media_request": media_request,
+                "voiceover": voiceover,
                 "creative_provider_route": creative_provider_route,
                 "selected_video_provider": selected_video_provider,
                 "selected_video_model": selected_video_model,
+                "selected_video_model_id": selected_video_model_id,
                 "selected_image_provider": image_route.get("provider"),
                 "selected_image_model": image_route.get("model"),
             },

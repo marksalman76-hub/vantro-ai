@@ -46,6 +46,22 @@
         {
           "name": "SQS_JOBS_QUEUE_URL",
           "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/sqs-jobs-queue-url-Bxxbtu"
+        },
+        {
+          "name": "ANTHROPIC_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/anthropic-api-key"
+        },
+        {
+          "name": "OPENAI_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/openai-api-key"
+        },
+        {
+          "name": "HIGGSFIELD_MCP_CREDENTIALS_JSON",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/higgsfield-mcp-credentials-json-uvxgjA"
+        },
+        {
+          "name": "ELEVENLABS_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/elevenlabs-api-key-lc7jgp"
         }
       ],
       "environment": [
@@ -54,7 +70,12 @@
         { "name": "FRONTEND_URL",   "value": "https://www.vantro.ai" },
         { "name": "FROM_EMAIL",     "value": "noreply@vantro.ai" },
         { "name": "AWS_REGION",     "value": "us-east-1" },
-        { "name": "ADMIN_EMAIL",    "value": "mark.salman76@gmail.com" }
+        { "name": "ADMIN_EMAIL",    "value": "mark.salman76@gmail.com" },
+        { "name": "HIGGSFIELD_EXECUTION_SURFACE", "value": "claude_code_mcp" },
+        { "name": "HIGGSFIELD_LIVE_EXECUTION_ENABLED", "value": "true" },
+        { "name": "HIGGSFIELD_MCP_MAX_BUDGET_USD", "value": "5.00" },
+        { "name": "HIGGSFIELD_MCP_READINESS_BUDGET_USD", "value": "1.00" },
+        { "name": "ELEVENLABS_MODEL_ID", "value": "eleven_multilingual_v2" }
       ],
       "healthCheck": {
         "command": ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"],

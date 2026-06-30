@@ -210,8 +210,25 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      - name: Check whether agent worker service exists
+        id: service
+        run: |
+          STATUS=$(aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE_AGENT_WORKER" \
+            --region "$AWS_REGION" \
+            --query 'services[0].status' \
+            --output text 2>/dev/null || true)
+          if [ "$STATUS" = "ACTIVE" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Agent worker service not present; skipping agent worker deploy."
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Render agent worker task definition with new image
         id: render
+        if: steps.service.outputs.exists == 'true'
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: task-def-agent-worker.json
@@ -219,6 +236,7 @@ jobs:
           image: ${{ needs.build.outputs.agent-worker-image }}
 
       - name: Deploy agent worker to ECS
+        if: steps.service.outputs.exists == 'true'
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
           task-definition: ${{ steps.render.outputs.task-definition }}

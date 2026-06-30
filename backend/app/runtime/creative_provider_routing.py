@@ -31,18 +31,21 @@ VIDEO_MODELS_BY_QUALITY = {
     "720p": {
         "provider": "higgsfield",
         "model": "Kling 3.0 Turbo",
+        "model_id": "kling3_0_turbo",
         "quality": "720p",
         "capability": "video_generation",
     },
     "1080p": {
         "provider": "higgsfield",
         "model": "Kling 3.0",
+        "model_id": "kling3_0",
         "quality": "1080p",
         "capability": "video_generation",
     },
     "4k": {
         "provider": "higgsfield",
         "model": "Cinema Studio 4K",
+        "model_id": "cinematic_studio_3_0",
         "quality": "4K",
         "capability": "video_generation",
     },
@@ -289,6 +292,8 @@ def creative_provider_status() -> Dict[str, Any]:
                 "display_name": "Higgsfield",
                 "capabilities": ["video_generation"],
                 "models": ["Kling 3.0 Turbo", "Kling 3.0", "Cinema Studio 4K"],
+                "model_ids": ["kling3_0_turbo", "kling3_0", "cinematic_studio_3_0"],
+                "execution_surface": "claude_code_mcp",
                 "credential_values_exposed": False,
             },
             "nano_banana": {

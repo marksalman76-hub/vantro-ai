@@ -14,7 +14,12 @@
       "environment": [
         { "name": "AWS_REGION",              "value": "us-east-1" },
         { "name": "ENVIRONMENT",             "value": "production" },
-        { "name": "DISABLE_INLINE_WORKER",   "value": "1" }
+        { "name": "DISABLE_INLINE_WORKER",   "value": "1" },
+        { "name": "HIGGSFIELD_EXECUTION_SURFACE", "value": "claude_code_mcp" },
+        { "name": "HIGGSFIELD_LIVE_EXECUTION_ENABLED", "value": "true" },
+        { "name": "HIGGSFIELD_MCP_MAX_BUDGET_USD", "value": "5.00" },
+        { "name": "HIGGSFIELD_MCP_READINESS_BUDGET_USD", "value": "1.00" },
+        { "name": "ELEVENLABS_MODEL_ID",     "value": "eleven_multilingual_v2" }
       ],
       "secrets": [
         {
@@ -40,6 +45,14 @@
         {
           "name": "STRIPE_SECRET_KEY",
           "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/stripe-secret-key"
+        },
+        {
+          "name": "HIGGSFIELD_MCP_CREDENTIALS_JSON",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/higgsfield-mcp-credentials-json-uvxgjA"
+        },
+        {
+          "name": "ELEVENLABS_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/elevenlabs-api-key-lc7jgp"
         }
       ],
       "healthCheck": {
