@@ -51,6 +51,13 @@ def _higgsfield_config_home() -> Path:
     return Path.home() / ".config"
 
 
+def _claude_config_home() -> Path:
+    configured = os.getenv("HIGGSFIELD_CLAUDE_CONFIG_HOME")
+    if configured:
+        return Path(configured)
+    return Path.home() / ".claude"
+
+
 def _prepare_higgsfield_mcp_credentials() -> None:
     raw_credentials = os.getenv("HIGGSFIELD_MCP_CREDENTIALS_JSON", "").strip()
     if not raw_credentials:
@@ -62,6 +69,38 @@ def _prepare_higgsfield_mcp_credentials() -> None:
     credentials_dir.mkdir(parents=True, exist_ok=True)
     credentials_path = credentials_dir / "credentials.json"
     credentials_path.write_text(json.dumps(parsed), encoding="utf-8")
+    try:
+        credentials_path.chmod(0o600)
+    except OSError:
+        pass
+
+
+def _prepare_claude_mcp_oauth_credentials() -> None:
+    raw_credentials = os.getenv("HIGGSFIELD_CLAUDE_MCP_OAUTH_JSON", "").strip()
+    if not raw_credentials:
+        return
+    parsed = json.loads(raw_credentials)
+    if not isinstance(parsed, dict):
+        raise ValueError("HIGGSFIELD_CLAUDE_MCP_OAUTH_JSON must be a JSON object")
+
+    mcp_oauth = parsed.get("mcpOAuth") if isinstance(parsed.get("mcpOAuth"), dict) else parsed
+    if not isinstance(mcp_oauth, dict) or not any("higgsfield" in str(key).lower() for key in mcp_oauth):
+        raise ValueError("HIGGSFIELD_CLAUDE_MCP_OAUTH_JSON must contain a Higgsfield mcpOAuth entry")
+
+    credentials_dir = _claude_config_home()
+    credentials_dir.mkdir(parents=True, exist_ok=True)
+    credentials_path = credentials_dir / ".credentials.json"
+    existing: dict = {}
+    if credentials_path.exists():
+        try:
+            loaded = json.loads(credentials_path.read_text(encoding="utf-8"))
+            existing = loaded if isinstance(loaded, dict) else {}
+        except (OSError, ValueError):
+            existing = {}
+    existing_mcp = existing.get("mcpOAuth") if isinstance(existing.get("mcpOAuth"), dict) else {}
+    existing_mcp.update(mcp_oauth)
+    existing["mcpOAuth"] = existing_mcp
+    credentials_path.write_text(json.dumps(existing), encoding="utf-8")
     try:
         credentials_path.chmod(0o600)
     except OSError:
@@ -96,6 +135,7 @@ async def _run_claude_mcp_prompt(
     allowed_tools: str = "mcp__higgsfield__generate_video",
 ) -> str:
     _prepare_higgsfield_mcp_credentials()
+    _prepare_claude_mcp_oauth_credentials()
     process = await asyncio.create_subprocess_exec(
         *_claude_command_base(),
         "-p",
@@ -272,6 +312,7 @@ class HiggsfieldProvider(BaseProvider):
             return False
         try:
             _prepare_higgsfield_mcp_credentials()
+            _prepare_claude_mcp_oauth_credentials()
 
             result = subprocess.run(
                 [

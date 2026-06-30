@@ -253,6 +253,33 @@ def test_higgsfield_mcp_readiness_uses_secret_credentials(tmp_path, monkeypatch)
     assert "--strict-mcp-config" in created["args"]
 
 
+def test_higgsfield_mcp_readiness_writes_claude_mcp_oauth_credentials(tmp_path, monkeypatch):
+    created = {}
+
+    def fake_run(*args, **kwargs):
+        created["args"] = args[0]
+        class Result:
+            returncode = 0
+            stdout = "[]"
+            stderr = ""
+        return Result()
+
+    monkeypatch.setenv(
+        "HIGGSFIELD_CLAUDE_MCP_OAUTH_JSON",
+        '{"mcpOAuth":{"higgsfield|test":{"accessToken":"mcp-access","refreshToken":"mcp-refresh"}}}',
+    )
+    monkeypatch.setenv("HIGGSFIELD_CLAUDE_CONFIG_HOME", str(tmp_path / ".claude"))
+    monkeypatch.setattr(higgsfield_module.shutil, "which", lambda name: "claude")
+    monkeypatch.setattr(higgsfield_module.subprocess, "run", fake_run)
+    higgsfield_module._MCP_READY_CACHE.update({"checked_at": 0.0, "ready": False})
+
+    assert HiggsfieldProvider().is_mcp_ready() is True
+    credentials_path = tmp_path / ".claude" / ".credentials.json"
+    credentials = json.loads(credentials_path.read_text(encoding="utf-8"))
+    assert credentials["mcpOAuth"]["higgsfield|test"]["accessToken"] == "mcp-access"
+    assert "--mcp-config" in created["args"]
+
+
 def test_higgsfield_claude_command_uses_oauth_without_bare(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setenv("CLAUDE_CODE_OAUTH_TOKEN", "oauth-token")

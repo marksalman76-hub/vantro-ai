@@ -49,6 +49,10 @@
         {
           "name": "CLAUDE_CODE_OAUTH_TOKEN",
           "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/claude-code-oauth-token-yXGWVN"
+        },
+        {
+          "name": "HIGGSFIELD_CLAUDE_MCP_OAUTH_JSON",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/higgsfield-claude-mcp-oauth-json-wwp4lp"
         }
       ],
       "healthCheck": {
