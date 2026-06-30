@@ -1,0 +1,105 @@
+name: Ops Health
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 16 * * 1"
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ROLE_TO_ASSUME: arn:aws:iam::685570573617:role/GitHubActionsVantroDeployRole
+  VERCEL_SCOPE: marksalman76-5799s-projects
+  VERCEL_PROJECT: vantro-ai
+
+jobs:
+  aws-and-docker:
+    name: AWS OIDC and Docker surfaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials through GitHub OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity --region "$AWS_REGION"
+
+      - name: Verify production ECS services are visible
+        run: |
+          aws ecs describe-services \
+            --cluster trance-formation-prod \
+            --services trance-formation-api-service vantro-worker vantro-agent-worker \
+            --region "$AWS_REGION" \
+            --query 'services[].{name:serviceName,status:status,desired:desiredCount,running:runningCount,taskDef:taskDefinition}' \
+            --output table
+
+      - name: Verify ECR repositories exist
+        run: |
+          aws ecr describe-repositories \
+            --repository-names trance-formation/api trance-formation/worker trance-formation/agent-worker \
+            --region "$AWS_REGION" \
+            --query 'repositories[].repositoryUri' \
+            --output table
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image without push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile
+          push: false
+          tags: vantro-api:ops-health
+
+      - name: Build worker image without push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile.worker
+          push: false
+          tags: vantro-worker:ops-health
+
+      - name: Build agent worker image without push
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          file: backend/Dockerfile.agent-worker
+          push: false
+          tags: vantro-agent-worker:ops-health
+
+  vercel:
+    name: Vercel CLI auth check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Skip when VERCEL_TOKEN is not configured
+        if: env.VERCEL_TOKEN == ''
+        run: |
+          echo "::warning::VERCEL_TOKEN is not configured. Vercel Git integration can still deploy, but CLI automation cannot be checked from GitHub Actions."
+
+      - name: Install Vercel CLI
+        if: env.VERCEL_TOKEN != ''
+        run: npm install -g vercel@54.18.4
+
+      - name: Verify Vercel CLI account
+        if: env.VERCEL_TOKEN != ''
+        run: vercel whoami --scope "$VERCEL_SCOPE"
+
+      - name: Verify Vercel project deployments are visible
+        if: env.VERCEL_TOKEN != ''
+        run: vercel ls "$VERCEL_PROJECT" --scope "$VERCEL_SCOPE" --format json
