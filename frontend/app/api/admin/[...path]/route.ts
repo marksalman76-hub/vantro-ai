@@ -40,9 +40,10 @@ async function handler(
     return NextResponse.json({ detail: "Not Found" }, { status: 404 });
   }
 
-  // Prefer httpOnly cookie; fall back to Authorization header for backward compat
+  // Prefer explicit Authorization header (admin token); fall back to httpOnly cookie
+  const authHeader = request.headers.get("authorization");
   const cookieToken = request.cookies.get("access_token")?.value;
-  const token = cookieToken ? `Bearer ${cookieToken}` : (request.headers.get("authorization") || "");
+  const token = authHeader || (cookieToken ? `Bearer ${cookieToken}` : "");
 
   let body: ArrayBuffer | undefined;
   if (request.method !== "GET" && request.method !== "HEAD") {

@@ -11,7 +11,7 @@ export default function AdminAuthGuard({ children, sidebar }: { children: React.
     const token = localStorage.getItem('admin_token');
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
 
-    fetch('/api/admin/clients', { headers, credentials: 'include' })
+    fetch('/api/admin/stats', { headers, credentials: 'include' })
       .then((res) => {
         if (res.ok) {
           setStatus('authed');

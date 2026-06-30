@@ -16,6 +16,7 @@ export interface HistoryJob {
 
 interface RecentJobsTableProps {
   jobs: HistoryJob[];
+  agentsHref?: string;
 }
 
 function formatCreatedTime(dateString: string | null): string {
@@ -33,7 +34,7 @@ function formatCreatedTime(dateString: string | null): string {
   }
 }
 
-export default function RecentJobsTable({ jobs }: RecentJobsTableProps) {
+export default function RecentJobsTable({ jobs, agentsHref = '/dashboard/agents' }: RecentJobsTableProps) {
   const displayJobs = jobs.slice(0, 10);
   const hasJobs = displayJobs.length > 0;
 
@@ -99,7 +100,7 @@ export default function RecentJobsTable({ jobs }: RecentJobsTableProps) {
         >
           <p style={{ margin: '0 0 1rem 0' }}>No jobs yet</p>
           <Link
-            href="/dashboard/agents"
+            href={agentsHref}
             style={{
               color: 'oklch(0.78 0.13 250)',
               textDecoration: 'none',

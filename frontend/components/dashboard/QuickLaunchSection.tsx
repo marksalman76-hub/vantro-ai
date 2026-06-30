@@ -42,10 +42,13 @@ const QUICK_LAUNCH_CARDS = [
   },
 ];
 
-export default function QuickLaunchSection() {
+export default function QuickLaunchSection({ agentsHref = '/dashboard/agents' }: { agentsHref?: string }) {
+  const cards = QUICK_LAUNCH_CARDS.map(c =>
+    c.href === '/dashboard/agents' ? { ...c, href: agentsHref } : c
+  );
   return (
     <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-      {QUICK_LAUNCH_CARDS.map((card) => (
+      {cards.map((card) => (
         <ActionCard
           key={card.href}
           href={card.href}

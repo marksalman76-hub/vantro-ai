@@ -173,6 +173,7 @@ export default function AdminDashboard() {
         pendingApprovals={pendingApprovals}
         failedJobs={failedJobs}
         onSignOut={onSignOut}
+        agentsHref="/admin/agents"
       />
 
       <div className="p-8 max-w-5xl" style={{ paddingTop: '6rem' }}>
@@ -193,9 +194,9 @@ export default function AdminDashboard() {
           />
         </div>
 
-        <QuickLaunchSection />
+        <QuickLaunchSection agentsHref="/admin/agents" />
 
-        <RecentJobsTable jobs={jobs} />
+        <RecentJobsTable jobs={jobs} agentsHref="/admin/agents" />
       </div>
 
       <ThemeToggle />

@@ -16,6 +16,7 @@ interface DashboardHeaderProps {
   pendingApprovals: number;
   failedJobs: number;
   onSignOut: () => void;
+  agentsHref?: string;
 }
 
 export default function DashboardHeader({
@@ -23,6 +24,7 @@ export default function DashboardHeader({
   pendingApprovals,
   failedJobs,
   onSignOut,
+  agentsHref = '/dashboard/agents',
 }: DashboardHeaderProps): React.ReactNode {
   const [showAlerts] = useState(false);
 
@@ -76,7 +78,7 @@ export default function DashboardHeader({
       </div>
 
       {/* Center: Run Agent CTA */}
-      <Link href="/dashboard/agents">
+      <Link href={agentsHref}>
         <button
           style={{
             background: 'rgb(37, 99, 235)',
