@@ -7,5 +7,15 @@ stripe
 httpx
 requests
 psycopg[binary]
+psycopg2-binary
 cryptography
 redis>=5.0.0
+sqlalchemy
+slowapi
+passlib
+bcrypt
+python-jose
+PyJWT
+boto3
+python-multipart
+pytest

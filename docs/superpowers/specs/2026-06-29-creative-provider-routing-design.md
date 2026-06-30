@@ -94,13 +94,36 @@ Credential values must never be logged, returned, or stored in generated artifac
 
 Add focused tests proving:
 
-- every listed creative-capable agent resolves to Higgsfield video models
-- every listed creative-capable agent resolves to Nano Banana image models
+- every video-capable creative agent resolves to the Higgsfield video models allowed for that agent and package tier
+- every image-capable creative agent resolves to the Nano Banana image models allowed for that agent and package tier
 - `720p`, `1080p`, and `4K` select the exact requested Higgsfield models
 - standard/production image requests select `Nano Banana 2`
 - premium/pro image requests select `Nano Banana Pro`
 - alias IDs resolve consistently to canonical creative routing
 - missing quality values use the documented defaults
+- restricted agents and restricted packages return clear entitlement failures
+
+## Agent And Package Entitlements
+
+Creative provider access is intentionally tiered because Vantro sells agents both as a team and as separate purchasable agents. The routing layer must intersect:
+
+- the selected agent's model policy
+- the workspace package tier
+- owner/admin package override, when applicable
+- provider readiness
+
+Lower-tier creative agents must not silently access premium generation software. For example, `social_media_content_agent` and `creative_rotation_agent` are limited to fast lower-cost generation (`Kling 3.0 Turbo` and `Nano Banana 2`), while `ugc_creative_agent` can access premium models such as `Cinema Studio 4K` and `Nano Banana Pro` when the package tier allows it.
+
+The current policy source of truth is:
+
+`backend/app/runtime/creative_agent_capability_policy.py`
+
+Expected entitlement failure reasons include:
+
+- `media_type_not_allowed_for_agent`
+- `media_type_not_allowed_for_package`
+- `model_not_allowed_for_agent`
+- `model_not_allowed_for_package`
 
 ## Non-Goals
 
@@ -113,7 +136,7 @@ This design does not remove existing governance, approval, credit, or package ch
 ## Acceptance Criteria
 
 - There is one source of truth for creative provider routing.
-- Every listed creative agent and alias can resolve video and image provider choices.
+- Every listed creative agent and alias can resolve only the video and image provider choices it is entitled to use.
 - Admin create-media jobs include the selected provider/model in backend context.
 - Provider status surfaces the new Higgsfield and Nano Banana capabilities without exposing secrets.
-- Tests prove the quality-to-model mapping and creative-agent coverage.
+- Tests prove the quality-to-model mapping, creative-agent coverage, and entitlement failures.

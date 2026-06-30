@@ -9,6 +9,7 @@ data/learning/
 data/orchestration/
 *.pyc
 __pycache__/
+.venv/
 .pytest_cache/
 frontend/.next/
 frontend/out/

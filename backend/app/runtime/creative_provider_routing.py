@@ -3,6 +3,11 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
+from app.runtime.creative_agent_capability_policy import (
+    creative_capability_policy_status,
+    effective_allowed_models,
+)
+
 
 CREATIVE_AGENT_IDS: set[str] = {
     "ugc_media_agent",
@@ -106,6 +111,20 @@ def _media_types(media_type: str) -> set[str]:
     raw = str(media_type or "both").strip().lower()
     if raw in {"video", "image"}:
         return {raw}
+    if raw in {
+        "product_demo",
+        "service_promo",
+        "social_ad",
+        "brand_story",
+        "testimonial",
+        "explainer",
+        "campaign",
+    }:
+        return {"video"}
+    if raw in {"image_graphic", "graphic", "static_image", "banner"}:
+        return {"image"}
+    if raw in {"script", "script_only"}:
+        return {"video"}
     if raw in {"both", "media", "creative", "video_image", "image_video"}:
         return {"video", "image"}
     return set()
@@ -127,6 +146,8 @@ def resolve_creative_provider_route(
     media_type: str = "both",
     video_quality: str = "",
     image_tier: str = "",
+    package_tier: str = "enterprise",
+    admin_override: bool = False,
     request_context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     canonical_agent_id = normalize_creative_agent_id(agent_id)
@@ -153,11 +174,43 @@ def resolve_creative_provider_route(
             "credential_values_exposed": False,
         }
 
+    entitlement = effective_allowed_models(
+        canonical_agent_id,
+        package_tier,
+        admin_override=admin_override,
+    )
+    allowed_models = entitlement["effective"]
+    for selected_media_type in sorted(selected_media_types):
+        if not entitlement["agent_allowed"].get(selected_media_type):
+            return {
+                "success": False,
+                "agent_id": agent_id,
+                "canonical_agent_id": canonical_agent_id,
+                "reason": "media_type_not_allowed_for_agent",
+                "blocked_media_type": selected_media_type,
+                "allowed_models": allowed_models,
+                "entitlement": entitlement,
+                "credential_values_exposed": False,
+            }
+        if not allowed_models.get(selected_media_type):
+            return {
+                "success": False,
+                "agent_id": agent_id,
+                "canonical_agent_id": canonical_agent_id,
+                "reason": "media_type_not_allowed_for_package",
+                "blocked_media_type": selected_media_type,
+                "allowed_models": allowed_models,
+                "entitlement": entitlement,
+                "credential_values_exposed": False,
+            }
+
     route: Dict[str, Any] = {
         "success": True,
         "agent_id": agent_id,
         "canonical_agent_id": canonical_agent_id,
         "media_types": sorted(selected_media_types),
+        "allowed_models": allowed_models,
+        "entitlement": entitlement,
         "owner_governed_execution_required": True,
         "credential_values_exposed": False,
         "created_at": _now_iso(),
@@ -165,11 +218,63 @@ def resolve_creative_provider_route(
 
     if "video" in selected_media_types:
         quality = normalize_video_quality(video_quality or _context_value(request_context, "video_quality", "quality"))
-        route["video"] = dict(VIDEO_MODELS_BY_QUALITY[quality])
+        selected_video = dict(VIDEO_MODELS_BY_QUALITY[quality])
+        selected_video_model = selected_video["model"]
+        if selected_video_model not in entitlement["agent_allowed"]["video"]:
+            return {
+                "success": False,
+                "agent_id": agent_id,
+                "canonical_agent_id": canonical_agent_id,
+                "reason": "model_not_allowed_for_agent",
+                "blocked_media_type": "video",
+                "blocked_model": selected_video_model,
+                "allowed_models": allowed_models,
+                "entitlement": entitlement,
+                "credential_values_exposed": False,
+            }
+        if selected_video_model not in entitlement["package_allowed"]["video"]:
+            return {
+                "success": False,
+                "agent_id": agent_id,
+                "canonical_agent_id": canonical_agent_id,
+                "reason": "model_not_allowed_for_package",
+                "blocked_media_type": "video",
+                "blocked_model": selected_video_model,
+                "allowed_models": allowed_models,
+                "entitlement": entitlement,
+                "credential_values_exposed": False,
+            }
+        route["video"] = selected_video
 
     if "image" in selected_media_types:
         tier = normalize_image_tier(image_tier or _context_value(request_context, "image_tier", "image_quality", "quality"))
-        route["image"] = dict(IMAGE_MODELS_BY_TIER[tier])
+        selected_image = dict(IMAGE_MODELS_BY_TIER[tier])
+        selected_image_model = selected_image["model"]
+        if selected_image_model not in entitlement["agent_allowed"]["image"]:
+            return {
+                "success": False,
+                "agent_id": agent_id,
+                "canonical_agent_id": canonical_agent_id,
+                "reason": "model_not_allowed_for_agent",
+                "blocked_media_type": "image",
+                "blocked_model": selected_image_model,
+                "allowed_models": allowed_models,
+                "entitlement": entitlement,
+                "credential_values_exposed": False,
+            }
+        if selected_image_model not in entitlement["package_allowed"]["image"]:
+            return {
+                "success": False,
+                "agent_id": agent_id,
+                "canonical_agent_id": canonical_agent_id,
+                "reason": "model_not_allowed_for_package",
+                "blocked_media_type": "image",
+                "blocked_model": selected_image_model,
+                "allowed_models": allowed_models,
+                "entitlement": entitlement,
+                "credential_values_exposed": False,
+            }
+        route["image"] = selected_image
 
     return route
 
@@ -193,6 +298,7 @@ def creative_provider_status() -> Dict[str, Any]:
                 "credential_values_exposed": False,
             },
         },
+        "capability_policy": creative_capability_policy_status(),
         "credential_values_exposed": False,
         "created_at": _now_iso(),
     }

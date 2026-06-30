@@ -327,6 +327,28 @@ async def run_agent(
     _ctx = dict(context)
     if output_language:
         _ctx["output_language"] = output_language
+    try:
+        from app.runtime.creative_provider_routing import (
+            is_creative_agent,
+            resolve_creative_provider_route,
+        )
+        if is_creative_agent(norm_id):
+            media_request = _ctx.get("media_request") if isinstance(_ctx.get("media_request"), dict) else {}
+            route_media_type = media_request.get("media_type") or media_request.get("type") or _ctx.get("media_type") or "both"
+            creative_provider_route = resolve_creative_provider_route(
+                agent_id=norm_id,
+                media_type=route_media_type,
+                video_quality=media_request.get("video_quality") or _ctx.get("video_quality") or "",
+                image_tier=media_request.get("image_tier") or _ctx.get("image_tier") or "",
+                package_tier=tier,
+                admin_override=is_admin,
+                request_context=_ctx,
+            )
+            if not creative_provider_route.get("success"):
+                raise HTTPException(status_code=400, detail=creative_provider_route)
+            _ctx["creative_provider_route"] = creative_provider_route
+    except HTTPException:
+        raise
     now = datetime.utcnow()
     job = AgentJob(
         id=str(uuid.uuid4()),

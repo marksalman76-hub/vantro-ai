@@ -28,9 +28,23 @@ CREATIVE_AGENT_CASES = [
     "ads_optimisation_agent",
 ]
 
+VIDEO_CAPABLE_AGENT_CASES = [
+    "ugc_media_agent",
+    "ugc_creative_agent",
+    "ad_creative_agent",
+    "creative_rotation_agent",
+    "social_media_content_agent",
+]
 
-@pytest.mark.parametrize("agent_id", CREATIVE_AGENT_CASES)
-def test_every_creative_agent_resolves_video_models(agent_id):
+PRO_IMAGE_CAPABLE_AGENT_CASES = [
+    "ugc_creative_agent",
+    "product_image_agent",
+    "ad_creative_agent",
+]
+
+
+@pytest.mark.parametrize("agent_id", VIDEO_CAPABLE_AGENT_CASES)
+def test_video_capable_creative_agents_resolve_lower_tier_video_model(agent_id):
     route = resolve_creative_provider_route(
         agent_id=agent_id,
         media_type="video",
@@ -46,8 +60,8 @@ def test_every_creative_agent_resolves_video_models(agent_id):
     assert route["credential_values_exposed"] is False
 
 
-@pytest.mark.parametrize("agent_id", CREATIVE_AGENT_CASES)
-def test_every_creative_agent_resolves_image_models(agent_id):
+@pytest.mark.parametrize("agent_id", PRO_IMAGE_CAPABLE_AGENT_CASES)
+def test_pro_image_capable_creative_agents_resolve_premium_image_model(agent_id):
     route = resolve_creative_provider_route(
         agent_id=agent_id,
         media_type="image",
@@ -73,7 +87,7 @@ def test_every_creative_agent_resolves_image_models(agent_id):
 )
 def test_video_quality_selects_higgsfield_model(quality, expected_model):
     route = resolve_creative_provider_route(
-        agent_id="ugc_media_agent",
+        agent_id="ugc_creative_agent",
         media_type="video",
         video_quality=quality,
     )
@@ -179,12 +193,19 @@ def test_provider_stack_exposes_higgsfield_and_nano_banana():
     assert status["credential_values_exposed"] is False
 
 
-@pytest.mark.parametrize("agent_id", CREATIVE_AGENT_CASES)
-def test_provider_stack_gives_creative_agents_higgsfield_and_nano_banana(agent_id):
+@pytest.mark.parametrize("agent_id", VIDEO_CAPABLE_AGENT_CASES)
+def test_provider_stack_gives_video_capable_agents_higgsfield(agent_id):
     providers = providers_for_agent(agent_id)
 
     assert "higgsfield" in providers
-    assert "nano_banana" in providers
+
+
+@pytest.mark.parametrize("agent_id", CREATIVE_AGENT_CASES)
+def test_provider_stack_gives_image_capable_agents_nano_banana(agent_id):
+    providers = providers_for_agent(agent_id)
+
+    if agent_id != "ugc_media_agent":
+        assert "nano_banana" in providers
 
 
 @pytest.mark.parametrize(
@@ -197,7 +218,6 @@ def test_provider_stack_gives_creative_agents_higgsfield_and_nano_banana(agent_i
 def test_provider_stack_normalizes_creative_aliases(alias):
     providers = providers_for_agent(alias)
 
-    assert "higgsfield" in providers
     assert "nano_banana" in providers
 
 
@@ -221,7 +241,7 @@ def test_provider_config_status_keeps_credentials_hidden():
 def test_execution_adapter_preserves_selected_creative_models_without_credentials():
     adapter = ExecutionAdapters(db=None)
     route = resolve_creative_provider_route(
-        agent_id="ugc_media_agent",
+        agent_id="ugc_creative_agent",
         media_type="both",
         video_quality="4K",
         image_tier="pro",
@@ -256,7 +276,7 @@ def test_execution_adapter_requires_live_flag_with_higgsfield_credentials(monkey
 
     adapter = ExecutionAdapters(db=None)
     route = resolve_creative_provider_route(
-        agent_id="ugc_media_agent",
+        agent_id="ugc_creative_agent",
         media_type="video",
         video_quality="4K",
     )
@@ -288,7 +308,7 @@ def test_execution_adapter_requires_credentials_and_live_flag_for_higgsfield_liv
 
     adapter = ExecutionAdapters(db=None)
     route = resolve_creative_provider_route(
-        agent_id="ugc_media_agent",
+        agent_id="ugc_creative_agent",
         media_type="video",
         video_quality="4K",
     )
@@ -404,3 +424,80 @@ def test_worker_live_execution_guard_requires_selected_video_route():
             "image": {"provider": "nano_banana", "model": "Nano Banana Pro"},
         },
     ) is False
+
+
+def test_lower_tier_social_agent_cannot_use_premium_higgsfield_models():
+    route = resolve_creative_provider_route(
+        agent_id="social_media_content_agent",
+        media_type="video",
+        video_quality="4K",
+        package_tier="enterprise",
+    )
+
+    assert route["success"] is False
+    assert route["reason"] == "model_not_allowed_for_agent"
+    assert route["blocked_model"] == "Cinema Studio 4K"
+    assert route["allowed_models"]["video"] == ["Kling 3.0 Turbo"]
+    assert route["credential_values_exposed"] is False
+
+
+def test_starter_package_caps_premium_agent_to_lower_higgsfield_model():
+    route = resolve_creative_provider_route(
+        agent_id="ugc_creative_agent",
+        media_type="video",
+        video_quality="1080p",
+        package_tier="starter",
+    )
+
+    assert route["success"] is False
+    assert route["reason"] == "model_not_allowed_for_package"
+    assert route["blocked_model"] == "Kling 3.0"
+    assert route["allowed_models"]["video"] == ["Kling 3.0 Turbo"]
+    assert route["credential_values_exposed"] is False
+
+
+def test_premium_creative_agent_on_business_can_use_4k_video_and_pro_images():
+    route = resolve_creative_provider_route(
+        agent_id="ugc_creative_agent",
+        media_type="both",
+        video_quality="4K",
+        image_tier="pro",
+        package_tier="business",
+    )
+
+    assert route["success"] is True
+    assert route["video"]["model"] == "Cinema Studio 4K"
+    assert route["image"]["model"] == "Nano Banana Pro"
+    assert route["entitlement"]["package_tier"] == "business"
+
+
+def test_product_image_agent_cannot_request_higgsfield_video():
+    route = resolve_creative_provider_route(
+        agent_id="product_image_agent",
+        media_type="video",
+        video_quality="720p",
+        package_tier="enterprise",
+    )
+
+    assert route["success"] is False
+    assert route["reason"] == "media_type_not_allowed_for_agent"
+    assert route["blocked_media_type"] == "video"
+    assert route["allowed_models"]["image"] == ["Nano Banana 2", "Nano Banana Pro"]
+
+
+def test_admin_create_media_form_type_social_ad_maps_to_video_route():
+    route = resolve_creative_provider_route(
+        agent_id="ugc_media_agent",
+        request_context={
+            "media_request": {
+                "type": "social_ad",
+                "video_quality": "720p",
+            }
+        },
+        package_tier="enterprise",
+    )
+
+    assert route["success"] is True
+    assert route["media_types"] == ["video"]
+    assert route["video"]["provider"] == "higgsfield"
+    assert route["video"]["model"] == "Kling 3.0 Turbo"

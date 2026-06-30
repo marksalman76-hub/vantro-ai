@@ -897,13 +897,18 @@ async def admin_run_agent(
     if is_creative_agent(norm_id):
         media_request = run_context.get("media_request") if isinstance(run_context.get("media_request"), dict) else {}
         route_media_type = media_request.get("media_type") or media_request.get("type") or run_context.get("media_type") or "both"
-        run_context["creative_provider_route"] = resolve_creative_provider_route(
+        creative_provider_route = resolve_creative_provider_route(
             agent_id=norm_id,
             media_type=route_media_type,
             video_quality=media_request.get("video_quality") or run_context.get("video_quality") or "",
             image_tier=media_request.get("image_tier") or run_context.get("image_tier") or "",
+            package_tier="enterprise",
+            admin_override=True,
             request_context=run_context,
         )
+        if not creative_provider_route.get("success"):
+            raise HTTPException(status_code=400, detail=creative_provider_route)
+        run_context["creative_provider_route"] = creative_provider_route
 
     meta = AGENT_CATALOGUE[norm_id]
     hitl = meta["hitl_default"]

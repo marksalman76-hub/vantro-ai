@@ -6,9 +6,21 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from app.runtime.creative_provider_routing import (
-    CREATIVE_AGENT_IDS,
     creative_provider_status,
     normalize_creative_agent_id,
+)
+from app.runtime.creative_agent_capability_policy import AGENT_CREATIVE_MODEL_ACCESS
+
+
+VIDEO_CREATIVE_AGENT_IDS = sorted(
+    agent_id
+    for agent_id, policy in AGENT_CREATIVE_MODEL_ACCESS.items()
+    if policy.get("video")
+)
+IMAGE_CREATIVE_AGENT_IDS = sorted(
+    agent_id
+    for agent_id, policy in AGENT_CREATIVE_MODEL_ACCESS.items()
+    if policy.get("image")
 )
 
 
@@ -59,14 +71,14 @@ PROVIDER_STACK = {
     "higgsfield": {
         "category": ["video", "text_to_video", "image_to_video", "creative_motion"],
         "env_keys": ["HIGGSFIELD_API_KEY"],
-        "agents": sorted(CREATIVE_AGENT_IDS),
+        "agents": VIDEO_CREATIVE_AGENT_IDS,
         "live_call_enabled_env": "HIGGSFIELD_LIVE_EXECUTION_ENABLED",
         "models": ["Kling 3.0 Turbo", "Kling 3.0", "Cinema Studio 4K"],
     },
     "nano_banana": {
         "category": ["image", "product_image", "ad_creative_image"],
         "env_keys": ["NANO_BANANA_API_KEY"],
-        "agents": sorted(CREATIVE_AGENT_IDS),
+        "agents": IMAGE_CREATIVE_AGENT_IDS,
         "live_call_enabled_env": "NANO_BANANA_LIVE_EXECUTION_ENABLED",
         "models": ["Nano Banana 2", "Nano Banana Pro"],
     },
