@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface AgentJob {
   id: string;
@@ -29,6 +29,9 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function AdminAgentJobsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const highlight = searchParams.get('highlight');
+  const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const [jobs, setJobs] = useState<AgentJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -46,6 +49,12 @@ export default function AdminAgentJobsPage() {
   };
 
   useEffect(load, [router]);
+
+  useEffect(() => {
+    if (!loading && highlight && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [loading, highlight]);
 
   const approve = async (jobId: string) => {
     const token = localStorage.getItem('admin_token');
@@ -145,23 +154,36 @@ export default function AdminAgentJobsPage() {
           </thead>
           <tbody>
             {jobs.map((j) => (
-              <tr key={j.id} className="border-b border-gray-800/50 hover:bg-gray-800/20 transition-colors">
-                <td className="px-4 py-3">
-                  <p className="text-white text-xs font-medium">{j.agent_name}</p>
-                  <p className="text-gray-600 text-[10px] font-mono">{j.agent_id}</p>
-                </td>
-                <td className="px-4 py-3">
-                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLOR[j.status] || 'bg-gray-700 text-gray-400'}`}>
-                    {j.status}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-xs text-gray-400">{j.hitl_level}</td>
-                <td className="px-4 py-3 text-xs text-gray-400">{j.client_email}</td>
-                <td className="px-4 py-3 text-xs text-gray-500">
-                  {j.created_at ? new Date(j.created_at).toLocaleString() : '—'}
-                </td>
-                <td className="px-4 py-3 text-xs text-gray-400 text-right">{j.credits_used}</td>
-              </tr>
+              <>
+                <tr
+                  key={j.id}
+                  ref={j.id === highlight ? highlightRef : null}
+                  className={`border-b border-gray-800/50 hover:bg-gray-800/20 transition-colors ${j.id === highlight ? 'bg-violet-500/10 ring-1 ring-inset ring-violet-500/30' : ''}`}
+                >
+                  <td className="px-4 py-3">
+                    <p className="text-white text-xs font-medium">{j.agent_name}</p>
+                    <p className="text-gray-600 text-[10px] font-mono">{j.agent_id}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${STATUS_COLOR[j.status] || 'bg-gray-700 text-gray-400'}`}>
+                      {j.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-400">{j.hitl_level}</td>
+                  <td className="px-4 py-3 text-xs text-gray-400">{j.client_email}</td>
+                  <td className="px-4 py-3 text-xs text-gray-500">
+                    {j.created_at ? new Date(j.created_at).toLocaleString() : '—'}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-gray-400 text-right">{j.credits_used}</td>
+                </tr>
+                {j.status === 'failed' && j.error_message && (
+                  <tr key={j.id + '_err'} className="bg-red-950/20 border-b border-gray-800/50">
+                    <td colSpan={6} className="px-4 py-2">
+                      <p className="text-red-400 text-[10px] font-mono break-all">Error: {j.error_message}</p>
+                    </td>
+                  </tr>
+                )}
+              </>
             ))}
             {jobs.length === 0 && (
               <tr>

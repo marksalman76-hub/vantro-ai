@@ -962,7 +962,7 @@ async def admin_run_agent(
         workspace_id=ws.id,
         agent_id=norm_id,
         agent_name=meta["name"],
-        status="pending",
+        status="pending_approval" if hitl == "HITL-3" else "pending",
         hitl_level=hitl,
         input_data=_json.dumps({"prompt": body.prompt[:10_000], "context": run_context}),
         credits_used=0,

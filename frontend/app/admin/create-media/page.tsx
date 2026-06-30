@@ -328,7 +328,7 @@ export default function AdminCreateMediaPage() {
       const d = await res.json();
       console.log('Agent response:', { status: res.status, ok: res.ok, data: d });
       if (res.ok && d.job_id) {
-        router.push('/admin/assets');
+        router.push(`/admin/agent-jobs?highlight=${d.job_id}`);
       } else {
         console.error('Agent submission failed:', { status: res.status, data: d });
         if (res.status === 401) {
