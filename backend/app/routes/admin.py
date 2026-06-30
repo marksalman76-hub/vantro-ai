@@ -897,8 +897,9 @@ async def admin_run_agent(
     if is_creative_agent(norm_id):
         media_request = run_context.get("media_request") if isinstance(run_context.get("media_request"), dict) else {}
         route_media_type = media_request.get("media_type") or media_request.get("type") or run_context.get("media_type") or "both"
+        route_agent_id = agent_id if is_creative_agent(agent_id) else norm_id
         creative_provider_route = resolve_creative_provider_route(
-            agent_id=norm_id,
+            agent_id=route_agent_id,
             media_type=route_media_type,
             video_quality=media_request.get("video_quality") or run_context.get("video_quality") or "",
             image_tier=media_request.get("image_tier") or run_context.get("image_tier") or "",

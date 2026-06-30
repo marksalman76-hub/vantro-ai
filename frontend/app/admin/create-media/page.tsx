@@ -59,6 +59,12 @@ const STEP_LABELS: Record<Step, string> = {
   review: 'Review',
 };
 
+function selectCreativeAgentId(req: MediaRequest) {
+  if (req.type === 'image') return 'product_image_agent';
+  if (req.video_quality === '4K') return 'ugc_creative_agent';
+  return 'ugc_media_agent';
+}
+
 export default function AdminCreateMediaPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('type');
@@ -146,10 +152,8 @@ export default function AdminCreateMediaPage() {
       const agentsData = await agentsRes.json();
       // Admin bypasses credit/unlock checks on backend — don't filter by unlocked here
       const agents = agentsData.agents || [];
-      const preferredAgentIds = ['ugc_media_agent', 'product_video_agent', 'social_media_content_agent'];
-      const mediaAgent = preferredAgentIds
-        .map((id) => agents.find((a: { id: string }) => a.id === id))
-        .find(Boolean) || { id: 'ugc_media_agent' };
+      const selectedAgentId = selectCreativeAgentId(req);
+      const mediaAgent = agents.find((a: { id: string }) => a.id === selectedAgentId) || { id: selectedAgentId };
       const selectedAssets = brandAssets.filter((asset) => selectedAssetIds.has(asset.id));
 
       const res = await fetch('/api/admin-run-agent', {

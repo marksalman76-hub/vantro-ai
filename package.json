@@ -2,6 +2,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "npm --prefix frontend run build",
+    "doctor": "powershell -NoProfile -ExecutionPolicy Bypass -File ./tools/doctor.ps1",
+    "test:creative": "powershell -NoProfile -ExecutionPolicy Bypass -File ./tools/test-creative-routing.ps1",
     "start": "next start",
     "test:e2e": "echo 'E2E tests coming soon'"
   },
