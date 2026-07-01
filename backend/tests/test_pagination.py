@@ -1,4 +1,5 @@
 """Tests for skip/limit pagination on list endpoints."""
+import json
 import uuid
 from datetime import datetime
 
@@ -16,7 +17,7 @@ def _seed_jobs(db, workspace_id: str, count: int) -> list:
             workspace_id=workspace_id,
             agent_id="brand_voice_agent",
             status="completed",
-            input_data={"text": f"job {i}"},
+            input_data=json.dumps({"text": f"job {i}"}),
             created_at=datetime.utcnow(),
         )
         db.add(job)
@@ -28,11 +29,10 @@ def _seed_jobs(db, workspace_id: str, count: int) -> list:
 class TestAgentJobPagination:
     def test_default_limit_returns_reasonable_count(self, client, db):
         user, token, _ = make_user(db)
-        ws_id = db.query(type("Workspace", (), {})).first()  # fetch via relationship below
-
-        # Find workspace_id for this user
+        from app.models import Organization
         from app.models.workspace import Workspace
-        ws = db.query(Workspace).filter(Workspace.owner_id == user.id).first()
+        org = db.query(Organization).filter(Organization.owner_id == user.id).first()
+        ws = db.query(Workspace).filter(Workspace.organization_id == org.id).first()
         _seed_jobs(db, ws.id, 15)
 
         resp = client.get(
@@ -46,8 +46,10 @@ class TestAgentJobPagination:
 
     def test_limit_parameter_respected(self, client, db):
         user, token, _ = make_user(db)
+        from app.models import Organization
         from app.models.workspace import Workspace
-        ws = db.query(Workspace).filter(Workspace.owner_id == user.id).first()
+        org = db.query(Organization).filter(Organization.owner_id == user.id).first()
+        ws = db.query(Workspace).filter(Workspace.organization_id == org.id).first()
         _seed_jobs(db, ws.id, 10)
 
         resp = client.get(
@@ -61,8 +63,10 @@ class TestAgentJobPagination:
 
     def test_skip_advances_page(self, client, db):
         user, token, _ = make_user(db)
+        from app.models import Organization
         from app.models.workspace import Workspace
-        ws = db.query(Workspace).filter(Workspace.owner_id == user.id).first()
+        org = db.query(Organization).filter(Organization.owner_id == user.id).first()
+        ws = db.query(Workspace).filter(Workspace.organization_id == org.id).first()
         _seed_jobs(db, ws.id, 10)
 
         resp_page1 = client.get(
@@ -111,8 +115,10 @@ class TestAgentJobPagination:
 class TestAdminJobPagination:
     def test_admin_jobs_list_paginated(self, client, db):
         admin, token, _ = make_user(db, email=f"admin-pg-{uuid.uuid4().hex[:6]}@test.com", is_admin=True)
+        from app.models import Organization
         from app.models.workspace import Workspace
-        ws = db.query(Workspace).filter(Workspace.owner_id == admin.id).first()
+        org = db.query(Organization).filter(Organization.owner_id == admin.id).first()
+        ws = db.query(Workspace).filter(Workspace.organization_id == org.id).first()
         _seed_jobs(db, ws.id, 5)
 
         resp = client.get(

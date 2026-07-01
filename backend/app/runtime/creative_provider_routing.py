@@ -172,8 +172,10 @@ def resolve_creative_provider_route(
         }
 
     requested_media_type = str(media_type or "").strip()
-    if requested_media_type.lower() in {"", "both"}:
+    explicit_media_type = requested_media_type.lower() not in {"", "both"}
+    if not explicit_media_type:
         requested_media_type = _context_value(request_context, "media_type", "type") or "both"
+        explicit_media_type = requested_media_type.lower() not in {"", "both"}
 
     selected_media_types = _media_types(requested_media_type)
     if not selected_media_types:
@@ -191,6 +193,22 @@ def resolve_creative_provider_route(
         admin_override=admin_override,
     )
     allowed_models = entitlement["effective"]
+
+    # Auto-mode ("both"): silently drop media types the agent doesn't support.
+    # Explicit requests still fail fast if the type isn't allowed.
+    if not explicit_media_type:
+        selected_media_types = {mt for mt in selected_media_types if entitlement["agent_allowed"].get(mt)}
+        if not selected_media_types:
+            return {
+                "success": False,
+                "agent_id": agent_id,
+                "canonical_agent_id": canonical_agent_id,
+                "reason": "agent_has_no_creative_capabilities",
+                "allowed_models": allowed_models,
+                "entitlement": entitlement,
+                "credential_values_exposed": False,
+            }
+
     for selected_media_type in sorted(selected_media_types):
         if not entitlement["agent_allowed"].get(selected_media_type):
             return {
@@ -228,21 +246,48 @@ def resolve_creative_provider_route(
     }
 
     if "video" in selected_media_types:
-        quality = normalize_video_quality(video_quality or _context_value(request_context, "video_quality", "quality"))
+        _explicit_quality_raw = video_quality or _context_value(request_context, "video_quality", "quality")
+        quality = normalize_video_quality(_explicit_quality_raw)
         selected_video = dict(VIDEO_MODELS_BY_QUALITY[quality])
         selected_video_model = selected_video["model"]
         if selected_video_model not in entitlement["agent_allowed"]["video"]:
-            return {
-                "success": False,
-                "agent_id": agent_id,
-                "canonical_agent_id": canonical_agent_id,
-                "reason": "model_not_allowed_for_agent",
-                "blocked_media_type": "video",
-                "blocked_model": selected_video_model,
-                "allowed_models": allowed_models,
-                "entitlement": entitlement,
-                "credential_values_exposed": False,
-            }
+            if not _explicit_quality_raw:
+                # Auto-mode: fall back to best model this agent+package can use
+                _priority = ["4k", "1080p", "720p"]
+                _fallback = next(
+                    (q for q in _priority
+                     if VIDEO_MODELS_BY_QUALITY[q]["model"] in entitlement["agent_allowed"]["video"]
+                     and VIDEO_MODELS_BY_QUALITY[q]["model"] in entitlement["package_allowed"]["video"]),
+                    None,
+                )
+                if _fallback:
+                    quality = _fallback
+                    selected_video = dict(VIDEO_MODELS_BY_QUALITY[quality])
+                    selected_video_model = selected_video["model"]
+                else:
+                    return {
+                        "success": False,
+                        "agent_id": agent_id,
+                        "canonical_agent_id": canonical_agent_id,
+                        "reason": "model_not_allowed_for_agent",
+                        "blocked_media_type": "video",
+                        "blocked_model": selected_video_model,
+                        "allowed_models": allowed_models,
+                        "entitlement": entitlement,
+                        "credential_values_exposed": False,
+                    }
+            else:
+                return {
+                    "success": False,
+                    "agent_id": agent_id,
+                    "canonical_agent_id": canonical_agent_id,
+                    "reason": "model_not_allowed_for_agent",
+                    "blocked_media_type": "video",
+                    "blocked_model": selected_video_model,
+                    "allowed_models": allowed_models,
+                    "entitlement": entitlement,
+                    "credential_values_exposed": False,
+                }
         if selected_video_model not in entitlement["package_allowed"]["video"]:
             return {
                 "success": False,

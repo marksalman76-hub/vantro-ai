@@ -44,12 +44,6 @@ PROVIDER_STACK = {
         "agents": ["ugc_creative_agent", "product_image_agent", "social_media_content_agent"],
         "live_call_enabled_env": "RUNWAY_LIVE_EXECUTION_ENABLED",
     },
-    "kling": {
-        "category": ["video", "image_to_video", "cinematic_motion"],
-        "env_keys": ["KLING_API_KEY"],
-        "agents": ["ugc_creative_agent", "product_image_agent", "social_media_content_agent"],
-        "live_call_enabled_env": "KLING_LIVE_EXECUTION_ENABLED",
-    },
     "heygen": {
         "category": ["avatar_video", "ugc_avatar", "voice_video"],
         "env_keys": ["HEYGEN_API_KEY"],

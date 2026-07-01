@@ -66,7 +66,7 @@ def _set_refresh_cookie(response: JSONResponse, token: str) -> None:
         secure=_IS_PROD,
         samesite="lax",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 86400,
-        path="/api/auth/refresh",  # scope to refresh endpoint only
+        path="/api/auth",  # scoped to auth endpoints (covers /refresh and /logout)
     )
 
 
@@ -290,7 +290,7 @@ async def logout(
 
     resp = JSONResponse(content={"message": "Logged out successfully"})
     resp.delete_cookie(key="access_token", path="/")
-    resp.delete_cookie(key="refresh_token", path="/api/auth/refresh")
+    resp.delete_cookie(key="refresh_token", path="/api/auth")
     return resp
 
 
