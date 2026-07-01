@@ -28,15 +28,15 @@
         },
         {
           "name": "SECRET_KEY",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/secret-key"
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/jwt-secret-key-V3I8EA"
         },
         {
-          "name": "BREVO_API_KEY",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/brevo-api-key"
+          "name": "SQS_JOBS_QUEUE_URL",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/sqs-jobs-queue-url-Bxxbtu"
         },
         {
-          "name": "STRIPE_SECRET_KEY",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/stripe-secret-key"
+          "name": "REDIS_URL",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/redis-url-BzFk4o"
         },
         {
           "name": "HIGGSFIELD_MCP_CREDENTIALS_JSON",
@@ -61,14 +61,6 @@
         {
           "name": "ANTHROPIC_API_KEY",
           "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/anthropic-api-key-AMWzt7"
-        },
-        {
-          "name": "SQS_JOBS_QUEUE_URL",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/sqs-jobs-queue-url-Bxxbtu"
-        },
-        {
-          "name": "REDIS_URL",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/redis-url-BzFk4o"
         },
         {
           "name": "SENTRY_DSN",

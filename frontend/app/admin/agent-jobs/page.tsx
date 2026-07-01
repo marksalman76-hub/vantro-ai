@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense, Fragment } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 interface AgentJob {
@@ -27,7 +27,7 @@ const STATUS_COLOR: Record<string, string> = {
   failed:            'bg-red-500/20     text-red-400',
 };
 
-export default function AdminAgentJobsPage() {
+function AdminAgentJobsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const highlight = searchParams.get('highlight');
@@ -154,9 +154,8 @@ export default function AdminAgentJobsPage() {
           </thead>
           <tbody>
             {jobs.map((j) => (
-              <>
+              <Fragment key={j.id}>
                 <tr
-                  key={j.id}
                   ref={j.id === highlight ? highlightRef : null}
                   className={`border-b border-gray-800/50 hover:bg-gray-800/20 transition-colors ${j.id === highlight ? 'bg-violet-500/10 ring-1 ring-inset ring-violet-500/30' : ''}`}
                 >
@@ -183,7 +182,7 @@ export default function AdminAgentJobsPage() {
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
             {jobs.length === 0 && (
               <tr>
@@ -194,5 +193,13 @@ export default function AdminAgentJobsPage() {
         </table>
       </div>
     </div>
+  );
+}
+
+export default function AdminAgentJobsPage() {
+  return (
+    <Suspense fallback={null}>
+      <AdminAgentJobsContent />
+    </Suspense>
   );
 }
