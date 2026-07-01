@@ -1,8 +1,17 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+
+interface MediaStatusResult {
+  status: 'processing' | 'completed' | 'failed';
+  video_url: string | null;
+  task_id: string | null;
+}
+
+const POLL_INTERVAL_MS = 10000;
+const POLL_MAX = 36; // 6 min cap
 
 interface BrandAsset {
   id: string;
@@ -220,6 +229,13 @@ export default function AdminCreateMediaPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedAgentRule = isCreativeAgentOptionAllowed(selectedCreativeAgentId, req);
 
+  // Post-submit result state
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [mediaStatus, setMediaStatus] = useState<MediaStatusResult | null>(null);
+  const [pollCount, setPollCount] = useState(0);
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pollCountRef = useRef(0);
+
   useEffect(() => {
     const token = getStoredAdminToken();
     fetch('/api/admin/brand-assets', { headers: authHeaders(token), credentials: 'include' })
@@ -227,6 +243,40 @@ export default function AdminCreateMediaPage() {
       .then(d => setBrandAssets(d.assets || []))
       .catch(() => {});
   }, []);
+
+  const stopPolling = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  const pollMediaStatus = useCallback((id: string, token: string) => {
+    if (pollCountRef.current >= POLL_MAX) { stopPolling(); return; }
+    fetch(`/api/admin/agents/jobs/${id}/media-status`, {
+      headers: authHeaders(token),
+      credentials: 'include',
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then((data: MediaStatusResult | null) => {
+        if (!data) return;
+        setMediaStatus(data);
+        pollCountRef.current += 1;
+        setPollCount(pollCountRef.current);
+        if (data.status === 'completed' || data.status === 'failed') {
+          stopPolling();
+        } else {
+          pollTimerRef.current = setTimeout(() => pollMediaStatus(id, token), POLL_INTERVAL_MS);
+        }
+      })
+      .catch(() => {
+        pollCountRef.current += 1;
+        setPollCount(pollCountRef.current);
+        pollTimerRef.current = setTimeout(() => pollMediaStatus(id, token), POLL_INTERVAL_MS);
+      });
+  }, [stopPolling]);
+
+  useEffect(() => () => stopPolling(), [stopPolling]);
 
   function toggleAsset(id: string) {
     setSelectedAssetIds(prev => {
@@ -326,11 +376,15 @@ export default function AdminCreateMediaPage() {
         }),
       });
       const d = await res.json();
-      console.log('Agent response:', { status: res.status, ok: res.ok, data: d });
       if (res.ok && d.job_id) {
-        router.push(`/admin/agent-jobs?highlight=${d.job_id}`);
+        // Stay on page — show inline result + poll for video
+        setJobId(d.job_id);
+        setMediaStatus(null);
+        setPollCount(0);
+        pollCountRef.current = 0;
+        stopPolling();
+        setTimeout(() => pollMediaStatus(d.job_id, token), POLL_INTERVAL_MS);
       } else {
-        console.error('Agent submission failed:', { status: res.status, data: d });
         if (res.status === 401) {
           setError('Your admin session expired. Please sign in again, then rerun this media request.');
           redirectToAdminLogin(router);
@@ -817,20 +871,121 @@ export default function AdminCreateMediaPage() {
             </div>
           )}
 
-          <div className="flex gap-2">
-            <button onClick={back} className="px-3.5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-medium transition-colors">Back</button>
-            <button
-              onClick={submit}
-              disabled={submitting}
-              className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition-colors"
-            >
-              {submitting ? 'Starting…' : 'Create media'}
-            </button>
-          </div>
+          {!jobId ? (
+            <>
+              <div className="flex gap-2">
+                <button onClick={back} className="px-3.5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-medium transition-colors">Back</button>
+                <button
+                  onClick={submit}
+                  disabled={submitting}
+                  className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white rounded-xl text-xs font-semibold transition-colors"
+                >
+                  {submitting ? 'Starting…' : 'Create media'}
+                </button>
+              </div>
+              <p className="text-[9px] text-gray-600 mt-2.5">
+                Credits will be reserved when the task starts. If the task cannot complete, credits are not charged or will be refunded.
+              </p>
+            </>
+          ) : (
+            /* ── Inline result panel ── */
+            <div className="mt-6 border border-gray-800 rounded-2xl overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 bg-gray-900 border-b border-gray-800">
+                <div className="flex items-center gap-2">
+                  {mediaStatus?.status !== 'completed' && mediaStatus?.status !== 'failed' && (
+                    <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+                  )}
+                  {mediaStatus?.status === 'completed' && (
+                    <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  )}
+                  {mediaStatus?.status === 'failed' && (
+                    <span className="w-2 h-2 rounded-full bg-red-400" />
+                  )}
+                  <span className="text-xs font-semibold text-white">
+                    {!mediaStatus ? 'Generating your media…' :
+                     mediaStatus.status === 'completed' ? 'Media ready — review & approve' :
+                     mediaStatus.status === 'failed' ? 'Generation failed' :
+                     `Rendering video… check ${pollCount}/${POLL_MAX}`}
+                  </span>
+                </div>
+                <Link
+                  href={`/admin/agent-jobs?highlight=${jobId}`}
+                  className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  View job →
+                </Link>
+              </div>
 
-          <p className="text-[9px] text-gray-600 mt-2.5">
-            Credits will be reserved when the task starts. If the task cannot complete, credits are not charged or will be refunded.
-          </p>
+              {/* Video preview */}
+              <div className="bg-black" style={{ minHeight: '260px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {mediaStatus?.video_url ? (
+                  <video
+                    src={mediaStatus.video_url}
+                    controls
+                    autoPlay
+                    loop
+                    style={{ maxHeight: '420px', maxWidth: '100%', width: '100%' }}
+                  />
+                ) : mediaStatus?.status === 'failed' ? (
+                  <p className="text-red-400 text-xs text-center px-6">
+                    Video generation failed. Try adjusting your brief and regenerating.
+                  </p>
+                ) : (
+                  <div className="flex flex-col items-center gap-3 py-12">
+                    <div className="w-8 h-8 border-2 border-violet-500/40 border-t-violet-500 rounded-full animate-spin" />
+                    <p className="text-gray-500 text-xs">
+                      {!mediaStatus ? 'Agent is working on your brief…' : 'Video rendering on Higgsfield servers…'}
+                    </p>
+                    <p className="text-gray-700 text-[10px]">
+                      {!mediaStatus ? 'First check in 10 seconds' : `Checked ${pollCount} time${pollCount !== 1 ? 's' : ''}`}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Approve / regenerate CTAs */}
+              <div className="px-4 py-3 bg-gray-900 border-t border-gray-800 flex items-center gap-2">
+                {mediaStatus?.status === 'completed' && mediaStatus.video_url && (
+                  <>
+                    <a
+                      href={mediaStatus.video_url}
+                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold transition-colors"
+                    >
+                      Approve &amp; Download
+                    </a>
+                    <Link
+                      href="/admin/assets"
+                      className="px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-semibold transition-colors"
+                    >
+                      View in Assets →
+                    </Link>
+                  </>
+                )}
+                <button
+                  onClick={() => {
+                    stopPolling();
+                    setJobId(null);
+                    setMediaStatus(null);
+                    setPollCount(0);
+                    pollCountRef.current = 0;
+                    setStep('review');
+                  }}
+                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-medium transition-colors"
+                >
+                  {mediaStatus?.status === 'failed' ? 'Try again' : 'Regenerate'}
+                </button>
+                {!mediaStatus || mediaStatus.status === 'processing' ? (
+                  <span className="text-[10px] text-gray-600 ml-auto">
+                    Higgsfield videos take 30–120s to render
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
