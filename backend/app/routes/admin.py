@@ -1147,45 +1147,6 @@ async def deploy_unlimited_credits(
     }
 
 
-# ── Audit Logs ────────────────────────────────────────────────────────────────
-
-@router.get("/audit-logs")
-async def list_audit_logs(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=200),
-    user_id: str | None = Query(None),
-    action: str | None = Query(None),
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(get_db),
-):
-    _require_admin(credentials, db)
-    q = db.query(AuditLog).order_by(AuditLog.created_at.desc())
-    if user_id:
-        q = q.filter(AuditLog.user_id == user_id)
-    if action:
-        q = q.filter(AuditLog.action == action)
-    total = q.count()
-    logs = q.offset(skip).limit(limit).all()
-    return {
-        "total": total,
-        "skip": skip,
-        "limit": limit,
-        "logs": [
-            {
-                "id": lg.id,
-                "user_id": lg.user_id,
-                "action": lg.action,
-                "resource_type": lg.resource_type,
-                "resource_id": lg.resource_id,
-                "ip_address": lg.ip_address,
-                "created_at": lg.created_at.isoformat() if lg.created_at else None,
-                "extra": lg.extra,
-            }
-            for lg in logs
-        ],
-    }
-
-
 # ── Admin user management ─────────────────────────────────────────────────────
 
 @router.post("/users/{user_id}/grant-admin")
