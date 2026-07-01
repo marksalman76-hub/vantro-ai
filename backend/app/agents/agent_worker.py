@@ -655,11 +655,17 @@ async def _process_job(job_id: str) -> None:
                                 or adapter_result.execution_payload.get("language"),
                                 "English",
                             )
+                            # Duration: clamp to [5, 10] — Kling API max is 10s per clip
+                            _raw_dur = media_request_k.get("duration") or media_request_k.get("video_duration") or 5
+                            try:
+                                _dur_s = max(5, min(10, int(str(_raw_dur).replace("s", "").strip())))
+                            except (TypeError, ValueError):
+                                _dur_s = 5
                             kling_kwargs: dict = {
                                 "model": adapter_result.execution_payload.get("selected_video_model_id")
                                 or adapter_result.execution_payload.get("selected_video_model")
                                 or "kling3_0_turbo",
-                                "duration": 5,
+                                "duration": _dur_s,
                                 "aspect_ratio": _normalize_aspect_ratio(media_request_k.get("aspect_ratio")),
                                 "voiceover_script": voiceover_script_k,
                                 "voice_model_id": os.getenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"),

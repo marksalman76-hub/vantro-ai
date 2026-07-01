@@ -44,6 +44,11 @@ const GENDERS = ['Female', 'Male', 'Non-binary', 'Not specified'];
 const ETHNICITIES = ['Caucasian', 'African', 'Asian', 'Hispanic', 'Middle Eastern', 'Mixed', 'Other'];
 const LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Mandarin', 'Japanese', 'Arabic', 'Other'];
 const VIDEO_QUALITIES = ['720p', '1080p', '4K'];
+// Kling API max is 10s per clip; 5 and 10 are the two supported values
+const VIDEO_DURATIONS = [
+  { value: 5,  label: '5 seconds' },
+  { value: 10, label: '10 seconds' },
+];
 
 export interface MediaRequest {
   type: string;
@@ -56,6 +61,7 @@ export interface MediaRequest {
   ethnicity: string;
   language: string;
   video_quality: string;
+  duration: number;
   use_brand_profile: boolean;
 }
 
@@ -210,6 +216,7 @@ export default function AdminCreateMediaPage() {
     ethnicity: '',
     language: '',
     video_quality: '',
+    duration: 5,
     use_brand_profile: true,
   });
   const [submitting, setSubmitting] = useState(false);
@@ -336,6 +343,7 @@ export default function AdminCreateMediaPage() {
       req.ethnicity ? `Creator ethnicity: ${req.ethnicity}.` : '',
       req.language ? `Language: ${req.language}.` : '',
       req.video_quality ? `Video quality: ${req.video_quality}.` : '',
+      req.duration ? `Clip duration: ${req.duration}s.` : '',
       req.use_brand_profile ? 'Use my brand profile for voice, colours, and assets.' : '',
     ].filter(Boolean).join(' ');
 
@@ -812,6 +820,26 @@ export default function AdminCreateMediaPage() {
             </div>
           </div>
 
+          <div className="mb-4">
+            <p className="text-[11px] text-gray-500 mb-1.5">Clip duration</p>
+            <div className="flex gap-1.5">
+              {VIDEO_DURATIONS.map(d => (
+                <button
+                  key={d.value}
+                  onClick={() => setReq(r => ({ ...r, duration: d.value }))}
+                  className={`px-3 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                    req.duration === d.value
+                      ? 'bg-violet-600 text-white'
+                      : 'bg-gray-900 border border-gray-800 text-gray-400 hover:text-white'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[9px] text-gray-700 mt-1">Max 10s per clip (provider limit)</p>
+          </div>
+
           <div className="flex gap-2">
             <button onClick={back} className="px-3.5 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-xs font-medium transition-colors">Back</button>
             <button onClick={next} className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-semibold transition-colors">
@@ -874,6 +902,7 @@ export default function AdminCreateMediaPage() {
               { label: 'Creator ethnicity', value: req.ethnicity || 'Not specified' },
               { label: 'Language', value: req.language || 'Not specified' },
               { label: 'Video quality', value: req.video_quality || 'Not specified' },
+              { label: 'Duration', value: req.duration ? `${req.duration}s` : '5s (default)' },
               { label: 'Brand profile', value: req.use_brand_profile ? 'Yes — using my brand profile' : 'No' },
             ].map(row => (
               <div key={row.label} className="px-4 py-2.5 flex gap-3">
