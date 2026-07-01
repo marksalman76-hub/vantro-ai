@@ -25,16 +25,15 @@ if _SENTRY_DSN:
                 LoggingIntegration(level=logging.WARNING, event_level=logging.ERROR),
             ],
             traces_sample_rate=1.0,
-            profile_session_sample_rate=1.0,
-            profile_lifecycle="trace",
+            profiles_sample_rate=1.0,
             environment=os.getenv("ENVIRONMENT", "production"),
             release=os.getenv("APP_VERSION", "1.0.0"),
             send_default_pii=True,
             enable_logs=True,
             before_send_log=_before_send_log,
         )
-    except ImportError:
-        logging.warning("sentry-sdk not installed; install sentry-sdk[fastapi] to enable error tracking")
+    except (ImportError, TypeError) as e:
+        logging.warning("Sentry init skipped: %s", e)
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response

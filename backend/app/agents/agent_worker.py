@@ -380,7 +380,7 @@ async def _process_job(job_id: str) -> None:
         _sentry_txn.set_data("workspace_id", str(job.workspace_id))
         _sentry_txn.set_data("job_id", job_id)
         sentry_sdk.set_user({"id": str(job.workspace_id)})
-        sentry_sdk.logger.info("Agent job {job_id} started for agent {agent_id}", agent_id=str(job.agent_id), job_id=job_id)
+        logger.info("Worker: job %s started for agent %s", job_id, job.agent_id)
 
         system_prompt = get_agent_system_prompt(job.agent_id)
         user_prompt   = job.input_data or ""
@@ -542,7 +542,6 @@ async def _process_job(job_id: str) -> None:
         # decide whether to release or reject the output.
         # This fires regardless of HITL level — it is a hard platform rule.
         if financial_violations:
-            sentry_sdk.logger.warning("Agent job {job_id} held for financial review ({violation_count} violations)", agent_id=str(job.agent_id), job_id=job_id, violation_count=len(financial_violations))
             logger.warning(
                 "Worker: job %s held for financial review — violations: %s",
                 job_id, financial_violations,
@@ -580,7 +579,6 @@ async def _process_job(job_id: str) -> None:
         import re as _re
         _confidence_low = bool(_re.search(r'\[CONFIDENCE:\s*LOW\]', output, _re.IGNORECASE))
         if _confidence_low and job.status not in ("pending_financial_review",):
-            sentry_sdk.logger.warning("Agent job {job_id} escalated to pending_approval (CONFIDENCE: LOW)", agent_id=str(job.agent_id), job_id=job_id)
             logger.warning(
                 "Worker: job %s escalated to pending_approval — agent output [CONFIDENCE: LOW]",
                 job_id,
@@ -731,19 +729,7 @@ async def _process_job(job_id: str) -> None:
         _sentry_txn.set_tag("outcome", "completed")
         _sentry_txn.set_tag("provider", provider_used.split("/")[0] if provider_used else "unknown")
         _sentry_txn.finish()
-        sentry_sdk.logger.info(
-            "Agent job {job_id} completed",
-            attributes={
-                "job.id": job_id,
-                "agent.id": str(job.agent_id),
-                "agent.hitl_level": hitl_level,
-                "job.credits_used": credit_cost,
-                "job.provider": provider_used.split("/")[0] if provider_used else "unknown",
-                "job.provider_model": provider_used or "unknown",
-                "job.duration_ms": round((datetime.utcnow() - _job_start_time).total_seconds() * 1000),
-                "workspace.id": str(job.workspace_id),
-            },
-        )
+        logger.info("Worker: job %s completed — credits=%s provider=%s", job_id, credit_cost, provider_used or "unknown")
         ws_dims = [{"Name": "WorkspaceId", "Value": str(job.workspace_id)}]
         _emit_metric("AgentJobsCompleted", 1, dimensions=ws_dims)
         _emit_metric("CreditsDeducted", credit_cost, dimensions=ws_dims)
@@ -755,14 +741,7 @@ async def _process_job(job_id: str) -> None:
 
     except Exception as exc:
         sentry_sdk.capture_exception(exc)
-        sentry_sdk.logger.error(
-            "Agent job {job_id} failed",
-            attributes={
-                "job.id": job_id,
-                "error.message": str(exc)[:500],
-                "error.type": type(exc).__name__,
-            },
-        )
+        logger.error("Worker: job %s failed: %s", job_id, exc, exc_info=True)
         if _sentry_txn is not None:
             _sentry_txn.set_tag("outcome", "failed")
             _sentry_txn.finish()

@@ -726,7 +726,6 @@ def execute_agent(
     # authorisation phrase, the worker routes to pending_financial_review.
     violations = scan_for_financial_actions(text)
     if violations:
-        sentry_sdk.logger.warning("Financial guard triggered for agent {agent_id} ({violation_count} matched phrases)", agent_id=agent_id, violation_count=len(violations))
         logger.warning(
             "Financial action guard triggered for agent=%s — matched phrases: %s",
             agent_id, violations,
