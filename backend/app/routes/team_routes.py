@@ -212,7 +212,7 @@ async def create_team_run(
         aid for aid in normalized_agent_ids if aid != normalized_lead_id
     ]
 
-    job_status = "pending_approval" if requires_hitl3_approval else "pending"
+    job_status = "approved" if requires_hitl3_approval else "pending"
     jobs_created = []
     lead_job_id = None
 

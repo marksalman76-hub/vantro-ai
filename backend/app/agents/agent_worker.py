@@ -1004,7 +1004,7 @@ async def _run_scheduled_agents() -> None:
                     workspace_id=sched.workspace_id,
                     agent_id=sched.agent_id,
                     agent_name=meta.get("name", sched.agent_id),
-                    status="pending" if hitl != "HITL-3" else "pending_approval",
+                    status="approved" if hitl == "HITL-3" else "pending",
                     hitl_level=hitl,
                     input_data=json.dumps({"prompt": sched.prompt, "context": ctx, "_scheduled_run_id": sched.id}),
                     credits_used=credit_cost,

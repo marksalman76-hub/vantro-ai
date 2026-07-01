@@ -253,7 +253,7 @@ async def v1_run_agent(
         workspace_id=ws.id,
         agent_id=norm_id,
         agent_name=meta["name"],
-        status="pending" if hitl != "HITL-3" else "pending_approval",
+        status="approved" if hitl == "HITL-3" else "pending",
         hitl_level=hitl,
         input_data=json.dumps({"prompt": body.prompt[:10_000], "context": ctx, "_api_key_id": key_record.id}),
         credits_used=credit_cost,

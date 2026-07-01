@@ -222,8 +222,8 @@ class TestRunAgent:
         )
         assert resp.status_code == status.HTTP_403_FORBIDDEN
 
-    def test_run_hitl3_agent_queued_as_pending_approval(self, client, db):
-        """HITL-3 agents must create jobs with status=pending_approval, NOT pending."""
+    def test_run_hitl3_agent_queued_as_approved(self, client, db):
+        """HITL-3 agents auto-approved at submission — submitter IS the approval authority."""
         _, token, credits = _make_business_user(db)
         with patch("app.routes.agents.send_approval_needed"):
             resp = client.post(
@@ -233,7 +233,7 @@ class TestRunAgent:
             )
         # May be 200 or blocked by credit gate — accept both
         if resp.status_code == status.HTTP_200_OK:
-            assert resp.json()["status"] == "pending_approval"
+            assert resp.json()["status"] == "approved"
 
     def test_run_agent_returns_hitl_level(self, client, db):
         """Run response must include hitl_level field."""

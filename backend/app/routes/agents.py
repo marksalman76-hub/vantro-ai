@@ -308,9 +308,12 @@ async def run_agent(
             norm_id, user.email, prompt_violations,
         )
 
-    # HITL-3 OR prompt contains explicit financial execution intent → pending_approval
-    if hitl == "HITL-3" or prompt_violations:
+    # Financial execution intent → hold for admin review.
+    # HITL-3 alone: submitter IS the approval authority → auto-approved.
+    if prompt_violations:
         status = "pending_approval"
+    elif hitl == "HITL-3":
+        status = "approved"
     else:
         status = "pending"
     # ────────────────────────────────────────────────────────────────────────

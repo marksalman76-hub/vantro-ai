@@ -230,8 +230,8 @@ class TestCreditDeductionLedger:
         job = db.query(AgentJob).filter(AgentJob.id == job_id).first()
         assert job.credits_used == cost
 
-    def test_hitl3_job_does_not_deduct_credits(self, client, db):
-        """HITL-3 jobs queued as pending_approval must NOT deduct credits at submission."""
+    def test_hitl3_job_deducts_credits_immediately(self, client, db):
+        """HITL-3 jobs auto-approved at submission — credits deducted immediately."""
         user, token, credits = make_user(db)
         credits.total_credits = 300  # business tier
         credits.used_credits = 0
@@ -244,11 +244,11 @@ class TestCreditDeductionLedger:
                 headers={"Authorization": f"Bearer {token}"},
             )
         assert resp.status_code == status.HTTP_200_OK
-        assert resp.json()["status"] == "pending_approval"
+        assert resp.json()["status"] == "approved"
 
         db.refresh(credits)
-        # No deduction for pending_approval jobs
-        assert credits.used_credits == 0
+        # Credits ARE pre-committed for auto-approved HITL-3 jobs
+        assert credits.used_credits == 4  # ads_optimisation_agent credit_estimate
 
 
 # ---------------------------------------------------------------------------

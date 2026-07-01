@@ -119,8 +119,8 @@ class TestFullJobLifecycle:
         # HITL-1 should not require approval
         assert body["status"] == "pending"
 
-    def test_hitl3_job_queued_as_pending_approval(self, client, db):
-        """HITL-3 agent (ads) must create job with status=pending_approval."""
+    def test_hitl3_job_queued_as_approved(self, client, db):
+        """HITL-3 agent auto-approved — submitter IS the approval authority."""
         user, token, credits = make_user(db)
         _with_business_credits(db, user, credits)
 
@@ -132,15 +132,15 @@ class TestFullJobLifecycle:
             )
         assert resp.status_code == status.HTTP_200_OK
         body = resp.json()
-        assert body["status"] == "pending_approval"
+        assert body["status"] == "approved"
 
         # Confirm in DB
         job = db.query(AgentJob).filter(AgentJob.id == body["job_id"]).first()
         assert job is not None
-        assert job.status == "pending_approval"
+        assert job.status == "approved"
 
-    def test_hitl3_credits_not_deducted_on_pending_approval(self, client, db):
-        """HITL-3 jobs held for approval should NOT deduct credits at submission."""
+    def test_hitl3_credits_deducted_on_auto_approval(self, client, db):
+        """HITL-3 jobs auto-approved at submission — credits deducted immediately."""
         user, token, credits = make_user(db)
         _with_business_credits(db, user, credits)
         initial_used = credits.used_credits
@@ -152,11 +152,11 @@ class TestFullJobLifecycle:
                 headers={"Authorization": f"Bearer {token}"},
             )
         assert resp.status_code == status.HTTP_200_OK
-        assert resp.json()["status"] == "pending_approval"
+        assert resp.json()["status"] == "approved"
 
         db.refresh(credits)
-        # Credits must NOT be deducted for HITL-3 pending_approval jobs
-        assert credits.used_credits == initial_used
+        # Credits ARE pre-committed for auto-approved HITL-3 jobs
+        assert credits.used_credits > initial_used
 
     def test_multiple_jobs_each_deduct_credits(self, client, db):
         """Running the same agent twice deducts credits twice."""
