@@ -42,12 +42,15 @@ const nextConfig = {
   },
 }
 
-module.exports = withSentryConfig(nextConfig, {
-  org: "vantro-vz",
-  project: "sentry-orange-pendant",
-  authToken: process.env.SENTRY_AUTH_TOKEN,
-  widenClientFileUpload: true,
-  tunnelRoute: "/monitoring",
-  silent: !process.env.CI,
-  // Tree-shaking disabled: Turbopack in use (webpack-only feature)
-});
+// Only enable Sentry source-map upload when auth token is available.
+// Without it withSentryConfig fails the build in Vercel/CI environments.
+module.exports = process.env.SENTRY_AUTH_TOKEN
+  ? withSentryConfig(nextConfig, {
+      org: "vantro-vz",
+      project: "sentry-orange-pendant",
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      widenClientFileUpload: true,
+      tunnelRoute: "/monitoring",
+      silent: !process.env.CI,
+    })
+  : nextConfig;

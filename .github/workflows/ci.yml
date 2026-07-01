@@ -37,7 +37,6 @@ jobs:
           STRIPE_SECRET_KEY: sk_test_placeholder
           STRIPE_WEBHOOK_SECRET: whsec_test_secret
           SQS_JOBS_QUEUE_URL: https://sqs.us-east-1.amazonaws.com/123/test.fifo
-          HEYGEN_API_KEY: test_key
           TESTING: "1"
 
   frontend-lint:
