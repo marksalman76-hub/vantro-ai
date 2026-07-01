@@ -77,7 +77,7 @@ export default function AdminSidebar() {
 
       {/* Footer */}
       <div className="px-3 pb-4 pt-3 border-t border-gray-800 shrink-0 space-y-1">
-        <Link href="/dashboard"
+        <Link href="/dashboard" prefetch={false}
           className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-gray-500 hover:text-gray-300 hover:bg-gray-800 transition-colors">
           ← Client view
         </Link>
