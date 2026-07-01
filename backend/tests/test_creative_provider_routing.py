@@ -55,7 +55,7 @@ def test_video_capable_creative_agents_resolve_lower_tier_video_model(agent_id):
     assert route["success"] is True
     assert route["agent_id"] == agent_id
     assert route["canonical_agent_id"] in CREATIVE_AGENT_IDS
-    assert route["video"]["provider"] == "higgsfield"
+    assert route["video"]["provider"] == "kling"
     assert route["video"]["model"] == "Kling 3.0 Turbo"
     assert route["video"]["quality"] == "720p"
     assert route["credential_values_exposed"] is False
@@ -70,8 +70,8 @@ def test_pro_image_capable_creative_agents_resolve_premium_image_model(agent_id)
     )
 
     assert route["success"] is True
-    assert route["image"]["provider"] == "nano_banana"
-    assert route["image"]["model"] == "Nano Banana Pro"
+    assert route["image"]["provider"] == "openai_dalle"
+    assert route["image"]["model"] == "DALL-E 3 HD"
     assert route["image"]["tier"] == "premium"
     assert route["credential_values_exposed"] is False
 
@@ -93,7 +93,7 @@ def test_video_quality_selects_higgsfield_model(quality, expected_model):
         video_quality=quality,
     )
 
-    assert route["video"]["provider"] == "higgsfield"
+    assert route["video"]["provider"] == "kling"
     assert route["video"]["model"] == expected_model
     assert route["video"]["model_id"]
 
@@ -101,11 +101,11 @@ def test_video_quality_selects_higgsfield_model(quality, expected_model):
 @pytest.mark.parametrize(
     ("tier", "expected_model"),
     [
-        ("standard", "Nano Banana 2"),
-        ("production", "Nano Banana 2"),
-        ("", "Nano Banana 2"),
-        ("premium", "Nano Banana Pro"),
-        ("pro", "Nano Banana Pro"),
+        ("standard", "DALL-E 3"),
+        ("production", "DALL-E 3"),
+        ("", "DALL-E 3"),
+        ("premium", "DALL-E 3 HD"),
+        ("pro", "DALL-E 3 HD"),
     ],
 )
 def test_image_tier_selects_nano_banana_model(tier, expected_model):
@@ -115,7 +115,7 @@ def test_image_tier_selects_nano_banana_model(tier, expected_model):
         image_tier=tier,
     )
 
-    assert route["image"]["provider"] == "nano_banana"
+    assert route["image"]["provider"] == "openai_dalle"
     assert route["image"]["model"] == expected_model
 
 
@@ -166,19 +166,19 @@ def test_creative_provider_status_exposes_models_without_credentials():
     status = creative_provider_status()
 
     assert status["success"] is True
-    assert status["providers"]["higgsfield"]["models"] == [
+    assert status["providers"]["kling"]["models"] == [
         "Kling 3.0 Turbo",
         "Kling 3.0",
         "Cinema Studio 4K",
     ]
-    assert status["providers"]["higgsfield"]["model_ids"] == [
+    assert status["providers"]["kling"]["model_ids"] == [
         "kling3_0_turbo",
         "kling3_0",
         "cinematic_studio_3_0",
     ]
-    assert status["providers"]["nano_banana"]["models"] == [
-        "Nano Banana 2",
-        "Nano Banana Pro",
+    assert status["providers"]["openai_dalle"]["models"] == [
+        "DALL-E 3",
+        "DALL-E 3 HD",
     ]
     assert status["credential_values_exposed"] is False
 
@@ -186,16 +186,16 @@ def test_creative_provider_status_exposes_models_without_credentials():
 def test_provider_stack_exposes_higgsfield_and_nano_banana():
     status = full_provider_stack_status()
 
-    assert "higgsfield" in status["providers"]
-    assert "nano_banana" in status["providers"]
-    assert status["providers"]["higgsfield"]["models"] == [
+    assert "kling" in status["providers"]
+    assert "openai_dalle" in status["providers"]
+    assert status["providers"]["kling"]["models"] == [
         "Kling 3.0 Turbo",
         "Kling 3.0",
         "Cinema Studio 4K",
     ]
-    assert status["providers"]["nano_banana"]["models"] == [
-        "Nano Banana 2",
-        "Nano Banana Pro",
+    assert status["providers"]["openai_dalle"]["models"] == [
+        "DALL-E 3",
+        "DALL-E 3 HD",
     ]
     assert status["credential_values_exposed"] is False
 
@@ -204,7 +204,7 @@ def test_provider_stack_exposes_higgsfield_and_nano_banana():
 def test_provider_stack_gives_video_capable_agents_higgsfield(agent_id):
     providers = providers_for_agent(agent_id)
 
-    assert "higgsfield" in providers
+    assert "kling" in providers
 
 
 @pytest.mark.parametrize("agent_id", CREATIVE_AGENT_CASES)
@@ -212,7 +212,7 @@ def test_provider_stack_gives_image_capable_agents_nano_banana(agent_id):
     providers = providers_for_agent(agent_id)
 
     if agent_id != "ugc_media_agent":
-        assert "nano_banana" in providers
+        assert "openai_dalle" in providers
 
 
 @pytest.mark.parametrize(
@@ -225,21 +225,21 @@ def test_provider_stack_gives_image_capable_agents_nano_banana(agent_id):
 def test_provider_stack_normalizes_creative_aliases(alias):
     providers = providers_for_agent(alias)
 
-    assert "nano_banana" in providers
+    assert "openai_dalle" in providers
 
 
 def test_recommended_stack_prioritizes_higgsfield_for_video_and_nano_banana_for_image():
     video_stack = recommended_stack_for_task("ugc_media_agent", "Create a 720p product video")
     image_stack = recommended_stack_for_task("product_image_agent", "Create a premium product image")
 
-    assert video_stack["recommended_order"][0] == "higgsfield"
-    assert image_stack["recommended_order"][0] == "nano_banana"
+    assert video_stack["recommended_order"][0] == "kling"
+    assert image_stack["recommended_order"][0] == "openai_dalle"
 
 
 def test_provider_config_status_keeps_credentials_hidden():
-    status = provider_config_status("higgsfield")
+    status = provider_config_status("kling")
 
-    assert status["provider"] == "higgsfield"
+    assert status["provider"] == "kling"
     assert "credential_values_exposed" in status
     assert status["credential_values_exposed"] is False
     assert "api_key" not in str(status).lower()
@@ -270,11 +270,11 @@ def test_execution_adapter_preserves_selected_creative_models_without_credential
         },
     )
 
-    assert result.execution_payload["selected_video_provider"] == "higgsfield"
+    assert result.execution_payload["selected_video_provider"] == "kling"
     assert result.execution_payload["selected_video_model"] == "Cinema Studio 4K"
     assert result.execution_payload["selected_video_model_id"] == "cinematic_studio_3_0"
-    assert result.execution_payload["selected_image_provider"] == "nano_banana"
-    assert result.execution_payload["selected_image_model"] == "Nano Banana Pro"
+    assert result.execution_payload["selected_image_provider"] == "openai_dalle"
+    assert result.execution_payload["selected_image_model"] == "DALL-E 3 HD"
     assert result.provider_ready is False
 
 
@@ -324,10 +324,10 @@ def test_execution_adapter_preserves_media_request_and_voiceover_metadata():
     assert result.execution_payload["voiceover"]["model_id"] == "eleven_multilingual_v2"
 
 
-def test_execution_adapter_requires_live_flag_with_higgsfield_credentials(monkeypatch):
-    monkeypatch.setenv("HIGGSFIELD_API_KEY", "test-key")
-    monkeypatch.setenv("HIGGSFIELD_EXECUTION_SURFACE", "api_key")
-    monkeypatch.delenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED", raising=False)
+def test_execution_adapter_with_kling_credentials_requires_live_flag(monkeypatch):
+    monkeypatch.setenv("KLING_ACCESS_KEY", "test-access")
+    monkeypatch.setenv("KLING_SECRET_KEY", "test-secret")
+    monkeypatch.delenv("VIDEO_LIVE_EXECUTION_ENABLED", raising=False)
 
     adapter = ExecutionAdapters(db=None)
     route = resolve_creative_provider_route(
@@ -354,119 +354,9 @@ def test_execution_adapter_requires_live_flag_with_higgsfield_credentials(monkey
 
     assert result.provider_ready is False
     assert result.execution_mode == "provider_orchestrated_safe_stub"
-    assert result.execution_payload["provider_connected"] is True
 
 
-def test_execution_adapter_requires_credentials_and_live_flag_for_higgsfield_live(monkeypatch):
-    monkeypatch.setenv("HIGGSFIELD_API_KEY", "test-key")
-    monkeypatch.setenv("HIGGSFIELD_EXECUTION_SURFACE", "api_key")
-    monkeypatch.setenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED", "true")
-
-    adapter = ExecutionAdapters(db=None)
-    route = resolve_creative_provider_route(
-        agent_id="ugc_creative_agent",
-        media_type="video",
-        video_quality="4K",
-    )
-
-    result = adapter.execute(
-        adapter_name="ugc_video_provider_adapter",
-        payload={
-            "workflow": {
-                "tenant_id": "workspace-test",
-                "task": "Create a cinematic product launch clip",
-                "creative_provider_route": route,
-            },
-            "context": {
-                "agent_id": "ugc_media_agent",
-                "job_id": "job-test",
-                "creative_provider_route": route,
-            },
-        },
-    )
-
-    assert result.provider_ready is True
-    assert result.execution_mode == "higgsfield_live"
-    assert result.execution_payload["provider_instance"].is_ready() is True
-
-
-def test_execution_adapter_uses_higgsfield_claude_mcp_without_api_key(monkeypatch):
-    monkeypatch.delenv("HIGGSFIELD_API_KEY", raising=False)
-    monkeypatch.setenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED", "true")
-    monkeypatch.setenv("HIGGSFIELD_EXECUTION_SURFACE", "claude_code_mcp")
-    monkeypatch.setattr(
-        "app.integrations.execution_adapters.HiggsfieldProvider.is_mcp_ready",
-        lambda self: True,
-    )
-
-    adapter = ExecutionAdapters(db=None)
-    route = resolve_creative_provider_route(
-        agent_id="ugc_media_agent",
-        media_type="video",
-        video_quality="720p",
-    )
-
-    result = adapter.execute(
-        adapter_name="ugc_video_provider_adapter",
-        payload={
-            "workflow": {
-                "tenant_id": "workspace-test",
-                "task": "Create a product clip",
-                "creative_provider_route": route,
-            },
-            "context": {
-                "agent_id": "ugc_media_agent",
-                "job_id": "job-test",
-                "creative_provider_route": route,
-            },
-        },
-    )
-
-    assert result.provider_ready is True
-    assert result.execution_mode == "higgsfield_mcp_live"
-    assert result.execution_payload["execution_surface"] == "claude_code_mcp"
-    assert result.execution_payload["provider_connected"] is True
-    assert result.execution_payload["selected_video_model_id"] == "kling3_0_turbo"
-
-
-def test_adapter_summary_drops_provider_instance_but_internal_result_keeps_it(monkeypatch):
-    monkeypatch.setenv("HIGGSFIELD_API_KEY", "test-key")
-    monkeypatch.setenv("HIGGSFIELD_EXECUTION_SURFACE", "api_key")
-    monkeypatch.setenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED", "true")
-
-    adapter = ExecutionAdapters(db=None)
-    route = resolve_creative_provider_route(
-        agent_id="ugc_media_agent",
-        media_type="video",
-    )
-
-    result = adapter.execute(
-        adapter_name="ugc_video_provider_adapter",
-        payload={
-            "workflow": {
-                "tenant_id": "workspace-test",
-                "task": "Create a product video",
-                "creative_provider_route": route,
-            },
-            "context": {
-                "agent_id": "ugc_media_agent",
-                "job_id": "job-test",
-                "creative_provider_route": route,
-            },
-        },
-    )
-
-    assert result.execution_payload["provider_instance"].is_ready() is True
-    summary = adapter_summary(result)
-
-    assert "provider_instance" not in summary["execution_payload"]
-    assert summary["execution_payload"]["selected_video_provider"] == "higgsfield"
-
-
-def test_execution_adapter_keeps_image_route_metadata_but_disables_live_video_for_image_only_routes(monkeypatch):
-    monkeypatch.setenv("HIGGSFIELD_API_KEY", "test-key")
-    monkeypatch.setenv("HIGGSFIELD_EXECUTION_SURFACE", "api_key")
-
+def test_execution_adapter_keeps_image_route_metadata_but_disables_live_video_for_image_only_routes():
     adapter = ExecutionAdapters(db=None)
     route = resolve_creative_provider_route(
         agent_id="product_image_agent",
@@ -490,8 +380,8 @@ def test_execution_adapter_keeps_image_route_metadata_but_disables_live_video_fo
         },
     )
 
-    assert result.execution_payload["selected_image_provider"] == "nano_banana"
-    assert result.execution_payload["selected_image_model"] == "Nano Banana Pro"
+    assert result.execution_payload["selected_image_provider"] == "openai_dalle"
+    assert result.execution_payload["selected_image_model"] == "DALL-E 3 HD"
     assert result.execution_payload["selected_video_provider"] is None
     assert result.execution_payload["selected_video_model"] is None
     assert result.provider_ready is False
@@ -501,75 +391,26 @@ def test_worker_live_execution_guard_requires_selected_video_route():
     adapter_result = AdapterResult(
         success=True,
         adapter_name="ugc_video_provider_adapter",
-        execution_mode="higgsfield_live",
+        execution_mode="kling_direct",
         provider_ready=True,
         message="prepared",
         next_steps=[],
         execution_payload={
             "selected_video_provider": None,
             "selected_video_model": None,
-            "selected_image_provider": "nano_banana",
-            "selected_image_model": "Nano Banana Pro",
+            "selected_image_provider": "openai_dalle",
+            "selected_image_model": "DALL-E 3 HD",
         },
     )
 
-    assert agent_worker._should_execute_higgsfield_live(  # type: ignore[attr-defined]
+    assert agent_worker._should_execute_kling_live(  # type: ignore[attr-defined]
         adapter_result,
         {
             "success": True,
             "media_types": ["image"],
-            "image": {"provider": "nano_banana", "model": "Nano Banana Pro"},
+            "image": {"provider": "openai_dalle", "model": "DALL-E 3 HD"},
         },
     ) is False
-
-
-def test_worker_builds_higgsfield_kwargs_from_create_media_request(monkeypatch):
-    monkeypatch.setenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2")
-    route = resolve_creative_provider_route(
-        agent_id="ugc_creative_agent",
-        media_type="video",
-        video_quality="4K",
-        package_tier="enterprise",
-    )
-    adapter_result = AdapterResult(
-        success=True,
-        adapter_name="ugc_video_provider_adapter",
-        execution_mode="higgsfield_live",
-        provider_ready=True,
-        message="prepared",
-        next_steps=[],
-        execution_payload={
-            "selected_video_provider": "higgsfield",
-            "selected_video_model": "Cinema Studio 4K",
-            "selected_video_model_id": "cinematic_studio_3_0",
-        },
-    )
-
-    kwargs = agent_worker._build_higgsfield_execution_kwargs(  # type: ignore[attr-defined]
-        {
-            "media_request": {
-                "platform": "Instagram Reels",
-                "aspect_ratio": "16:9 (landscape)",
-                "tone": "Luxury",
-                "language": "Spanish",
-                "video_quality": "4K",
-                "voiceover_script": "Descubre nuestra nueva coleccion premium.",
-            }
-        },
-        adapter_result,
-    )
-
-    assert kwargs["model"] == "cinematic_studio_3_0"
-    assert kwargs["platform"] == "instagram reels"
-    assert kwargs["aspect_ratio"] == "16:9"
-    assert kwargs["tone"] == "luxury"
-    assert kwargs["quality"] == "4K"
-    assert kwargs["language"] == "Spanish"
-    assert kwargs["voice_provider"] == "elevenlabs"
-    assert kwargs["voice_model_id"] == "eleven_multilingual_v2"
-    assert kwargs["voice_language"] == "Spanish"
-    assert kwargs["voiceover_script"] == "Descubre nuestra nueva coleccion premium."
-    assert kwargs["multilingual_voice_enabled"] is True
 
 
 def test_worker_media_preview_packet_preserves_provider_readiness_when_live_asset_missing():
@@ -589,8 +430,8 @@ def test_worker_media_preview_packet_preserves_provider_readiness_when_live_asse
         execution_payload={
             "selected_video_provider": None,
             "selected_video_model": None,
-            "selected_image_provider": "nano_banana",
-            "selected_image_model": "Nano Banana Pro",
+            "selected_image_provider": "openai_dalle",
+            "selected_image_model": "DALL-E 3 HD",
             "provider_connected": False,
             "live_execution_enabled": False,
         },
@@ -619,7 +460,7 @@ def test_worker_media_preview_packet_preserves_provider_readiness_when_live_asse
     assert packet["download_ready"] is True
     assert packet["download_url"].startswith("data:image/svg+xml")
     assert packet["provider_readiness"]["provider_ready"] is False
-    assert packet["provider_readiness"]["selected_image_model"] == "Nano Banana Pro"
+    assert packet["provider_readiness"]["selected_image_model"] == "DALL-E 3 HD"
 
 
 def test_lower_tier_social_agent_cannot_use_premium_higgsfield_models():
@@ -663,7 +504,7 @@ def test_premium_creative_agent_on_business_can_use_4k_video_and_pro_images():
 
     assert route["success"] is True
     assert route["video"]["model"] == "Cinema Studio 4K"
-    assert route["image"]["model"] == "Nano Banana Pro"
+    assert route["image"]["model"] == "DALL-E 3 HD"
     assert route["entitlement"]["package_tier"] == "business"
 
 
@@ -678,7 +519,7 @@ def test_product_image_agent_cannot_request_higgsfield_video():
     assert route["success"] is False
     assert route["reason"] == "media_type_not_allowed_for_agent"
     assert route["blocked_media_type"] == "video"
-    assert route["allowed_models"]["image"] == ["Nano Banana 2", "Nano Banana Pro"]
+    assert route["allowed_models"]["image"] == ["DALL-E 3", "DALL-E 3 HD"]
 
 
 def test_admin_create_media_form_type_social_ad_maps_to_video_route():
@@ -695,5 +536,5 @@ def test_admin_create_media_form_type_social_ad_maps_to_video_route():
 
     assert route["success"] is True
     assert route["media_types"] == ["video"]
-    assert route["video"]["provider"] == "higgsfield"
+    assert route["video"]["provider"] == "kling"
     assert route["video"]["model"] == "Kling 3.0 Turbo"

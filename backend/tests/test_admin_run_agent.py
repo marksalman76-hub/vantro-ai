@@ -43,7 +43,7 @@ def test_admin_run_agent_uses_admin_organization_workspace(client, db):
 
     input_data = json.loads(job.input_data)
     route = input_data["context"]["creative_provider_route"]
-    assert route["video"]["provider"] == "higgsfield"
+    assert route["video"]["provider"] == "kling"
     assert route["video"]["model"] == "Kling 3.0 Turbo"
     assert input_data["context"]["billing_mode"] == "owner_admin_unlimited"
     assert input_data["context"]["package_tier"] == "enterprise"
@@ -91,5 +91,5 @@ def test_admin_run_agent_uses_requested_creative_identity_for_premium_route(clie
     input_data = json.loads(job.input_data)
     route = input_data["context"]["creative_provider_route"]
     assert route["canonical_agent_id"] == "ugc_creative_agent"
-    assert route["video"]["provider"] == "higgsfield"
+    assert route["video"]["provider"] == "kling"
     assert route["video"]["model"] == "Cinema Studio 4K"

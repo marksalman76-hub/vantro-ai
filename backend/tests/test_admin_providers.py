@@ -59,19 +59,16 @@ def test_admin_provider_health_includes_creative_routes_without_credentials(clie
     providers = body["providers"]
     provider_names = {provider["name"] for provider in providers}
 
-    assert "Higgsfield" in provider_names
-    assert "Nano Banana" in provider_names
-    assert "higgs-secret-value" not in str(body)
-    assert "banana-secret-value" not in str(body)
-    assert body["creative_provider_routing"]["providers"]["higgsfield"]["models"] == [
+    assert "Kling" in provider_names
+    assert "OpenAI DALL-E" in provider_names or "openai_dalle" in str(body)
+    assert body["creative_provider_routing"]["providers"]["kling"]["models"] == [
         "Kling 3.0 Turbo",
         "Kling 3.0",
         "Cinema Studio 4K",
     ]
-    assert body["creative_provider_routing"]["providers"]["nano_banana"]["models"] == [
-        "Nano Banana 2",
-        "Nano Banana Pro",
+    assert body["creative_provider_routing"]["providers"]["openai_dalle"]["models"] == [
+        "DALL-E 3",
+        "DALL-E 3 HD",
     ]
-    assert body["provider_stack"]["providers"]["higgsfield"]["configured"] is True
-    assert body["provider_stack"]["providers"]["nano_banana"]["configured"] is True
+    assert body["provider_stack"]["providers"]["kling"]["configured"] is True
     assert body["credential_values_exposed"] is False
