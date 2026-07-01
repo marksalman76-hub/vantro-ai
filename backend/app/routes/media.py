@@ -17,7 +17,7 @@ from app.database import SessionLocal
 from app.models import User, Organization
 from app.models.workspace import Workspace, CreditsAccount, MediaJob
 from app.models.agent_system import WorkspaceIntegration
-from app.providers.adapters.higgsfield import HiggsfieldProvider
+from app.providers.adapters.kling import KlingProvider
 from app.providers.adapters.elevenlabs import ElevenLabsProvider
 from app.services.encryption_service import decrypt
 
@@ -104,7 +104,6 @@ async def create_media_job(
     job_id = str(uuid.uuid4())
     now = datetime.utcnow()
 
-    # Parse aspect ratio for Higgsfield
     aspect_map = {
         "9:16 (vertical)": "9:16",
         "1:1 (square)": "1:1",
@@ -113,48 +112,52 @@ async def create_media_job(
     }
     aspect_ratio = aspect_map.get(req.aspect_ratio, "9:16")
 
-    # Determine provider and create job accordingly
-    provider_type = "higgsfield"  # Default to Higgsfield for now
+    _QUALITY_TO_KLING_MODEL = {
+        "720p": "kling3_0_turbo",
+        "1080p": "kling3_0",
+        "4k": "cinematic_studio_3_0",
+        "4K": "cinematic_studio_3_0",
+    }
+
+    provider_type = "kling_direct"
     external_job_id = None
 
     try:
         if req.type in ["product_demo", "service_promo", "social_ad", "testimonial", "explainer", "brand_story", "campaign"]:
-            # Route to Higgsfield for video — get API key from workspace integrations
-            higgsfield_cred = (
-                db.query(WorkspaceIntegration)
-                .filter(
-                    WorkspaceIntegration.workspace_id == workspace.id,
-                    WorkspaceIntegration.integration_key == "HIGGSFIELD_API_KEY",
-                    WorkspaceIntegration.is_active == True,
+            # Retrieve Kling credentials from workspace integrations or env
+            access_key = secret_key = ""
+            for key_name, attr in (("KLING_ACCESS_KEY", "access"), ("KLING_SECRET_KEY", "secret")):
+                row = (
+                    db.query(WorkspaceIntegration)
+                    .filter(
+                        WorkspaceIntegration.workspace_id == workspace.id,
+                        WorkspaceIntegration.integration_key == key_name,
+                        WorkspaceIntegration.is_active == True,
+                    )
+                    .first()
                 )
-                .first()
-            )
+                val = decrypt(row.encrypted_value) if row else ""
+                if attr == "access":
+                    access_key = val or os.getenv("KLING_ACCESS_KEY", "")
+                else:
+                    secret_key = val or os.getenv("KLING_SECRET_KEY", "")
 
-            if not higgsfield_cred:
-                raise HTTPException(
-                    status_code=503,
-                    detail="Higgsfield not configured for this workspace"
-                )
+            if not access_key or not secret_key:
+                raise HTTPException(status_code=503, detail="Video generation not configured for this workspace")
 
-            # Decrypt API key
-            api_key = decrypt(higgsfield_cred.encrypted_value)
-            higgsfield = HiggsfieldProvider()
-            higgsfield.set_api_key(api_key)  # Use set_api_key() to set both key and status
-
-            result = await higgsfield.execute(
+            kling = KlingProvider(access_key=access_key, secret_key=secret_key)
+            result = await kling.execute(
                 prompt=req.brief,
+                model=_QUALITY_TO_KLING_MODEL.get(getattr(req, "video_quality", "1080p"), "kling3_0"),
                 aspect_ratio=aspect_ratio,
-                platform=req.platform.lower(),
-                tone=req.tone.lower(),
-                quality=req.video_quality,
-                language=req.language,
+                language=getattr(req, "language", "English"),
             )
 
             if "error" in result:
-                raise HTTPException(status_code=503, detail=f"Higgsfield error: {result['error']}")
+                raise HTTPException(status_code=503, detail=f"Video generation error: {result['error']}")
 
             external_job_id = result.get("task_id")
-            provider_type = "higgsfield"
+            provider_type = "kling_direct"
 
         elif req.type in ["voiceover", "podcast", "narration"]:
             # Route to ElevenLabs for audio

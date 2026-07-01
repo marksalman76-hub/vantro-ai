@@ -62,7 +62,7 @@ PROVIDER_MAP = {
     "ads": ["meta_ads", "google_ads"],
     "content": ["openai", "anthropic"],
     "image": ["openai_image", "replicate"],
-    "video": ["heygen", "runway", "higgsfield"],
+    "video": ["heygen", "runway", "kling"],
     "workflow": ["make", "zapier"],
 }
 
@@ -107,7 +107,7 @@ def classify_workflow_provider_category(action_type: str, workflow_payload: Opti
         return "ads"
     if any(k in raw for k in ["image", "photo", "product picture"]):
         return "image"
-    if any(k in raw for k in ["video", "ugc", "avatar", "heygen", "runway", "higgsfield"]):
+    if any(k in raw for k in ["video", "ugc", "avatar", "heygen", "runway", "kling"]):
         return "video"
     if any(k in raw for k in ["make", "zapier", "webhook", "automation"]):
         return "workflow"

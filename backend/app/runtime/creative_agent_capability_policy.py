@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import Any, Dict
 
 
-VIDEO_PROVIDER = "higgsfield"
-IMAGE_PROVIDER = "nano_banana"
+VIDEO_PROVIDER = "kling"
+IMAGE_PROVIDER = "openai_dalle"
 
 VIDEO_MODELS = {
     "Kling 3.0 Turbo": {
@@ -28,15 +28,15 @@ VIDEO_MODELS = {
 }
 
 IMAGE_MODELS = {
-    "Nano Banana 2": {
+    "DALL-E 3": {
         "provider": IMAGE_PROVIDER,
-        "model": "Nano Banana 2",
+        "model": "DALL-E 3",
         "tier": "standard",
         "capability": "image_generation",
     },
-    "Nano Banana Pro": {
+    "DALL-E 3 HD": {
         "provider": IMAGE_PROVIDER,
-        "model": "Nano Banana Pro",
+        "model": "DALL-E 3 HD",
         "tier": "pro",
         "capability": "image_generation",
     },
@@ -45,50 +45,50 @@ IMAGE_MODELS = {
 AGENT_CREATIVE_MODEL_ACCESS: dict[str, dict[str, list[str]]] = {
     "ugc_media_agent": {
         "video": ["Kling 3.0 Turbo", "Kling 3.0"],
-        "image": ["Nano Banana 2"],
+        "image": ["DALL-E 3"],
     },
     "ugc_creative_agent": {
         "video": ["Kling 3.0 Turbo", "Kling 3.0", "Cinema Studio 4K"],
-        "image": ["Nano Banana 2", "Nano Banana Pro"],
+        "image": ["DALL-E 3", "DALL-E 3 HD"],
     },
     "product_image_agent": {
         "video": [],
-        "image": ["Nano Banana 2", "Nano Banana Pro"],
+        "image": ["DALL-E 3", "DALL-E 3 HD"],
     },
     "ad_creative_agent": {
         "video": ["Kling 3.0 Turbo", "Kling 3.0"],
-        "image": ["Nano Banana 2", "Nano Banana Pro"],
+        "image": ["DALL-E 3", "DALL-E 3 HD"],
     },
     "creative_rotation_agent": {
         "video": ["Kling 3.0 Turbo"],
-        "image": ["Nano Banana 2"],
+        "image": ["DALL-E 3"],
     },
     "social_media_content_agent": {
         "video": ["Kling 3.0 Turbo"],
-        "image": ["Nano Banana 2"],
+        "image": ["DALL-E 3"],
     },
     "ads_optimisation_agent": {
         "video": [],
-        "image": ["Nano Banana 2"],
+        "image": ["DALL-E 3"],
     },
 }
 
 PACKAGE_CREATIVE_MODEL_ACCESS: dict[str, dict[str, list[str]]] = {
     "starter": {
         "video": ["Kling 3.0 Turbo"],
-        "image": ["Nano Banana 2"],
+        "image": ["DALL-E 3"],
     },
     "growth": {
         "video": ["Kling 3.0 Turbo", "Kling 3.0"],
-        "image": ["Nano Banana 2", "Nano Banana Pro"],
+        "image": ["DALL-E 3", "DALL-E 3 HD"],
     },
     "business": {
         "video": ["Kling 3.0 Turbo", "Kling 3.0", "Cinema Studio 4K"],
-        "image": ["Nano Banana 2", "Nano Banana Pro"],
+        "image": ["DALL-E 3", "DALL-E 3 HD"],
     },
     "enterprise": {
         "video": ["Kling 3.0 Turbo", "Kling 3.0", "Cinema Studio 4K"],
-        "image": ["Nano Banana 2", "Nano Banana Pro"],
+        "image": ["DALL-E 3", "DALL-E 3 HD"],
     },
 }
 

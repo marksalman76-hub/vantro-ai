@@ -112,21 +112,8 @@ def _selected_video_route(creative_provider_route: object) -> dict:
 def _execution_surface_from_adapter(adapter_result) -> str:
     payload = getattr(adapter_result, "execution_payload", None)
     if isinstance(payload, dict):
-        return str(payload.get("execution_surface") or "claude_code_mcp").strip().lower()
-    return "claude_code_mcp"
-
-
-def _should_execute_higgsfield_live(adapter_result, creative_provider_route: object) -> bool:
-    if not getattr(adapter_result, "provider_ready", False):
-        return False
-    execution_payload = getattr(adapter_result, "execution_payload", None)
-    if not isinstance(execution_payload, dict):
-        return False
-    surface = _execution_surface_from_adapter(adapter_result)
-    if surface not in ("claude_code_mcp", "higgsfield_http"):
-        return False
-    selected_model = execution_payload.get("selected_video_model")
-    return bool(selected_model)
+        return str(payload.get("execution_surface") or "kling_direct").strip().lower()
+    return "kling_direct"
 
 
 def _should_execute_kling_live(adapter_result) -> bool:
@@ -274,56 +261,6 @@ def _extract_reference_image(context: object) -> tuple[str, str]:
     except ValueError:
         return "", ""
     return b64.strip(), content_type.strip()
-
-
-def _build_higgsfield_execution_kwargs(
-    context: object,
-    adapter_result: object,
-    fallback_voiceover_script: str = "",
-) -> dict:
-    media_request = _media_request_from_context(context)
-    execution_payload = getattr(adapter_result, "execution_payload", {})
-    execution_payload = execution_payload if isinstance(execution_payload, dict) else {}
-    route = execution_payload.get("creative_provider_route")
-    video_route = _selected_video_route(route)
-    language = _clean_media_string(
-        media_request.get("language") or execution_payload.get("language"),
-        "English",
-    )
-    quality = _clean_media_string(
-        media_request.get("video_quality") or video_route.get("quality"),
-        "1080p",
-    )
-    voiceover = _build_elevenlabs_voiceover(language)
-    voiceover_script = _clean_media_string(
-        media_request.get("voiceover_script")
-        or media_request.get("voice_script")
-        or media_request.get("narration_script")
-        or media_request.get("voiceover")
-        or _extract_voiceover_text_from_llm_output(fallback_voiceover_script),
-        "",
-    )
-
-    ref_image_b64, ref_image_content_type = _extract_reference_image(context)
-
-    kwargs: dict = {
-        "model": execution_payload.get("selected_video_model_id") or execution_payload.get("selected_video_model"),
-        "duration": 30,
-        "aspect_ratio": _normalize_aspect_ratio(media_request.get("aspect_ratio")),
-        "platform": _clean_media_string(media_request.get("platform"), "tiktok").lower(),
-        "tone": _clean_media_string(media_request.get("tone"), "professional").lower(),
-        "quality": quality,
-        "language": language,
-        "voice_provider": voiceover["provider"],
-        "voice_model_id": voiceover["model_id"],
-        "voice_language": voiceover["language"],
-        "voiceover_script": voiceover_script,
-        "multilingual_voice_enabled": voiceover["multilingual"],
-    }
-    if ref_image_b64:
-        kwargs["reference_image_base64"] = ref_image_b64
-        kwargs["reference_image_content_type"] = ref_image_content_type or "image/jpeg"
-    return kwargs
 
 
 def _resolve_billable_credit_cost(*, actual_credits: int, pre_committed: int, owner_admin_unlimited: bool) -> int:
@@ -693,25 +630,7 @@ async def _process_job(job_id: str) -> None:
                     },
                 )
 
-                if _should_execute_higgsfield_live(adapter_result, creative_provider_route):
-                    higgsfield = adapter_result.execution_payload.get("provider_instance")
-                    if higgsfield:
-                        try:
-                            higgsfield_kwargs = _build_higgsfield_execution_kwargs(
-                                context,
-                                adapter_result,
-                                fallback_voiceover_script=output,
-                            )
-                            live_task_result = await higgsfield.execute(
-                                prompt=output,
-                                **higgsfield_kwargs,
-                            )
-                            logger.info("Worker: UGC media job %s routed to Higgsfield", job_id)
-                        except Exception as e:
-                            logger.error("Worker: Higgsfield execution failed for job %s: %s", job_id, e)
-                            live_task_result = {"error": str(e), "provider": "higgsfield"}
-
-                elif _should_execute_kling_live(adapter_result):
+                if _should_execute_kling_live(adapter_result):
                     kling = adapter_result.execution_payload.get("provider_instance")
                     if kling:
                         try:

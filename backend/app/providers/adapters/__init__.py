@@ -4,7 +4,8 @@ from .elevenlabs import ElevenLabsProvider
 from .pika import PikaProvider
 from .mubert import MubertProvider
 from .assemblyai import AssemblyAIProvider
-from .higgsfield import HiggsfieldProvider
+from .dalle import DalleProvider
+from .kling import KlingProvider
 
 __all__ = [
     "SynthesiaProvider",
@@ -12,5 +13,6 @@ __all__ = [
     "PikaProvider",
     "MubertProvider",
     "AssemblyAIProvider",
-    "HiggsfieldProvider",
+    "DalleProvider",
+    "KlingProvider",
 ]

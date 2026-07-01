@@ -23,7 +23,7 @@ from app.integrations.shopify_draft_product_adapter import (
     ShopifyDraftProductRequest,
     shopify_draft_product_summary,
 )
-from app.providers.adapters.higgsfield import HiggsfieldProvider
+from app.providers.adapters.dalle import DalleProvider
 from app.providers.adapters.kling import KlingProvider
 
 logger = logging.getLogger(__name__)
@@ -71,38 +71,6 @@ def _get_kling_credentials(db: Session, workspace_id: str) -> tuple[str, str]:
         secret_key or os.getenv("KLING_SECRET_KEY", ""),
     )
 
-
-
-def _get_higgsfield_api_key(db: Session, workspace_id: str) -> Optional[str]:
-    """
-    Retrieve Higgsfield API key for workspace from encrypted storage.
-    Returns None if not configured.
-
-    Security: decryption happens only here, never logged or returned to caller.
-    """
-    if not db:
-        return None
-
-    try:
-        from app.models.agent_system import WorkspaceIntegration
-        from app.services.encryption_service import decrypt
-
-        row = (
-            db.query(WorkspaceIntegration)
-            .filter(
-                WorkspaceIntegration.workspace_id == workspace_id,
-                WorkspaceIntegration.integration_key == "HIGGSFIELD_API_KEY",
-                WorkspaceIntegration.is_active == True,
-            )
-            .first()
-        )
-        if not row:
-            return None
-
-        return decrypt(row.encrypted_value)
-    except Exception as e:
-        logger.exception("Failed to retrieve Higgsfield credentials for workspace %s", workspace_id)
-        return None
 
 
 def _truthy(value: str | None) -> bool:
@@ -172,7 +140,6 @@ class ExecutionAdapters:
             task_type="ugc_video_brief",
         )
 
-        # Extract workspace_id from payload (tenant_id)
         workflow = payload.get("workflow", {})
         context = payload.get("context", {}) if isinstance(payload.get("context"), dict) else {}
         creative_provider_route = (
@@ -192,79 +159,38 @@ class ExecutionAdapters:
         language = str(workflow.get("language") or media_request.get("language") or "English")
         voiceover = workflow.get("voiceover") if isinstance(workflow.get("voiceover"), dict) else {}
 
-        live_enabled = _truthy(os.getenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED"))
-        execution_surface = os.getenv("HIGGSFIELD_EXECUTION_SURFACE", "claude_code_mcp").strip().lower()
+        live_enabled = _truthy(
+            os.getenv("VIDEO_LIVE_EXECUTION_ENABLED") or os.getenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED")
+        )
 
-        provider_connected = False
-        provider_ready = False
-        provider_instance = None
-        execution_mode = "provider_orchestrated_safe_stub"
-
-        if execution_surface == "kling_direct":
-            access_key, secret_key = _get_kling_credentials(self.db, workspace_id)
-            kling = KlingProvider(access_key=access_key, secret_key=secret_key)
-            provider_connected = kling.is_ready()
-            provider_ready = live_enabled and provider_connected
-            provider_instance = kling
-            execution_mode = "kling_direct_live" if provider_ready else "provider_orchestrated_safe_stub"
-
-        else:
-            # Higgsfield MCP (claude_code_mcp) or legacy HTTP
-            higgsfield = HiggsfieldProvider()
-            higgsfield_api_key = None
-
-            if execution_surface == "claude_code_mcp":
-                provider_connected = higgsfield.is_mcp_ready()
-                provider_ready = live_enabled and provider_connected
-                execution_mode = "higgsfield_mcp_live" if provider_ready else "provider_orchestrated_safe_stub"
-            else:
-                if workspace_id and self.db:
-                    higgsfield_api_key = _get_higgsfield_api_key(self.db, workspace_id)
-                if not higgsfield_api_key:
-                    higgsfield_api_key = os.getenv("HIGGSFIELD_API_KEY", "")
-                if higgsfield_api_key and selected_video_provider == "higgsfield":
-                    higgsfield.set_api_key(higgsfield_api_key)
-                    provider_connected = True
-                    provider_ready = live_enabled and higgsfield.is_ready()
-                execution_mode = "higgsfield_live" if provider_ready else "provider_orchestrated_safe_stub"
-
-            provider_instance = higgsfield
+        access_key, secret_key = _get_kling_credentials(self.db, workspace_id)
+        kling = KlingProvider(access_key=access_key, secret_key=secret_key)
+        provider_connected = kling.is_ready()
+        provider_ready = live_enabled and provider_connected
+        execution_mode = "kling_direct_live" if provider_ready else "provider_orchestrated_safe_stub"
 
         next_steps: list[str] = []
         if not provider_ready:
-            if execution_surface == "kling_direct":
-                next_steps = [
-                    "Set KLING_ACCESS_KEY and KLING_SECRET_KEY environment variables.",
-                    "Set HIGGSFIELD_LIVE_EXECUTION_ENABLED=true.",
-                ]
-            else:
-                next_steps = [
-                    "Run `claude mcp login higgsfield` where the worker executes.",
-                    "Set HIGGSFIELD_EXECUTION_SURFACE=claude_code_mcp.",
-                    "Set HIGGSFIELD_LIVE_EXECUTION_ENABLED=true after MCP preflight succeeds.",
-                    "Alternatively set HIGGSFIELD_EXECUTION_SURFACE=kling_direct with KLING_ACCESS_KEY/KLING_SECRET_KEY.",
-                ]
-
-        surface_label = {
-            "kling_direct": "Kling",
-            "claude_code_mcp": "Higgsfield MCP",
-        }.get(execution_surface, "Higgsfield")
+            next_steps = [
+                "Set KLING_ACCESS_KEY and KLING_SECRET_KEY environment variables.",
+                "Set VIDEO_LIVE_EXECUTION_ENABLED=true.",
+            ]
 
         return AdapterResult(
             success=bool(provider_route["success"]) and provider_ready,
             adapter_name="ugc_video_provider_adapter",
             execution_mode=execution_mode,
             provider_ready=provider_ready,
-            message=f"UGC video generation routed to {surface_label}" if provider_ready else "UGC video provider adapter prepared through provider orchestrator.",
+            message="UGC video generation routed to Kling" if provider_ready else "UGC video provider adapter prepared through provider orchestrator.",
             next_steps=next_steps,
             execution_payload={
                 "provider_route": provider_route,
                 "provider_category": "ugc_video_generation",
                 "provider": selected_video_provider,
-                "execution_surface": execution_surface,
+                "execution_surface": "kling_direct",
                 "provider_connected": provider_connected,
                 "live_execution_enabled": live_enabled,
-                "provider_instance": provider_instance,
+                "provider_instance": kling,
                 "workspace_id": workspace_id,
                 "language": language,
                 "media_request": media_request,
@@ -285,22 +211,44 @@ class ExecutionAdapters:
             task_type="product_image_generation",
         )
 
+        workflow = payload.get("workflow", {})
+        context = payload.get("context", {}) if isinstance(payload.get("context"), dict) else {}
+        creative_provider_route = (
+            workflow.get("creative_provider_route")
+            if isinstance(workflow.get("creative_provider_route"), dict)
+            else context.get("creative_provider_route")
+        )
+        image_route = creative_provider_route.get("image", {}) if isinstance(creative_provider_route, dict) else {}
+
+        dalle = DalleProvider()
+        provider_connected = dalle.is_ready()
+        live_enabled = _truthy(
+            os.getenv("VIDEO_LIVE_EXECUTION_ENABLED") or os.getenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED")
+        )
+        provider_ready = live_enabled and provider_connected
+        execution_mode = "dalle_direct_live" if provider_ready else "provider_orchestrated_safe_stub"
+
         return AdapterResult(
-            success=bool(provider_route["success"]),
+            success=bool(provider_route["success"]) and provider_ready,
             adapter_name="image_generation_provider_adapter",
-            execution_mode="provider_orchestrated_safe_stub",
-            provider_ready=False,
-            message="Product image generation adapter prepared through provider orchestrator.",
-            next_steps=[
-                "Select premium image generation provider.",
-                "Map product, brand, scene, and platform parameters.",
-                "Add quality validation for product accuracy and visual artefacts.",
-                "Run safe test generation before enabling client delivery.",
+            execution_mode=execution_mode,
+            provider_ready=provider_ready,
+            message="Product image generation routed to DALL-E 3" if provider_ready else "Product image generation adapter prepared through provider orchestrator.",
+            next_steps=[] if provider_ready else [
+                "Set OPENAI_API_KEY environment variable.",
+                "Set VIDEO_LIVE_EXECUTION_ENABLED=true.",
             ],
             execution_payload={
                 "provider_route": provider_route,
                 "provider_category": "image_generation",
-                "provider_connected": False,
+                "execution_surface": "dalle_direct",
+                "provider_connected": provider_connected,
+                "live_execution_enabled": live_enabled,
+                "provider_instance": dalle,
+                "selected_image_provider": image_route.get("provider"),
+                "selected_image_model": image_route.get("model"),
+                "selected_image_model_id": image_route.get("model_id"),
+                "selected_image_quality": image_route.get("quality", "standard"),
             },
         )
 

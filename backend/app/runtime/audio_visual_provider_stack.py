@@ -68,11 +68,11 @@ PROVIDER_STACK = {
         "agents": ["product_image_agent", "ugc_creative_agent", "website_landing_apps_agent"],
         "live_call_enabled_env": "REPLICATE_LIVE_EXECUTION_ENABLED",
     },
-    "higgsfield": {
+    "kling": {
         "category": ["video", "text_to_video", "image_to_video", "creative_motion"],
-        "env_keys": ["HIGGSFIELD_API_KEY"],
+        "env_keys": ["KLING_ACCESS_KEY", "KLING_SECRET_KEY"],
         "agents": VIDEO_CREATIVE_AGENT_IDS,
-        "live_call_enabled_env": "HIGGSFIELD_LIVE_EXECUTION_ENABLED",
+        "live_call_enabled_env": "VIDEO_LIVE_EXECUTION_ENABLED",
         "models": ["Kling 3.0 Turbo", "Kling 3.0", "Cinema Studio 4K"],
     },
     "nano_banana": {
@@ -183,7 +183,7 @@ def recommended_stack_for_task(agent_id: str, task: str = "") -> Dict[str, Any]:
     if "avatar" in task_lower or "presenter" in task_lower:
         preferred.append("heygen")
     if "video" in task_lower or "ugc" in task_lower or "reel" in task_lower:
-        preferred.extend(["higgsfield", "kling", "runway", "heygen"])
+        preferred.extend(["kling", "runway", "heygen"])
     if "image" in task_lower or "product photo" in task_lower or "visual" in task_lower:
         preferred.extend(["nano_banana", "openai", "replicate"])
     if "website" in task_lower or "landing page" in task_lower:

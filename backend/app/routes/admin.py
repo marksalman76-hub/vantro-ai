@@ -176,8 +176,8 @@ def _platform_provider_health(user: User, db: Session) -> list[dict]:
     ]
 
     creative_provider_entries = [
-        ("higgsfield", "Higgsfield", "Video Generation", "Creative video generation provider", "primary"),
-        ("nano_banana", "Nano Banana", "Image Generation", "Creative image generation provider", "primary"),
+        ("kling", "Kling", "Video Generation", "Creative video generation provider", "primary"),
+        ("openai_dalle", "AI Image Generation", "Image Generation", "Creative image generation provider", "primary"),
     ]
     for provider_key, name, category, notes, role in creative_provider_entries:
         status = provider_config_status(provider_key)
@@ -991,11 +991,6 @@ async def admin_get_agent_job_media_status(
       or {"status": "no_task_id"} when no task_id is present.
     """
     import json as _json
-    from app.providers.adapters.higgsfield import (
-        _run_claude_mcp_prompt,
-        _extract_json_payload,
-        _find_first_key,
-    )
 
     _require_admin(credentials, db)
 
@@ -1003,12 +998,20 @@ async def admin_get_agent_job_media_status(
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Parse output_data
+    # Parse output_data — may be wrapped in agent job envelope
     output_raw = job.output_data or ""
+    # Strip "<!-- provider:... -->\n" wrapper if present
+    if output_raw.startswith("<!--"):
+        output_raw = output_raw.split("\n", 1)[-1].strip()
     try:
         output = _json.loads(output_raw) if output_raw.strip().startswith("{") else {}
     except (ValueError, TypeError):
         output = {}
+
+    # Dig into nested provider_task if present (agent job structure)
+    provider_task = output.get("provider_task") or {}
+    if isinstance(provider_task, dict):
+        output = {**output, **provider_task}
 
     task_id = output.get("task_id")
     provider = (output.get("provider") or "").lower()
@@ -1016,7 +1019,7 @@ async def admin_get_agent_job_media_status(
     if not task_id:
         return {"status": "no_task_id", "task_id": None, "video_url": None}
 
-    # If there is already a video_url in the stored output, return it immediately
+    # If a video_url is already stored, return immediately — Kling polling is synchronous
     existing_url = (
         output.get("video_url")
         or output.get("download_url")
@@ -1026,48 +1029,41 @@ async def admin_get_agent_job_media_status(
     if existing_url:
         return {"task_id": task_id, "status": "completed", "video_url": existing_url}
 
-    # ── Higgsfield via Claude Code MCP ───────────────────────────────────────
-    if provider == "higgsfield":
-        mcp_prompt = (
-            f"Use the connected Higgsfield MCP tool to check the status of task_id '{task_id}'. "
-            "Try mcp__higgsfield__check_video_status or mcp__higgsfield__get_video_result. "
-            "Return only the raw JSON result."
-        )
+    # ── Kling: poll REST API for task status ─────────────────────────────────
+    if provider in ("kling_direct", "kling"):
         try:
-            timeout = int(os.getenv("HIGGSFIELD_MCP_TIMEOUT_SECONDS", "60"))
-            raw = await _run_claude_mcp_prompt(
-                mcp_prompt,
-                timeout_seconds=timeout,
-                allowed_tools="mcp__higgsfield__*",
-            )
-            data = _extract_json_payload(raw)
+            import time, jwt as _jwt
+            from app.providers.adapters.kling import KLING_BASE
+            kling_access = os.getenv("KLING_ACCESS_KEY", "")
+            kling_secret = os.getenv("KLING_SECRET_KEY", "")
+            if kling_access and kling_secret:
+                import httpx as _httpx
+                now_ts = int(time.time())
+                token = _jwt.encode(
+                    {"iss": kling_access, "exp": now_ts + 1800, "nbf": now_ts - 5},
+                    kling_secret, algorithm="HS256",
+                )
+                headers = {"Authorization": f"Bearer {token}", "Content-Type": "application/json"}
+                base = KLING_BASE.rstrip("/")
+                # Try text2video first, then image2video
+                for poll_path in ("text2video", "image2video"):
+                    async with _httpx.AsyncClient(timeout=15.0) as client:
+                        resp = await client.get(f"{base}/v1/videos/{poll_path}/{task_id}", headers=headers)
+                    if resp.status_code == 200:
+                        pd = resp.json()
+                        task_data = pd.get("data") or {}
+                        raw_status = task_data.get("task_status", "")
+                        if raw_status == "succeed":
+                            videos = (task_data.get("task_result") or {}).get("videos") or []
+                            video_url = videos[0].get("url", "") if videos else None
+                            return {"task_id": task_id, "status": "completed", "video_url": video_url}
+                        elif raw_status == "failed":
+                            return {"task_id": task_id, "status": "failed", "video_url": None}
+                        elif raw_status:
+                            return {"task_id": task_id, "status": "processing", "video_url": None}
         except Exception as exc:
-            logger.warning("Higgsfield media-status MCP error for job %s: %s", job_id, exc)
-            return {"task_id": task_id, "status": "processing", "video_url": None, "error": str(exc)}
+            logger.warning("Kling media-status poll error for job %s: %s", job_id, exc)
 
-        # Extract status
-        raw_status = (
-            data.get("status")
-            or data.get("state")
-            or ""
-        )
-        normalized = raw_status.lower() if isinstance(raw_status, str) else ""
-        if normalized in {"completed", "done", "succeeded", "success", "ready"}:
-            status = "completed"
-        elif normalized in {"failed", "error", "cancelled", "canceled"}:
-            status = "failed"
-        else:
-            status = "processing"
-
-        # Extract video URL
-        video_url = _find_first_key(
-            data,
-            {"video_url", "url", "download_url", "output_url", "result_url", "asset_url", "preview_url"},
-        ) or None
-
-        return {"task_id": task_id, "status": status, "video_url": video_url}
-
-    # ── Fallback: unknown provider ────────────────────────────────────────────
     return {"task_id": task_id, "status": "processing", "video_url": None}
 
 
