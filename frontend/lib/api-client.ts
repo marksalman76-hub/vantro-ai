@@ -1,8 +1,6 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
-
 export const apiClient = {
   async register(email: string, password: string, name: string) {
-    const res = await fetch(`${API_URL}/api/auth/register`, {
+    const res = await fetch('/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password, name }),
@@ -11,7 +9,7 @@ export const apiClient = {
   },
 
   async login(email: string, password: string) {
-    const res = await fetch(`${API_URL}/api/auth/login`, {
+    const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
@@ -20,14 +18,14 @@ export const apiClient = {
   },
 
   async getMe(token: string) {
-    const res = await fetch(`${API_URL}/api/auth/me`, {
+    const res = await fetch('/api/auth/me', {
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     })
     return res.json()
   },
 
   async getDashboard(token: string) {
-    const res = await fetch(`${API_URL}/api/dashboard`, {
+    const res = await fetch('/api/dashboard', {
       headers: { Authorization: `Bearer ${token}` },
     })
     return res.json()

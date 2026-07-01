@@ -8,7 +8,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
-from typing import Optional, List
+from typing import Optional, List, Literal
 
 from app.auth import verify_token
 from app.database import SessionLocal
@@ -1084,16 +1084,20 @@ async def admin_list_support_tickets(
     return {"tickets": [dict(r._mapping) for r in rows]}
 
 
+class TicketUpdateRequest(BaseModel):
+    status: Literal["open", "in_progress", "resolved", "closed"] = "resolved"
+
+
 @router.patch("/support/tickets/{ticket_id}")
 async def admin_update_ticket(
     ticket_id: str,
-    body: dict,
+    body: TicketUpdateRequest,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db),
 ):
     """Admin updates support ticket status."""
     _require_admin(credentials, db)
-    new_status = body.get("status", "resolved")
+    new_status = body.status
     db.execute(
         text("UPDATE support_tickets SET status = :status, updated_at = :ts WHERE id = :id"),
         {"status": new_status, "ts": datetime.utcnow(), "id": ticket_id},

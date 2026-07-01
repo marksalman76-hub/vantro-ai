@@ -67,6 +67,8 @@ def _get_user(credentials: HTTPAuthorizationCredentials, db: Session) -> User:
     user = db.query(User).filter(User.id == payload.get("sub")).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    if not user.is_active:
+        raise HTTPException(status_code=403, detail="Account suspended")
     return user
 
 

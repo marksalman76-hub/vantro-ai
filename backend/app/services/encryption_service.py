@@ -40,6 +40,11 @@ def _get_fernet():
 
     # Derive a stable Fernet key from SECRET_KEY so the app always works
     secret = os.getenv("SECRET_KEY", "vantro-default-secret-change-in-production")
+    if secret == "vantro-default-secret-change-in-production" and os.getenv("ENVIRONMENT") == "production":
+        raise ValueError(
+            "INTEGRATION_ENCRYPTION_KEY or a non-default SECRET_KEY must be set in production. "
+            "All workspace credentials would be encrypted with a known default key."
+        )
     derived = base64.urlsafe_b64encode(hashlib.sha256(secret.encode()).digest())
     _fernet = Fernet(derived)
     return _fernet

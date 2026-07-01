@@ -28,9 +28,7 @@ export default function ActivatePage() {
   useEffect(() => {
     if (!token) return;
 
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.vantro.ai';
-
-    fetch(`${API_URL}/api/billing/activate/${encodeURIComponent(token)}`)
+    fetch(`/api/billing/activate/${encodeURIComponent(token)}`)
       .then(async (res) => {
         const data = await res.json();
         if (!res.ok) {
