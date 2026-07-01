@@ -187,7 +187,7 @@ jobs:
         with:
           task-definition: task-def-worker.json
           container-name: worker
-          image: ${{ needs.build.outputs.worker-image }}
+          image: ${{ needs.build.outputs.agent-worker-image }}
 
       - name: Deploy to ECS and wait for stability
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
