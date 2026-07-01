@@ -402,7 +402,12 @@ export default function AdminCreateMediaPage() {
       });
       const d = await res.json();
       if (res.ok && d.job_id) {
-        // Stay on page — show inline result + poll for video
+        if (d.status === 'pending_approval') {
+          setError(`This agent requires approval before running. Go to Admin › Agent Jobs to approve job ${d.job_id}.`);
+          submitLockRef.current = false;
+          setSubmitting(false);
+          return;
+        }
         setJobId(d.job_id);
         setMediaStatus(null);
         setPollCount(0);

@@ -930,7 +930,9 @@ async def admin_run_agent(
         workspace_id=ws.id,
         agent_id=norm_id,
         agent_name=meta["name"],
-        status="pending_approval" if hitl == "HITL-3" else "pending",
+        # Admin submitting the job IS the HITL-3 approval authority — auto-approve.
+        # Client-submitted HITL-3 jobs (via /api/agents/{id}/run) still require owner approval.
+        status="approved" if hitl == "HITL-3" else "pending",
         hitl_level=hitl,
         input_data=_json.dumps({"prompt": body.prompt[:10_000], "context": run_context}),
         credits_used=0,
