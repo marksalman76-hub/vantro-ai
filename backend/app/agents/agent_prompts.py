@@ -1,5 +1,5 @@
 """
-System prompts for all 27 Vantro agents.
+System prompts for all 22 Vantro agents.
 
 Each prompt:
 - Defines the agent's identity, role, and output style
@@ -135,7 +135,7 @@ JSON schema:
 ```
 
 Rules:
-- `selected_agents`: list of agent IDs from the 24-agent catalogue only. Never invent agent IDs.
+- `selected_agents`: list of agent IDs from the 22-agent catalogue only. Never invent agent IDs.
 - `execution_order`: "parallel" only if agents are fully independent (no output dependency). Default "sequential".
 - `priority_agent`: the first agent to run in sequential order, or the most critical in parallel.
 - `hitl_override`: null unless you are escalating the task beyond the default HITL level.

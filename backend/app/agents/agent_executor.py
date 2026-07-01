@@ -42,6 +42,25 @@ TEMPERATURE       = 0.7
 LLM_TIMEOUT_S     = 90  # max seconds to wait for any LLM response
 TOKENS_PER_CREDIT = 1000  # 1 credit = 1,000 tokens billed
 
+# Agents permitted to call Composio-connected external tools.
+# Agents not in this set receive zero Composio tools even if a workspace key is present.
+# Creative, analytical, and content agents intentionally excluded — they have no need
+# for external write-capable integrations.
+COMPOSIO_ENABLED_AGENTS: set[str] = {
+    "business_growth_partnerships_agent",
+    "lead_generator_agent",
+    "sales_closer_agent",
+    "crm_agent",
+    "ads_optimisation_agent",
+    "influencer_outreach_agent",
+    "website_app_agent",
+    "ecommerce_agent",
+    "customer_lifecycle_agent",
+    "email_reply_agent",
+    "workflow_automation_agent",
+    "research_analytics_agent",
+}
+
 # HITL level → Anthropic model (Haiku for speed, Opus for accuracy, Sonnet default)
 HITL_MODEL_MAP: dict[str, str] = {
     "HITL-0": ANTHROPIC_FAST,
@@ -218,6 +237,8 @@ _OPACITY_PATTERNS: list[tuple[str, str]] = [
     # Chain of thought leakage
     (r"(?i)^(Let me (think|analyse|analyze|consider|break this down)|First[,\s]+let me|Step \d+:)\s*\n?", "", ),
     (r"(?i)\bmy (reasoning|thought process|analysis pipeline|retrieval)\b", "my analysis"),
+    # head_agent <thinking> block — must not reach stored output
+    (r"<thinking>[\s\S]*?</thinking>", ""),
 ]
 
 
@@ -284,16 +305,11 @@ def _query_ga4(inputs: dict, workspace_id: Optional[str]) -> str:
                     WorkspaceIntegration.is_active == True,
                 ).first()
                 if record:
-                    # Real GA4 call would go here — requires google-analytics-data library
-                    # For now: return structured placeholder noting it's connected
                     return json.dumps({
-                        "status": "connected",
-                        "note": "GA4 property connected. Real-time query in progress.",
-                        "data": {
-                            "metrics": inputs.get("metrics", []),
-                            "date_range": inputs.get("date_range"),
-                            "result": "Real GA4 data pull requires backend GA4 API integration. Property ID confirmed connected."
-                        }
+                        "status": "no_live_data",
+                        "reason": "GA4 API integration not yet implemented in backend",
+                        "action_required": "Implement google-analytics-data library call in agent_executor._query_ga4",
+                        "guidance": "Provide framework-based analysis only. Do not claim real metrics were retrieved.",
                     })
             finally:
                 db.close()
@@ -321,13 +337,10 @@ def _query_shopify(inputs: dict, workspace_id: Optional[str]) -> str:
                 ).first()
                 if record:
                     return json.dumps({
-                        "status": "connected",
-                        "note": "Shopify store connected. Real-time query in progress.",
-                        "data": {
-                            "metric_type": inputs.get("metric_type"),
-                            "period": inputs.get("period"),
-                            "result": "Real Shopify data pull requires backend Shopify Admin API integration. Store URL confirmed connected."
-                        }
+                        "status": "no_live_data",
+                        "reason": "Shopify Admin API integration not yet implemented in backend",
+                        "action_required": "Implement Shopify Admin API call in agent_executor._query_shopify",
+                        "guidance": "Provide framework-based analysis only. Do not claim real order data was retrieved.",
                     })
             finally:
                 db.close()
@@ -355,13 +368,10 @@ def _query_crm(inputs: dict, workspace_id: Optional[str]) -> str:
                 ).first()
                 if record:
                     return json.dumps({
-                        "status": "connected",
-                        "note": "CRM connected. Real-time query in progress.",
-                        "data": {
-                            "metric_type": inputs.get("metric_type"),
-                            "period": inputs.get("period"),
-                            "result": "Real CRM data pull requires backend HubSpot/Salesforce API integration. CRM confirmed connected."
-                        }
+                        "status": "no_live_data",
+                        "reason": "HubSpot/Salesforce API integration not yet implemented in backend",
+                        "action_required": "Implement CRM API call in agent_executor._query_crm",
+                        "guidance": "Provide framework-based analysis only. Do not claim real CRM data was retrieved.",
                     })
             finally:
                 db.close()
@@ -668,11 +678,11 @@ def execute_agent(
     try:
         if os.getenv("ANTHROPIC_API_KEY", "").strip() or _workspace_llm_key("WORKSPACE_ANTHROPIC_API_KEY", workspace_id):
             try:
-                # Build merged tool list: analytics tools (research_analytics only) + Composio tools (any agent)
+                # Build merged tool list: analytics tools (research_analytics only) + Composio tools (allowlisted agents only)
                 _analytics = ANALYTICS_TOOLS if agent_id in ("research_analytics_agent", "analytics_agent") else []
                 _composio_tools: list = []
                 _composio_creds: tuple | None = None
-                if _composio_api_key:
+                if _composio_api_key and agent_id in COMPOSIO_ENABLED_AGENTS:
                     try:
                         from app.services.composio_service import get_available_tools
                         _composio_tools = get_available_tools(_composio_api_key, _composio_entity)
@@ -734,6 +744,6 @@ def execute_agent(
     # Log unsupported claim warnings (non-blocking — just telemetry)
     claim_hits = scan_for_unsupported_claims(text)
     if claim_hits:
-        logger.info("Unsupported claim patterns in agent=%s output: %s", agent_id, claim_hits[:3])
+        logger.warning("Unsupported claim patterns in agent=%s output: %s", agent_id, claim_hits[:3])
 
     return text, provider, credits, violations, prompt_version

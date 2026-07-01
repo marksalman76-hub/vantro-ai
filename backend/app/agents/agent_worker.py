@@ -434,7 +434,14 @@ async def _process_job(job_id: str) -> None:
                 {"ws": job.workspace_id, "prefix": f"AGENT_MEMORY_{job.agent_id}%"},
             ).fetchall()
             if _mem_rows:
-                context["_workspace_memory"] = "\n".join(r[0] for r in _mem_rows)
+                try:
+                    from app.services.encryption_service import decrypt as _decrypt_mem
+                    context["_workspace_memory"] = "\n".join(
+                        _decrypt_mem(r[0]) if r[0] else "" for r in _mem_rows
+                    )
+                except Exception:
+                    # Memory may be stored unencrypted — fall back to raw value
+                    context["_workspace_memory"] = "\n".join(r[0] for r in _mem_rows if r[0])
         except Exception as _e:
             logger.debug("Worker: workspace memory fetch failed for job %s: %s", job_id, _e)
 
@@ -479,7 +486,7 @@ async def _process_job(job_id: str) -> None:
             )
 
         job.agent_version   = prompt_version
-        job.prompt_snapshot = system_prompt[:4000]  # cap to avoid DB bloat
+        job.prompt_snapshot = system_prompt[:16000]
 
         owner_admin_unlimited = _job_uses_owner_admin_unlimited_billing(job)
 
@@ -699,16 +706,29 @@ async def _process_job(job_id: str) -> None:
             logger.error("Worker: Media adapter setup failed for job %s: %s", job_id, e)
         # ────────────────────────────────────────────────────────────────────────
 
+        # Scan output for unsupported claim patterns — flag in steps if found
+        from app.agents.agent_executor import scan_for_unsupported_claims as _scan_claims
+        _claim_hits = _scan_claims(output)
+
         job.status       = "completed"
         job.output_data  = f"<!-- provider:{provider_used} -->\n{media_provider_output}"
         job.credits_used = credit_cost
         job.updated_at   = now
         job.completed_at = now
-        job.steps = json.dumps([
+        _completion_steps = [
             {"step": "Queued",          "status": "done", "ts": job.created_at.isoformat() if job.created_at else now.isoformat()},
             {"step": "Executing agent", "status": "done", "ts": _step_ts},
             {"step": "Completed",       "status": "done", "ts": now.isoformat()},
-        ])
+        ]
+        if _claim_hits:
+            _completion_steps.append({
+                "step": "Content review",
+                "status": "warning",
+                "ts": now.isoformat(),
+                "detail": f"{len(_claim_hits)} unsupported claim pattern(s) detected — review before publishing",
+            })
+            logger.warning("Worker: job %s output contains %d unsupported claim pattern(s): %s", job_id, len(_claim_hits), _claim_hits[:3])
+        job.steps = json.dumps(_completion_steps)
         db.commit()
 
         logger.info(
