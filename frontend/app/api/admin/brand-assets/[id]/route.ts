@@ -21,6 +21,6 @@ export async function DELETE(
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch (error) {
-    return NextResponse.json({ error: 'Backend unreachable', detail: String(error) }, { status: 502 });
+    return NextResponse.json({ error: 'Backend unreachable' }, { status: 502 });
   }
 }

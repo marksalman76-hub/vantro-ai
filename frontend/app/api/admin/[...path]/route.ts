@@ -74,7 +74,7 @@ async function handler(
     const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     console.error("[admin-proxy] request failed", { path, detail });
     return NextResponse.json(
-      { error: "Internal server error", detail },
+      { error: "Internal server error" },
       { status: 500 },
     );
   }

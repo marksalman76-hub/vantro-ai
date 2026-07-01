@@ -11,7 +11,7 @@ async function toJsonResponse(res: Response) {
       return NextResponse.json(JSON.parse(text), { status: res.status });
     } catch {
       return NextResponse.json(
-        { error: 'Invalid JSON from backend', detail: text },
+        { error: 'Invalid response from backend' },
         { status: res.status }
       );
     }
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     });
     return toJsonResponse(res);
   } catch (error) {
-    return NextResponse.json({ error: 'Backend unreachable', detail: String(error) }, { status: 502 });
+    return NextResponse.json({ error: 'Backend unreachable', detail: undefined }, { status: 502 });
   }
 }
 
@@ -52,6 +52,6 @@ export async function POST(req: NextRequest) {
     });
     return toJsonResponse(res);
   } catch (error) {
-    return NextResponse.json({ error: 'Backend unreachable', detail: String(error) }, { status: 502 });
+    return NextResponse.json({ error: 'Backend unreachable', detail: undefined }, { status: 502 });
   }
 }

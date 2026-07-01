@@ -304,7 +304,7 @@ class ProductionSecurityHardeningMiddleware(BaseHTTPMiddleware):
             return security_headers(response)
 
         response = await call_next(request)
-        response.headers["X-Request-Fingerprint"] = assessment.fingerprint
+        # Fingerprint kept server-side only — not sent to clients
         return security_headers(response)
 
 

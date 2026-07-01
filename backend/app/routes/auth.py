@@ -191,7 +191,7 @@ async def login(request: Request, body: LoginRequest, db: Session = Depends(get_
 
     try:
         user = db.query(User).filter(User.email == body.email.lower()).first()
-        if not user or not verify_password(body.password, user.password_hash):
+        if not user or not verify_password(body.password, user.password_hash) or not user.is_active:
             _audit(db, request, "login_failed", resource_type="auth", extra={"email": body.email})
             raise HTTPException(status_code=401, detail="Invalid credentials")
 
@@ -213,7 +213,7 @@ async def login(request: Request, body: LoginRequest, db: Session = Depends(get_
         raise
     except Exception as e:
         _log.error("Login error: %s", e, exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Authentication error")
 
 
 @router.post("/refresh")
@@ -295,6 +295,7 @@ async def logout(
 
 
 @router.post("/change-password")
+@limiter.limit("5/minute")
 async def change_password(
     request: Request,
     body: ChangePasswordRequest,

@@ -815,7 +815,7 @@ async def get_infrastructure(
     return {
         "environment": os.getenv("ENVIRONMENT", "development"),
         "region": os.getenv("AWS_REGION", "us-east-1"),
-        "account_id": "685570573617",
+        "account_id": os.getenv("AWS_ACCOUNT_ID", ""),
         "services": [
             {"name": "RDS PostgreSQL",      "status": "configured" if "postgres" in db_url else "not_configured", "detail": "Primary database — RDS via Secrets Manager"},
             {"name": "SQS Job Queue",        "status": "configured" if os.getenv("SQS_JOBS_QUEUE_URL") else "not_configured", "detail": "FIFO queue for async video job processing"},

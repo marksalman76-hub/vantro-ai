@@ -20,6 +20,6 @@ export async function POST(request: NextRequest) {
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch (e) {
-    return NextResponse.json({ error: 'Backend unreachable', detail: String(e) }, { status: 502 });
+    return NextResponse.json({ error: 'Backend unreachable' }, { status: 502 });
   }
 }

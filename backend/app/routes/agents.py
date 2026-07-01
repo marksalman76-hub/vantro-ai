@@ -613,7 +613,7 @@ async def stream_agent(
             return
 
         client = anthropic.Anthropic(api_key=api_key)
-        yield f'data: {json.dumps({"type": "start", "agent_id": normalized, "model": model})}\n\n'
+        yield f'data: {json.dumps({"type": "start", "agent_id": normalized})}\n\n'
         try:
             with client.messages.stream(
                 model=model,
@@ -626,7 +626,8 @@ async def stream_agent(
                     yield f'data: {json.dumps({"type": "chunk", "text": text_chunk})}\n\n'
             yield f'data: {json.dumps({"type": "done", "credits_used": 1})}\n\n'
         except Exception as e:
-            yield f'data: {json.dumps({"type": "error", "message": str(e)})}\n\n'
+            logger.error("SSE stream error agent=%s: %s", normalized, e, exc_info=True)
+            yield f'data: {json.dumps({"type": "error", "message": "An error occurred processing your request"})}\n\n'
 
     return StreamingResponse(
         event_generator(),

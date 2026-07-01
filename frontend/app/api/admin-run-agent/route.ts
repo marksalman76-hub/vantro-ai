@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     console.error("[admin-run-agent] request failed", { detail });
     return NextResponse.json(
-      { error: "Could not start admin agent request", detail },
+      { error: "Could not start admin agent request" },
       { status: 502 },
     );
   }

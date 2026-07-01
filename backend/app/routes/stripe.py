@@ -105,7 +105,7 @@ async def create_checkout_session(
         return {"checkout_url": session["url"], "session_id": session["id"]}
     except Exception as e:
         logger.error("Checkout session error: %s", e)
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Payment processing error")
 
 
 @router.get("/plans")
@@ -135,7 +135,7 @@ async def create_payment_intent(
         )
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Payment processing error")
 
 
 @router.post("/create-subscription")
@@ -150,7 +150,7 @@ async def create_subscription(
         result = StripeService.create_subscription(customer_id, request.price_id)
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Payment processing error")
 
 
 @router.post("/create-topup-checkout")
@@ -176,7 +176,7 @@ async def create_topup_checkout(
         return {"checkout_url": session["url"], "session_id": session["id"]}
     except Exception as e:
         logger.error("Top-up checkout error: %s", e)
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Payment processing error")
 
 
 @router.post("/customer-portal")
@@ -195,7 +195,7 @@ async def create_customer_portal(
         return result
     except Exception as e:
         logger.error("Customer portal error: %s", e)
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail="Payment processing error")
 
 
 @router.get("/config")

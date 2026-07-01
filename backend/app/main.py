@@ -28,7 +28,7 @@ if _SENTRY_DSN:
             profiles_sample_rate=1.0,
             environment=os.getenv("ENVIRONMENT", "production"),
             release=os.getenv("APP_VERSION", "1.0.0"),
-            send_default_pii=True,
+            send_default_pii=False,
             enable_logs=True,
             before_send_log=_before_send_log,
         )
@@ -174,7 +174,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline'; "
+            "script-src 'self'; "
             "style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data: https:; "
             "connect-src 'self' https:; "
@@ -281,12 +281,12 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "https://vantro.ai",
-        "https://vantro.ai",
+        "https://www.vantro.ai",
     ],
     allow_origin_regex=r"https://vantro-.*\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"],
 )
 
 app.include_router(admin_router)
@@ -309,7 +309,9 @@ app.include_router(brand_assets_router)
 
 @app.get("/sentry-debug")
 async def sentry_debug():
-    """Intentional error to verify Sentry is capturing exceptions. Remove or restrict in prod."""
+    """Intentional error to verify Sentry is capturing exceptions. Dev-only."""
+    if os.getenv("ENVIRONMENT", "production") == "production":
+        raise HTTPException(status_code=404, detail="Not found")
     division_by_zero = 1 / 0
 
 
@@ -336,7 +338,8 @@ async def readiness_probe():
         db.close()
         checks["database"] = "ok"
     except Exception as exc:
-        checks["database"] = f"error: {exc}"
+        logger.error("Readiness probe DB check failed: %s", exc, exc_info=True)
+        checks["database"] = "error"
         healthy = False
 
     # Redis check (optional — skip if not configured)

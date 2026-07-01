@@ -45,7 +45,8 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
     }
     return NextResponse.json(data, { status: res.status });
   } catch (e) {
-    return NextResponse.json({ error: "Backend unreachable", detail: String(e) }, { status: 502 });
+    console.error("[agents-proxy] request failed", { path });
+    return NextResponse.json({ error: "Backend unreachable" }, { status: 502 });
   }
 }
 
