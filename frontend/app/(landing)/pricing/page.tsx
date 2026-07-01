@@ -1066,7 +1066,7 @@ export default function PricingPage() {
             What do credits cover?
           </h3>
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 24, fontFamily: "'Space Grotesk', sans-serif" }}>
-            All video pricing includes 30% margin over Higgsfield provider costs.
+            All video pricing includes a 30% platform margin over compute costs.
           </p>
 
           {/* Video quality table */}

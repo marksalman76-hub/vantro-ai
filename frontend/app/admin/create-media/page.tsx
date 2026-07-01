@@ -11,7 +11,7 @@ interface MediaStatusResult {
 }
 
 const POLL_INTERVAL_MS = 10000;
-const POLL_MAX = 36; // 6 min cap
+const POLL_MAX = 72; // 12 min cap — video render can take up to 120s on provider
 
 interface BrandAsset {
   id: string;
@@ -964,7 +964,7 @@ export default function AdminCreateMediaPage() {
                   <div className="flex flex-col items-center gap-3 py-12">
                     <div className="w-8 h-8 border-2 border-violet-500/40 border-t-violet-500 rounded-full animate-spin" />
                     <p className="text-gray-500 text-xs">
-                      {!mediaStatus ? 'Agent is working on your brief…' : 'Video rendering on Higgsfield servers…'}
+                      {!mediaStatus ? 'Agent is working on your brief…' : 'Video rendering on our servers…'}
                     </p>
                     <p className="text-gray-700 text-[10px]">
                       {!mediaStatus ? 'First check in 10 seconds' : `Checked ${pollCount} time${pollCount !== 1 ? 's' : ''}`}
@@ -1009,7 +1009,7 @@ export default function AdminCreateMediaPage() {
                 </button>
                 {!mediaStatus || mediaStatus.status === 'processing' ? (
                   <span className="text-[10px] text-gray-600 ml-auto">
-                    Higgsfield videos take 30–120s to render
+                    Videos take 30–120s to render
                   </span>
                 ) : null}
               </div>
