@@ -715,6 +715,45 @@ async def admin_reject_agent_job(
     return {"success": True, "job_id": job_id, "new_status": "rejected"}
 
 
+@router.post("/agent-jobs/{job_id}/retry")
+async def retry_agent_job(
+    job_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Reset a failed/rejected AgentJob to pending so the worker picks it up again."""
+    _require_admin(credentials, db)
+    job = db.query(AgentJob).filter(AgentJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Agent job not found")
+    job.status = "pending"
+    job.error_message = None
+    job.updated_at = datetime.utcnow()
+    db.commit()
+    return {"success": True, "job_id": job_id, "new_status": "pending"}
+
+
+@router.post("/agent-jobs/{job_id}/refund")
+async def refund_agent_job_credits(
+    job_id: str,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Refund credits for a failed/rejected AgentJob by reducing used_credits."""
+    _require_admin(credentials, db)
+    job = db.query(AgentJob).filter(AgentJob.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Agent job not found")
+    credits_to_refund = job.credits_used or 0
+    if credits_to_refund > 0:
+        cred = db.query(CreditsAccount).filter(CreditsAccount.workspace_id == job.workspace_id).first()
+        if cred:
+            cred.used_credits = max(0, cred.used_credits - credits_to_refund)
+            cred.updated_at = datetime.utcnow()
+            db.commit()
+    return {"success": True, "job_id": job_id, "credits_refunded": credits_to_refund}
+
+
 @router.get("/packages/downloads")
 async def admin_list_downloads(
     skip: int = Query(0, ge=0),
@@ -1145,6 +1184,65 @@ async def deploy_unlimited_credits(
         "new_total": 9999,
         "message": "Unlimited package deployed. Credits set to 9999.",
     }
+
+
+# ─── Packages — List & Assign ─────────────────────────────────────────────────
+
+_PACKAGE_DEFINITIONS = [
+    {"id": "starter",    "name": "Starter",    "tier": "starter",    "price_monthly": 97,  "credits_included": 500,  "team_execution": False, "media_generation": True},
+    {"id": "growth",     "name": "Growth",     "tier": "growth",     "price_monthly": 197, "credits_included": 1500, "team_execution": True,  "media_generation": True},
+    {"id": "business",   "name": "Business",   "tier": "business",   "price_monthly": 397, "credits_included": 4000, "team_execution": True,  "media_generation": True},
+    {"id": "enterprise", "name": "Enterprise", "tier": "enterprise", "price_monthly": 0,   "credits_included": 9999, "team_execution": True,  "media_generation": True},
+]
+
+_TIER_CREDITS = {"starter": PLAN_CREDITS["starter"], "growth": PLAN_CREDITS["growth"], "business": PLAN_CREDITS["business"], "enterprise": 9999}
+
+
+@router.get("/packages")
+async def list_packages(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Return tier definitions with live agent counts derived from the catalogue."""
+    _require_admin(credentials, db)
+    result = []
+    for pkg in _PACKAGE_DEFINITIONS:
+        tier = pkg["tier"]
+        accessible = {"starter", "growth", "business", "enterprise"}
+        tiers_up_to = [t for t in ("starter", "growth", "business", "enterprise") if list(accessible).index(t) <= list(accessible).index(tier)]
+        tier_set = set(tiers_up_to)
+        agent_count = sum(1 for meta in AGENT_CATALOGUE.values() if meta.get("min_package", "starter") in tier_set)
+        result.append({**pkg, "agent_count": agent_count})
+    return {"packages": result}
+
+
+class PackageAssignRequest(BaseModel):
+    user_id: str
+    tier: Literal["starter", "growth", "business", "enterprise"]
+    reason: str = "Admin package assignment"
+
+
+@router.post("/packages/assign")
+async def assign_package(
+    body: PackageAssignRequest,
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db),
+):
+    """Assign a package tier to a workspace by setting total_credits to the tier threshold."""
+    admin = _require_admin(credentials, db)
+    user = db.query(User).filter(User.id == body.user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    rec = _resolve_client_record(user, db)
+    if not rec["credits_obj"]:
+        raise HTTPException(status_code=404, detail="No credits account found")
+    credits = rec["credits_obj"]
+    new_total = _TIER_CREDITS[body.tier]
+    credits.total_credits = new_total
+    credits.updated_at = datetime.utcnow()
+    db.commit()
+    logger.info("Admin %s assigned tier=%s to user %s. Reason: %s", admin.email, body.tier, user.email, body.reason)
+    return {"success": True, "target_user": user.email, "tier": body.tier, "new_total": new_total}
 
 
 # ── Admin user management ─────────────────────────────────────────────────────

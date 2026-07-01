@@ -34,6 +34,12 @@ export default function AdminSupportPage() {
   const [filter, setFilter] = useState<string>('open');
   const [selected, setSelected] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
+  const [flash, setFlash] = useState('');
+  const [note, setNote] = useState<Record<string, string>>({});
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
+
+  const showFlash = (msg: string) => { setFlash(msg); setTimeout(() => setFlash(''), 4000); };
+  const t = () => localStorage.getItem('admin_token') || '';
 
   useEffect(() => {
     const t = localStorage.getItem('admin_token');
@@ -55,13 +61,53 @@ export default function AdminSupportPage() {
   }, [router]);
 
   const resolve = async (id: string) => {
-    const t = localStorage.getItem('admin_token');
     await fetch(`/api/admin/support/tickets/${id}`, {
       method: 'PATCH',
-      headers: { Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${t()}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'resolved' }),
     }).catch(() => {});
     setTickets(prev => prev.map(tk => tk.id === id ? { ...tk, status: 'resolved' } : tk));
+    showFlash('Ticket marked as resolved.');
+  };
+
+  const retryJob = async (ticket: Ticket) => {
+    if (!ticket.job_id) { showFlash('No job ID on this ticket.'); return; }
+    setActionBusy(`retry-${ticket.id}`);
+    try {
+      const res = await fetch(`/api/admin/agent-jobs/${ticket.job_id}/retry`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${t()}` },
+      });
+      const data = await res.json();
+      showFlash(data.success ? `Job ${ticket.job_id.slice(0,8)}… queued for retry.` : (data.detail || 'Retry failed.'));
+    } catch { showFlash('Retry failed.'); }
+    setActionBusy(null);
+  };
+
+  const refundCredits = async (ticket: Ticket) => {
+    if (!ticket.job_id) { showFlash('No job ID on this ticket.'); return; }
+    setActionBusy(`refund-${ticket.id}`);
+    try {
+      const res = await fetch(`/api/admin/agent-jobs/${ticket.job_id}/refund`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${t()}` },
+      });
+      const data = await res.json();
+      showFlash(data.success ? `Refunded ${data.credits_refunded} credits for job ${ticket.job_id.slice(0,8)}….` : (data.detail || 'Refund failed.'));
+    } catch { showFlash('Refund failed.'); }
+    setActionBusy(null);
+  };
+
+  const addNote = async (ticket: Ticket) => {
+    const text = note[ticket.id]?.trim();
+    if (!text) return;
+    await fetch(`/api/admin/support/tickets/${ticket.id}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${t()}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: ticket.status }),
+    }).catch(() => {});
+    setNote(prev => ({ ...prev, [ticket.id]: '' }));
+    showFlash('Note saved.');
   };
 
   const visible = tickets.filter(t => filter === 'all' || t.status === filter);
@@ -69,6 +115,9 @@ export default function AdminSupportPage() {
 
   return (
     <div className="p-8 max-w-5xl">
+      {flash && (
+        <div className="mb-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-5 py-3 text-emerald-400 text-sm font-medium">{flash}</div>
+      )}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-1">
           <h1 className="text-2xl font-bold text-white">Support & Incidents</h1>
@@ -117,16 +166,36 @@ export default function AdminSupportPage() {
                     className="py-2 rounded-lg text-xs font-semibold bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-600/30 transition-colors">
                     Mark resolved
                   </button>
-                  <button className="py-2 rounded-lg text-xs font-semibold bg-violet-600/20 border border-violet-500/30 text-violet-400 hover:bg-violet-600/30 transition-colors">
-                    Retry job
+                  <button
+                    onClick={e => { e.stopPropagation(); retryJob(ticket); }}
+                    disabled={actionBusy === `retry-${ticket.id}` || !ticket.job_id}
+                    className="py-2 rounded-lg text-xs font-semibold bg-violet-600/20 border border-violet-500/30 text-violet-400 hover:bg-violet-600/30 disabled:opacity-40 transition-colors"
+                  >
+                    {actionBusy === `retry-${ticket.id}` ? 'Retrying…' : 'Retry job'}
                   </button>
-                  <button className="py-2 rounded-lg text-xs font-semibold bg-orange-600/20 border border-orange-500/30 text-orange-400 hover:bg-orange-600/30 transition-colors">
-                    Refund credits
+                  <button
+                    onClick={e => { e.stopPropagation(); refundCredits(ticket); }}
+                    disabled={actionBusy === `refund-${ticket.id}` || !ticket.job_id}
+                    className="py-2 rounded-lg text-xs font-semibold bg-orange-600/20 border border-orange-500/30 text-orange-400 hover:bg-orange-600/30 disabled:opacity-40 transition-colors"
+                  >
+                    {actionBusy === `refund-${ticket.id}` ? 'Refunding…' : 'Refund credits'}
                   </button>
                 </div>
-                <textarea placeholder="Add internal note…" rows={3}
-                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-violet-500" />
-                <button className="mt-2 px-4 py-1.5 rounded-lg text-xs font-medium bg-gray-700 hover:bg-gray-600 text-gray-300 transition-colors">Add note</button>
+                <textarea
+                  placeholder="Add internal note…"
+                  rows={3}
+                  value={note[ticket.id] || ''}
+                  onChange={e => { e.stopPropagation(); setNote(prev => ({ ...prev, [ticket.id]: e.target.value })); }}
+                  onClick={e => e.stopPropagation()}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-violet-500"
+                />
+                <button
+                  onClick={e => { e.stopPropagation(); addNote(ticket); }}
+                  disabled={!note[ticket.id]?.trim()}
+                  className="mt-2 px-4 py-1.5 rounded-lg text-xs font-medium bg-gray-700 hover:bg-gray-600 text-gray-300 disabled:opacity-40 transition-colors"
+                >
+                  Add note
+                </button>
               </div>
             )}
           </div>
