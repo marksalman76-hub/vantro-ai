@@ -357,7 +357,7 @@ class TestExecutorGuardInjection:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                _, _, _, violations = execute_agent(
+                _, _, _, violations, *_ = execute_agent(
                     agent_id="influencer_outreach_agent",
                     system_prompt="System.",
                     user_prompt="Task.",
@@ -379,7 +379,7 @@ class TestExecutorGuardInjection:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                text, provider, credits, violations = execute_agent(
+                text, provider, credits, violations, *_ = execute_agent(
                     agent_id="influencer_outreach_agent",
                     system_prompt="System.",
                     user_prompt="Task.",
@@ -411,7 +411,7 @@ class TestExecutorGuardInjection:
                     "ANTHROPIC_API_KEY": "sk-test",
                     "OPENAI_API_KEY": "sk-oai-test",
                 }):
-                    text, provider, credits, violations = execute_agent(
+                    text, provider, credits, violations, *_ = execute_agent(
                         agent_id="influencer_outreach_agent",
                         system_prompt="System.",
                         user_prompt="Task.",
@@ -477,7 +477,7 @@ class TestInfluencerOutreachAgentGuardrails:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}):
-                text, _, _, violations = execute_agent(
+                text, _, _, violations, *_ = execute_agent(
                     agent_id="influencer_outreach_agent",
                     system_prompt="Influencer Outreach Agent.",
                     user_prompt=f"Use this API key to pull creator data: {secret}",

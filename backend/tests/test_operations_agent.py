@@ -262,7 +262,7 @@ class TestOperationsAgentExecutor:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                text, provider, credits, violations = execute_agent(
+                text, provider, credits, violations, *_ = execute_agent(
                     agent_id="ops_automation_agent",
                     system_prompt="You are the Operations Agent.",
                     user_prompt="Create a customer onboarding SOP.",
@@ -280,7 +280,7 @@ class TestOperationsAgentExecutor:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                _, _, _, violations = execute_agent(
+                _, _, _, violations, *_ = execute_agent(
                     agent_id="ops_automation_agent",
                     system_prompt="System.",
                     user_prompt="Task.",
@@ -310,7 +310,7 @@ class TestOperationsAgentExecutor:
                     "ANTHROPIC_API_KEY": "sk-test",
                     "OPENAI_API_KEY": "sk-oai-test",
                 }):
-                    text, provider, credits, violations = execute_agent(
+                    text, provider, credits, violations, *_ = execute_agent(
                         agent_id="ops_automation_agent",
                         system_prompt="System.",
                         user_prompt="Task.",

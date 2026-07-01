@@ -277,7 +277,7 @@ class TestAnalyticsAgentExecutor:
 
         with patch("app.agents.agent_executor._call_anthropic_with_tools", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                text, provider, credits, violations = execute_agent(
+                text, provider, credits, violations, *_ = execute_agent(
                     agent_id="research_analytics_agent",
                     system_prompt="You are the Analytics Agent.",
                     user_prompt="Analyse our Q2 funnel.",
@@ -295,7 +295,7 @@ class TestAnalyticsAgentExecutor:
 
         with patch("app.agents.agent_executor._call_anthropic_with_tools", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                _, _, _, violations = execute_agent(
+                _, _, _, violations, *_ = execute_agent(
                     agent_id="research_analytics_agent",
                     system_prompt="You are the Analytics Agent.",
                     user_prompt="Analyse spend efficiency.",
@@ -311,7 +311,7 @@ class TestAnalyticsAgentExecutor:
 
         with patch("app.agents.agent_executor._call_anthropic_with_tools", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                _, _, _, violations = execute_agent(
+                _, _, _, violations, *_ = execute_agent(
                     agent_id="research_analytics_agent",
                     system_prompt="Analytics Agent.",
                     user_prompt="Scale the ad spend.",
@@ -327,7 +327,7 @@ class TestAnalyticsAgentExecutor:
 
         with patch("app.agents.agent_executor._call_anthropic_with_tools", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                _, _, _, violations = execute_agent(
+                _, _, _, violations, *_ = execute_agent(
                     agent_id="research_analytics_agent",
                     system_prompt="Analytics Agent.",
                     user_prompt="Process the budget approval.",
@@ -361,7 +361,7 @@ class TestAnalyticsAgentExecutor:
                     "ANTHROPIC_API_KEY": "sk-test",
                     "OPENAI_API_KEY": "sk-oai-test",
                 }):
-                    text, provider, credits, violations = execute_agent(
+                    text, provider, credits, violations, *_ = execute_agent(
                         agent_id="research_analytics_agent",
                         system_prompt="Analytics Agent.",
                         user_prompt="Analyse weekly KPIs.",
@@ -510,7 +510,7 @@ class TestAnalyticsAgentGuardrails:
 
         with patch("app.agents.agent_executor._call_anthropic_with_tools", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}):
-                text, _, _, violations = execute_agent(
+                text, _, _, violations, *_ = execute_agent(
                     agent_id="research_analytics_agent",
                     system_prompt="Analytics Agent.",
                     user_prompt=f"Use this key to pull data: {secret}",

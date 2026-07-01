@@ -1,4 +1,4 @@
-﻿"""
+"""
 workflow_automation_agent test suite.
 
 Covers:
@@ -15,7 +15,7 @@ from unittest.mock import patch, MagicMock
 from fastapi import status
 
 
-# â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
 REQUIRED_SECTIONS = [
     "PROCESS AUDIT",
@@ -41,7 +41,7 @@ def has_all_sections(text: str) -> list[str]:
     return [s for s in REQUIRED_SECTIONS if s not in text.upper()]
 
 
-# â”€â”€ 1. Prompt structure tests (no LLM, no network) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── 1. Prompt structure tests (no LLM, no network) ───────────────────────────
 
 @pytest.mark.unit
 class TestWorkflowAutomationAgentPrompt:
@@ -214,7 +214,7 @@ class TestWorkflowAutomationAgentPrompt:
         assert "STAGING" in impl_text
 
 
-# â”€â”€ 2. Registry entry tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── 2. Registry entry tests ───────────────────────────────────────────────────
 
 @pytest.mark.unit
 class TestWorkflowAutomationAgentRegistry:
@@ -224,7 +224,7 @@ class TestWorkflowAutomationAgentRegistry:
         assert "ops_automation_agent" in AGENT_CATALOGUE
 
     def test_registry_hitl_level_is_hitl3(self):
-        """workflow_automation_agent MUST be HITL-3 â€” live automations require owner approval."""
+        """workflow_automation_agent MUST be HITL-3 — live automations require owner approval."""
         from app.agents.agent_registry import AGENT_CATALOGUE
         entry = AGENT_CATALOGUE["ops_automation_agent"]
         assert entry["hitl_default"] == "HITL-3"
@@ -274,7 +274,7 @@ class TestWorkflowAutomationAgentRegistry:
         assert len(entry["architecture"]) > 0
 
 
-# â”€â”€ 3. Financial action scanner unit tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── 3. Financial action scanner unit tests ────────────────────────────────────
 
 @pytest.mark.unit
 class TestFinancialActionScannerForAutomation:
@@ -326,7 +326,7 @@ Staging validation required before production activation. Owner approval require
     def test_planning_language_not_a_violation(self):
         from app.agents.agent_executor import scan_for_financial_actions
         safe = (
-            "Consider subscribing to Make.com â€” tool cost requires owner approval. "
+            "Consider subscribing to Make.com — tool cost requires owner approval. "
             "[ESTIMATED - VALIDATE AFTER 30 DAYS]"
         )
         violations = scan_for_financial_actions(safe)
@@ -339,7 +339,7 @@ Staging validation required before production activation. Owner approval require
         assert violations == []
 
 
-# â”€â”€ 4. Executor guard injection tests (mocked LLM) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── 4. Executor guard injection tests (mocked LLM) ───────────────────────────
 
 @pytest.mark.unit
 class TestExecutorGuardInjectionForAutomation:
@@ -446,7 +446,7 @@ class TestExecutorGuardInjectionForAutomation:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                _, _, _, violations = execute_agent(
+                _, _, _, violations, *_ = execute_agent(
                     agent_id="ops_automation_agent",
                     system_prompt="System.",
                     user_prompt="Task.",
@@ -467,7 +467,7 @@ class TestExecutorGuardInjectionForAutomation:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                text, provider, credits, violations = execute_agent(
+                text, provider, credits, violations, *_ = execute_agent(
                     agent_id="ops_automation_agent",
                     system_prompt="System.",
                     user_prompt="Task.",
@@ -499,7 +499,7 @@ class TestExecutorGuardInjectionForAutomation:
                     "ANTHROPIC_API_KEY": "sk-test",
                     "OPENAI_API_KEY": "sk-oai-test",
                 }):
-                    text, provider, credits, violations = execute_agent(
+                    text, provider, credits, violations, *_ = execute_agent(
                         agent_id="ops_automation_agent",
                         system_prompt="System.",
                         user_prompt="Task.",
@@ -519,7 +519,7 @@ class TestExecutorGuardInjectionForAutomation:
                 )
 
 
-# â”€â”€ 5. Guardrail tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── 5. Guardrail tests ────────────────────────────────────────────────────────
 
 @pytest.mark.unit
 class TestWorkflowAutomationAgentGuardrails:
@@ -582,7 +582,7 @@ class TestWorkflowAutomationAgentGuardrails:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}):
-                text, _, _, violations = execute_agent(
+                text, _, _, violations, *_ = execute_agent(
                     agent_id="ops_automation_agent",
                     system_prompt="Workflow Automation Agent.",
                     user_prompt=f"Use this API key to connect to our CRM: {secret}",
@@ -591,7 +591,7 @@ class TestWorkflowAutomationAgentGuardrails:
         assert secret not in text
 
 
-# â”€â”€ 6. API endpoint integration tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── 6. API endpoint integration tests ────────────────────────────────────────
 
 @pytest.mark.unit
 class TestWorkflowAutomationAgentAPI:
@@ -655,7 +655,7 @@ class TestWorkflowAutomationAgentAPI:
         assert "jobs" in body
 
 
-# â”€â”€ 7. Output format validation helper tests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ── 7. Output format validation helper tests ─────────────────────────────────
 
 @pytest.mark.unit
 class TestAutomationOutputFormatValidator:
@@ -694,7 +694,7 @@ Projected savings after 90 days: 2h/week [ESTIMATED - VALIDATE AFTER 30 DAYS].
         output = (
             "## RISK REGISTER & ROLLBACK PLAN\n"
             "Failure Mode: API timeout causes loop.\n"
-            "Blast Radius: [MEDIUM] â€” up to 200 records affected.\n"
+            "Blast Radius: [MEDIUM] — up to 200 records affected.\n"
             "Rollback Procedure: Disable trigger, restore from last known good state.\n"
             "Monitoring Approach: Error queue alert within 5 minutes.\n"
             "Owner Escalation Trigger: Any PII exposure or financial impact."
@@ -702,17 +702,17 @@ Projected savings after 90 days: 2h/week [ESTIMATED - VALIDATE AFTER 30 DAYS].
         assert "RISK REGISTER" in output.upper()
 
     def test_draft_label_for_internal_output(self):
-        output = "[DRAFT] Workflow audit for internal review â€” no approval needed."
+        output = "[DRAFT] Workflow audit for internal review — no approval needed."
         assert "[DRAFT]" in output
 
     def test_requires_review_label_for_automation_spec(self):
-        output = "[REQUIRES REVIEW] Automation spec ready for build â€” owner must review before dev starts."
+        output = "[REQUIRES REVIEW] Automation spec ready for build — owner must review before dev starts."
         assert "[REQUIRES REVIEW]" in output
 
     def test_requires_owner_approval_label_for_production_activation(self):
         output = (
             "## IMPLEMENTATION PLAN\n"
-            "Phase 3: Production deployment [REQUIRES OWNER APPROVAL â€” PRODUCTION ACTIVATION]."
+            "Phase 3: Production deployment [REQUIRES OWNER APPROVAL — PRODUCTION ACTIVATION]."
         )
         assert "REQUIRES OWNER APPROVAL" in output.upper()
 

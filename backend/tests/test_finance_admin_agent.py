@@ -368,7 +368,7 @@ class TestExecutorGuardInjectionForFinanceAdmin:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                _, _, _, violations = execute_agent(
+                _, _, _, violations, *_ = execute_agent(
                     agent_id="finance_admin_agent",
                     system_prompt="System.",
                     user_prompt="Task.",
@@ -389,7 +389,7 @@ class TestExecutorGuardInjectionForFinanceAdmin:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                text, provider, credits, violations = execute_agent(
+                text, provider, credits, violations, *_ = execute_agent(
                     agent_id="finance_admin_agent",
                     system_prompt="System.",
                     user_prompt="Task.",
@@ -421,7 +421,7 @@ class TestExecutorGuardInjectionForFinanceAdmin:
                     "ANTHROPIC_API_KEY": "sk-test",
                     "OPENAI_API_KEY": "sk-oai-test",
                 }):
-                    text, provider, credits, violations = execute_agent(
+                    text, provider, credits, violations, *_ = execute_agent(
                         agent_id="finance_admin_agent",
                         system_prompt="System.",
                         user_prompt="Task.",
@@ -495,7 +495,7 @@ class TestFinanceAdminAgentGuardrails:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}):
-                text, _, _, violations = execute_agent(
+                text, _, _, violations, *_ = execute_agent(
                     agent_id="finance_admin_agent",
                     system_prompt="Finance & Admin Agent.",
                     user_prompt=f"Log into our bank with this key: {secret}",

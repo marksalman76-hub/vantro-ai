@@ -354,7 +354,7 @@ class TestWebsiteAppExecutorGuardInjection:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                _, _, _, violations = execute_agent(
+                _, _, _, violations, *_ = execute_agent(
                     agent_id="website_app_agent",
                     system_prompt="System.",
                     user_prompt="Task.",
@@ -370,7 +370,7 @@ class TestWebsiteAppExecutorGuardInjection:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                text, provider, credits, violations = execute_agent(
+                text, provider, credits, violations, *_ = execute_agent(
                     agent_id="website_app_agent",
                     system_prompt="System.",
                     user_prompt="Task.",
@@ -402,7 +402,7 @@ class TestWebsiteAppExecutorGuardInjection:
                     "ANTHROPIC_API_KEY": "sk-test",
                     "OPENAI_API_KEY": "sk-oai-test",
                 }):
-                    text, provider, credits, violations = execute_agent(
+                    text, provider, credits, violations, *_ = execute_agent(
                         agent_id="website_app_agent",
                         system_prompt="System.",
                         user_prompt="Task.",
@@ -480,7 +480,7 @@ class TestWebsiteAppAgentGuardrails:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}):
-                text, _, _, violations = execute_agent(
+                text, _, _, violations, *_ = execute_agent(
                     agent_id="website_app_agent",
                     system_prompt="Website App Agent.",
                     user_prompt=f"Use this key to access our server: {secret}",

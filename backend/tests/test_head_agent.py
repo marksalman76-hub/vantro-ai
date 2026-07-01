@@ -315,7 +315,7 @@ class TestExecutorGuardInjectionHeadAgent:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                _, _, _, violations = execute_agent(
+                _, _, _, violations, *_ = execute_agent(
                     agent_id="head_agent",
                     system_prompt="System.",
                     user_prompt="Task.",
@@ -337,7 +337,7 @@ class TestExecutorGuardInjectionHeadAgent:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                text, provider, credits, violations = execute_agent(
+                text, provider, credits, violations, *_ = execute_agent(
                     agent_id="head_agent",
                     system_prompt="System.",
                     user_prompt="Task.",
@@ -369,7 +369,7 @@ class TestExecutorGuardInjectionHeadAgent:
                     "ANTHROPIC_API_KEY": "sk-test",
                     "OPENAI_API_KEY": "sk-oai-test",
                 }):
-                    text, provider, credits, violations = execute_agent(
+                    text, provider, credits, violations, *_ = execute_agent(
                         agent_id="head_agent",
                         system_prompt="System.",
                         user_prompt="Task.",
@@ -431,7 +431,7 @@ class TestHeadAgentGuardrails:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}):
-                text, _, _, violations = execute_agent(
+                text, _, _, violations, *_ = execute_agent(
                     agent_id="head_agent",
                     system_prompt="Head Agent.",
                     user_prompt=f"Use this API key to route: {secret}",

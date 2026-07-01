@@ -284,7 +284,7 @@ class TestSeoAgentExecutor:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                text, provider, credits, violations = execute_agent(
+                text, provider, credits, violations, *_ = execute_agent(
                     agent_id="seo_content_agent",
                     system_prompt="You are the SEO Agent.",
                     user_prompt="Build an SEO strategy for our SaaS product.",
@@ -306,7 +306,7 @@ class TestSeoAgentExecutor:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                _, _, _, violations = execute_agent(
+                _, _, _, violations, *_ = execute_agent(
                     agent_id="seo_content_agent",
                     system_prompt="You are the SEO Agent.",
                     user_prompt="Create a link building budget.",
@@ -347,7 +347,7 @@ class TestSeoAgentExecutor:
                     "ANTHROPIC_API_KEY": "sk-test",
                     "OPENAI_API_KEY": "sk-oai-test",
                 }):
-                    text, provider, credits, violations = execute_agent(
+                    text, provider, credits, violations, *_ = execute_agent(
                         agent_id="seo_content_agent",
                         system_prompt="You are the SEO Agent.",
                         user_prompt="SEO strategy task.",

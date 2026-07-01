@@ -315,7 +315,7 @@ class TestEcommerceExecutorGuardInjection:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                _, _, _, violations = execute_agent(
+                _, _, _, violations, *_ = execute_agent(
                     agent_id="ecommerce_agent",
                     system_prompt="System.",
                     user_prompt="Task.",
@@ -331,7 +331,7 @@ class TestEcommerceExecutorGuardInjection:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                text, provider, credits, violations = execute_agent(
+                text, provider, credits, violations, *_ = execute_agent(
                     agent_id="ecommerce_agent",
                     system_prompt="System.",
                     user_prompt="Task.",
@@ -363,7 +363,7 @@ class TestEcommerceExecutorGuardInjection:
                     "ANTHROPIC_API_KEY": "sk-test",
                     "OPENAI_API_KEY": "sk-oai-test",
                 }):
-                    text, provider, credits, violations = execute_agent(
+                    text, provider, credits, violations, *_ = execute_agent(
                         agent_id="ecommerce_agent",
                         system_prompt="System.",
                         user_prompt="Task.",
@@ -440,7 +440,7 @@ class TestEcommerceAgentGuardrails:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}):
-                text, _, _, violations = execute_agent(
+                text, _, _, violations, *_ = execute_agent(
                     agent_id="ecommerce_agent",
                     system_prompt="Ecommerce Agent.",
                     user_prompt=f"Use this key to pull competitor pricing data: {secret}",

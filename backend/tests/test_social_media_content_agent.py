@@ -194,7 +194,7 @@ class TestSocialMediaContentAgentExecutor:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                text, provider, credits, violations = execute_agent(
+                text, provider, credits, violations, *_ = execute_agent(
                     agent_id="social_media_content_agent",
                     system_prompt="You are the Social Media Content Agent.",
                     user_prompt="Create a content calendar.",
@@ -212,7 +212,7 @@ class TestSocialMediaContentAgentExecutor:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test-key"}):
-                _, _, _, violations = execute_agent(
+                _, _, _, violations, *_ = execute_agent(
                     agent_id="social_media_content_agent",
                     system_prompt="System.",
                     user_prompt="Book an influencer.",
@@ -242,7 +242,7 @@ class TestSocialMediaContentAgentExecutor:
                     "ANTHROPIC_API_KEY": "sk-test",
                     "OPENAI_API_KEY": "sk-oai-test",
                 }):
-                    text, provider, credits, violations = execute_agent(
+                    text, provider, credits, violations, *_ = execute_agent(
                         agent_id="social_media_content_agent",
                         system_prompt="System.",
                         user_prompt="Create a content calendar.",
@@ -315,7 +315,7 @@ class TestSocialMediaContentAgentGuardrails:
 
         with patch("app.agents.agent_executor._call_anthropic", side_effect=mock_call):
             with patch.dict("os.environ", {"ANTHROPIC_API_KEY": "sk-test"}):
-                text, _, _, violations = execute_agent(
+                text, _, _, violations, *_ = execute_agent(
                     agent_id="social_media_content_agent",
                     system_prompt="Social Media Content Agent.",
                     user_prompt=f"Use this API key to pull engagement data: {secret}",
