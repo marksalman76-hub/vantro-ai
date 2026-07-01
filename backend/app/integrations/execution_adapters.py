@@ -23,7 +23,9 @@ from app.integrations.shopify_draft_product_adapter import (
     ShopifyDraftProductRequest,
     shopify_draft_product_summary,
 )
+from app.providers.adapters.arcads import ArcadsProvider
 from app.providers.adapters.higgsfield import HiggsfieldProvider
+from app.providers.adapters.kling import KlingProvider
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +39,61 @@ class AdapterResult:
     message: str
     next_steps: List[str]
     execution_payload: Optional[Dict[str, object]] = None
+
+
+def _get_kling_credentials(db: Session, workspace_id: str) -> tuple[str, str]:
+    """Return (access_key, secret_key) from workspace storage or env vars."""
+    access_key = secret_key = ""
+    if db and workspace_id:
+        try:
+            from app.models.agent_system import WorkspaceIntegration
+            from app.services.encryption_service import decrypt
+
+            for key_name, attr in (("KLING_ACCESS_KEY", "access"), ("KLING_SECRET_KEY", "secret")):
+                row = (
+                    db.query(WorkspaceIntegration)
+                    .filter(
+                        WorkspaceIntegration.workspace_id == workspace_id,
+                        WorkspaceIntegration.integration_key == key_name,
+                        WorkspaceIntegration.is_active == True,
+                    )
+                    .first()
+                )
+                if row:
+                    val = decrypt(row.encrypted_value)
+                    if attr == "access":
+                        access_key = val or ""
+                    else:
+                        secret_key = val or ""
+        except Exception:
+            logger.exception("Failed to retrieve Kling credentials for workspace %s", workspace_id)
+    return (
+        access_key or os.getenv("KLING_ACCESS_KEY", ""),
+        secret_key or os.getenv("KLING_SECRET_KEY", ""),
+    )
+
+
+def _get_arcads_api_key(db: Session, workspace_id: str) -> str:
+    """Return Arcads API key from workspace storage or env var."""
+    if db and workspace_id:
+        try:
+            from app.models.agent_system import WorkspaceIntegration
+            from app.services.encryption_service import decrypt
+
+            row = (
+                db.query(WorkspaceIntegration)
+                .filter(
+                    WorkspaceIntegration.workspace_id == workspace_id,
+                    WorkspaceIntegration.integration_key == "ARCADS_API_KEY",
+                    WorkspaceIntegration.is_active == True,
+                )
+                .first()
+            )
+            if row:
+                return decrypt(row.encrypted_value) or ""
+        except Exception:
+            logger.exception("Failed to retrieve Arcads credentials for workspace %s", workspace_id)
+    return os.getenv("ARCADS_API_KEY", "")
 
 
 def _get_higgsfield_api_key(db: Session, workspace_id: str) -> Optional[str]:
@@ -158,60 +215,94 @@ class ExecutionAdapters:
         language = str(workflow.get("language") or media_request.get("language") or "English")
         voiceover = workflow.get("voiceover") if isinstance(workflow.get("voiceover"), dict) else {}
 
-        # Initialize Higgsfield provider
-        higgsfield = HiggsfieldProvider()
-        higgsfield_api_key = None
-        provider_connected = False
-        provider_ready = False
-        higgsfield_live_enabled = _truthy(os.getenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED"))
+        live_enabled = _truthy(os.getenv("HIGGSFIELD_LIVE_EXECUTION_ENABLED"))
         execution_surface = os.getenv("HIGGSFIELD_EXECUTION_SURFACE", "claude_code_mcp").strip().lower()
 
-        if selected_video_provider == "higgsfield" and execution_surface == "claude_code_mcp":
-            provider_connected = higgsfield.is_mcp_ready()
-            provider_ready = higgsfield_live_enabled and provider_connected
+        provider_connected = False
+        provider_ready = False
+        provider_instance = None
+        execution_mode = "provider_orchestrated_safe_stub"
+
+        if execution_surface == "kling_direct":
+            access_key, secret_key = _get_kling_credentials(self.db, workspace_id)
+            kling = KlingProvider(access_key=access_key, secret_key=secret_key)
+            provider_connected = kling.is_ready()
+            provider_ready = live_enabled and provider_connected
+            provider_instance = kling
+            execution_mode = "kling_direct_live" if provider_ready else "provider_orchestrated_safe_stub"
+
+        elif execution_surface == "arcads":
+            arcads_key = _get_arcads_api_key(self.db, workspace_id)
+            arcads = ArcadsProvider(api_key=arcads_key)
+            provider_connected = arcads.is_ready()
+            provider_ready = live_enabled and provider_connected
+            provider_instance = arcads
+            execution_mode = "arcads_live" if provider_ready else "provider_orchestrated_safe_stub"
+
         else:
-            # Attempt workspace-specific credential lookup first
-            if workspace_id and self.db:
-                higgsfield_api_key = _get_higgsfield_api_key(self.db, workspace_id)
+            # Higgsfield MCP (claude_code_mcp) or legacy HTTP
+            higgsfield = HiggsfieldProvider()
+            higgsfield_api_key = None
 
-            # Fallback to global env var for backward compatibility (testing, legacy deployments)
-            if not higgsfield_api_key:
-                higgsfield_api_key = os.getenv("HIGGSFIELD_API_KEY", "")
+            if execution_surface == "claude_code_mcp":
+                provider_connected = higgsfield.is_mcp_ready()
+                provider_ready = live_enabled and provider_connected
+                execution_mode = "higgsfield_mcp_live" if provider_ready else "provider_orchestrated_safe_stub"
+            else:
+                if workspace_id and self.db:
+                    higgsfield_api_key = _get_higgsfield_api_key(self.db, workspace_id)
+                if not higgsfield_api_key:
+                    higgsfield_api_key = os.getenv("HIGGSFIELD_API_KEY", "")
+                if higgsfield_api_key and selected_video_provider == "higgsfield":
+                    higgsfield.set_api_key(higgsfield_api_key)
+                    provider_connected = True
+                    provider_ready = live_enabled and higgsfield.is_ready()
+                execution_mode = "higgsfield_live" if provider_ready else "provider_orchestrated_safe_stub"
 
-            if higgsfield_api_key and selected_video_provider == "higgsfield":
-                higgsfield.set_api_key(higgsfield_api_key)
-                provider_connected = True
-                provider_ready = higgsfield_live_enabled and higgsfield.is_ready()
+            provider_instance = higgsfield
 
-        execution_mode = (
-            "higgsfield_mcp_live"
-            if provider_ready and execution_surface == "claude_code_mcp"
-            else "higgsfield_live"
-            if provider_ready
-            else "provider_orchestrated_safe_stub"
-        )
+        next_steps: list[str] = []
+        if not provider_ready:
+            if execution_surface == "kling_direct":
+                next_steps = [
+                    "Set KLING_ACCESS_KEY and KLING_SECRET_KEY environment variables.",
+                    "Set HIGGSFIELD_LIVE_EXECUTION_ENABLED=true.",
+                ]
+            elif execution_surface == "arcads":
+                next_steps = [
+                    "Set ARCADS_API_KEY environment variable.",
+                    "Set HIGGSFIELD_LIVE_EXECUTION_ENABLED=true.",
+                ]
+            else:
+                next_steps = [
+                    "Run `claude mcp login higgsfield` where the worker executes.",
+                    "Set HIGGSFIELD_EXECUTION_SURFACE=claude_code_mcp.",
+                    "Set HIGGSFIELD_LIVE_EXECUTION_ENABLED=true after MCP preflight succeeds.",
+                    "Alternatively set HIGGSFIELD_EXECUTION_SURFACE=kling_direct with KLING_ACCESS_KEY/KLING_SECRET_KEY.",
+                    "Or set HIGGSFIELD_EXECUTION_SURFACE=arcads with ARCADS_API_KEY.",
+                ]
+
+        surface_label = {
+            "kling_direct": "Kling direct API",
+            "arcads": "Arcads API",
+            "claude_code_mcp": "Higgsfield MCP",
+        }.get(execution_surface, "Higgsfield")
 
         return AdapterResult(
             success=bool(provider_route["success"]) and provider_ready,
             adapter_name="ugc_video_provider_adapter",
             execution_mode=execution_mode,
             provider_ready=provider_ready,
-            message="UGC video generation routed to Higgsfield" if provider_ready else "UGC video provider adapter prepared through provider orchestrator.",
-            next_steps=[] if provider_ready else [
-                "Run `claude mcp login higgsfield` where the worker executes.",
-                "Set HIGGSFIELD_EXECUTION_SURFACE=claude_code_mcp.",
-                "Set HIGGSFIELD_LIVE_EXECUTION_ENABLED=true after MCP preflight succeeds.",
-                "For legacy HTTP mode only, configure HIGGSFIELD_API_KEY.",
-                "Run safe test generation before enabling client delivery.",
-            ],
+            message=f"UGC video generation routed to {surface_label}" if provider_ready else "UGC video provider adapter prepared through provider orchestrator.",
+            next_steps=next_steps,
             execution_payload={
                 "provider_route": provider_route,
                 "provider_category": "ugc_video_generation",
                 "provider": selected_video_provider,
                 "execution_surface": execution_surface,
                 "provider_connected": provider_connected,
-                "live_execution_enabled": higgsfield_live_enabled,
-                "provider_instance": higgsfield,
+                "live_execution_enabled": live_enabled,
+                "provider_instance": provider_instance,
                 "workspace_id": workspace_id,
                 "language": language,
                 "media_request": media_request,

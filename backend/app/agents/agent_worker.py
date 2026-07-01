@@ -109,26 +109,45 @@ def _selected_video_route(creative_provider_route: object) -> dict:
     return video_route if isinstance(video_route, dict) else {}
 
 
+def _execution_surface_from_adapter(adapter_result) -> str:
+    payload = getattr(adapter_result, "execution_payload", None)
+    if isinstance(payload, dict):
+        return str(payload.get("execution_surface") or "claude_code_mcp").strip().lower()
+    return "claude_code_mcp"
+
+
 def _should_execute_higgsfield_live(adapter_result, creative_provider_route: object) -> bool:
     if not getattr(adapter_result, "provider_ready", False):
         return False
-
     execution_payload = getattr(adapter_result, "execution_payload", None)
     if not isinstance(execution_payload, dict):
         return False
-
+    surface = _execution_surface_from_adapter(adapter_result)
+    if surface not in ("claude_code_mcp", "higgsfield_http"):
+        return False
     video_route = _selected_video_route(creative_provider_route)
     selected_provider = execution_payload.get("selected_video_provider")
     selected_model = execution_payload.get("selected_video_model")
     route_provider = video_route.get("provider")
     route_model = video_route.get("model")
-
     return (
         selected_provider == "higgsfield"
         and route_provider == "higgsfield"
         and bool(selected_model)
         and selected_model == route_model
     )
+
+
+def _should_execute_kling_live(adapter_result) -> bool:
+    if not getattr(adapter_result, "provider_ready", False):
+        return False
+    return _execution_surface_from_adapter(adapter_result) == "kling_direct"
+
+
+def _should_execute_arcads_live(adapter_result) -> bool:
+    if not getattr(adapter_result, "provider_ready", False):
+        return False
+    return _execution_surface_from_adapter(adapter_result) == "arcads"
 
 
 def _first_media_url(value: object) -> str:
@@ -704,6 +723,50 @@ async def _process_job(job_id: str) -> None:
                         except Exception as e:
                             logger.error("Worker: Higgsfield execution failed for job %s: %s", job_id, e)
                             live_task_result = {"error": str(e), "provider": "higgsfield"}
+
+                elif _should_execute_kling_live(adapter_result):
+                    kling = adapter_result.execution_payload.get("provider_instance")
+                    if kling:
+                        try:
+                            media_request_k = _media_request_from_context(context)
+                            ref_b64, ref_ct = _extract_reference_image(context)
+                            kling_kwargs: dict = {
+                                "model": adapter_result.execution_payload.get("selected_video_model_id")
+                                or adapter_result.execution_payload.get("selected_video_model")
+                                or "kling-v1",
+                                "duration": 5,
+                                "aspect_ratio": _normalize_aspect_ratio(media_request_k.get("aspect_ratio")),
+                            }
+                            if ref_b64:
+                                kling_kwargs["reference_image_base64"] = ref_b64
+                                kling_kwargs["reference_image_content_type"] = ref_ct or "image/jpeg"
+                            live_task_result = await kling.execute(prompt=output, **kling_kwargs)
+                            logger.info("Worker: UGC media job %s routed to Kling direct", job_id)
+                        except Exception as e:
+                            logger.error("Worker: Kling execution failed for job %s: %s", job_id, e)
+                            live_task_result = {"error": str(e), "provider": "kling_direct"}
+
+                elif _should_execute_arcads_live(adapter_result):
+                    arcads = adapter_result.execution_payload.get("provider_instance")
+                    if arcads:
+                        try:
+                            media_request_a = _media_request_from_context(context)
+                            ref_b64_a, ref_ct_a = _extract_reference_image(context)
+                            arcads_kwargs: dict = {
+                                "model": adapter_result.execution_payload.get("selected_video_model_id")
+                                or adapter_result.execution_payload.get("selected_video_model")
+                                or "kling-3.0",
+                                "duration": 5,
+                                "aspect_ratio": _normalize_aspect_ratio(media_request_a.get("aspect_ratio")),
+                            }
+                            if ref_b64_a:
+                                arcads_kwargs["reference_image_base64"] = ref_b64_a
+                                arcads_kwargs["reference_image_content_type"] = ref_ct_a or "image/jpeg"
+                            live_task_result = await arcads.execute(prompt=output, **arcads_kwargs)
+                            logger.info("Worker: UGC media job %s routed to Arcads", job_id)
+                        except Exception as e:
+                            logger.error("Worker: Arcads execution failed for job %s: %s", job_id, e)
+                            live_task_result = {"error": str(e), "provider": "arcads"}
 
                 fallback_preview_asset = None
                 if not _first_media_url(live_task_result):
