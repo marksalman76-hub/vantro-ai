@@ -16,9 +16,7 @@
         { "name": "ENVIRONMENT",                   "value": "production" },
         { "name": "DISABLE_INLINE_WORKER",         "value": "1" },
         { "name": "VIDEO_LIVE_EXECUTION_ENABLED",  "value": "true" },
-        { "name": "ELEVENLABS_MODEL_ID",           "value": "eleven_multilingual_v2" },
-        { "name": "KLING_ACCESS_KEY",              "value": "A3GpDaEfJGmFYmGheFemM3TYkbaQkrrr" },
-        { "name": "KLING_SECRET_KEY",              "value": "AYCHYE9NMehGtaHhEK43FHnrrHJAkeKG" }
+        { "name": "ELEVENLABS_MODEL_ID",           "value": "eleven_multilingual_v2" }
       ],
       "secrets": [
         {
@@ -52,6 +50,14 @@
         {
           "name": "SENTRY_DSN",
           "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/sentry-dsn-ZI0RuC"
+        },
+        {
+          "name": "KLING_ACCESS_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/kling-access-key-mIHIBS"
+        },
+        {
+          "name": "KLING_SECRET_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/kling-secret-key-GuKaTN"
         }
       ],
       "healthCheck": {
