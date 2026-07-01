@@ -23,7 +23,6 @@ from app.integrations.shopify_draft_product_adapter import (
     ShopifyDraftProductRequest,
     shopify_draft_product_summary,
 )
-from app.providers.adapters.arcads import ArcadsProvider
 from app.providers.adapters.higgsfield import HiggsfieldProvider
 from app.providers.adapters.kling import KlingProvider
 
@@ -72,28 +71,6 @@ def _get_kling_credentials(db: Session, workspace_id: str) -> tuple[str, str]:
         secret_key or os.getenv("KLING_SECRET_KEY", ""),
     )
 
-
-def _get_arcads_api_key(db: Session, workspace_id: str) -> str:
-    """Return Arcads API key from workspace storage or env var."""
-    if db and workspace_id:
-        try:
-            from app.models.agent_system import WorkspaceIntegration
-            from app.services.encryption_service import decrypt
-
-            row = (
-                db.query(WorkspaceIntegration)
-                .filter(
-                    WorkspaceIntegration.workspace_id == workspace_id,
-                    WorkspaceIntegration.integration_key == "ARCADS_API_KEY",
-                    WorkspaceIntegration.is_active == True,
-                )
-                .first()
-            )
-            if row:
-                return decrypt(row.encrypted_value) or ""
-        except Exception:
-            logger.exception("Failed to retrieve Arcads credentials for workspace %s", workspace_id)
-    return os.getenv("ARCADS_API_KEY", "")
 
 
 def _get_higgsfield_api_key(db: Session, workspace_id: str) -> Optional[str]:
@@ -231,14 +208,6 @@ class ExecutionAdapters:
             provider_instance = kling
             execution_mode = "kling_direct_live" if provider_ready else "provider_orchestrated_safe_stub"
 
-        elif execution_surface == "arcads":
-            arcads_key = _get_arcads_api_key(self.db, workspace_id)
-            arcads = ArcadsProvider(api_key=arcads_key)
-            provider_connected = arcads.is_ready()
-            provider_ready = live_enabled and provider_connected
-            provider_instance = arcads
-            execution_mode = "arcads_live" if provider_ready else "provider_orchestrated_safe_stub"
-
         else:
             # Higgsfield MCP (claude_code_mcp) or legacy HTTP
             higgsfield = HiggsfieldProvider()
@@ -268,23 +237,16 @@ class ExecutionAdapters:
                     "Set KLING_ACCESS_KEY and KLING_SECRET_KEY environment variables.",
                     "Set HIGGSFIELD_LIVE_EXECUTION_ENABLED=true.",
                 ]
-            elif execution_surface == "arcads":
-                next_steps = [
-                    "Set ARCADS_API_KEY environment variable.",
-                    "Set HIGGSFIELD_LIVE_EXECUTION_ENABLED=true.",
-                ]
             else:
                 next_steps = [
                     "Run `claude mcp login higgsfield` where the worker executes.",
                     "Set HIGGSFIELD_EXECUTION_SURFACE=claude_code_mcp.",
                     "Set HIGGSFIELD_LIVE_EXECUTION_ENABLED=true after MCP preflight succeeds.",
                     "Alternatively set HIGGSFIELD_EXECUTION_SURFACE=kling_direct with KLING_ACCESS_KEY/KLING_SECRET_KEY.",
-                    "Or set HIGGSFIELD_EXECUTION_SURFACE=arcads with ARCADS_API_KEY.",
                 ]
 
         surface_label = {
-            "kling_direct": "Kling direct API",
-            "arcads": "Arcads API",
+            "kling_direct": "Kling",
             "claude_code_mcp": "Higgsfield MCP",
         }.get(execution_surface, "Higgsfield")
 

@@ -29,21 +29,21 @@ CREATIVE_AGENT_ALIASES: dict[str, str] = {
 
 VIDEO_MODELS_BY_QUALITY = {
     "720p": {
-        "provider": "higgsfield",
+        "provider": "kling",
         "model": "Kling 3.0 Turbo",
         "model_id": "kling3_0_turbo",
         "quality": "720p",
         "capability": "video_generation",
     },
     "1080p": {
-        "provider": "higgsfield",
+        "provider": "kling",
         "model": "Kling 3.0",
         "model_id": "kling3_0",
         "quality": "1080p",
         "capability": "video_generation",
     },
     "4k": {
-        "provider": "higgsfield",
+        "provider": "kling",
         "model": "Cinema Studio 4K",
         "model_id": "cinematic_studio_3_0",
         "quality": "4K",
@@ -288,12 +288,14 @@ def creative_provider_status() -> Dict[str, Any]:
         "creative_agent_ids": sorted(CREATIVE_AGENT_IDS),
         "aliases": dict(CREATIVE_AGENT_ALIASES),
         "providers": {
-            "higgsfield": {
-                "display_name": "Higgsfield",
+            "kling": {
+                "display_name": "Kling",
                 "capabilities": ["video_generation"],
                 "models": ["Kling 3.0 Turbo", "Kling 3.0", "Cinema Studio 4K"],
                 "model_ids": ["kling3_0_turbo", "kling3_0", "cinematic_studio_3_0"],
-                "execution_surface": "claude_code_mcp",
+                "api_models": ["kling-v1-5 (std)", "kling-v1-5 (pro)", "kling-v2-master (pro)"],
+                "execution_surface": "kling_direct",
+                "voiceover": "elevenlabs",
                 "credential_values_exposed": False,
             },
             "nano_banana": {

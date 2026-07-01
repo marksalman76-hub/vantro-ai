@@ -125,17 +125,8 @@ def _should_execute_higgsfield_live(adapter_result, creative_provider_route: obj
     surface = _execution_surface_from_adapter(adapter_result)
     if surface not in ("claude_code_mcp", "higgsfield_http"):
         return False
-    video_route = _selected_video_route(creative_provider_route)
-    selected_provider = execution_payload.get("selected_video_provider")
     selected_model = execution_payload.get("selected_video_model")
-    route_provider = video_route.get("provider")
-    route_model = video_route.get("model")
-    return (
-        selected_provider == "higgsfield"
-        and route_provider == "higgsfield"
-        and bool(selected_model)
-        and selected_model == route_model
-    )
+    return bool(selected_model)
 
 
 def _should_execute_kling_live(adapter_result) -> bool:
@@ -144,10 +135,6 @@ def _should_execute_kling_live(adapter_result) -> bool:
     return _execution_surface_from_adapter(adapter_result) == "kling_direct"
 
 
-def _should_execute_arcads_live(adapter_result) -> bool:
-    if not getattr(adapter_result, "provider_ready", False):
-        return False
-    return _execution_surface_from_adapter(adapter_result) == "arcads"
 
 
 def _first_media_url(value: object) -> str:
@@ -730,12 +717,27 @@ async def _process_job(job_id: str) -> None:
                         try:
                             media_request_k = _media_request_from_context(context)
                             ref_b64, ref_ct = _extract_reference_image(context)
+                            voiceover_script_k = _clean_media_string(
+                                media_request_k.get("voiceover_script")
+                                or media_request_k.get("voice_script")
+                                or media_request_k.get("narration_script")
+                                or _extract_voiceover_text_from_llm_output(output),
+                                "",
+                            )
+                            language_k = _clean_media_string(
+                                media_request_k.get("language")
+                                or adapter_result.execution_payload.get("language"),
+                                "English",
+                            )
                             kling_kwargs: dict = {
                                 "model": adapter_result.execution_payload.get("selected_video_model_id")
                                 or adapter_result.execution_payload.get("selected_video_model")
-                                or "kling-v1",
+                                or "kling3_0_turbo",
                                 "duration": 5,
                                 "aspect_ratio": _normalize_aspect_ratio(media_request_k.get("aspect_ratio")),
+                                "voiceover_script": voiceover_script_k,
+                                "voice_model_id": os.getenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"),
+                                "language": language_k,
                             }
                             if ref_b64:
                                 kling_kwargs["reference_image_base64"] = ref_b64
@@ -745,28 +747,6 @@ async def _process_job(job_id: str) -> None:
                         except Exception as e:
                             logger.error("Worker: Kling execution failed for job %s: %s", job_id, e)
                             live_task_result = {"error": str(e), "provider": "kling_direct"}
-
-                elif _should_execute_arcads_live(adapter_result):
-                    arcads = adapter_result.execution_payload.get("provider_instance")
-                    if arcads:
-                        try:
-                            media_request_a = _media_request_from_context(context)
-                            ref_b64_a, ref_ct_a = _extract_reference_image(context)
-                            arcads_kwargs: dict = {
-                                "model": adapter_result.execution_payload.get("selected_video_model_id")
-                                or adapter_result.execution_payload.get("selected_video_model")
-                                or "kling-3.0",
-                                "duration": 5,
-                                "aspect_ratio": _normalize_aspect_ratio(media_request_a.get("aspect_ratio")),
-                            }
-                            if ref_b64_a:
-                                arcads_kwargs["reference_image_base64"] = ref_b64_a
-                                arcads_kwargs["reference_image_content_type"] = ref_ct_a or "image/jpeg"
-                            live_task_result = await arcads.execute(prompt=output, **arcads_kwargs)
-                            logger.info("Worker: UGC media job %s routed to Arcads", job_id)
-                        except Exception as e:
-                            logger.error("Worker: Arcads execution failed for job %s: %s", job_id, e)
-                            live_task_result = {"error": str(e), "provider": "arcads"}
 
                 fallback_preview_asset = None
                 if not _first_media_url(live_task_result):
