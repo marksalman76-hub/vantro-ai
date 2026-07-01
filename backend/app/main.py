@@ -11,11 +11,9 @@ if _SENTRY_DSN:
         from sentry_sdk.integrations.fastapi import FastApiIntegration
         from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
         from sentry_sdk.integrations.logging import LoggingIntegration
-        from sentry_sdk.types import Log, Hint
-        from typing import Optional as _Optional
 
-        def _before_send_log(log: Log, _hint: Hint) -> _Optional[Log]:
-            if log.get("severity_text") in ("trace", "debug"):
+        def _before_send_log(log, _hint):
+            if isinstance(log, dict) and log.get("severity_text") in ("trace", "debug"):
                 return None
             return log
 

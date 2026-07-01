@@ -307,7 +307,14 @@ class HiggsfieldProvider(BaseProvider):
         if now - float(_MCP_READY_CACHE["checked_at"]) < cache_seconds:
             return bool(_MCP_READY_CACHE["ready"])
 
+        # Bypass probe — assume ready; execute() returns real error if CLI fails
+        if os.getenv("HIGGSFIELD_FORCE_MCP_READY", "").strip().lower() in {"1", "true", "yes", "on"}:
+            logger.info("Higgsfield MCP readiness: forced via HIGGSFIELD_FORCE_MCP_READY")
+            _MCP_READY_CACHE.update({"checked_at": now, "ready": True})
+            return True
+
         if shutil.which("claude") is None:
+            logger.warning("Higgsfield MCP not ready: 'claude' CLI not found in PATH")
             _MCP_READY_CACHE.update({"checked_at": now, "ready": False})
             return False
         try:
@@ -337,10 +344,20 @@ class HiggsfieldProvider(BaseProvider):
                 check=False,
                 env=_mcp_process_env(),
             )
-        except Exception:
+            if result.returncode != 0:
+                logger.warning(
+                    "Higgsfield MCP probe failed (rc=%d) stdout=%r stderr=%r",
+                    result.returncode,
+                    (result.stdout or "")[:600],
+                    (result.stderr or "")[:600],
+                )
+        except Exception as exc:
+            logger.warning("Higgsfield MCP probe exception: %s", exc)
             _MCP_READY_CACHE.update({"checked_at": now, "ready": False})
             return False
         ready = result.returncode == 0
+        if ready:
+            logger.info("Higgsfield MCP probe passed — live execution enabled")
         _MCP_READY_CACHE.update({"checked_at": now, "ready": ready})
         return ready
 
