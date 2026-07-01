@@ -33,8 +33,9 @@ async function forwardBackendResponse(res: Response) {
 }
 
 export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get("authorization") || "";
   const cookieToken = request.cookies?.get("access_token")?.value;
-  const token = cookieToken ? `Bearer ${cookieToken}` : (request.headers.get("authorization") || "");
+  const token = authHeader || (cookieToken ? `Bearer ${cookieToken}` : "");
 
   try {
     const body = await request.json();

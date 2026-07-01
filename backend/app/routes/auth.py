@@ -18,6 +18,7 @@ from app.database import SessionLocal
 from app.limiter import limiter
 from app.models import User
 from app.models.refresh_token import RefreshToken
+from app.models.otp_token import OTPToken
 from app.models.audit_log import AuditLog
 from app.services import email_service
 
@@ -365,3 +366,97 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+# ── Two-step verification (OTP) ───────────────────────────────────────────────
+
+class OTPRequestBody(BaseModel):
+    email: str
+    password: str
+
+
+class OTPVerifyBody(BaseModel):
+    email: str
+    code: str
+
+
+def _clean_expired_otps(email: str, db: Session) -> None:
+    db.query(OTPToken).filter(
+        OTPToken.email == email.lower(),
+        OTPToken.expires_at < datetime.utcnow(),
+    ).delete(synchronize_session=False)
+    db.commit()
+
+
+@router.post("/otp/request")
+@limiter.limit("5/minute")
+async def request_otp(request: Request, body: OTPRequestBody, db: Session = Depends(get_db)):
+    """Step 1: validate credentials, send 6-digit OTP to registered email."""
+    user = db.query(User).filter(User.email == body.email.lower()).first()
+    if not user or not verify_password(body.password, user.password_hash) or not user.is_active:
+        # Generic error — don't reveal whether email exists
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    code = str(secrets.randbelow(900000) + 100000)  # 100000–999999
+    code_hash = hashlib.sha256(code.encode()).hexdigest()
+    expires_at = datetime.utcnow() + timedelta(minutes=10)
+
+    _clean_expired_otps(body.email, db)
+
+    otp = OTPToken(
+        id=str(uuid.uuid4()),
+        email=body.email.lower(),
+        token_hash=code_hash,
+        expires_at=expires_at,
+        used=False,
+    )
+    db.add(otp)
+    db.commit()
+
+    email_service.send_otp(user.email, code, user.name or "")
+    _audit(db, request, "otp_requested", user_id=user.id, resource_type="auth")
+
+    return {"ok": True, "message": "Verification code sent to your email"}
+
+
+@router.post("/otp/verify")
+@limiter.limit("10/minute")
+async def verify_otp(request: Request, body: OTPVerifyBody, db: Session = Depends(get_db)):
+    """Step 2: verify OTP code, return access token on success."""
+    code = body.code.strip()
+    if not code or len(code) != 6 or not code.isdigit():
+        raise HTTPException(status_code=400, detail="Invalid verification code format")
+
+    code_hash = hashlib.sha256(code.encode()).hexdigest()
+
+    otp = db.query(OTPToken).filter(
+        OTPToken.email == body.email.lower(),
+        OTPToken.token_hash == code_hash,
+        OTPToken.used == False,  # noqa: E712
+        OTPToken.expires_at > datetime.utcnow(),
+    ).first()
+
+    if not otp:
+        _audit(db, request, "otp_failed", resource_type="auth")
+        raise HTTPException(status_code=401, detail="Invalid or expired verification code")
+
+    otp.used = True
+    db.commit()
+
+    user = db.query(User).filter(User.email == body.email.lower()).first()
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="Account not found or inactive")
+
+    access_token = create_access_token(user.id, expires_delta=timedelta(hours=24))
+    try:
+        refresh_opaque = _create_refresh_token(user.id, request, db)
+    except Exception:
+        refresh_opaque = None
+
+    _audit(db, request, "login_otp", user_id=user.id, resource_type="auth")
+
+    resp = JSONResponse(content={"access_token": access_token, "token_type": "bearer", "user_id": user.id})
+    _set_auth_cookie(resp, access_token)
+    if refresh_opaque:
+        _set_refresh_cookie(resp, refresh_opaque)
+    return resp

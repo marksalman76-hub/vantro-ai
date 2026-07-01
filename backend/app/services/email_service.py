@@ -298,6 +298,26 @@ def send_approval_result(user_email: str, agent_id: str, approved: bool, reason:
     return _send(user_email, subject, body_text, body_html)
 
 
+def send_otp(to_email: str, code: str, name: str = "") -> bool:
+    subject = "Your Vantro verification code"
+    greeting = f"Hi {name}," if name else "Hi,"
+    body_text = f"{greeting}\n\nYour one-time verification code is:\n\n{code}\n\nThis code expires in 10 minutes. Never share this code with anyone."
+    body_html = f"""
+    <html><body style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:40px 20px;background:#0f0f13;color:#e5e7eb;">
+      <div style="margin-bottom:32px;">
+        <span style="font-size:20px;font-weight:700;color:#fff;">Vantro<span style="color:#8b5cf6;">.ai</span></span>
+      </div>
+      <h2 style="color:#fff;margin-bottom:8px;">Verification code</h2>
+      <p style="color:#9ca3af;margin-bottom:24px;">{greeting} Use the code below to complete sign-in. It expires in 10 minutes.</p>
+      <div style="background:#1a1a2e;border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:28px;text-align:center;margin-bottom:24px;">
+        <span style="font-size:36px;font-weight:800;letter-spacing:0.25em;color:#fff;">{code}</span>
+      </div>
+      <p style="color:#6b7280;font-size:12px;">If you didn't attempt to sign in, ignore this email and your account remains secure.</p>
+    </body></html>
+    """
+    return _send(to_email, subject, body_text, body_html)
+
+
 def _send(to: str, subject: str, body_text: str, body_html: str, reply_to: str = "") -> bool:
     try:
         client = _ses_client()

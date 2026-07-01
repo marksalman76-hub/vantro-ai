@@ -10,14 +10,10 @@ import ActionCard from '@/components/dashboard/ActionCard';
 import StatusBadge from '@/components/dashboard/StatusBadge';
 
 // Sections
-import DashboardHeader from '@/components/dashboard/DashboardHeader';
 import StatusStrip from '@/components/dashboard/StatusStrip';
 import AlertsSection from '@/components/dashboard/AlertsSection';
 import QuickLaunchSection from '@/components/dashboard/QuickLaunchSection';
 import RecentJobsTable from '@/components/dashboard/RecentJobsTable';
-
-// Fixed widget
-import ThemeToggle from '@/components/dashboard/ThemeToggle';
 
 // Suppress unused-import lint warnings — these are re-exported for consumers
 void MetricCard;
@@ -100,11 +96,6 @@ export default function DashboardPage() {
     localStorage.setItem('dismissed_announcements', JSON.stringify(Array.from(next)));
   };
 
-  const onSignOut = () => {
-    localStorage.removeItem('token');
-    router.push('/login');
-  };
-
   // Derived state
   const completedThisMonth = jobs.filter(
     j => j.status === 'completed' && isThisMonth(j.completed_at || j.created_at)
@@ -129,7 +120,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-5xl" style={{ paddingTop: '6rem' }}>
+      <div className="p-8 max-w-5xl">
         <div className="mb-8">
           <div className="animate-pulse bg-gray-800 rounded h-7 w-36 mb-2" />
           <div className="animate-pulse bg-gray-800 rounded h-4 w-56" />
@@ -145,46 +136,27 @@ export default function DashboardPage() {
   }
 
   return (
-    <>
-      {/* Sticky header — fixed, z-index 100 */}
-      <DashboardHeader
+    <div className="p-8 max-w-5xl">
+      <StatusStrip
         credits={credits}
+        completedThisMonth={completedThisMonth}
         pendingApprovals={pendingApprovals}
-        failedJobs={failedJobs}
-        onSignOut={onSignOut}
+        topAgents={topAgents}
       />
 
-      {/* Main content — offset by header height */}
-      <div className="p-8 max-w-5xl" style={{ paddingTop: '6rem' }}>
-
-        {/* Collapsible metrics strip */}
-        <StatusStrip
-          credits={credits}
-          completedThisMonth={completedThisMonth}
+      <div className="mb-6">
+        <AlertsSection
+          announcements={announcements}
           pendingApprovals={pendingApprovals}
-          topAgents={topAgents}
+          failedJobs={failedJobs}
+          dismissed={dismissed}
+          onDismiss={onDismiss}
         />
-
-        {/* Announcements + action cards */}
-        <div className="mb-6">
-          <AlertsSection
-            announcements={announcements}
-            pendingApprovals={pendingApprovals}
-            failedJobs={failedJobs}
-            dismissed={dismissed}
-            onDismiss={onDismiss}
-          />
-        </div>
-
-        {/* Quick-launch grid */}
-        <QuickLaunchSection />
-
-        {/* Job history table */}
-        <RecentJobsTable jobs={jobs} />
       </div>
 
-      {/* Fixed bottom-left theme toggle */}
-      <ThemeToggle />
-    </>
+      <QuickLaunchSection />
+
+      <RecentJobsTable jobs={jobs} />
+    </div>
   );
 }
