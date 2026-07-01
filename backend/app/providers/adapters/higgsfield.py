@@ -190,6 +190,61 @@ def _first_higgsfield_result(data: dict) -> dict:
     return {}
 
 
+async def _upload_image_base64_to_higgsfield_mcp(
+    *,
+    image_base64: str,
+    content_type: str,
+    timeout_seconds: int,
+) -> dict:
+    filename = f"reference-image-{uuid4().hex}.{content_type.split('/')[-1] or 'jpg'}"
+    upload_params = {
+        "method": "upload_url",
+        "filename": filename,
+        "content_type": content_type or "image/jpeg",
+    }
+    upload_prompt = (
+        "Use the connected Higgsfield MCP tool mcp__higgsfield__media_upload "
+        f"with this exact JSON params object: {json.dumps(upload_params, sort_keys=True)}. "
+        "Return only the raw JSON result."
+    )
+    upload_raw = await _run_claude_mcp_prompt(
+        upload_prompt,
+        timeout_seconds=timeout_seconds,
+        allowed_tools="mcp__higgsfield__media_upload",
+    )
+    upload_data = _extract_json_payload(upload_raw)
+    upload_url = _find_first_key(upload_data, {"upload_url", "url", "presigned_url", "put_url"})
+    media_id = _find_first_key(upload_data, {"media_id", "id"})
+    if not upload_url or not media_id:
+        raise RuntimeError("Higgsfield MCP media_upload did not return upload_url and media_id")
+
+    image_bytes = base64.b64decode(image_base64)
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        response = await client.put(
+            upload_url,
+            content=image_bytes,
+            headers={"Content-Type": content_type or "image/jpeg"},
+        )
+        response.raise_for_status()
+
+    confirm_params = {"media_id": media_id, "type": "image"}
+    confirm_prompt = (
+        "Use the connected Higgsfield MCP tool mcp__higgsfield__media_confirm "
+        f"with this exact JSON params object: {json.dumps(confirm_params, sort_keys=True)}. "
+        "Return only the raw JSON result."
+    )
+    confirm_raw = await _run_claude_mcp_prompt(
+        confirm_prompt,
+        timeout_seconds=timeout_seconds,
+        allowed_tools="mcp__higgsfield__media_confirm",
+    )
+    return {
+        "media_id": media_id,
+        "upload": upload_data,
+        "confirm": _extract_json_payload(confirm_raw),
+    }
+
+
 async def _upload_audio_base64_to_higgsfield_mcp(
     *,
     audio_base64: str,
@@ -430,6 +485,21 @@ class HiggsfieldProvider(BaseProvider):
                         "execution_surface": "claude_code_mcp",
                         "audio_provider": "elevenlabs",
                     }
+
+            ref_image_b64 = str(kwargs.get("reference_image_base64") or "").strip()
+            if ref_image_b64:
+                try:
+                    ref_content_type = str(kwargs.get("reference_image_content_type") or "image/jpeg")
+                    image_upload = await _upload_image_base64_to_higgsfield_mcp(
+                        image_base64=ref_image_b64,
+                        content_type=ref_content_type,
+                        timeout_seconds=timeout_seconds,
+                    )
+                    image_media_entry = {"value": image_upload["media_id"], "role": "image"}
+                    medias = ([image_media_entry] + list(medias)) if medias else [image_media_entry]
+                except Exception as exc:
+                    logger.warning("Reference image upload to Higgsfield failed (continuing without it): %s", exc)
+
             mcp_params = {
                 "model": payload["model"],
                 "prompt": prompt,

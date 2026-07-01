@@ -310,6 +310,15 @@ export default function AdminCreateMediaPage() {
     if (idx > 0) setStep(STEPS[idx - 1]);
   }
 
+  async function readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function submit() {
     if (submitLockRef.current) return;
     submitLockRef.current = true;
@@ -351,6 +360,16 @@ export default function AdminCreateMediaPage() {
       const mediaAgent = agents.find((a: { id: string }) => a.id === selectedAgentId) || { id: selectedAgentId };
       const selectedAssets = brandAssets.filter((asset) => selectedAssetIds.has(asset.id));
 
+      const imageFiles = refFiles.filter((f) => f.type.startsWith('image/'));
+      const referenceImages = await Promise.all(
+        imageFiles.map(async (file) => ({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data_url: await readFileAsDataUrl(file),
+        }))
+      );
+
       const res = await fetch('/api/admin-run-agent', {
         method: 'POST',
         headers: {
@@ -369,11 +388,13 @@ export default function AdminCreateMediaPage() {
               type: file.type,
               size: file.size,
             })),
+            reference_images: referenceImages,
             brand_asset_ids: Array.from(selectedAssetIds),
             brand_assets: selectedAssets.map((asset) => ({
               id: asset.id,
               name: asset.name,
               mime_type: asset.mime_type,
+              filename: asset.filename,
               size: asset.size,
             })),
             creative_provider_route: {

@@ -248,6 +248,28 @@ def _extract_voiceover_text_from_llm_output(raw_output: str) -> str:
     return raw_output[:_VOICEOVER_TEXT_LIMIT]
 
 
+def _extract_reference_image(context: object) -> tuple[str, str]:
+    """Return (base64_data, content_type) for the first image in reference_images, or ('', '')."""
+    if not isinstance(context, dict):
+        return "", ""
+    reference_images = context.get("reference_images")
+    if not isinstance(reference_images, list) or not reference_images:
+        return "", ""
+    first = reference_images[0]
+    if not isinstance(first, dict):
+        return "", ""
+    data_url = str(first.get("data_url") or "")
+    if not data_url.startswith("data:"):
+        return "", ""
+    # data:<content-type>;base64,<data>
+    try:
+        header, b64 = data_url.split(",", 1)
+        content_type = header.split(";")[0].replace("data:", "")
+    except ValueError:
+        return "", ""
+    return b64.strip(), content_type.strip()
+
+
 def _build_higgsfield_execution_kwargs(
     context: object,
     adapter_result: object,
@@ -276,7 +298,9 @@ def _build_higgsfield_execution_kwargs(
         "",
     )
 
-    return {
+    ref_image_b64, ref_image_content_type = _extract_reference_image(context)
+
+    kwargs: dict = {
         "model": execution_payload.get("selected_video_model_id") or execution_payload.get("selected_video_model"),
         "duration": 30,
         "aspect_ratio": _normalize_aspect_ratio(media_request.get("aspect_ratio")),
@@ -290,6 +314,10 @@ def _build_higgsfield_execution_kwargs(
         "voiceover_script": voiceover_script,
         "multilingual_voice_enabled": voiceover["multilingual"],
     }
+    if ref_image_b64:
+        kwargs["reference_image_base64"] = ref_image_b64
+        kwargs["reference_image_content_type"] = ref_image_content_type or "image/jpeg"
+    return kwargs
 
 
 def _resolve_billable_credit_cost(*, actual_credits: int, pre_committed: int, owner_admin_unlimited: bool) -> int:
