@@ -51,7 +51,7 @@ class TestAgentRun:
         )
 
     def test_run_agent_missing_prompt(self, client, authenticated_client):
-        resp = authenticated_client.post("/api/agents/content_writer/run", json={})
+        resp = authenticated_client.post("/api/agents/head_agent/run", json={})
         assert resp.status_code in (
             status.HTTP_422_UNPROCESSABLE_ENTITY,
             status.HTTP_400_BAD_REQUEST,

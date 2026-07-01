@@ -65,11 +65,11 @@ class TestInsufficientCredits:
         db.commit()
 
         resp = client.post(
-            "/api/agents/jobs",
-            json={"agent_id": "brand_voice_agent", "input_data": {"text": "hello"}},
+            "/api/agents/head_agent/run",
+            json={"prompt": "hello"},
             headers={"Authorization": f"Bearer {token}"},
         )
-        # Should be 402 Payment Required or 403 Forbidden
+        # Should be 402 Payment Required
         assert resp.status_code in (402, 403, 400)
 
     def test_job_accepted_when_credits_available(self, client, db):
@@ -77,11 +77,11 @@ class TestInsufficientCredits:
         assert credits.total_credits - credits.used_credits > 0
 
         resp = client.post(
-            "/api/agents/jobs",
-            json={"agent_id": "brand_voice_agent", "input_data": {"text": "hello"}},
+            "/api/agents/head_agent/run",
+            json={"prompt": "hello"},
             headers={"Authorization": f"Bearer {token}"},
         )
-        # 201 created or 200 OK — not a credit-rejection status
+        # 200 OK or 201 — not a credit-rejection status
         assert resp.status_code not in (402, 403)
 
 
@@ -92,10 +92,9 @@ class TestCreditAdminOps:
         target_credits.used_credits = 90
         db.commit()
 
-        # Admin deploys credits via the admin endpoint
         resp = client.post(
-            f"/api/admin/clients/{target.id}/deploy-unlimited-credits",
-            json={"reason": "testing"},
+            "/api/admin/packages/deploy-unlimited",
+            json={"user_id": target.id, "reason": "testing"},
             headers={"Authorization": f"Bearer {admin_token}"},
         )
         assert resp.status_code == 200
@@ -107,8 +106,8 @@ class TestCreditAdminOps:
         target, _, _ = make_user(db)
 
         resp = client.post(
-            f"/api/admin/clients/{target.id}/deploy-unlimited-credits",
-            json={"reason": "hacking"},
+            "/api/admin/packages/deploy-unlimited",
+            json={"user_id": target.id, "reason": "hacking"},
             headers={"Authorization": f"Bearer {user_token}"},
         )
         assert resp.status_code == 403

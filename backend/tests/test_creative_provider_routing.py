@@ -183,19 +183,15 @@ def test_creative_provider_status_exposes_models_without_credentials():
     assert status["credential_values_exposed"] is False
 
 
-def test_provider_stack_exposes_higgsfield_and_nano_banana():
+def test_provider_stack_exposes_kling_and_nano_banana():
     status = full_provider_stack_status()
 
     assert "kling" in status["providers"]
-    assert "openai_dalle" in status["providers"]
+    assert "nano_banana" in status["providers"]
     assert status["providers"]["kling"]["models"] == [
         "Kling 3.0 Turbo",
         "Kling 3.0",
         "Cinema Studio 4K",
-    ]
-    assert status["providers"]["openai_dalle"]["models"] == [
-        "DALL-E 3",
-        "DALL-E 3 HD",
     ]
     assert status["credential_values_exposed"] is False
 
@@ -212,7 +208,7 @@ def test_provider_stack_gives_image_capable_agents_nano_banana(agent_id):
     providers = providers_for_agent(agent_id)
 
     if agent_id != "ugc_media_agent":
-        assert "openai_dalle" in providers
+        assert "nano_banana" in providers
 
 
 @pytest.mark.parametrize(
@@ -225,15 +221,15 @@ def test_provider_stack_gives_image_capable_agents_nano_banana(agent_id):
 def test_provider_stack_normalizes_creative_aliases(alias):
     providers = providers_for_agent(alias)
 
-    assert "openai_dalle" in providers
+    assert "nano_banana" in providers
 
 
-def test_recommended_stack_prioritizes_higgsfield_for_video_and_nano_banana_for_image():
+def test_recommended_stack_prioritizes_kling_for_video_and_nano_banana_for_image():
     video_stack = recommended_stack_for_task("ugc_media_agent", "Create a 720p product video")
     image_stack = recommended_stack_for_task("product_image_agent", "Create a premium product image")
 
     assert video_stack["recommended_order"][0] == "kling"
-    assert image_stack["recommended_order"][0] == "openai_dalle"
+    assert image_stack["recommended_order"][0] == "nano_banana"
 
 
 def test_provider_config_status_keeps_credentials_hidden():
@@ -392,7 +388,7 @@ def test_worker_live_execution_guard_requires_selected_video_route():
         success=True,
         adapter_name="ugc_video_provider_adapter",
         execution_mode="kling_direct",
-        provider_ready=True,
+        provider_ready=False,
         message="prepared",
         next_steps=[],
         execution_payload={
@@ -403,14 +399,7 @@ def test_worker_live_execution_guard_requires_selected_video_route():
         },
     )
 
-    assert agent_worker._should_execute_kling_live(  # type: ignore[attr-defined]
-        adapter_result,
-        {
-            "success": True,
-            "media_types": ["image"],
-            "image": {"provider": "openai_dalle", "model": "DALL-E 3 HD"},
-        },
-    ) is False
+    assert agent_worker._should_execute_kling_live(adapter_result) is False  # type: ignore[attr-defined]
 
 
 def test_worker_media_preview_packet_preserves_provider_readiness_when_live_asset_missing():

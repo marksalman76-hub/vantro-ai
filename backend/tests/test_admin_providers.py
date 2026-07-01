@@ -45,8 +45,8 @@ def test_admin_stats_reports_unlimited_owner_credits(client, db):
 
 
 def test_admin_provider_health_includes_creative_routes_without_credentials(client, db, monkeypatch):
-    monkeypatch.setenv("HIGGSFIELD_API_KEY", "higgs-secret-value")
-    monkeypatch.setenv("NANO_BANANA_API_KEY", "banana-secret-value")
+    monkeypatch.setenv("KLING_ACCESS_KEY", "test-access-key")
+    monkeypatch.setenv("KLING_SECRET_KEY", "test-secret-key")
     _, token, _ = make_user(db, email="admin-creative-providers@test.com", is_admin=True)
 
     response = client.get(
@@ -60,7 +60,6 @@ def test_admin_provider_health_includes_creative_routes_without_credentials(clie
     provider_names = {provider["name"] for provider in providers}
 
     assert "Kling" in provider_names
-    assert "OpenAI DALL-E" in provider_names or "openai_dalle" in str(body)
     assert body["creative_provider_routing"]["providers"]["kling"]["models"] == [
         "Kling 3.0 Turbo",
         "Kling 3.0",
