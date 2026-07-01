@@ -63,14 +63,7 @@ export const CREATIVE_AGENT_OPTIONS = [
   {
     id: 'ugc_media_agent',
     label: 'UGC / AI Media Agent',
-    desc: 'Default video and creator-led media',
-    videoModels: ['720p', '1080p'],
-    imageTiers: ['standard'],
-  },
-  {
-    id: 'ugc_creative_agent',
-    label: 'UGC Creative Agent',
-    desc: 'Premium UGC, 4K, and pro creative routes',
+    desc: 'Video and creator-led media — 720p, 1080p, 4K',
     videoModels: ['720p', '1080p', '4K'],
     imageTiers: ['standard', 'pro'],
   },
@@ -128,7 +121,6 @@ export const BRIEF_STEP_FIELD_ORDER = [
 
 function recommendedCreativeAgentId(req: MediaRequest) {
   if (req.type === 'image') return 'product_image_agent';
-  if (req.video_quality === '4K') return 'ugc_creative_agent';
   return 'ugc_media_agent';
 }
 
@@ -397,9 +389,6 @@ export default function AdminCreateMediaPage() {
               filename: asset.filename,
               size: asset.size,
             })),
-            creative_provider_route: {
-              video: { provider: 'higgsfield', model: 'ugc_pro' },
-            },
           },
         }),
       });

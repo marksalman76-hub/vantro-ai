@@ -90,6 +90,6 @@ def test_admin_run_agent_uses_requested_creative_identity_for_premium_route(clie
 
     input_data = json.loads(job.input_data)
     route = input_data["context"]["creative_provider_route"]
-    assert route["canonical_agent_id"] == "ugc_creative_agent"
+    assert route["canonical_agent_id"] == "ugc_media_agent"
     assert route["video"]["provider"] == "kling"
     assert route["video"]["model"] == "Cinema Studio 4K"

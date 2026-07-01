@@ -11,7 +11,6 @@ from app.runtime.creative_agent_capability_policy import (
 
 CREATIVE_AGENT_IDS: set[str] = {
     "ugc_media_agent",
-    "ugc_creative_agent",
     "product_image_agent",
     "ad_creative_agent",
     "creative_rotation_agent",
@@ -20,6 +19,7 @@ CREATIVE_AGENT_IDS: set[str] = {
 }
 
 CREATIVE_AGENT_ALIASES: dict[str, str] = {
+    "ugc_creative_agent": "ugc_media_agent",
     "paid_ads_agent": "ads_optimisation_agent",
     "social_media_manager_content_creator_agent": "social_media_content_agent",
     "product_video_agent": "ugc_media_agent",

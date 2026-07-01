@@ -5,25 +5,29 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.vantro.ai";
 async function forwardBackendResponse(res: Response) {
   const text = await res.text();
   const contentType = res.headers.get("content-type") || "";
-  const headers = contentType ? { "Content-Type": contentType } : undefined;
 
   if (text.trim()) {
     if (contentType.includes("application/json")) {
-      return new NextResponse(text, { status: res.status, headers });
+      return new NextResponse(text, { status: res.status, headers: { "Content-Type": "application/json" } });
     }
 
-    return NextResponse.json(
-      res.ok
-        ? { ok: true, status: res.status, response: text }
-        : { error: text || res.statusText || "Backend request failed" },
-      { status: res.status },
-    );
+    // Non-JSON error (nginx/ALB/WAF HTML page) — return a clean error, not raw markup
+    if (!res.ok) {
+      const status = res.status;
+      const detail =
+        status === 403 ? "Access denied by the server. Check that the backend service is healthy and the admin token is valid." :
+        status === 502 || status === 503 || status === 504 ? "Backend service is temporarily unavailable. Please retry in a moment." :
+        `Backend request failed (HTTP ${status}).`;
+      return NextResponse.json({ error: detail }, { status });
+    }
+
+    return NextResponse.json({ ok: true, status: res.status, response: text }, { status: res.status });
   }
 
   return NextResponse.json(
     res.ok
       ? { ok: true, status: res.status }
-      : { error: res.statusText || "Backend request failed" },
+      : { error: `Backend request failed (HTTP ${res.status}).` },
     { status: res.status },
   );
 }

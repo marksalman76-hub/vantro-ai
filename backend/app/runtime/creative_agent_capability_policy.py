@@ -44,10 +44,6 @@ IMAGE_MODELS = {
 
 AGENT_CREATIVE_MODEL_ACCESS: dict[str, dict[str, list[str]]] = {
     "ugc_media_agent": {
-        "video": ["Kling 3.0 Turbo", "Kling 3.0"],
-        "image": ["DALL-E 3"],
-    },
-    "ugc_creative_agent": {
         "video": ["Kling 3.0 Turbo", "Kling 3.0", "Cinema Studio 4K"],
         "image": ["DALL-E 3", "DALL-E 3 HD"],
     },
