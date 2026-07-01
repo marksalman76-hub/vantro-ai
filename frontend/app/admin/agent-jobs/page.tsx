@@ -30,7 +30,7 @@ const STATUS_COLOR: Record<string, string> = {
 function AdminAgentJobsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const highlight = searchParams.get('highlight');
+  const highlight = searchParams?.get('highlight') ?? null;
   const highlightRef = useRef<HTMLTableRowElement | null>(null);
   const [jobs, setJobs] = useState<AgentJob[]>([]);
   const [loading, setLoading] = useState(true);
