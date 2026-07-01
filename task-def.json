@@ -48,20 +48,8 @@
           "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/sqs-jobs-queue-url-Bxxbtu"
         },
         {
-          "name": "HIGGSFIELD_MCP_CREDENTIALS_JSON",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/higgsfield-mcp-credentials-json-uvxgjA"
-        },
-        {
           "name": "ELEVENLABS_API_KEY",
           "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/elevenlabs-api-key-lc7jgp"
-        },
-        {
-          "name": "CLAUDE_CODE_OAUTH_TOKEN",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/claude-code-oauth-token-yXGWVN"
-        },
-        {
-          "name": "HIGGSFIELD_CLAUDE_MCP_OAUTH_JSON",
-          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/higgsfield-claude-mcp-oauth-json-wwp4lp"
         },
         {
           "name": "OPENAI_API_KEY",
@@ -79,11 +67,10 @@
         { "name": "FROM_EMAIL",     "value": "noreply@vantro.ai" },
         { "name": "AWS_REGION",     "value": "us-east-1" },
         { "name": "ADMIN_EMAIL",    "value": "mark.salman76@gmail.com" },
-        { "name": "HIGGSFIELD_EXECUTION_SURFACE", "value": "claude_code_mcp" },
-        { "name": "HIGGSFIELD_LIVE_EXECUTION_ENABLED", "value": "true" },
-        { "name": "HIGGSFIELD_MCP_MAX_BUDGET_USD", "value": "5.00" },
-        { "name": "HIGGSFIELD_MCP_READINESS_BUDGET_USD", "value": "1.00" },
-        { "name": "ELEVENLABS_MODEL_ID", "value": "eleven_multilingual_v2" }
+        { "name": "VIDEO_LIVE_EXECUTION_ENABLED", "value": "true" },
+        { "name": "ELEVENLABS_MODEL_ID", "value": "eleven_multilingual_v2" },
+        { "name": "KLING_ACCESS_KEY", "value": "A3GpDaEfJGmFYmGheFemM3TYkbaQkrrr" },
+        { "name": "KLING_SECRET_KEY", "value": "AYCHYE9NMehGtaHhEK43FHnrrHJAkeKG" }
       ],
       "healthCheck": {
         "command": ["CMD-SHELL", "python3 -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\" || exit 1"],
