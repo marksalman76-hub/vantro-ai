@@ -134,14 +134,6 @@ def _platform_provider_health(user: User, db: Session) -> list[dict]:
 
     providers = [
         {
-            "name": "HeyGen",
-            "category": "Video / Avatar",
-            "configured": _provider_configured("HEYGEN_API_KEY"),
-            "readiness": readiness(_provider_configured("HEYGEN_API_KEY")),
-            "notes": "Primary video generation and avatar presenter",
-            "role": "primary",
-        },
-        {
             "name": "Stripe",
             "category": "Billing",
             "configured": _provider_configured("STRIPE_SECRET_KEY"),
@@ -179,14 +171,6 @@ def _platform_provider_health(user: User, db: Session) -> list[dict]:
             "configured": _provider_configured("ELEVENLABS_API_KEY"),
             "readiness": readiness(_provider_configured("ELEVENLABS_API_KEY")),
             "notes": "Voice synthesis - future provider",
-            "role": "future",
-        },
-        {
-            "name": "Runway",
-            "category": "Video Generation",
-            "configured": _provider_configured("RUNWAY_API_KEY"),
-            "readiness": readiness(_provider_configured("RUNWAY_API_KEY")),
-            "notes": "Cinematic video generation - future provider",
             "role": "future",
         },
     ]
@@ -783,14 +767,6 @@ async def get_providers(
     return {
         "providers": [
             {
-                "name": "HeyGen",
-                "category": "Video / Avatar",
-                "configured": bool(os.getenv("HEYGEN_API_KEY")),
-                "readiness": provider_status("HEYGEN_API_KEY"),
-                "notes": "Primary video generation and avatar presenter",
-                "role": "primary",
-            },
-            {
                 "name": "Stripe",
                 "category": "Billing",
                 "configured": bool(os.getenv("STRIPE_SECRET_KEY")),
@@ -820,14 +796,6 @@ async def get_providers(
                 "configured": bool(os.getenv("ELEVENLABS_API_KEY")),
                 "readiness": provider_status("ELEVENLABS_API_KEY"),
                 "notes": "Voice synthesis — future provider",
-                "role": "future",
-            },
-            {
-                "name": "Runway",
-                "category": "Video Generation",
-                "configured": bool(os.getenv("RUNWAY_API_KEY")),
-                "readiness": provider_status("RUNWAY_API_KEY"),
-                "notes": "Cinematic video generation — future provider",
                 "role": "future",
             },
         ]
@@ -971,7 +939,6 @@ async def admin_run_agent(
     )
     db.add(job)
     db.commit()
-    db.refresh(job)
 
     return {
         "job_id": job.id,
@@ -1749,7 +1716,6 @@ async def get_settings(
             "openapi_docs_in_production": False,
         },
         "provider_status": {
-            "heygen_configured": bool(os.getenv("HEYGEN_API_KEY")),
             "stripe_configured": bool(os.getenv("STRIPE_SECRET_KEY")),
             "sqs_configured": bool(os.getenv("SQS_JOBS_QUEUE_URL")),
             "redis_configured": bool(os.getenv("REDIS_URL")),

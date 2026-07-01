@@ -26,15 +26,12 @@ def init_providers() -> None:
     from .adapters import (
         SynthesiaProvider,
         ElevenLabsProvider,
-        RunwayProvider,
         MubertProvider,
         AssemblyAIProvider,
         PikaProvider,
     )
 
-    _register_if_key("HEYGEN_API_KEY", SynthesiaProvider, "HeyGen (avatar video)")
     _register_if_key("ELEVENLABS_API_KEY", ElevenLabsProvider, "ElevenLabs (voice)")
-    _register_if_key("RUNWAY_API_KEY", RunwayProvider, "Runway (text-to-video)")
     _register_if_key("MUBERT_API_KEY", MubertProvider, "Mubert (music)")
     _register_if_key("ASSEMBLYAI_API_KEY", AssemblyAIProvider, "AssemblyAI (captions)")
     _register_if_key("PIKA_API_KEY", PikaProvider, "Pika (text-to-video alt)")

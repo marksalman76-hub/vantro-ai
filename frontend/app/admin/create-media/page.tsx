@@ -227,6 +227,7 @@ export default function AdminCreateMediaPage() {
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
   const [selectedCreativeAgentId, setSelectedCreativeAgentId] = useState('ugc_media_agent');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const submitLockRef = useRef(false);
   const selectedAgentRule = isCreativeAgentOptionAllowed(selectedCreativeAgentId, req);
 
   // Post-submit result state
@@ -310,10 +311,13 @@ export default function AdminCreateMediaPage() {
   }
 
   async function submit() {
+    if (submitLockRef.current) return;
+    submitLockRef.current = true;
     const token = getStoredAdminToken();
     const selectedAgentId = resolveCreateMediaAgentId(req, selectedCreativeAgentId);
     const selectedAgentAllowed = isCreativeAgentOptionAllowed(selectedAgentId, req);
     if (!selectedAgentAllowed.allowed) {
+      submitLockRef.current = false;
       setError(selectedAgentAllowed.reason);
       setStep('brief');
       return;
@@ -372,6 +376,9 @@ export default function AdminCreateMediaPage() {
               mime_type: asset.mime_type,
               size: asset.size,
             })),
+            creative_provider_route: {
+              video: { provider: 'higgsfield', model: 'ugc_pro' },
+            },
           },
         }),
       });
@@ -400,6 +407,7 @@ export default function AdminCreateMediaPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not start media request. Please contact support.');
     } finally {
+      submitLockRef.current = false;
       setSubmitting(false);
     }
   }

@@ -59,6 +59,18 @@
           "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/openai-api-key-dsCL3D"
         },
         {
+          "name": "ANTHROPIC_API_KEY",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/anthropic-api-key-AMWzt7"
+        },
+        {
+          "name": "SQS_JOBS_QUEUE_URL",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/sqs-jobs-queue-url-Bxxbtu"
+        },
+        {
+          "name": "REDIS_URL",
+          "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/redis-url-BzFk4o"
+        },
+        {
           "name": "SENTRY_DSN",
           "valueFrom": "arn:aws:secretsmanager:us-east-1:685570573617:secret:vantro/prod/sentry-dsn-ZI0RuC"
         }
