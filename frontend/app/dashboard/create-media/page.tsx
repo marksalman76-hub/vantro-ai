@@ -66,6 +66,15 @@ export default function CreateMediaPage() {
     if (idx > 0) setStep(STEPS[idx - 1]);
   }
 
+  function readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function submit() {
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -78,7 +87,19 @@ export default function CreateMediaPage() {
       req.aspect_ratio ? `Format: ${req.aspect_ratio}.` : '',
       req.tone ? `Tone: ${req.tone}.` : '',
       req.use_brand_profile ? 'Use my brand profile for voice, colours, and assets.' : '',
+      refFiles.length > 0 ? `Reference image provided.` : '',
     ].filter(Boolean).join(' ');
+
+    // Convert image files to base64 data URLs for reference_images context
+    const imageFiles = refFiles.filter(f => f.type.startsWith('image/'));
+    const referenceImages = await Promise.all(
+      imageFiles.slice(0, 3).map(async (file) => ({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        data_url: await readFileAsDataUrl(file),
+      }))
+    );
 
     try {
       // Find and run the create_media_agent (or similar agent)
@@ -98,7 +119,13 @@ export default function CreateMediaPage() {
       const res = await fetch(`/api/agents/${mediaAgent.id}/run`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ task }),
+        body: JSON.stringify({
+          prompt: task,
+          context: {
+            media_request: req,
+            reference_images: referenceImages,
+          },
+        }),
       });
       const d = await res.json();
       if (res.ok && d.job_id) {
@@ -345,20 +372,35 @@ export default function CreateMediaPage() {
               </Link>
             </div>
             {refFiles.length > 0 && (
-              <div className="mt-2 space-y-1">
+              <div className="mt-3 flex flex-wrap gap-2">
                 {refFiles.map((file, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-[10px] text-gray-400">
-                    <span>{file.name}</span>
+                  <div key={idx} className="relative group">
+                    {file.type.startsWith('image/') ? (
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="w-16 h-16 object-cover rounded-lg border border-gray-700"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-lg border border-gray-700 bg-gray-800 flex flex-col items-center justify-center gap-1">
+                        <span className="text-lg">📄</span>
+                        <span className="text-[8px] text-gray-500 truncate w-12 text-center">{file.name.split('.').pop()}</span>
+                      </div>
+                    )}
                     <button
                       onClick={() => setRefFiles(prev => prev.filter((_, i) => i !== idx))}
-                      className="text-gray-600 hover:text-gray-400 transition-colors"
+                      className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gray-800 border border-gray-700 text-gray-400 hover:text-red-400 flex items-center justify-center text-[9px] opacity-0 group-hover:opacity-100 transition-opacity"
                       type="button"
                     >
                       ✕
                     </button>
+                    <p className="text-[8px] text-gray-600 mt-0.5 truncate w-16 text-center">{file.name}</p>
                   </div>
                 ))}
               </div>
+            )}
+            {refFiles.some(f => f.type.startsWith('image/')) && (
+              <p className="text-[9px] text-violet-400 mt-2">Photo detected — agents will animate it into video using Kling AI</p>
             )}
           </div>
 
@@ -384,6 +426,7 @@ export default function CreateMediaPage() {
               { label: 'Aspect ratio', value: req.aspect_ratio || 'Not specified' },
               { label: 'Tone', value: req.tone || 'Not specified' },
               { label: 'Brand profile', value: req.use_brand_profile ? 'Yes — using my brand profile' : 'No' },
+              ...(refFiles.length > 0 ? [{ label: 'Reference', value: `${refFiles.length} file${refFiles.length > 1 ? 's' : ''} attached${refFiles.some(f => f.type.startsWith('image/')) ? ' (photo → video)' : ''}` }] : []),
             ].map(row => (
               <div key={row.label} className="px-4 py-2.5 flex gap-3">
                 <span className="text-[11px] text-gray-500 w-20 shrink-0">{row.label}</span>

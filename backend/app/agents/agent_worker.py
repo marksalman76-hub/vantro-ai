@@ -663,7 +663,9 @@ async def _process_job(job_id: str) -> None:
                                 _dur_s = 5
 
                             luma = adapter_result.execution_payload.get("luma_instance")
-                            use_luma = _dur_s > 10 and luma is not None and luma.is_ready()
+                            # Luma needs a public URL for image input; base64 only works for Kling
+                            # so fall back to Kling (capped at 10s) when a reference image is present
+                            use_luma = _dur_s > 10 and luma is not None and luma.is_ready() and not ref_b64
 
                             if use_luma:
                                 try:
