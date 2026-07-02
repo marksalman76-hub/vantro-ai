@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
       body: backendBody,
     });
 
-    if (res.status === 404) {
-      console.warn(`[admin-run-agent] admin endpoint 404 for agent=${agentId}, falling back to client route`);
+    if (res.status === 404 || res.status === 403) {
+      console.warn(`[admin-run-agent] admin endpoint ${res.status} for agent=${agentId}, falling back to client route`);
       res = await fetch(`${API_URL}/api/agents/${agentId}/run`, {
         method: "POST",
         headers: { Authorization: token, "Content-Type": "application/json" },

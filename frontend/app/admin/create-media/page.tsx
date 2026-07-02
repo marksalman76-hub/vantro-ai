@@ -44,10 +44,13 @@ const GENDERS = ['Female', 'Male', 'Non-binary', 'Not specified'];
 const ETHNICITIES = ['Caucasian', 'African', 'Asian', 'Hispanic', 'Middle Eastern', 'Mixed', 'Other'];
 const LANGUAGES = ['English', 'Spanish', 'French', 'German', 'Mandarin', 'Japanese', 'Arabic', 'Other'];
 const VIDEO_QUALITIES = ['720p', '1080p', '4K'];
-// Kling API max is 10s per clip; 5 and 10 are the two supported values
+// ≤10s → Kling AI; 15s, 30s, 60s → Luma Dream Machine (auto-routed)
 const VIDEO_DURATIONS = [
-  { value: 5,  label: '5 seconds' },
-  { value: 10, label: '10 seconds' },
+  { value: 5,  label: '5s',  provider: 'Kling' },
+  { value: 10, label: '10s', provider: 'Kling' },
+  { value: 15, label: '15s', provider: 'Luma' },
+  { value: 30, label: '30s', provider: 'Luma' },
+  { value: 60, label: '60s', provider: 'Luma' },
 ];
 
 export interface MediaRequest {
@@ -827,7 +830,7 @@ export default function AdminCreateMediaPage() {
 
           <div className="mb-4">
             <p className="text-[11px] text-gray-500 mb-1.5">Clip duration</p>
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 flex-wrap">
               {VIDEO_DURATIONS.map(d => (
                 <button
                   key={d.value}
@@ -842,7 +845,9 @@ export default function AdminCreateMediaPage() {
                 </button>
               ))}
             </div>
-            <p className="text-[9px] text-gray-700 mt-1">Max 10s per clip (provider limit)</p>
+            <p className="text-[9px] text-gray-700 mt-1">
+              {(req.duration || 5) > 10 ? 'Luma Dream Machine — 15s+ clips (auto-routed)' : 'Kling AI — up to 10s per clip'}
+            </p>
           </div>
 
           <div className="flex gap-2">

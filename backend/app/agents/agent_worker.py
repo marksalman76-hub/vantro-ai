@@ -655,30 +655,47 @@ async def _process_job(job_id: str) -> None:
                                 or adapter_result.execution_payload.get("language"),
                                 "English",
                             )
-                            # Duration: clamp to [5, 10] — Kling API max is 10s per clip
+                            # Parse requested duration; >10s routes to Luma Dream Machine
                             _raw_dur = media_request_k.get("duration") or media_request_k.get("video_duration") or 5
                             try:
-                                _dur_s = max(5, min(10, int(str(_raw_dur).replace("s", "").strip())))
+                                _dur_s = max(5, int(str(_raw_dur).replace("s", "").strip()))
                             except (TypeError, ValueError):
                                 _dur_s = 5
-                            kling_kwargs: dict = {
-                                "model": adapter_result.execution_payload.get("selected_video_model_id")
-                                or adapter_result.execution_payload.get("selected_video_model")
-                                or "kling3_0_turbo",
-                                "duration": _dur_s,
-                                "aspect_ratio": _normalize_aspect_ratio(media_request_k.get("aspect_ratio")),
-                                "voiceover_script": voiceover_script_k,
-                                "voice_model_id": os.getenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"),
-                                "language": language_k,
-                            }
-                            if ref_b64:
-                                kling_kwargs["reference_image_base64"] = ref_b64
-                                kling_kwargs["reference_image_content_type"] = ref_ct or "image/jpeg"
-                            live_task_result = await kling.execute(prompt=output, **kling_kwargs)
-                            logger.info("Worker: UGC media job %s routed to Kling direct", job_id)
+
+                            luma = adapter_result.execution_payload.get("luma_instance")
+                            use_luma = _dur_s > 10 and luma is not None and luma.is_ready()
+
+                            if use_luma:
+                                try:
+                                    live_task_result = await luma.execute(
+                                        prompt=output,
+                                        duration=_dur_s,
+                                        aspect_ratio=_normalize_aspect_ratio(media_request_k.get("aspect_ratio")),
+                                    )
+                                    logger.info("Worker: UGC media job %s routed to Luma Dream Machine (%ds)", job_id, _dur_s)
+                                except Exception as e:
+                                    logger.error("Worker: Luma execution failed for job %s: %s", job_id, e)
+                                    live_task_result = {"error": str(e), "provider": "luma_dream_machine"}
+                            else:
+                                _kling_dur = max(5, min(10, _dur_s))
+                                kling_kwargs: dict = {
+                                    "model": adapter_result.execution_payload.get("selected_video_model_id")
+                                    or adapter_result.execution_payload.get("selected_video_model")
+                                    or "kling3_0_turbo",
+                                    "duration": _kling_dur,
+                                    "aspect_ratio": _normalize_aspect_ratio(media_request_k.get("aspect_ratio")),
+                                    "voiceover_script": voiceover_script_k,
+                                    "voice_model_id": os.getenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"),
+                                    "language": language_k,
+                                }
+                                if ref_b64:
+                                    kling_kwargs["reference_image_base64"] = ref_b64
+                                    kling_kwargs["reference_image_content_type"] = ref_ct or "image/jpeg"
+                                live_task_result = await kling.execute(prompt=output, **kling_kwargs)
+                                logger.info("Worker: UGC media job %s routed to Kling direct (%ds)", job_id, _kling_dur)
                         except Exception as e:
-                            logger.error("Worker: Kling execution failed for job %s: %s", job_id, e)
-                            live_task_result = {"error": str(e), "provider": "kling_direct"}
+                            logger.error("Worker: video execution failed for job %s: %s", job_id, e)
+                            live_task_result = {"error": str(e), "provider": "video_direct"}
 
                 fallback_preview_asset = None
                 if not _first_media_url(live_task_result):

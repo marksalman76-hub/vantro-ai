@@ -25,6 +25,7 @@ from app.integrations.shopify_draft_product_adapter import (
 )
 from app.providers.adapters.dalle import DalleProvider
 from app.providers.adapters.kling import KlingProvider
+from app.providers.adapters.luma import LumaProvider
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,30 @@ class AdapterResult:
     message: str
     next_steps: List[str]
     execution_payload: Optional[Dict[str, object]] = None
+
+
+def _get_luma_api_key(db: Session, workspace_id: str) -> str:
+    """Return Luma API key from workspace storage or env var."""
+    if db and workspace_id:
+        try:
+            from app.models.agent_system import WorkspaceIntegration
+            from app.services.encryption_service import decrypt
+            row = (
+                db.query(WorkspaceIntegration)
+                .filter(
+                    WorkspaceIntegration.workspace_id == workspace_id,
+                    WorkspaceIntegration.integration_key == "LUMAAI_API_KEY",
+                    WorkspaceIntegration.is_active == True,
+                )
+                .first()
+            )
+            if row:
+                val = decrypt(row.encrypted_value)
+                if val:
+                    return val
+        except Exception:
+            logger.exception("Failed to retrieve Luma credentials for workspace %s", workspace_id)
+    return os.getenv("LUMAAI_API_KEY", "")
 
 
 def _get_kling_credentials(db: Session, workspace_id: str) -> tuple[str, str]:
@@ -165,6 +190,8 @@ class ExecutionAdapters:
 
         access_key, secret_key = _get_kling_credentials(self.db, workspace_id)
         kling = KlingProvider(access_key=access_key, secret_key=secret_key)
+        luma_key = _get_luma_api_key(self.db, workspace_id)
+        luma = LumaProvider(api_key=luma_key)
         provider_connected = kling.is_ready()
         provider_ready = live_enabled and provider_connected
         execution_mode = "kling_direct_live" if provider_ready else "provider_orchestrated_safe_stub"
@@ -181,7 +208,7 @@ class ExecutionAdapters:
             adapter_name="ugc_video_provider_adapter",
             execution_mode=execution_mode,
             provider_ready=provider_ready,
-            message="UGC video generation routed to Kling" if provider_ready else "UGC video provider adapter prepared through provider orchestrator.",
+            message="UGC video generation routed to Kling/Luma" if provider_ready else "UGC video provider adapter prepared through provider orchestrator.",
             next_steps=next_steps,
             execution_payload={
                 "provider_route": provider_route,
@@ -191,6 +218,7 @@ class ExecutionAdapters:
                 "provider_connected": provider_connected,
                 "live_execution_enabled": live_enabled,
                 "provider_instance": kling,
+                "luma_instance": luma,
                 "workspace_id": workspace_id,
                 "language": language,
                 "media_request": media_request,
