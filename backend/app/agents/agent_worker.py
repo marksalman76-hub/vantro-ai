@@ -671,6 +671,9 @@ async def _process_job(job_id: str) -> None:
                                         prompt=output,
                                         duration=_dur_s,
                                         aspect_ratio=_normalize_aspect_ratio(media_request_k.get("aspect_ratio")),
+                                        voiceover_script=voiceover_script_k,
+                                        voice_model_id=os.getenv("ELEVENLABS_MODEL_ID", "eleven_multilingual_v2"),
+                                        language=language_k,
                                     )
                                     logger.info("Worker: UGC media job %s routed to Luma Dream Machine (%ds)", job_id, _dur_s)
                                 except Exception as e:

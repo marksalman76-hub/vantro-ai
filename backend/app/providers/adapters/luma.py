@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import logging
 import os
 
@@ -19,6 +20,34 @@ _ASPECT_RATIO_MAP = {
     "3:4": "3:4",
     "21:9": "21:9",
 }
+
+
+async def _generate_elevenlabs_audio(
+    *,
+    script: str,
+    voice_model_id: str,
+    language: str,
+    elevenlabs_api_key: str,
+) -> bytes | None:
+    if not script or not elevenlabs_api_key:
+        return None
+    voice_id = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
+                headers={"xi-api-key": elevenlabs_api_key, "Content-Type": "application/json"},
+                json={
+                    "text": script[:1500],
+                    "model_id": voice_model_id or "eleven_multilingual_v2",
+                    "voice_settings": {"stability": 0.5, "similarity_boost": 0.75},
+                },
+            )
+            resp.raise_for_status()
+            return resp.content
+    except Exception as exc:
+        logger.warning("ElevenLabs audio generation failed for Luma job (continuing without voiceover): %s", exc)
+        return None
 
 
 class LumaProvider:
@@ -81,6 +110,9 @@ class LumaProvider:
         prompt: str,
         duration: int = 5,
         aspect_ratio: str = "9:16",
+        voiceover_script: str = "",
+        voice_model_id: str = "eleven_multilingual_v2",
+        language: str = "English",
         **kwargs,
     ) -> dict:
         if not self.is_ready():
@@ -100,10 +132,24 @@ class LumaProvider:
             video_url = await self._poll_generation(next_gen_id)
             prev_gen_id = next_gen_id
 
+        # ElevenLabs voiceover — returned as base64 for frontend overlay
+        # (Luma has no built-in lip-sync API unlike Kling)
+        audio_url = ""
+        elevenlabs_key = os.getenv("ELEVENLABS_API_KEY", "")
+        if voiceover_script and elevenlabs_key and video_url:
+            audio_bytes = await _generate_elevenlabs_audio(
+                script=voiceover_script,
+                voice_model_id=voice_model_id,
+                language=language,
+                elevenlabs_api_key=elevenlabs_key,
+            )
+            if audio_bytes:
+                audio_url = "data:audio/mpeg;base64," + base64.b64encode(audio_bytes).decode()
+
         return {
             "asset_url": video_url,
             "video_url": video_url,
-            "audio_url": "",
+            "audio_url": audio_url,
             "task_id": gen_id,
             "provider": "luma_dream_machine",
             "clips_generated": clips_needed,
